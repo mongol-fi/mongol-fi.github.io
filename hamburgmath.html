@@ -662,6 +662,18 @@ TRINITY_DN8024_ gccaga------------------------------------------------------
 NC_045512.2     gccagaagctggacttccctatggtgctaacaaagacggcatcatatgggttgcaactga
                 ******
 [...]</pre>
+<p>When I ran Trinity a second time so that I trimmed the reads with <code>fastp</code>, I got 109,806 contigs with a maximum length of 31,241. Now only two contigs aligned against SARS2, but the longer contig was 31,241 bases long because it had a 1,379-base insertion in the middle, and the shorter contig also had the same 1,379-base insertion in the middle:</p>
+<pre>$ fastp -f 5 -t 5 -53 -i SRR10971381_1.fastq.gz -I SRR10971381_2.fastq.gz -o SRR10971381_1.trim.fq -O SRR10971381_2.trim.fq
+[...]
+$ trinity --seqType fq --left SRR10971381_1.trim.fq --right SRR10971381_2.trim.fq --max_memory 30G --CPU 16 --output trinityout2
+[...]
+$ bowtie2 -p4 --no-unal -x sars2.fa -fU Downloads/trinityout2.Trinity.fasta.gz|samtools sort -&gt;trinity2.bam
+[...]
+$ samtools view trinity2.bam|ruby -ane&#39;l=$F[9].length;s=$F[3].to_i;e=s+l-$F[5].scan(/\d+(?=I)/).map(&amp;:to_i).sum-1;puts [$F[0],s,e,l,$F.grep(/NM:i/)[0][/\d+/],$F[5]]*&quot; &quot;&#39;|(echo contig_name start end length mismatches cigar_string;cat)|column -t
+contig_name               start  end    length  mismatches  cigar_string
+TRINITY_DN39043_c0_g1_i2  4      29865  31241   1379        27790M1379I2072M
+TRINITY_DN39043_c0_g1_i1  21487  29852  9755    1413        6M4D5M1I3M3I2M3I28M1I2M2I6M9D6242M1379I2072M</pre>
+<p>When I did a BLAST search for the insert, it started with a 64-base segment which was identical to bases 29,109-29,172 of Wuhan-Hu-1 which was followed by a 1,315-base segment which was identical to bases 27,794-29,108 of Wuhan-Hu-1. So even though the starting position of the first segment was one base bigger than the ending position of the second segment, for some reason the two segments were in the wrong order.</p>
 <h2>
 <a href=#Comparison_to_other_samples id=Comparison_to_other_samples>Comparison to other samples</a>
 </h2>
