@@ -2118,7 +2118,8 @@ system(paste0(&quot;convert -gravity north \\( -splice 0x26 -pointsize 46 label:
 <h2>
 <a href=#Calculate_number_of_amino_acid_changes_from_Wuhan_Hu_1_in_RdRp_region id=Calculate_number_of_amino_acid_changes_from_Wuhan_Hu_1_in_RdRp_region>Calculate number of amino acid changes from Wuhan-Hu-1 in RdRp region</a>
 </h2>
-<p>Valentin Bruttel has said that because the RdRp of RaTG13 has only 4 amino acid changes from Wuhan-Hu-1 so that there's about 99.5% amino acid identity, the rest of the genome of RaTG13 was most likely artificially manipulated so that it would appear to be further from SARS2, because the whole genome of RaTG13 has only about 96% identity with SARS2 on the nucleotide level. [<a href="https://twitter.com/VBruttel/status/1722617170663010438">https://twitter.com/VBruttel/status/1722617170663010438</a>] However RdRp is a conserved region, so the number of amino acid changes from Wuhan-Hu-1 in the RdRp region is only one in all five BANAL viruses and RpYN06, and it's only 34 even in Tor2.</p>
+<p>Valentin Bruttel has said that because the RdRp of RaTG13 has only 4 amino acid changes from Wuhan-Hu-1 so that there's about 99.5% amino acid identity, the rest of the genome of RaTG13 may have been artificially manipulated to have a higher distance to SARS2, because the whole genome of RaTG13 has only about 96.2% identity with SARS2 on the nucleotide level. [<a href="https://twitter.com/VBruttel/status/1722617170663010438">https://twitter.com/VBruttel/status/1722617170663010438</a>, <a href="https://www.youtube.com/watch?v=EuuY94tsbls&t=1h1m58s">https://www.youtube.com/watch?v=EuuY94tsbls&amp;t=1h1m58s</a>]</p>
+<p>However RdRp is a conserved region, so the number of amino acid changes from Wuhan-Hu-1 in the RdRp is only 1 in all five BANAL viruses and RpYN06, and it's 3 in some of the new Vietnamese sequences from Hassanin et al. 2023, and it's only 34 even in Tor2. So since the RdRp of Wuhan-Hu-1 is 932 aa long, Tor2 and Wuhan-Hu-1 have about 96.4% amino acid identity for the RdRp. The RdRp might have slightly different starting and ending positions in different sarbecoviruses, but I used the positions corresponding to Wuhan-Hu-1 in my calculation.</p>
 <p>Here the first column shows the number of amino acid changes from Wuhan-Hu-1 in the RdRp, the second column shows the number of nucleotide changes in the RdRp, and the third column shows the nucleotide percentage identity in the whole genome:</p>
 <pre>$ wget -q https://mongol-fi.github.io/f/sarbe.{pid,fa.xz}
 $ awk -F\\t &#39;NR==1{for(i=2;i&lt;=NF;i++)if($i~/Hu-1/)break;next}$1!=x{print$i,$1}&#39; sarbe.pid|awk &#39;($1&gt;=90&amp;&amp;$1&lt;100)||/Tor2/{print$2}&#39;|seqkit grep -f- sarbe.fa.xz|cat &lt;(seqkit grep -nrp Hu-1 sarbe.fa.xz) -|seqkit subseq -r$(seqkit grep -nrp Wuhan-Hu-1 sarbe.fa.xz|seqkit seq -s|awk -F &#39;&#39; &#39;{for(i=1;i&lt;=length;i++){if($i==&quot;-&quot;)gaps++;if(i-gaps==13442)printf&quot;%s:&quot;,i;if(i-gaps==16237)print i}}&#39;)|mafft --thread 4 -&gt;temp.fa
@@ -2147,20 +2148,17 @@ $ seqkit fx2tab&lt;&lt;&lt;&quot;$x&quot;|dist1|sed $&#39;s/ /\t/;s/ /\t/&#39;|p
 34  332  91.0  Sarbecovirus sp. PrC31
 34  333  92.2  Horseshoe bat sarbecovirus Rp22DB159
 37  335  90.1  Sarbecovirus sp. YN2021</pre>
-<p>ORF1ab has a ribosomal slippage where the frame is shifted one base backwards at the start of ORF1b, so that the last base of ORF1a gets duplicated as the first base of ORF1b. In Wuhan-Hu-1 the first 26 bases of the RdRp come from ORF1a and the rest comes from ORF1b, so the code above inserts the last base of ORF1a to position 27, because otherwise the amino acid translation of the RdRp is messed up:</p>
-<pre>$ seqkit subseq -r 13442:16237 sars2.fa|seqkit translate|seqkit subseq -r1:120 # messed up because of ribosomal slippage
+<p>The RdRp is very distant from SARS2 in BtSY2, PrC31, and YN2021, but that's because they are recombinant viruses where some regions are similar to SARS2-like viruses and other regions are similar to SARS1-like viruses, but the RdRp is one of the regions that is more similar to SARS1.</p>
+<p>ORF1ab has a ribosomal slippage where the frame is shifted one base backwards at the start of ORF1b, so that the last base of ORF1a gets duplicated as the first base of ORF1b. In Wuhan-Hu-1 the first 26 bases of the RdRp come from ORF1a and the rest comes from ORF1b, so the code above inserts the last base of ORF1a to position 27, because otherwise the amino acid translation of the RdRp gets messed up:</p>
+<pre>$ seqkit subseq -r 13442:16237 sars2.fa|seqkit translate|seqkit subseq -r1:60 # messed up because of ribosomal slippage
 &gt;MN908947.3 Severe acute respiratory syndrome coronavirus 2 isolate Wuhan-Hu-1, complete genome
 SADAQSFLNGFAV*VQPVLHRAAQALVLMSYTGLLTSTMIK*LVLLNS*KLIVVASKKRT
-KMTI*LILTL*LRDTLSLTTNMKKQFIIYLRIVQLLLNMTSLSLE*TVTWYHIYHVNVLL
-$ seqkit subseq -r 13442:16237 sars2.fa|seqkit mutate -i 27:c|seqkit translate|seqkit subseq -r1:120 # insert last base of ORF1a to start of ORF1b
+$ seqkit subseq -r 13442:16237 sars2.fa|seqkit mutate -i 27:c|seqkit translate|seqkit subseq -r1:60 # insert last base of ORF1a to start of ORF1b
 &gt;MN908947.3 Severe acute respiratory syndrome coronavirus 2 isolate Wuhan-Hu-1, complete genome
 SADAQSFLNRVCGVSAARLTPCGTGTSTDVVYRAFDIYNDKVAGFAKFLKTNCCRFQEKD
-EDDNLIDSYFVVKRHTFSNYQHEETIYNLLKDCPAVAKHDFFKFRIDGDMVPHISRQRLT
-$ curl -s &#39;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=protein&amp;rettype=fasta&amp;id=YP_009725307&#39;|seqkit subseq -r1:120 # compare to RdRp sequence from GenBank
+$ curl -s &#39;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=protein&amp;rettype=fasta&amp;id=YP_009725307&#39;|seqkit subseq -r1:60 # compare to RdRp sequence from GenBank
 &gt;YP_009725307.1 RNA-dependent RNA polymerase [Severe acute respiratory syndrome coronavirus 2]
-SADAQSFLNRVCGVSAARLTPCGTGTSTDVVYRAFDIYNDKVAGFAKFLKTNCCRFQEKD
-EDDNLIDSYFVVKRHTFSNYQHEETIYNLLKDCPAVAKHDFFKFRIDGDMVPHISRQRLT</pre>
-<p>The RdRp is very distant from SARS2 in BtSY2, PrC31, and YN2021, but that's because they are recombinant viruses where some regions are similar to SARS2-like viruses and other regions are similar to SARS1-like viruses, but the RdRp is one of the regions that is more similar to SARS1.</p>
+SADAQSFLNRVCGVSAARLTPCGTGTSTDVVYRAFDIYNDKVAGFAKFLKTNCCRFQEKD</pre>
 <h2>
 <a href=#Search_for_ORFs_on_reverse_strand_in_SARS2_and_Pfizer_vaccines id=Search_for_ORFs_on_reverse_strand_in_SARS2_and_Pfizer_vaccines>Search for ORFs on reverse strand in SARS2 and Pfizer vaccines</a>
 </h2>
