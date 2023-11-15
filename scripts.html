@@ -36,7 +36,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 .width13{max-width:1300px}
 .width14,.width0{max-width:1400px}
 .width00{margin-left:calc(-1 * max(0px, min(50vw - 275px, 100vw - 1200px)) + 6px)}
-@media print{body{margin:6px}}
+@media print{body{margin:0px;zoom:.75;print-color-adjust:exact;-webkit-print-color-adjust:exact}}
 </style>
 <title>Shell and R code for genetic analysis of SARS-like viruses</title>
 <h1>Shell and R code for genetic analysis of SARS-like viruses - <a href=index.html>mongol-fi</a></h1>
@@ -85,7 +85,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Find_longest_repeats_within_a_sequence>Find longest repeats within a sequence</a></li>
 <li><a href=#Find_GISAID_samples_with_lowest_mutation_distance_to_RaTG13>Find GISAID samples with lowest mutation distance to RaTG13</a></li>
 <li><a href=#Make_a_heatmap_for_number_of_nucleotide_changes_to_a_target_sequence_within_each_fixed_length_block_of_an_alignment>Make a heatmap for number of nucleotide changes to a target sequence within each fixed-length block of an alignment</a></li>
-<li><a href=#Calculate_number_of_amino_acid_changes_from_Wuhan_Hu_1_in_RdRp_region>Calculate number of amino acid changes from Wuhan-Hu-1 in RdRp region</a></li>
+<li><a href=#Calculate_distance_to_Wuhan_Hu_1_in_RdRp>Calculate distance to Wuhan-Hu-1 in RdRp</a></li>
 <li><a href=#Search_for_ORFs_on_reverse_strand_in_SARS2_and_Pfizer_vaccine_contigs>Search for ORFs on reverse strand in SARS2 and Pfizer vaccine contigs</a></li>
 </ul>
 
@@ -1748,7 +1748,7 @@ ggsave(&quot;1.png&quot;,width=4.5,height=3)</pre>
 <div class="width6">
 <img src="i/scripts10.png">
 </div>
-<p>The Twitter user babarlelephant has also made a JavaScript utility for creating simplots: <a href="http://babarlelephant.free-hoster.net/simplotfirstN.html">http://babarlelephant.free-hoster.net/simplotfirstN.html</a>.</p>
+<p>There's also a JavaScript utility for creating simplots: <a href="http://babarlelephant.free-hoster.net/simplotfirstN.html">http://babarlelephant.free-hoster.net/simplotfirstN.html</a>.</p>
 <h2>
 <a href=#Make_a_simplot_with_gene_annotations id=Make_a_simplot_with_gene_annotations>Make a simplot with gene annotations</a>
 </h2>
@@ -1846,6 +1846,7 @@ ggsave(&quot;1.png&quot;,width=5,height=3.5)</pre>
 <div class="width6">
 <img src="i/scripts-simplot-genes.png">
 </div>
+<p>Rp22DB159 is one of the new Vietnamese sequences from Hassanin et al. 2023. It's a recombinant virus where some regions are similar to SARS2-like viruses and other regions are similar to SARS1-like viruses, like in ZC45, BtSY2, PrC31, and YN2021. The plot above shows that in Rp22DB159 the S1 is similar to BtSY2 but the ORF1b is similar to PrC31.</p>
 <h2>
 <a href=#Download_sarbecovirus_sequences_from_GenBank_and_make_a_percentage_identity_matrix id=Download_sarbecovirus_sequences_from_GenBank_and_make_a_percentage_identity_matrix>Download sarbecovirus sequences from GenBank and make a percentage identity matrix</a>
 </h2>
@@ -1869,7 +1870,7 @@ seqkit grep -vf sarbe.ignore sarbe.fa|seqkit replace -isp &#39;[^ACGT-]&#39; -r 
 <h2>
 <a href=#Fill_in_N_bases_from_the_consensus_sequence_of_related_viruses id=Fill_in_N_bases_from_the_consensus_sequence_of_related_viruses>Fill in N bases from the consensus sequence of related viruses</a>
 </h2>
-<p>The sequence of the Guangdong pangolin virus GD/P2S is available from GISAID but not GenBank. The sequence has about 30% N bases, but if you ignore positions with an N letter, degenerate base, or a gap, then GD/P2S has about 99.5-99.6% identity with a couple of other pangolin viruses. Therefore in order to fill in the N letters and degenerate bases, you can replace them with the consensus sequence of other pangolin viruses:</p>
+<p>The sequence of the Guangdong pangolin virus GD/P2S is available from GISAID but not GenBank. The sequence has about 30% N bases, but if you ignore positions with an N letter, degenerate base, or a gap, then GD/P2S has about 99.6-99.7% identity with MP789 and GD/P79-9 and about 99.1% identity with GD/P44-9. Therefore in order to fill in the N letters and degenerate bases, you can replace them with the consensus sequence of other pangolin viruses:</p>
 <pre>$ curl https://pastebin.com/raw/AuXrLcLx|tr -d \\r&gt;gdp2s.fa
 $ seqkit subseq -r1:200 gdp2s.fa
 &gt;hCoV-19/pangolin/Guangdong/P2S/2019
@@ -1878,9 +1879,9 @@ TAACTAATTACTGKCGTTGACAGGACACGAGTAACTCGTCTATCTTCTGCNNNNNNNNNN
 NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNGCATACCTAGGTTTCGTCCGGGTGTGACCG
 AAAGGTAAGATGGAGAGCCT
 $ curl https://mongol-fi.github.io/f/sarbe.fa.xz|xz -dc&gt;sarbe.fa
-$ seqkit grep -nrp &#39;OQ297708|MT084071|OQ297707|OQ297700|MT121216&#39; sarbe.fa|cat gdp2s.fa -|mafft --thread 4 -&gt;pang.fa
+$ seqkit grep -nrp &#39;GD/P44-9|GD/P44-9|MT121216&#39; sarbe.fa|cat gdp2s.fa -|mafft --thread 4 -&gt;pang.fa
 [...]
-$ seqkit replace -isp &#39;[^acgtn-]&#39; -r n pang.fa|seqkit seq -s|awk -F &#39;&#39; &#39;{for(i=1;i&lt;=NF;i++)if($i!=&quot;n&quot;)a[i][$i]++}END{for(i in a){max=0;for(j in a[i])if(a[i][j]&gt;max){max=a[i][j];o=j}printf&quot;%s&quot;,o};print&quot;&quot;}&#39;|cat - &lt;(seqkit seq -s pang.fa|sed 1q)|awk -F &#39;&#39; &#39;NR==1{split($0,a,&quot;&quot;);next}{for(i=1;i&lt;=NF;i++)printf&quot;%s&quot;,$i==&quot;n&quot;?a[i]:$i}&#39;|tr -d -|(echo \&gt;filled_in;cat)|seqkit subseq -r1:200
+$ seqkit replace -isp &#39;[^acgtn-]&#39; -r n pang.fa|seqkit seq -s|awk -F &#39;&#39; &#39;{for(i=1;i&lt;=NF;i++)if($i!=&quot;n&quot;)a[i][$i]++}END{for(i in a){max=0;for(j in a[i])if(a[i][j]&gt;max){max=a[i][j];o=j}printf&quot;%s&quot;,o};print&quot;&quot;}&#39;|cat - &lt;(seqkit seq -s pang.fa|sed 1q)|awk -F &#39;&#39; &#39;NR==1{split($0,a,&quot;&quot;);next}{for(i=1;i&lt;=NF;i++)printf&quot;%s&quot;,$i==&quot;n&quot;?a[i]:$i}&#39;|(echo \&gt;filled_in;tr -d -)|seqkit subseq -r1:200
 &gt;filled_in
 ttaaaatctgtgtggctgtcactcggctgcatgcttagtgcactcacgcagtataattaa
 taactaattactgkcgttgacaggacacgagtaactcgtctatcttctgctgcttagact
@@ -1917,14 +1918,9 @@ t=t[count[,3]&gt;1,]
 
 colnames(t)=paste0(&quot;V&quot;,1:3)
 t[,1]=as.Date(paste0(t[,1],&quot;-1&quot;))
+group=factor(t[,2],unique(t[,2]))
 
-group=factor(t[,2],levels=unique(t[,2]))
-
-set.seed(0)
 hue=c(0,30,60,90,150,210,250,310)+15
-color=sample(c(hcl(hue,50,50),hcl(hue,40,60),hcl(hue,30,30),hcl(hue,100,50),hcl(hue,80,20),hcl(hue,60,80),hcl(hue,20,80)))
-color=sample(c(hcl(hue,50,50),hcl(hue,30,70),hcl(hue,30,30),hcl(hue,100,80),hcl(hue,100,30)))
-
 color=rep(c(hcl(hue,60,80),hcl(hue,100,40)),3)
 
 xstart=as.Date(&quot;2019-12-1&quot;)
@@ -2046,10 +2042,10 @@ wget https:/mongol-fi.github.io/f/pid.cpp;g++ pid.cpp -O3 -o pid
 # percentage identity matrix of 529 sarbecovirus sequences
 wget https://mongol-fi.github.io/f/sarbe.pid
 
-# sort matrix by column which matches substring
+# matrix sort grep (for a matrix with row names and column names, print the values of a column whose name matches a substring and sort by the column)
 masog()(awk -F\\t &#39;NR==1{for(i=2;i&lt;=NF;i++)if($i~x)break;next}{print$i,$1}&#39; x=&quot;$1&quot; &quot;${2--}&quot;|sort -n)
 
-# efetch multi (download accession list from STDIN)
+# efetch multi (download list of accessions from STDIN)
 emu()(curl -sd &quot;id=$(paste -sd, -)&quot; &quot;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=${1:-nuccore}&amp;rettype=${2:-fasta}&amp;retmode=$3&quot;)
 
 # align spike proteins of Tor2 and sequences with 95-98% identity to Tor2
@@ -2073,8 +2069,8 @@ ranges=lapply(seq(1,max,step),\(i)c(i,min(i+step-1,max)))
 heat=100*sapply(ranges,\(x)as.matrix(stringDist(subseq(t,x[1],x[2]),&quot;hamming&quot;))[targ,]/(x[2]-x[1]))
 # heat=100*sapply(ranges,\(x){block=t[,x[1]:x[2]];rowSums(block[targ,]!=&quot;-&quot;&amp;block!=&quot;-&quot;&amp;block[targ,]==block)/ncol(block)}) # don&#39;t count positions where either sequence has a gap
 
-colnames(heat)=sapply(ranges,paste,collapse=&quot;-&quot;)
-# colnames(heat)=apply(ranges,1,\(x)paste0((x[1]-1)/3+1,&quot;-&quot;,x[2]/3)) # display amino acid positions instead of nucleotide positions
+# colnames(heat)=sapply(ranges,paste,collapse=&quot;-&quot;) # display nucleotide positions instead of amino acid positions
+colnames(heat)=apply(ranges,1,\(x)paste0((x[1]-1)/3+1,&quot;-&quot;,x[2]/3))
 
 dist=100-read.table(&quot;temp.pid&quot;,sep=&quot;\t&quot;,row.names=1,header=T)
 
@@ -2109,14 +2105,14 @@ pheatmap::pheatmap(
   colorRampPalette(hex(HSV(c(210,210,210,160,110,60,40,20,0,0,0),c(0,.25,rep(.5,9)),c(rep(1,9),.5,0))))(256)
 )
 
-system(paste0(&quot;convert -gravity north \\( -splice 0x26 -pointsize 46 label:&#39;Target: &quot;,targ,&quot; (percentage of nucleotide changes in each &quot;,step,&quot; nt block)&#39; \\) 0.png -append 1.png&quot;))
-# system(paste0(&quot;convert -gravity north \\( -splice 0x26 -pointsize 46 label:&#39;Target: Tor2 (percentage of nucleotide changes in each &quot;,(step/3),&quot; aa block of spike protein)&#39; \\) 0.png -append 1.png&quot;))</pre>
+# system(paste0(&quot;convert -gravity north \\( -splice 0x26 -pointsize 46 label:&#39;Target: &quot;,targ,&quot; (percentage of nucleotide changes in each &quot;,step,&quot; nt block)&#39; \\) 0.png -append 1.png&quot;))
+system(paste0(&quot;convert -gravity north \\( -splice 0x26 -pointsize 46 label:&#39;Target: Tor2 (percentage of nucleotide changes in each &quot;,(step/3),&quot; aa block of spike protein)&#39; \\) 0.png -append 1.png&quot;))</pre>
 <div class="width6">
 <img src="i/scripts-nucmultiheat.png">
 </div>
-<p>So basically you can divide the viruses that are the closest to SARS1 to four groups based on the N-terminal domain and receptor binding motif. WIV1 has a different NTD but similar RBM, Rs4231 has a different RBM but similar NTD, in SHC014 both NTD and RBM are different, and in WIV16 both NTD and RBM are similar.</p>
+<p>The heatmap above shows that you can divide the viruses that are the closest to SARS1 to four groups based on the N-terminal domain and receptor binding motif. WIV1 has a different NTD but similar RBM, Rs4231 has a different RBM but similar NTD, in SHC014 both NTD and RBM are different, and in WIV16 both the NTD and RBM are similar.</p>
 <h2>
-<a href=#Calculate_number_of_amino_acid_changes_from_Wuhan_Hu_1_in_RdRp_region id=Calculate_number_of_amino_acid_changes_from_Wuhan_Hu_1_in_RdRp_region>Calculate number of amino acid changes from Wuhan-Hu-1 in RdRp region</a>
+<a href=#Calculate_distance_to_Wuhan_Hu_1_in_RdRp id=Calculate_distance_to_Wuhan_Hu_1_in_RdRp>Calculate distance to Wuhan-Hu-1 in RdRp</a>
 </h2>
 <p>Valentin Bruttel has said that because the RdRp of RaTG13 has only 4 amino acid changes from Wuhan-Hu-1 so that there's about 99.5% amino acid identity, the rest of the genome of RaTG13 may have been artificially manipulated to have a higher distance to SARS2, because the whole genome of RaTG13 has only about 96.2% identity with SARS2 on the nucleotide level. [<a href="https://twitter.com/VBruttel/status/1722617170663010438">https://twitter.com/VBruttel/status/1722617170663010438</a>, <a href="https://www.youtube.com/watch?v=EuuY94tsbls&t=1h1m58s">https://www.youtube.com/watch?v=EuuY94tsbls&amp;t=1h1m58s</a>]</p>
 <p>However RdRp is a conserved region, so the number of amino acid changes from Wuhan-Hu-1 in the RdRp is only 1 in all five BANAL viruses and RpYN06, and it's 3 in some of the new Vietnamese sequences from Hassanin et al. 2023, and it's only 34 even in Tor2. So since the RdRp of Wuhan-Hu-1 is 932 aa long, Tor2 and Wuhan-Hu-1 have about 96.4% amino acid identity for the RdRp. (The RdRp might have slightly different starting and ending positions in different sarbecoviruses, but I used the positions corresponding to Wuhan-Hu-1 in my calculation.)</p>
@@ -2148,9 +2144,9 @@ $ dist1&lt;&lt;&lt;&quot;$x&quot;|sed $&#39;s/ /\t/;s/ /\t/&#39;|paste &lt;(seqk
 34  332  91.0  Sarbecovirus sp. PrC31
 34  333  92.2  Horseshoe bat sarbecovirus Rp22DB159
 37  335  90.1  Sarbecovirus sp. YN2021</pre>
-<p>The RdRp is very distant from SARS2 in BtSY2, PrC31, and YN2021, but that's because they are recombinant viruses where some regions are similar to SARS2-like viruses and other regions are similar to SARS1-like viruses, but the RdRp is one of the regions that is more similar to SARS1.</p>
+<p>The RdRp of SARS2 is very distant from BtSY2, PrC31, and YN2021, but that's because they are recombinant viruses where some regions are similar to SARS2-like viruses and other regions are similar to SARS1-like viruses, but the RdRp is one of the regions that is more similar to SARS1.</p>
 <p>ORF1ab has a ribosomal slippage where the frame is shifted one base backwards at the start of ORF1b, so that the last base of ORF1a gets duplicated as the first base of ORF1b. In Wuhan-Hu-1 the first 26 bases of the RdRp come from ORF1a and the rest comes from ORF1b, so the code above inserts the last base of ORF1a to position 27, because otherwise the amino acid translation of the RdRp gets messed up:</p>
-<pre>$ seqkit subseq -r 13442:16237 sars2.fa|seqkit translate|seqkit subseq -r1:60 # messed up because of ribosomal slippage
+<pre>$ seqkit subseq -r 13442:16237 sars2.fa|seqkit translate|seqkit subseq -r1:60 # the translation is messed up because of ribosomal slippage
 &gt;MN908947.3 Severe acute respiratory syndrome coronavirus 2 isolate Wuhan-Hu-1, complete genome
 SADAQSFLNGFAV*VQPVLHRAAQALVLMSYTGLLTSTMIK*LVLLNS*KLIVVASKKRT
 $ seqkit seq -s sars2.fa|cut -c 13442-16237|(echo \&gt;a;sed &#39;s/./&amp;&amp;/26&#39;)|seqkit translate|seqkit subseq -r1:60 # insert last base of ORF1a to start of ORF1b
@@ -2162,14 +2158,14 @@ SADAQSFLNRVCGVSAARLTPCGTGTSTDVVYRAFDIYNDKVAGFAKFLKTNCCRFQEKD</pre>
 <h2>
 <a href=#Search_for_ORFs_on_reverse_strand_in_SARS2_and_Pfizer_vaccine_contigs id=Search_for_ORFs_on_reverse_strand_in_SARS2_and_Pfizer_vaccine_contigs>Search for ORFs on reverse strand in SARS2 and Pfizer vaccine contigs</a>
 </h2>
-<p>When Kevin McKernan sequenced Pfizer vaccine vials, he found that the reverse strand of the spike protein sequence there was a 1,252-aa open reading frame. In an RNA sequence it wouldn't matter but the vaccines were contaminated with double-stranded DNA, and McKernan found that the long ORF on the reverse strand had high amyloidogenic potential, so he has been calling it the <span class="quote">&quot;spidroin&quot;</span>, since there is high amyloidogenic potential in some spidroins which are the main protein in spider silk. [<a href="https://anandamide.substack.com/p/spider-webs-in-the-pfizer-closet">https://anandamide.substack.com/p/spider-webs-in-the-pfizer-closet</a>]</p>
-<p>If you for search for ORFs in all three frames of the reverse strand of Wuhan-Hu-1, the longest ORF is only 150 aa:</p>
+<p>When Kevin McKernan sequenced Pfizer vaccine vials, he found that the reverse strand of the spike protein sequence had a 1,252-aa open reading frame. [<a href="https://anandamide.substack.com/p/what-do-you-make-of-this-sars1-patent">https://anandamide.substack.com/p/what-do-you-make-of-this-sars1-patent</a>] In an RNA sequence it wouldn't matter but the vaccines were contaminated with double-stranded DNA. McKernan has been calling the long ORF on the reverse strand the <span class="quote">&quot;spidroin&quot;</span> because its closest hit on UniProt was a spidroin protein which is the main protein in spider silk, even though the similarity was not very high and the match was almost certainly accidental.</p>
+<p>If you for search for ORFs in all three frames of the reverse strand of Wuhan-Hu-1, the longest ORF is only 150 amino acids long:</p>
 <pre>$ curl -s &#39;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&amp;rettype=fasta&amp;id=MN908947.3&#39;&gt;sars2.fa
 $ r=$(seqkit seq -rp sars2.fa|seqkit seq -s);for x in $r ${r:1} ${r:2};do sed &#39;s/.../&amp; /g&#39;&lt;&lt;&lt;$x|grep -Po &#39;(ATG|CTG|TTG).*?(?=(TAA|TAG|TGA))&#39;|tr -d \ ;done|awk &#39;{print&quot;&gt;&quot;NR}1&#39;|seqkit translate|seqkit seq -gm4|seqkit stat
 file  format  type     num_seqs  sum_len  min_len  avg_len  max_len
 -     FASTA   Protein       669   13,036        4     19.5      150</pre>
 <p>However the spike sequence in the Pfizer jabs was codon-optimized, which eliminated some of the stop codons on the reverse strand.</p>
-<p>This PDF includes a full sequence for a <span class="quote">&quot;Spike-encoding contig assembled from BioNTech/Pfizer BNT-162b2 vaccine&quot;</span>: <a href="https://github.com/NAalytics/Assemblies-of-putative-SARS-CoV2-spike-encoding-mRNA-sequences-for-vaccines-BNT-162b2-and-mRNA-1273/blob/main/Assemblies+of+putative+SARS-CoV2-spike-encoding+mRNA+sequences+for+vaccines+BNT-162b2+and+mRNA-1273.docx.pdf">https://github.com/NAalytics/Assemblies-of-putative-SARS-CoV2-spike-encoding-mRNA-sequences-for-vaccines-BNT-162b2-and-mRNA-1273/blob/main/Assemblies+of+putative+SARS-CoV2-spike-encoding+mRNA+sequences+for+vaccines+BNT-162b2+and+mRNA-1273.docx.pdf</a>. When I searched for ORFs on all 3 frames on the reverse strand, my longest ORF was 1,341 aa:</p>
+<p>This PDF includes a full sequence for a <span class="quote">&quot;spike-encoding contig assembled from BioNTech/Pfizer BNT-162b2 vaccine&quot;</span>: <a href="https://github.com/NAalytics/Assemblies-of-putative-SARS-CoV2-spike-encoding-mRNA-sequences-for-vaccines-BNT-162b2-and-mRNA-1273/blob/main/Assemblies+of+putative+SARS-CoV2-spike-encoding+mRNA+sequences+for+vaccines+BNT-162b2+and+mRNA-1273.docx.pdf">https://github.com/NAalytics/Assemblies-of-putative-SARS-CoV2-spike-encoding-mRNA-sequences-for-vaccines-BNT-162b2-and-mRNA-1273/blob/main/Assemblies+of+putative+SARS-CoV2-spike-encoding+mRNA+sequences+for+vaccines+BNT-162b2+and+mRNA-1273.docx.pdf</a>. When I searched for ORFs on all 3 frames on the reverse strand, my longest ORF was 1,341 aa:</p>
 <pre>$ echo $&#39;&gt;pfizerspike\nGAGAATAAACTAGTATTCTTCTGGTCCCCACAGACTCAGAGAGAACCCGCCACCATGTTCGTGTTCCTGGTGCTGCTGCCTCTGGTGTCCAGCCAGTGTGTGAACCTGACCACCAGAACACAGCTGCCTCCAGCCTACACCAACAGCTTTACCAGAGGCGTGTACTACCCCGACAAGGTGTTCAGATCCAGCGTGCTGCACTCTACCCAGGACCTGTTCCTGCCTTTCTTCAGCAACGTGACCTGGTTCCACGCCATCCACGTGTCCGGCACCAATGGCACCAAGAGATTCGACAACCCCGTGCTGCCCTTCAACGACGGGGTGTACTTTGCCAGCACCGAGAAGTCCAACATCATCAGAGGCTGGATCTTCGGCACCACACTGGACAGCAAGACCCAGAGCCTGCTGATCGTGAACAACGCCACCAACGTGGTCATCAAAGTGTGCGAGTTCCAGTTCTGCAACGACCCCTTCCTGGGCGTCTACTACCACAAGAACAACAAGAGCTGGATGGAAAGCGAGTTCCGGGTGTACAGCAGCGCCAACAACTGCACCTTCGAGTACGTGTCCCAGCCTTTCCTGATGGACCTGGAAGGCAAGCAGGGCAACTTCAAGAACCTGCGCGAGTTCGTGTTTAAGAACATCGACGGCTACTTCAAGATCTACAGCAAGCACACCCCTATCAACCTCGTGCGGGATCTGCCTCAGGGCTTCTCTGCTCTGGAACCCCTGGTGGATCTGCCCATCGGCATCAACATCACCCGGTTTCAGACACTGCTGGCCCTGCACAGAAGCTACCTGACACCTGGCGATAGCAGCAGCGGATGGACAGCTGGTGCCGCCGCTTACTATGTGGGCTACCTGCAGCCTAGAACCTTCCTGCTGAAGTACAACGAGAACGGCACCATCACCGACGCCGTGGATTGTGCTCTGGATCCTCTGAGCGAGACAAAGTGCACCCTGAAGTCCTTCACCGTGGAAAAGGGCATCTACCAGACCAGCAACTTCCGGGTGCAGCCCACCGAATCCATCGTGCGGTTCCCCAATATCACCAATCTGTGCCCCTTCGGCGAGGTGTTCAATGCCACCAGATTCGCCTCTGTGTACGCCTGGAACCGGAAGCGGATCAGCAATTGCGTGGCCGACTACTCCGTGCTGTACAACTCCGCCAGCTTCAGCACCTTCAAGTGCTACGGCGTGTCCCCTACCAAGCTGAACGACCTGTGCTTCACAAACGTGTACGCCGACAGCTTCGTGATCCGGGGAGATGAAGTGCGGCAGATTGCCCCTGGACAGACAGGCAAGATCGCCGACTACAACTACAAGCTGCCCGACGACTTCACCGGCTGTGTGATTGCCTGGAACAGCAACAACCTGGACTCCAAAGTCGGCGGCAACTACAATTACCTGTACCGGCTGTTCCGGAAGTCCAATCTGAAGCCCTTCGAGCGGGACATCTCCACCGAGATCTATCAGGCCGGCAGCACCCCTTGTAACGGCGTGGAAGGCTTCAACTGCTACTTCCCACTGCAGTCCTACGGCTTTCAGCCCACAAATGGCGTGGGCTATCAGCCCTACAGAGTGGTGGTGCTGAGCTTCGAACTGCTGCATGCCCCTGCCACAGTGTGCGGCCCTAAGAAAAGCACCAATCTCGTGAAGAACAAATGCGTGAACTTCAACTTCAACGGCCTGACCGGCACCGGCGTGCTGACAGAGAGCAACAAGAAGTTCCTGCCATTCCAGCAGTTTGGCCGGGATATCGCCGATACCACAGACGCCGTTAGAGATCCCCAGACACTGGAAATCCTGGACATCACCCCTTGCAGCTTCGGCGGAGTGTCTGTGATCACCCCTGGCACCAACACCAGCAATCAGGTGGCAGTGCTGTACCAGGACGTGAACTGTACCGAAGTGCCCGTGGCCATTCACGCCGATCAGCTGACACCTACATGGCGGGTGTACTCCACCGGCAGCAATGTGTTTCAGACCAGAGCCGGCTGTCTGATCGGAGCCGAGCACGTGAACAATAGCTACGAGTGCGACATCCCCATCGGCGCTGGAATCTGCGCCAGCTACCAGACACAGACAAACAGCCCTCGGAGAGCCAGAAGCGTGGCCAGCCAGAGCATCATTGCCTACACAATGTCTCTGGGCGCCGAGAACAGCGTGGCCTACTCCAACAACTCTATCGCTATCCCCACCAACTTCACCATCAGCGTGACCACAGAGATCCTGCCTGTGTCCATGACCAAGACCAGCGTGGACTGCACCATGTACATCTGCGGCGATTCCACCGAGTGCTCCAACCTGCTGCTGCAGTACGGCAGCTTCTGCACCCAGCTGAATAGAGCCCTGACAGGGATCGCCGTGGAACAGGACAAGAACACCCAAGAGGTGTTCGCCCAAGTGAAGCAGATCTACAAGACCCCTCCTATCAAGGACTTCGGCGGCTTCAATTTCAGCCAGATTCTGCCCGATCCTAGCAAGCCCAGCAAGCGGAGCTTCATCGAGGACCTGCTGTTCAACAAAGTGACACTGGCCGACGCCGGCTTCATCAAGCAGTATGGCGATTGTCTGGGCGACATTGCCGCCAGGGATCTGATTTGCGCCCAGAAGTTTAACGGACTGACAGTGCTGCCTCCTCTGCTGACCGATGAGATGATCGCCCAGTACACATCTGCCCTGCTGGCCGGCACAATCACAAGCGGCTGGACATTTGGAGCAGGCGCCGCTCTGCAGATCCCCTTTGCTATGCAGATGGCCTACCGGTTCAACGGCATCGGAGTGACCCAGAATGTGCTGTACGAGAACCAGAAGCTGATCGCCAACCAGTTCAACAGCGCCATCGGCAAGATCCAGGACAGCCTGAGCAGCACAGCAAGCGCCCTGGGAAAGCTGCAGGACGTGGTCAACCAGAATGCCCAGGCACTGAACACCCTGGTCAAGCAGCTGTCCTCCAACTTCGGCGCCATCAGCTCTGTGCTGAACGATATCCTGAGCAGACTGGACCCTCCTGAGGCCGAGGTGCAGATCGACAGACTGATCACAGGCAGACTGCAGAGCCTCCAGACATACGTGACCCAGCAGCTGATCAGAGCCGCCGAGATTAGAGCCTCTGCCAATCTGGCCGCCACCAAGATGTCTGAGTGTGTGCTGGGCCAGAGCAAGAGAGTGGACTTTTGCGGCAAGGGCTACCACCTGATGAGCTTCCCTCAGTCTGCCCCTCACGGCGTGGTGTTTCTGCACGTGACATATGTGCCCGCTCAAGAGAAGAATTTCACCACCGCTCCAGCCATCTGCCACGACGGCAAAGCCCACTTTCCTAGAGAAGGCGTGTTCGTGTCCAACGGCACCCATTGGTTCGTGACACAGCGGAACTTCTACGAGCCCCAGATCATCACCACCGACAACACCTTCGTGTCTGGCAACTGCGACGTCGTGATCGGCATTGTGAACAATACCGTGTACGACCCTCTGCAGCCCGAGCTGGACAGCTTCAAAGAGGAACTGGACAAGTACTTTAAGAACCACACAAGCCCCGACGTGGACCTGGGCGATATCAGCGGAATCAATGCCAGCGTCGTGAACATCCAGAAAGAGATCGACCGGCTGAACGAGGTGGCCAAGAATCTGAACGAGAGCCTGATCGACCTGCAAGAACTGGGGAAGTACGAGCAGTACATCAAGTGGCCCTGGTACATCTGGCTGGGCTTTATCGCCGGACTGATTGCCATCGTGATGGTCACAATCATGCTGTGTTGCATGACCAGCTGCTGTAGCTGCCTGAAGGGCTGTTGTAGCTGTGGCAGCTGCTGCAAGTTCGACGAGGACGATTCTGAGCCCGTGCTGAAGGGCGTGAAACTGCACTACACATGATGACTCGAGCTGGTACTGCATGCACGCAATGCTAGCTGCCCCTTTCCCGTCCTGGGTACCCCGAGTCTCCCCCGACCTCGGGTCCCAGGTATGCTCCCACCTCCACCTGCCCCACTCACCACCTCTGCTAGTTCCAGACACCTCCCAAGCACGCAGCAATGCAGCTCAAAACGCTTAGCCTAGCCACACCCCCACGGGAAACAGCAGTGATTAACCTTTAGCAATAAACGAAAGTTTAACTAAGCTATACTAACCCCAGGGTTGGTCAATTTCGTGCCAGCCACACCCTGGAGCTAGCA&#39;&gt;pfizerspike.fa
 $ r=$(seqkit seq -rp pfizerspike.fa|seqkit seq -s);for x in $r ${r:1} ${r:2};do sed &#39;s/.../&amp; /g&#39;&lt;&lt;&lt;$x|grep -Po &#39;(ATG|CTG|TTG).*?(?=(TAA|TAG|TGA))&#39;|tr -d \ ;done|awk &#39;{print&quot;&gt;&quot;NR}1&#39;|seqkit translate|seqkit seq -gm4|seqkit stat
 file  format  type     num_seqs  sum_len  min_len  avg_len  max_len
