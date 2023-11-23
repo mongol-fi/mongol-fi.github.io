@@ -11,9 +11,9 @@ h2{font-size:1.6em}
 h3{font-size:1.23em}
 pre,code{white-space:pre-wrap;word-wrap:break-word;font:13px Menlo,'DejaVu Sans Mono','Liberation Mono',Consolas,monospace;background:#dbdbdb}
 pre{padding:3px}
-blockquote{margin-left:45px;margin-right:0;max-width:520px}
-blockquote blockquote{max-width:475px}
-blockquote blockquote blockquote{max-width:430px}
+blockquote{margin-left:45px;margin-right:0;max-width:475px}
+blockquote blockquote{max-width:430px}
+blockquote blockquote blockquote{max-width:385px}
 blockquote,.quote{color:hsl(38,60%,30%)}
 blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(38,45%,50%)}
 blockquote blockquote blockquote,blockquote .quote .quote,.quote .quote .quote{color:hsl(38,70%,60%)}
@@ -89,6 +89,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Make_a_heatmap_for_number_of_nucleotide_changes_to_a_target_sequence_within_each_fixed_length_block_of_an_alignment>Make a heatmap for number of nucleotide changes to a target sequence within each fixed-length block of an alignment</a></li>
 <li><a href=#Calculate_distance_to_Wuhan_Hu_1_in_RdRp>Calculate distance to Wuhan-Hu-1 in RdRp</a></li>
 <li><a href=#Search_for_ORFs_on_reverse_strand_in_SARS2_and_Pfizer_vaccine_contigs>Search for ORFs on reverse strand in SARS2 and Pfizer vaccine contigs</a></li>
+<li><a href=#Retrieve_STAT_results_from_SRA_Database_Backend_API>Retrieve STAT results from SRA Database Backend API</a></li>
 </ul>
 
 <h2>
@@ -2177,6 +2178,46 @@ file  format  type     num_seqs  sum_len  min_len  avg_len  max_len
 <pre>$ r=$(seqkit sort -lr PbiV1-cs-Megahit-assem.fa|seqkit head -n1|seqkit seq -rp|seqkit seq -s);for x in $r ${r:1} ${r:2};do sed &#39;s/.../&amp; /g&#39;&lt;&lt;&lt;$x|grep -Po &#39;(ATG|CTG|TTG).*?(?=(TAA|TAG|TGA))&#39;|tr -d \ ;done|awk &#39;{print&quot;&gt;&quot;NR}1&#39;|seqkit translate|seqkit seq -gm4|seqkit stat
 file  format  type     num_seqs  sum_len  min_len  avg_len  max_len
 -     FASTA   Protein        69    4,588        4     66.5    1,271</pre>
+<h2>
+<a href=#Retrieve_STAT_results_from_SRA_Database_Backend_API id=Retrieve_STAT_results_from_SRA_Database_Backend_API>Retrieve STAT results from SRA Database Backend API</a>
+</h2>
+<p>NCBI's Sequence Read Archive has a little-known <span class="quote">&quot;SRA Database Backend&quot;</span> API: <a href="https://trace.ncbi.nlm.nih.gov/Traces/sra-db-be/">https://trace.ncbi.nlm.nih.gov/Traces/sra-db-be/</a>. It can be used to retrieve the full STAT results of an SRA run, which are not displayed anywhere on the SRA's website.</p>
+<p>This displays the most abundant leaf nodes in the metagenomic sequencing run of Wuhan-Hu-1:</p>
+<pre>$ curl -Ls &quot;https://trace.ncbi.nlm.nih.gov/Traces/sra-db-be/run_taxonomy?acc=SRR10971381&amp;cluster_name=public&quot;&gt;SRR10971381.stat
+$ jq -r &#39;[.[]|.tax_table[]|.parent]as$par|[.[]|.tax_table[]|select(.tax_id as$x|$par|index($x)|not)]|sort_by(-.total_count)[]|((.total_count|tostring)+&quot;;&quot;+.org)&#39; SRR10971381.stat|head
+$ stal SRR10971381.stat|head
+171042;Prevotella salivae F0493
+155602;Prevotella veroralis F0319
+89078;Prevotella scopos JCM 17725
+57886;Prevotella melaninogenica D18
+54238;Severe acute respiratory syndrome coronavirus 2
+51814;Leptotrichia sp. oral taxon 212
+41272;Prevotella nanceiensis DSM 19126 = JCM 15639
+33716;Homo sapiens
+28813;Prevotella veroralis DSM 19559 = JCM 6290
+23601;Leptotrichia hongkongensis</pre>
+<p>This displays viral leaf nodes along with the chain of ancestors of each node:</p>
+<pre>$ jq -r &#39;.[]|.tax_table[]|[.org,.total_count,.tax_id,.parent]|@tsv&#39; SRR10971381.stat|awk -F\\t &#39;{out[$3]=$0;parent[$3]=$4;name[$3]=$1;nonleaf[$4]}END{for(i in out){j=parent[i];chain=&quot;&quot;;do{chain=(chain?chain&quot;:&quot;:&quot;&quot;)name[j];j=parent[j]}while(j!=&quot;&quot;);print out[i]&quot;\t&quot;!(i in nonleaf)&quot;\t&quot;chain}}&#39;|sort -nr|grep Virus|sort -t$&#39;\t&#39; -rnk2|awk -F\\t &#39;$5{print$2 FS$1&quot; - &quot;$6}&#39;|head -n20|column -ts$&#39;\t&#39;
+54238  Severe acute respiratory syndrome coronavirus 2 - Severe acute respiratory syndrome-related coronavirus:Sarbecovirus:Betacoronavirus:Orthocoronavirinae:Coronaviridae:Cornidovirineae:Nidovirales:Riboviria:Viruses
+693    CRESS virus sp. - CRESS viruses:unclassified ssDNA viruses:unclassified DNA viruses:unclassified viruses:Viruses
+159    uncultured virus - environmental samples:Viruses
+20     Parvovirus NIH-CQV - unclassified Parvovirinae:Parvovirinae:Parvoviridae:Viruses
+15     Curvibacter phage P26059B - unclassified Autographivirinae:Autographivirinae:Podoviridae:Caudovirales:Viruses
+13     Pseudomonas phage HU1 - unclassified Podoviridae:Podoviridae:Caudovirales:Viruses
+12     Bat coronavirus RaTG13 - Severe acute respiratory syndrome-related coronavirus:Sarbecovirus:Betacoronavirus:Orthocoronavirinae:Coronaviridae:Cornidovirineae:Nidovirales:Riboviria:Viruses
+9      Iodobacter phage PhiPLPE - Iodobacter virus PLPE:Iodovirus:Myoviridae:Caudovirales:Viruses
+9      Bat SARS-like coronavirus - Severe acute respiratory syndrome-related coronavirus:Sarbecovirus:Betacoronavirus:Orthocoronavirinae:Coronaviridae:Cornidovirineae:Nidovirales:Riboviria:Viruses
+8      Rhodoferax phage P26218 - unclassified Podoviridae:Podoviridae:Caudovirales:Viruses
+8      Prokaryotic dsDNA virus sp. - unclassified dsDNA viruses:unclassified DNA viruses:unclassified viruses:Viruses
+8      Pangolin coronavirus - unclassified Betacoronavirus:Betacoronavirus:Orthocoronavirinae:Coronaviridae:Cornidovirineae:Nidovirales:Riboviria:Viruses
+5      uncultured cyanophage - environmental samples:unclassified bacterial viruses:unclassified viruses:Viruses
+5      Rimavirus - Siphoviridae:Caudovirales:Viruses
+4      Genomoviridae sp. - unclassified Genomoviridae:Genomoviridae:Viruses
+3      Streptococcus phage Javan363 - unclassified Siphoviridae:Siphoviridae:Caudovirales:Viruses
+3      Sewage-associated circular DNA virus-14 - unclassified viruses:Viruses
+3      RDHV-like virus SF1 - unclassified viruses:Viruses
+3      Paramecium bursaria Chlorella virus NW665.2 - unclassified Chlorovirus:Chlorovirus:Phycodnaviridae:Viruses
+3      Microviridae sp. - unclassified Microviridae:Microviridae:Viruses</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
