@@ -199,7 +199,7 @@ $ seqkit grep -nrp &#39;ZC45.*complete&#39; sarbe19.fa|cat sars2.fa -|mafft --qu
 </h3>
 <p>If SARS2 would have been in widespread circulation long before 2020, then the genomes of SARS2 samples collected in early 2020 would be more diverse, except perhaps in the scenario where the earlier undocumented strains would've been replaced by the Wuhan strain, like how Omicron ended up replacing pre-Omicron strains.</p>
 <p>But actually there's 54 SARS2 sequences that were submitted to GISAID in January 2020, but only 2 samples have more than 10 mutations from Wuhan-Hu-1, and even those are likely to be the result of sequencing or assembly errors:</p>
-<pre>$ curl https://sars2.net/f/gisaid2020.tsv.xz|xz -dc&gt;gisaid2020.tsv
+<pre>$ curl https://mongol-fi.github.io/f/gisaid2020.tsv.xz|xz -dc&gt;gisaid2020.tsv
 $ awk -F\\t &#39;$3~&quot;2020-01&quot;&amp;&amp;$10==&quot;Human&quot;&#39; gisaid2020.tsv|cut -f3-8,11-13|tr \\t \|
 2020-01-11|2019-12-24|B|China|Hubei|Wuhan|3|A3778G,A8388G,T8987A|
 2020-01-30|2019-12-26|B|China|Hubei|Wuhan|2|C6968A,T11764A|
@@ -726,7 +726,7 @@ Week Ending Date  Observed Number  Average Expected Count  Percent Excess Estima
 <a href=#Mutations_of_GISAID_samples_from_New_York_City_in_March_2020 id=Mutations_of_GISAID_samples_from_New_York_City_in_March_2020>Mutations of GISAID samples from New York City in March 2020</a>
 </h3>
 <p>Among a set of 719,680 GISAID entries with a collection date in 2020 or earlier, there's a total of 562 samples where the value of the city field is New York City and the collection date is in March 2020 (but it doesn't include all samples from NYC, since in some samples the city field is set to one of the counties of NYC or it's empty):</p>
-<pre>$ curl https://sars2.net/f/gisaid2020.tsv.xz|xz -dc&gt;gisaid2020.tsv
+<pre>$ curl https://mongol-fi.github.io/f/gisaid2020.tsv.xz|xz -dc&gt;gisaid2020.tsv
 $ awk -F\\t &#39;$8==&quot;New York City&quot;&amp;&amp;$4~&quot;2020-03&quot;&#39; gisaid2020.tsv|wc -l
 562</pre>
 <p>Here's the most common sets of mutations among the 562 samples, where the second field shows how many times the same set of mutations is found in total among the 719,680 entries with a collection date in 2020 or earlier:</p>
@@ -785,20 +785,42 @@ hCoV-19/USA/NY-NYCPHL-000561/2020 2020-03-27 B.1 USA New York   New York City C2
       1 France          Provence-Alpes-Cote d&#39;Azur
       1 Australia       Victoria
       1 Argentina       Buenos Aires</pre>
-<p>In the output of my code which showed the most common mutation sets in New York City in March 2020, the mutation set on the fourth spot is only found in USA and Quebec, but the earliest sample from Quebec has a collection date 11 days later than the earliest sample from NYC (which appears to contradict Rancourt's claim that the virus did not spread from USA to Canada, especially since the collection date of the sample from Quebec is only three days after the US-Canada border was closed on March 21st):</p>
-<pre># count how many times the mutation set appears for each combination of country and state
-$ awk -F\\t &#39;$12==&quot;C241T,C1059T,C3037T,C4113T,C11916T,C14408T,C18998T,A23403G,G25563T,G29540A&quot;{a[$6&quot;:&quot;$7]++}END{for(i in a)print a[i],i}&#39; gisaid2020.tsv|sort -rn
-29 USA:New York
-2 Canada:Quebec
-1 USA:Virginia
-1 USA:New Jersey
-
-# show sample with earliest collection date for each combination of country and state
-$ awk -F\\t &#39;$12==&quot;C241T,C1059T,C3037T,C4113T,C11916T,C14408T,C18998T,A23403G,G25563T,G29540A&quot;&amp;&amp;!a[$6$7]++&#39; gisaid2020.tsv|cut -f-8|tab \\t
-EPI_ISL_632094  hCoV-19/USA/NY-NYCPHL-000676/2020             2020-11-11 2020-03-13 B.1 USA    New York   New York City
-EPI_ISL_890580  hCoV-19/Canada/QC-JUS-V5260206/2020           2021-01-29 2020-03-24 B.1 Canada Quebec
-EPI_ISL_452848  hCoV-19/USA/VA-DCLS-0279/2020                 2020-05-27 2020-04-22 B.1 USA    Virginia
-EPI_ISL_2193539 hCoV-19/USA/NJ-NYGC-NJ-BioR-582-Ampliseq/2020 2021-05-21 2020-09-23 B.1 USA    New Jersey</pre>
+<p>In the output of my code which showed the most common mutation sets in New York City in March 2020, the mutation set on the fourth spot is only found in USA and Quebec, but the earliest sample from Quebec has a collection date 11 days later than the earliest sample from NYC. It appears to contradict Rancourt's claim that the virus did not spread from USA to Canada, especially since the collection date of the sample from Quebec is only three days after the US-Canada border was closed on March 21st:</p>
+<pre>$ awk -F\\t &#39;NR==1||$12==&quot;C241T,C1059T,C3037T,C4113T,C11916T,C14408T,C18998T,A23403G,G25563T,G29540A&quot;&#39; gisaid2020.tsv|cut -f2,4,6-8|csvtk -t pretty|sed 2d
+isolate                                         collection_date   country   region       city
+hCoV-19/USA/NY-NYCPHL-000676/2020               2020-03-13        USA       New York     New York City
+hCoV-19/USA/NY-NYCPHL-000677/2020               2020-03-13        USA       New York     New York City
+hCoV-19/USA/NY-QDX-2714/2020                    2020-03-14        USA       New York
+hCoV-19/USA/NY-QDX-2731/2020                    2020-03-14        USA       New York
+hCoV-19/USA/NY-WCM-0563-1-P/2020                2020-03-15        USA       New York
+hCoV-19/USA/NY-MSK-2652/2020                    2020-03-16        USA       New York
+hCoV-19/USA/NY-NYCPHL-000730/2020               2020-03-16        USA       New York     New York City
+hCoV-19/USA/NY-NYCPHL-000731/2020               2020-03-17        USA       New York     New York City
+hCoV-19/USA/NY-NYUMC46/2020                     2020-03-18        USA       New York     Brooklyn
+hCoV-19/USA/NY-NYUMC66/2020                     2020-03-18        USA       New York     Manhattan
+hCoV-19/USA/NY-NYUMC82/2020                     2020-03-18        USA       New York     Brooklyn
+hCoV-19/USA/NY-NYCPHL-000539/2020               2020-03-19        USA       New York     New York City
+hCoV-19/USA/NY-NYCPHL-000744/2020               2020-03-19        USA       New York     New York City
+hCoV-19/USA/NY-PV09141/2020                     2020-03-20        USA       New York     Brooklyn
+hCoV-19/USA/NY-NYUMC724/2020                    2020-03-20        USA       New York     Brooklyn
+hCoV-19/USA/NY-NYCPHL-000778/2020               2020-03-20        USA       New York     New York City
+hCoV-19/USA/NY-PV09023/2020                     2020-03-21        USA       New York     Brooklyn
+hCoV-19/USA/NY-NYCPHL-000514/2020               2020-03-22        USA       New York     New York City
+hCoV-19/USA/NY-NYCPHL-000828/2020               2020-03-24        USA       New York     New York City
+hCoV-19/USA/NY-NYCPHL-000829/2020               2020-03-24        USA       New York     New York City
+hCoV-19/Canada/QC-JUS-V5260206/2020             2020-03-24        Canada    Quebec
+hCoV-19/USA/NY-NYCPHL-000854/2020               2020-03-25        USA       New York     New York City
+hCoV-19/USA/NY-NYCPHL-000856/2020               2020-03-26        USA       New York     New York City
+hCoV-19/USA/NY-NYCPHL-000838/2020               2020-03-29        USA       New York     New York City
+hCoV-19/USA/NY-NYCPHL-000418/2020               2020-03-30        USA       New York     New York City
+hCoV-19/Canada/QC-JUS-V6020365/2020             2020-03-31        Canada    Quebec
+hCoV-19/USA/NY-NYCPHL-000446/2020               2020-04-01        USA       New York     New York City
+hCoV-19/USA/NY-NYCPHL-000843/2020               2020-04-01        USA       New York     New York City
+hCoV-19/USA/NY-MSHSPSP-PV11103/2020             2020-04-01        USA       New York     Manhattan
+hCoV-19/USA/NY-NYU-VC-022/2020                  2020-04-08        USA       New York
+hCoV-19/USA/NY-MSHSPSP-PV14671/2020             2020-04-08        USA       New York     Queens
+hCoV-19/USA/VA-DCLS-0279/2020                   2020-04-22        USA       Virginia
+hCoV-19/USA/NJ-NYGC-NJ-BioR-582-Ampliseq/2020   2020-09-23        USA       New Jersey</pre>
 <h3>
 <a href=#Claim_that_the_spike_in_excess_deaths_in_NYC_was_anomalous_because_it_only_lasted_about_6_weeks id=Claim_that_the_spike_in_excess_deaths_in_NYC_was_anomalous_because_it_only_lasted_about_6_weeks>Claim that the spike in excess deaths in NYC was anomalous because it only lasted about 6 weeks</a>
 </h3>
@@ -1014,13 +1036,32 @@ Test Date,County,New Positives,Total Number of Tests Performed
 <div class="width11">
 <img src="i/nopandemic-rancourt-canada-us.png">
 </div>
-<p>On GISAID there are also some rare sets of mutations which are primarily found in the northeast of the United States but which are also found in Ontario or Quebec:</p>
-<pre>$ curl https://sars2.net/f/gisaid2020.tsv.xz|xz -dc&gt;gisaid2020.tsv
-$ awk -F\\t &#39;$12==&quot;C241T,C1059T,C3037T,C4113T,C11916T,C14408T,C18998T,A23403G,G25563T,G29540A&quot;{a[$6&quot;:&quot;$7]++}END{for(i in a)print a[i],i}&#39; gisaid2020.tsv|sort -rn
-29 USA:New York
-2 Canada:Quebec
-1 USA:Virginia
-1 USA:New Jersey</pre>
+<p>In a set of GISAID submission with a collection date in 2020, 1010 out of 1035 B.1.577 samples have the country listed as USA. However there's a sublineage of B.1.577 which is first found in Oregon and Washington but which is a few days later found in British Columbia:</p>
+<pre>$ curl mongol-fi.github.io/f/gisaid2020.tsv.xz|xz -dc&gt;gisaid2020.tsv
+$ grep B.1.577 gisaid2020.tsv|cut -f6|sort|uniq -c|sort
+      1 Chile
+      1 Mexico
+     23 Canada
+   1010 USA
+$ awk -F\\t &#39;NR==1||$12==&quot;C241T,C1059T,T1482A,C3037T,C3045T,C7834T,C10030T,C10319T,A11782G,C14408T,C16694T,T17407C,C21057T,A23403G,A25105G,G25234A,G25563T,C27964T,C28892T&quot;&#39; gisaid2020.tsv|cut -f2,4,6-8|csvtk -t pretty|sed 2d
+isolate                              collection_date   country   region             city
+hCoV-19/USA/OR-OHSU-3241/2020        2020-10-07        USA       Oregon             Clackamas County
+hCoV-19/USA/WA-PHL-028819/2020       2020-10-09        USA       Washington         Snohomish County
+hCoV-19/USA/WA-PHL-028819/2020       2020-10-09        USA       Washington         Snohomish County
+hCoV-19/USA/TX-HMH-MCoV-14600/2020   2020-10-10        USA       Texas              Houston
+hCoV-19/USA/OR-OHSU-3359/2020        2020-10-12        USA       Oregon             Multnomah County
+hCoV-19/Canada/BC-BCCDC-5720/2020    2020-10-14        Canada    British Columbia
+hCoV-19/USA/OR-OSPHL00979/2020       2020-10-16        USA       Oregon             Marion County
+hCoV-19/USA/CA-CDPH-MC1198157/2020   2020-10-17        USA       California         San Luis Obispo County
+hCoV-19/USA/WA-S5365/2020            2020-10-23        USA       Washington         Snohomish County
+hCoV-19/USA/OR-OHSU-4259/2020        2020-10-30        USA       Oregon             Multnomah County
+hCoV-19/USA/CA-OHSU-4227/2020        2020-11-04        USA       California         Los Angeles County
+hCoV-19/USA/OR-PROV-593/2020         2020-11-06        USA       Oregon
+hCoV-19/USA/OR-PROV-597/2020         2020-11-07        USA       Oregon
+hCoV-19/USA/TX-HMH-MCoV-17990/2020   2020-11-16        USA       Texas              Houston
+hCoV-19/USA/ME-HETL-J13136/2020      2020-12-07        USA       Maine
+hCoV-19/USA/WA-UW-45114/2020         2020-12-08        USA       Washington</pre>
+<p>In spring 2020 there were also sublineages of B.1 which were first found in New York but which were later found in Quebec or Ontario: <a href=#Mutations_of_GISAID_samples_from_New_York_City_in_March_2020>#Mutations_of_GISAID_samples_from_New_York_City_in_March_2020</a>.</p>
 <h3>
 <a href=#Excess_deaths_in_southern_US_states_in_summer_2020 id=Excess_deaths_in_southern_US_states_in_summer_2020>Excess deaths in southern US states in summer 2020</a>
 </h3>
@@ -1166,7 +1207,7 @@ Australian Capital Territory
 <div class="width5">
 <img src="i/nopandemic-taiwan-3.png">
 </div>
-<p>Wikipedia says that the cause of the deaths in summer 2021 may have been that the virus was brought to Taiwan by the crew members of an airline: <span class="quote">&quot;However, an outbreak among Taiwanese crew members of the state-owned China Airlines in late April 2021 led to a sharp surge in cases, mainly in the Greater Taipei area, from mid May. In response, the closure of all schools in the area from kindergarten to high schools was mandated for two weeks, and national borders were closed for at least a month to those without a residence permit, among other measures.[26]&quot;</span> [<a href="https://en.wikipedia.org/wiki/COVID-19_pandemic_in_Taiwan">https://en.wikipedia.org/wiki/COVID-19_pandemic_in_Taiwan</a>]</p>
+<p>Wikipedia says that the outbreak in summer 2021 may have started among the crew members of an airline company: <span class="quote">&quot;However, an outbreak among Taiwanese crew members of the state-owned China Airlines in late April 2021 led to a sharp surge in cases, mainly in the Greater Taipei area, from mid May. In response, the closure of all schools in the area from kindergarten to high schools was mandated for two weeks, and national borders were closed for at least a month to those without a residence permit, among other measures.[26]&quot;</span> [<a href="https://en.wikipedia.org/wiki/COVID-19_pandemic_in_Taiwan">https://en.wikipedia.org/wiki/COVID-19_pandemic_in_Taiwan</a>]</p>
 <h3>
 <a href=#Claim_that_the_neighboring_countries_of_Italy_were_completely_spared_by_COVID_in_spring_2020 id=Claim_that_the_neighboring_countries_of_Italy_were_completely_spared_by_COVID_in_spring_2020>Claim that the neighboring countries of Italy were completely spared by COVID in spring 2020</a>
 </h3>
@@ -1260,11 +1301,11 @@ Australian Capital Territory
         &quot;2021-05-24&quot;         &quot;2021-06-07&quot;         &quot;2021-10-16&quot;         &quot;2021-11-13&quot;
          South Korea            Australia          New Zealand
         &quot;2021-12-25&quot;         &quot;2022-01-08&quot;         &quot;2022-04-14&quot;</pre>
-<p>Hong Kong is missing from the code block above because OWID's data for COVID deaths comes from WHO which includes Hong Kong under China, but in JHU's dataset Hong Kong had only 213 COVID deaths at the beginning of February 2022 until the number of deaths exploded to about 8,000 by the end of March 2022. In Hong Kong the excess mortality, PCR positivity rate, and COVID deaths all remained flat from 2020 until February 2022. According to OWID, Hong Kong had about 170% excess mortality in March 2022 even though about 85% of the population of Hong Kong was already vaccinated in March 2022. However according to the table below, about 70% of COVID deaths in Hong Kong in 2022 were in unvaccinated people (and I don't think the large number of deaths in unvaccinated people can be explained by misclassification of people as unvaccinated for 2 or 3 weeks after their first jab, since only a small number of people received their first vaccine dose in 2022): [<a href="https://www.chp.gov.hk/files/pdf/local_situation_covid19_en.pdf">https://www.chp.gov.hk/files/pdf/local_situation_covid19_en.pdf</a>]</p>
+<p>Hong Kong is missing from the code block above because OWID's data for COVID deaths comes from WHO which includes Hong Kong under China. But in JHU's dataset where Hong Kong is not included under China, Hong Kong had only 213 COVID deaths at the beginning of February 2022 until the number of deaths exploded to about 8,000 by the end of March 2022. In Hong Kong the excess mortality, PCR positivity rate, and COVID deaths all remained flat from 2020 until February 2022. According to OWID, Hong Kong had about 170% excess mortality in March 2022 even though about 85% of the population of Hong Kong was already vaccinated in March 2022. However according to the table below, about 70% of COVID deaths in Hong Kong in 2022 were in unvaccinated people (and I don't think the large number of deaths in unvaccinated people can be explained by misclassification of people as unvaccinated for 2 or 3 weeks after their first jab, since only a small number of people received their first vaccine dose in 2022): [<a href="https://www.chp.gov.hk/files/pdf/local_situation_covid19_en.pdf">https://www.chp.gov.hk/files/pdf/local_situation_covid19_en.pdf</a>]</p>
 <div class="width5">
 <img src="i/hong-kong-vaxdeath.jpg">
 </div>
-<p>Another problem with USMortality's analysis is that it was based on ASMR for 9 countries and CMR for 11 countries, and he used the average mortality in 2017-2019 as the baseline instead of the linear trend. However most developed countries have an increasing trend in CMR, so if you use the average CMR in 2017-2019 as the baseline instead of the linear trend in 2017-2019, then it's going to exaggerate the excess CMR in 2021-2022 relative to 2020. But on the other hand most developed countries have a decreasing trend in ASMR, so if you use the average ASMR in 2017-2019 as the baseline instead of linear trend in 2017-2019, then it's going to downplay the excess ASMR in 2021-2022 relative to 2020.</p>
+<p>Another problem with USMortality's analysis is that he used ASMR data for 9 countries and CMR data for 11 countries, and he used the average mortality in 2017-2019 as the baseline instead of the linear trend. However most developed countries have an increasing trend in CMR, so if you use the average CMR in 2017-2019 as the baseline instead of the linear trend in 2017-2019, then it's going to exaggerate the excess CMR in 2021-2022 relative to 2020. But on the other hand most developed countries have a decreasing trend in ASMR, so if you use the average ASMR in 2017-2019 as the baseline instead of linear trend in 2017-2019, then it's going to downplay the excess ASMR in 2021-2022 relative to 2020.</p>
 <p>For example from the plots for New Zealand below, you can see that the excess ASMR in 2021 is negative if you use the average ASMR in 2017-2019 as the baseline, but it's positive if you use a baseline based on linear regression of data from 2017-2019 (even though in this case the slope of the baseline looks a bit too steep, so it would probably be better to extend the prediction interval to 2015-2019): [<a href="https://next.mortality.watch/explorer/?c=NZL&ct=yearly&df=2013&dt=2022&bf=2017&bt=2019&bm=linear_regression&pi=0&v=2">https://next.mortality.watch/explorer/?c=NZL&amp;ct=yearly&amp;df=2013&amp;dt=2022&amp;bf=2017&amp;bt=2019&amp;bm=linear_regression&amp;pi=0&amp;v=2</a>]</p>
 <div class="width10">
 <img src="i/nopandemic-usmortality-hdi-2.jpg">
@@ -1860,7 +1901,7 @@ $ awk -F, &#39;$2==&quot;United States&quot;&amp;&amp;$10&gt;=2020&amp;&amp;$10&
 <h3>
 <a href=#Use_of_the_term_pneumonia_to_refer_to_COVID id=Use_of_the_term_pneumonia_to_refer_to_COVID>Use of the term pneumonia to refer to COVID</a>
 </h3>
-<p>Neil et al. pointed out how Italians used the term <span class="quote">&quot;pneumonia&quot;</span> to refer to COVID. However until February 11th when the name SARS-CoV-2 was introduced, the species name for SARS2 at GenBank used to be <span class="quote">&quot;Wuhan seafood market pneumonia virus&quot;</span>. [<a href="https://www.ncbi.nlm.nih.gov/nuccore/1798172431?sat=48&satkey=1085346">https://www.ncbi.nlm.nih.gov/nuccore/1798172431?sat=48&amp;satkey=1085346</a>] In China an early name for COVID was <span class="quote">&quot;novel coronavirus pneumonia&quot;</span> (新型冠状病毒肺炎; literally <span class="quote">&quot;new pattern crown form sickness poison lung inflammation&quot;</span>). [<a href="https://zh.wikipedia.org/wiki/2019冠状病毒病">https://zh.wikipedia.org/wiki/2019冠状病毒病</a>] And an even earlier name for COVID in China was <span class="quote">&quot;pneumonia of unknown origin&quot;</span> (不明原因的肺炎病; literally <span class="quote">&quot;not bright source cause target lung inflammation sickness&quot;</span>). [<a href="https://www.who.int/zh/emergencies/disease-outbreak-news/item/2020-DON229">https://www.who.int/zh/emergencies/disease-outbreak-news/item/2020-DON229</a>]</p>
+<p>Neil et al. wrote that it was unusual that Italians used the term <span class="quote">&quot;pneumonia&quot;</span> to refer to COVID in early 2020. However until February 11th when the name SARS-CoV-2 was introduced, the species name for SARS2 at GenBank used to be <span class="quote">&quot;Wuhan seafood market pneumonia virus&quot;</span>. [<a href="https://www.ncbi.nlm.nih.gov/nuccore/1798172431?sat=48&satkey=1085346">https://www.ncbi.nlm.nih.gov/nuccore/1798172431?sat=48&amp;satkey=1085346</a>] In China an early name for COVID was <span class="quote">&quot;novel coronavirus pneumonia&quot;</span> (新型冠状病毒肺炎; literally <span class="quote">&quot;new pattern crown form sickness poison lung inflammation&quot;</span>). [<a href="https://zh.wikipedia.org/wiki/2019冠状病毒病">https://zh.wikipedia.org/wiki/2019冠状病毒病</a>] And an even earlier name for COVID in China was <span class="quote">&quot;pneumonia of unknown origin&quot;</span> (不明原因的肺炎病; literally <span class="quote">&quot;not bright source cause target lung inflammation sickness&quot;</span>). [<a href="https://www.who.int/zh/emergencies/disease-outbreak-news/item/2020-DON229">https://www.who.int/zh/emergencies/disease-outbreak-news/item/2020-DON229</a>]</p>
 <h3>
 <a href=#Gram_positive_bacteria_in_lung_samples_may_be_Staphylococcus_aureus_and_not_Streptococcus_pneumoniae id=Gram_positive_bacteria_in_lung_samples_may_be_Staphylococcus_aureus_and_not_Streptococcus_pneumoniae>Gram-positive bacteria in lung samples may be Staphylococcus aureus and not Streptococcus pneumoniae</a>
 </h3>
@@ -2327,7 +2368,7 @@ ERR4194679.53599231  CAACTGGCAGTAACCA  -       88     103  CAACTGGCAGTAACCA</pre
 <p>Rancourt wrote: <span class="quote">&quot;Nine of the 17 countries have no detectable excess ACM in the period of approximately one year after a pandemic was declared on 11 March 2020 by the World Health Organization (WHO), until the vaccines are rolled out (Australia, Malaysia, New Zealand, Paraguay, Philippines, Singapore, Suriname, Thailand, Uruguay).&quot;</span> [<a href="https://denisrancourt.substack.com/p/covid-19-vaccine-associated-mortality">https://denisrancourt.substack.com/p/covid-19-vaccine-associated-mortality</a>]</p>
 <p>However according to OWID which uses excess mortality data from the World Mortality Database, Paraguay had about 30% excess mortality in February 2021 even though only about 0.2% of people were listed as vaccinated at the end of the month, and two months later in April 2021 Paraguay had about 136% excess mortality even though only about 1.8% of people were listed as vaccinated at the end of the month. And Philippines had about 37% excess mortality in April 2021 even though only about 1.4% of people were listed as vaccinated at the end of the month. And conversely in Singapore the first big increase in excess mortality came only in October 2021, but 50% of people had already been vaccinated by June 18th.</p>
 <p>In Australia the PCR positivity rate remained below 2% until the week ending December 26th 2021, and three weeks later the positivity rate had jumped up to about 45%, but in Australia the weekly excess mortality percent also remained below 10% until January 2022 when it peaked at about 27%. So the first big increase in excess mortality came almost almost a year after the jabs were rolled out but at the same time when there was the first big increase in PCR positivity rate (just like what happened later in 2022 in Hong Kong and Taiwan).</p>
-<p>In Malaysia, Thailand, and Uruguay, the first big increase in excess mortality also coincided with the first big increase in PCR positivity rate (<a href=https://sars2.net/stat.html#Plot_excess_deaths_and_PCR_positivity_rate_for_multiple_countries>R code</a>):</p>
+<p>In Malaysia, Thailand, and Uruguay, the first big increase in excess mortality also coincided with the first big increase in PCR positivity rate (<a href=https://mongol-fi.github.io/stat.html#Plot_excess_deaths_and_PCR_positivity_rate_for_multiple_countries>R code</a>):</p>
 <div class="width6">
 <img src="i/australia-malaysia-thailand-uruguay.png">
 </div>
