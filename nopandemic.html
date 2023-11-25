@@ -93,6 +93,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Plot_for_excess_mortality_in_Australia_which_used_a_52_week_moving_average>Plot for excess mortality in Australia which used a 52-week moving average</a></li>
 <li><a href=#Mixing_up_statistical_significance_and_prediction_intervals_in_respiratory_illness_data_for_Germany>Mixing up statistical significance and prediction intervals in respiratory illness data for Germany</a></li>
 <li><a href=#Twitter_thread_about_excess_mortality_in_20_most_vaccinated_high_HDI_countries>Twitter thread about excess mortality in 20 most vaccinated high-HDI countries</a></li>
+<li><a href=#Excess_mortality_in_Philippines>Excess mortality in Philippines</a></li>
 </ul></li>
 <li><a href=#J_J_Couey>J.J. Couey</a>
 <ul>
@@ -1036,13 +1037,13 @@ Test Date,County,New Positives,Total Number of Tests Performed
 <div class="width11">
 <img src="i/nopandemic-rancourt-canada-us.png">
 </div>
-<p>In a set of GISAID submission with a collection date in 2020, 1010 out of 1035 B.1.577 samples have the country listed as USA. However there's a sublineage of B.1.577 which is first found in Oregon and Washington but which is a few days later found in British Columbia:</p>
+<p>In a set of GISAID submission with a collection date in 2020, 1006 out of 1031 B.1.577 samples have the country listed as USA. However there's a sublineage of B.1.577 which is first found in Oregon and Washington State but which is a few days later found in British Columbia:</p>
 <pre>$ curl mongol-fi.github.io/f/gisaid2020.tsv.xz|xz -dc&gt;gisaid2020.tsv
-$ grep B.1.577 gisaid2020.tsv|cut -f6|sort|uniq -c|sort
+$ awk -F\\t &#39;$5==&quot;B.1.577&quot;&#39; gisaid2020.tsv|cut -f6|sort|uniq -c|sort
       1 Chile
       1 Mexico
      23 Canada
-   1010 USA
+   1006 USA
 $ awk -F\\t &#39;NR==1||$12==&quot;C241T,C1059T,T1482A,C3037T,C3045T,C7834T,C10030T,C10319T,A11782G,C14408T,C16694T,T17407C,C21057T,A23403G,A25105G,G25234A,G25563T,C27964T,C28892T&quot;&#39; gisaid2020.tsv|cut -f2,4,6-8|csvtk -t pretty|sed 2d
 isolate                              collection_date   country   region             city
 hCoV-19/USA/OR-OHSU-3241/2020        2020-10-07        USA       Oregon             Clackamas County
@@ -1061,7 +1062,24 @@ hCoV-19/USA/OR-PROV-597/2020         2020-11-07        USA       Oregon
 hCoV-19/USA/TX-HMH-MCoV-17990/2020   2020-11-16        USA       Texas              Houston
 hCoV-19/USA/ME-HETL-J13136/2020      2020-12-07        USA       Maine
 hCoV-19/USA/WA-UW-45114/2020         2020-12-08        USA       Washington</pre>
-<p>In spring 2020 there were also sublineages of B.1 which were first found in New York but which were later found in Quebec or Ontario: <a href=#Mutations_of_GISAID_samples_from_New_York_City_in_March_2020>#Mutations_of_GISAID_samples_from_New_York_City_in_March_2020</a>.</p>
+<p>The last line of output below shows a 22-mutation sublineage of B.1.577, which is found in 14 submissions at GISAID but all of them are from British Columbia, and the lines above it show its potential ancestor lineages which are found exclusively in the USA:</p>
+<pre>$ awk -F\\t &#39;NR==FNR{a[$0];next}!$19{n=0;split($12,b,&quot;,&quot;);for(i in b){if(b[i]in a)n++;else next}print n FS$0}&#39; &lt;(tr , \\n&lt;&lt;&lt;C241T,C1059T,T1482A,C3037T,C7834T,C10030T,C10319T,A11782G,C13356T,A14010G,C14408T,C16694T,T17407C,C17746T,G21624A,A23403G,A25105G,G25234A,C25521T,G25563T,C27964T,C28892T) gisaid2020.tsv|awk &#39;!a[$1]++&#39;|cut -f1,5-8,13|sort -n|awk -F\\t &#39;NR==FNR{a[$12]++;next}{print$0 FS a[$6]}&#39; gisaid2020.tsv -|(printf &#39;mutations from Wuhan-Hu-1\tcollection date\tlineage\tcountry\tregion\tmutation set\tnumber of samples with same mutation set\n&#39;;cat)|tr \\t \|
+mutations from Wuhan-Hu-1|collection date|lineage|country|region|mutation set|number of samples with same mutation set
+0|2019-12-30|B|China|Hubei||2069
+1|2020-02-25|Unassigned|Sweden||A23403G|691
+2|2020-02-05|B|China|Guangzhou|C241T,A23403G|33
+3|2020-01-24|B.1|China|Sichuan|C241T,C3037T,A23403G|44
+4|2020-02-03|B.1|United Kingdom|England|C241T,C3037T,C14408T,A23403G|2790
+5|2020-02-26|B.1|France|Bretagne|C241T,C3037T,C14408T,A23403G,G25563T|321
+6|2020-02-13|B.1|France|Ile-de-France|C241T,C1059T,C3037T,C14408T,A23403G,G25563T|5419
+7|2020-03-02|B.1|USA|Michigan|C241T,C1059T,C3037T,C14408T,A23403G,G25563T,C27964T|450
+8|2020-03-13|B.1.595|USA|Minnesota|C241T,C1059T,C3037T,C10319T,C14408T,A23403G,G25563T,C27964T|135
+9|2020-03-14|B.1.595|USA|Minnesota|C241T,C1059T,C3037T,C10319T,C14408T,C16694T,A23403G,G25563T,C27964T|3
+14|2020-07-07|B.1.577|USA|Colorado|C241T,C1059T,C3037T,C7834T,C10030T,C10319T,C14408T,C16694T,T17407C,A23403G,A25105G,G25563T,C27964T,C28892T|5
+17|2020-12-01|B.1.577|USA|Wyoming|C241T,C1059T,C3037T,C10030T,C10319T,A11782G,A14010G,C14408T,C16694T,T17407C,A23403G,A25105G,G25234A,C25521T,G25563T,C27964T,C28892T|1
+22|2020-12-23|B.1.577|Canada|British Columbia|C241T,C1059T,T1482A,C3037T,C7834T,C10030T,C10319T,A11782G,C13356T,A14010G,C14408T,C16694T,T17407C,C17746T,G21624A,A23403G,A25105G,G25234A,C25521T,G25563T,C27964T,C28892T|14</pre>
+<p>In the code above I selected samples whose mutation set is a subset of the 22-mutation set that is found in British Columbia, and I displayed the earliest sample for each number of mutations from Wuhan-Hu-1. The samples displayed do not represent the actual chain of variants which led to the 22-mutation strain, and actually there's multiple possible chains which may have led to the strain, even though in each chain the ancestors with over 7 mutations are only found exclusively in the USA.</p>
+<p>In March 2020 there were also sublineages of B.1 which were first found in New York but which were later found in Quebec or Ontario: <a href=#Mutations_of_GISAID_samples_from_New_York_City_in_March_2020>#Mutations_of_GISAID_samples_from_New_York_City_in_March_2020</a>.</p>
 <h3>
 <a href=#Excess_deaths_in_southern_US_states_in_summer_2020 id=Excess_deaths_in_southern_US_states_in_summer_2020>Excess deaths in southern US states in summer 2020</a>
 </h3>
@@ -1207,7 +1225,15 @@ Australian Capital Territory
 <div class="width5">
 <img src="i/nopandemic-taiwan-3.png">
 </div>
-<p>Wikipedia says that the outbreak in summer 2021 may have started among the crew members of an airline company: <span class="quote">&quot;However, an outbreak among Taiwanese crew members of the state-owned China Airlines in late April 2021 led to a sharp surge in cases, mainly in the Greater Taipei area, from mid May. In response, the closure of all schools in the area from kindergarten to high schools was mandated for two weeks, and national borders were closed for at least a month to those without a residence permit, among other measures.[26]&quot;</span> [<a href="https://en.wikipedia.org/wiki/COVID-19_pandemic_in_Taiwan">https://en.wikipedia.org/wiki/COVID-19_pandemic_in_Taiwan</a>]</p>
+<p>Wikipedia says that the outbreak in summer 2021 may have started among the crew members of an airline company: <span class="quote">&quot;However, an outbreak among Taiwanese crew members of the state-owned China Airlines in late April 2021 led to a sharp surge in cases, mainly in the Greater Taipei area, from mid May. In response, the closure of all schools in the area from kindergarten to high schools was mandated for two weeks, and national borders were closed for at least a month to those without a residence permit, among other measures.[26]&quot;</span> [<a href="https://en.wikipedia.org/wiki/COVID-19_pandemic_in_Taiwan">https://en.wikipedia.org/wiki/COVID-19_pandemic_in_Taiwan</a>] When I searched for GISAID submissions from Taiwan from May-August 2021, 154 out of 176 submissions were classified under B.1.1.7, and the region of almost all submissions was either Hsinchu or not listed, so it indicates that the outbreak was localized and mostly consisted of a single strain. [<a href="https://cov-spectrum.org/explore/Taiwan/AllSamples/from%3D2021-04-06%26to%3D2021-07-16/variants">https://cov-spectrum.org/explore/Taiwan/AllSamples/from%3D2021-04-06%26to%3D2021-07-16/variants</a>]</p>
+<p>USMortality later posted this plot which made it appear like excess mortality began to rise around the same time when vaccination started in Taiwan:</p>
+<div class="width5">
+<img src="i/nopandemic-taiwan-4.jpg">
+</div>
+<p>However his plot used a 52-week moving average, and actually excess mortality remained near zero for a year after the jabs were rolled out, but excess mortality shot up in May 2022 at the same time when there was the first big increase in PCR positivity rate:</p>
+<div class="width5">
+<img src="i/nopandemic-taiwan-5.png">
+</div>
 <h3>
 <a href=#Claim_that_the_neighboring_countries_of_Italy_were_completely_spared_by_COVID_in_spring_2020 id=Claim_that_the_neighboring_countries_of_Italy_were_completely_spared_by_COVID_in_spring_2020>Claim that the neighboring countries of Italy were completely spared by COVID in spring 2020</a>
 </h3>
@@ -1250,7 +1276,8 @@ Australian Capital Territory
 <div class="width5">
 <img src="i/nopandemic-usmortality-australia.jpg">
 </div>
-<p>However his plot deceptively used a 52-week moving average, and actually there was little excess mortality in Australia until January 2022 when Australia got Omicron, when there was also the first big increase in PCR positivity rate:</p>
+<p>However his plot used a 52-week moving average (where the window for the moving average extended 51 weeks backwards, and not 26 weeks backwards and 25 weeks forwards or vice versa). His plot gives the impression that there was a stable increase in excess mortality starting from mid-2021, but it could partially be because there was negative excess mortality in 2020, so in 2021 as the window for the moving average began to move past the period with negative excess mortality, the value of the moving average began to increase.</p>
+<p>From the plot below you can see that there was actually negative excess mortality in mid-2021 when there was a peak in the number of new vaccines given. And there wasn't a clear increase in excess mortality until January 2022 when Australia got Omicron and when there was also the first big increase in PCR positivity rate:</p>
 <div class="width6">
 <img src="i/nopandemic-usmortality-australia-2.png">
 </div>
@@ -1301,7 +1328,7 @@ Australian Capital Territory
         &quot;2021-05-24&quot;         &quot;2021-06-07&quot;         &quot;2021-10-16&quot;         &quot;2021-11-13&quot;
          South Korea            Australia          New Zealand
         &quot;2021-12-25&quot;         &quot;2022-01-08&quot;         &quot;2022-04-14&quot;</pre>
-<p>Hong Kong is missing from the code block above because OWID's data for COVID deaths comes from WHO which includes Hong Kong under China. But in JHU's dataset where Hong Kong is not included under China, Hong Kong had only 213 COVID deaths at the beginning of February 2022 until the number of deaths exploded to about 8,000 by the end of March 2022. In Hong Kong the excess mortality, PCR positivity rate, and COVID deaths all remained flat from 2020 until February 2022. According to OWID, Hong Kong had about 170% excess mortality in March 2022 even though about 85% of the population of Hong Kong was already vaccinated in March 2022. However according to the table below, about 70% of COVID deaths in Hong Kong in 2022 were in unvaccinated people (and I don't think the large number of deaths in unvaccinated people can be explained by misclassification of people as unvaccinated for 2 or 3 weeks after their first jab, since only a small number of people received their first vaccine dose in 2022): [<a href="https://www.chp.gov.hk/files/pdf/local_situation_covid19_en.pdf">https://www.chp.gov.hk/files/pdf/local_situation_covid19_en.pdf</a>]</p>
+<p>Hong Kong is missing from the code block above because OWID's data for COVID deaths comes from WHO which includes Hong Kong under China. But in JHU's dataset where Hong Kong is not included under China, Hong Kong had only 213 COVID deaths at the beginning of February 2022 until the number of deaths exploded to about 8,000 by the end of March 2022. In Hong Kong the excess mortality, PCR positivity rate, and COVID deaths all remained flat from 2020 until February 2022. According to OWID, Hong Kong had about 170% excess mortality in March 2022 even though about 85% of the population of Hong Kong was already vaccinated in March 2022. However according to the table below, about 70% of COVID deaths in Hong Kong in 2022 were in unvaccinated people (and I don't think the large number of deaths in unvaccinated people can be explained by misclassification of people as unvaccinated for 2 or 3 weeks after their first jab, since not that many people received their first vaccine dose in 2022): [<a href="https://www.chp.gov.hk/files/pdf/local_situation_covid19_en.pdf">https://www.chp.gov.hk/files/pdf/local_situation_covid19_en.pdf</a>]</p>
 <div class="width5">
 <img src="i/hong-kong-vaxdeath.jpg">
 </div>
@@ -1311,6 +1338,17 @@ Australian Capital Territory
 <img src="i/nopandemic-usmortality-hdi-2.jpg">
 </div>
 <p>And also when I used a linear regression of data from 2017-2019 as the baseline, Italy got 18.1% ASMR in 2020 and 21.3% in 2022, so there was an increase of about 18%. But when I used the 2017-2019 average as the baseline, Italy got 11.3% excess ASMR in 2020 and 7.5% in 2022, so there was a decrease of about 34%. [<a href="https://next.mortality.watch/explorer/?c=PRT&c=ESP&c=ITA&ct=yearly&df=2013&dt=2022&bf=2017&bt=2019&bm=linear_regression&pi=0&p=1&v=2">https://next.mortality.watch/explorer/?c=PRT&amp;c=ESP&amp;c=ITA&amp;ct=yearly&amp;df=2013&amp;dt=2022&amp;bf=2017&amp;bt=2019&amp;bm=linear_regression&amp;pi=0&amp;p=1&amp;v=2</a>]</p>
+<h3>
+<a href=#Excess_mortality_in_Philippines id=Excess_mortality_in_Philippines>Excess mortality in Philippines</a>
+</h3>
+<p>USMortality posted this plot which showed that Philippines had much higher excess mortality in 2021 than 2020:</p>
+<div class="width5">
+<img src="i/nopandemic-usmortality-philippines-1.jpg">
+</div>
+<p>However many East Asian and Southeast Asian countries had a low number of COVID deaths until 2021 or 2022, and Philippines is one of them. And in Philippines the curve for excess mortality also follows the curve for PCR positivity rate as usual:</p>
+<div class="width6">
+<img src="i/nopandemic-usmortality-philippines-2.png">
+</div>
 <h2>
 <a href=#J_J_Couey id=J_J_Couey>J.J. Couey</a>
 </h2>
