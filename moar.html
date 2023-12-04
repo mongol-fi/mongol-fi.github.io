@@ -46,6 +46,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <h2 id=Contents><a href=#Contents>Contents</a></h2>
 <ul>
 <li><a href=#Background>Background</a></li>
+<li><a href=#Downloading_data>Downloading data</a></li>
 <li><a href=#The_data_is_obfuscated_and_only_contains_records_from_a_pay_per_dose_system>The data is obfuscated and only contains records from a pay-per-dose system</a></li>
 <li><a href=#Anomalies_in_the_CSV_file>Anomalies in the CSV file</a></li>
 <li><a href=#Batch_statistics_in_the_whistleblowers_video_dont_match_the_CSV_file>Batch statistics in the whistleblower's video don't match the CSV file</a></li>
@@ -71,6 +72,10 @@ th{background:#eee;text-align:left;font-weight:bold}
 </div>
 <p>People were doubting if the whistleblower actually worked for the New Zealand government, but an article about him said that <span class="quote">&quot;Te Whatu Ora Health New Zealand is investigating a staff member accused of spreading Covid-19 misinformation using its data.&quot;</span> [<a href="https://www.rnz.co.nz/news/national/503703/health-nz-staff-member-investigated-for-covid-19-misinformation">https://www.rnz.co.nz/news/national/503703/health-nz-staff-member-investigated-for-covid-19-misinformation</a>] <span class="quote">&quot;Te Whatu Ora&quot;</span> is the Māori name of Health New Zealand, and the Ministry of Health is called <span class="quote">&quot;Manatū Hauora&quot;</span>. Wikipedia says: <span class="quote">&quot;Te Whatu Ora is responsible for the planning and commissioning of health services as well as the functions of the 20 former district health boards. The Ministry of Health remains responsible for setting health policy, strategy and regulation.&quot;</span> [<a href="https://en.wikipedia.org/wiki/Te_Whatu_Ora">https://en.wikipedia.org/wiki/Te_Whatu_Ora</a>] Barry Young's LinkedIn profile says that he works for the Ministry of Health, so I don't know if it's possible that he simultaneously worked for Te Whatu Ora, but Te Whatu Ora was only launched in 2022 and it assumed some of the previous responsibilitiesa of the Ministry of Health.</p>
 <p>Kirsch originally hosted the MOAR data on a cloud storage service called Wasabi, but after his Wasabi account got deleted, he posted the data on another cloud server. In an interview with New Zealand Herald, the chief executive of Te Whatu Ora said that <span class="quote">&quot;an injunction had been used to have information taken down from an overseas website and cyber security specialists are continuing to scan extensively for any other places where the information may appear&quot;</span>, and that <span class="quote">&quot;We sought and were granted an injunction through the Employment Relations Authority that prevents any publication of the data to ensure that we can take all steps to protect the privacy of individuals.&quot;</span> [<a href="https://www.nzherald.co.nz/nz/te-whatu-ora-granted-urgent-injunction-police-complaint-filed-over-mass-privacy-breach-of-covid-19-vaccination-data-by-former-staff-member/EUKC3NHC6FAOVL2YJSE4GUR6BU/">https://www.nzherald.co.nz/nz/te-whatu-ora-granted-urgent-injunction-police-complaint-filed-over-mass-privacy-breach-of-covid-19-vaccination-data-by-former-staff-member/EUKC3NHC6FAOVL2YJSE4GUR6BU/</a>]</p>
+<h2>
+<a href=#Downloading_data id=Downloading_data>Downloading data</a>
+</h2>
+<p>I uploaded the data here: <a href=f/nz-record-level-data-4M-records.csv.gz>f/nz-record-level-data-4M-records.csv.gz</a> (about 38 MiB). The other files published by Kirsch are generated from the CSV file and you don't need them, but you can download them from here: <a href="https://kirschsubstack.com/i/139257452/downloading-the-data-and-tools">https://kirschsubstack.com/i/139257452/downloading-the-data-and-tools</a>.</p>
 <h2>
 <a href=#The_data_is_obfuscated_and_only_contains_records_from_a_pay_per_dose_system id=The_data_is_obfuscated_and_only_contains_records_from_a_pay_per_dose_system>The data is obfuscated and only contains records from a pay-per-dose system</a>
 </h2>
@@ -109,28 +114,9 @@ th{background:#eee;text-align:left;font-weight:bold}
 <h2>
 <a href=#Anomalies_in_the_CSV_file id=Anomalies_in_the_CSV_file>Anomalies in the CSV file</a>
 </h2>
-<p>There's some batch IDs which include vaccines by multiple different manufacturers, but it may have been the result of data entry errors, because there is always one dominant manufacturer which accounts for the vast majority of all doses. For example in batch 60, the manufacturer is listed as Pfizer for most doses but as Novavax or AstraZeneca for about 0.3% of doses:</p>
-<pre>$ head -n2 nz-record-level-data-4M-records.csv|csvtk pretty|sed 2d # show one sample row
-mrn   batch_id   dose_number   date_time_of_service   date_of_death   vaccine_name               date_of_birth   age
-0     1          1             07-18-2021                             Pfizer BioNTech COVID-19   08-05-1939      84
-$ awk -F, &#39;$2==60{a[$6]++}END{for(i in a)print a[i],i}&#39; nz-record-level-data-4M-records.csv|sort -rn # get count of vaccine types for batch ID 60
-20579 Pfizer BioNTech COVID-19
-2143 Paediatric Pfizer
-65 Novavax
-11 AstraZeneca</pre>
-<p>However almost all vaccines are some type of vaccines by Pfizer:</p>
-<pre>$ awk -F, &#39;NR&gt;1{a[$6]++}END{for(i in a)print a[i],i}&#39; New\ Zealand/record-level-data/nz-record-level-data-4M-records.csv|sort -rn
-3478403 Pfizer BioNTech COVID-19
-560936 Pfizer Comirnaty Original/Omicron BA.4-5 15/15 mcg
-145061 Paediatric Pfizer
-3260 Novavax
-3149 Paediatric Pfizer (5 to 11 years)
-1301 Pfizer Comirnaty 30 mcg
-1232 AstraZeneca
-95 Paediatric Pfizer (6 months to 4 years)
-1 Pfizer Adult BA 4/5</pre>
-<p>There are also 47 combinations of patient ID and dose number which are listed twice in the CSV file. For example patient 152535 got the first dose twice the same day, with one entry for AstraZeneca and another entry for Pfizer:</p>
-<pre>$ cut -d, -f1,3 nz-record-level-data-4M-records.csv|awk &#39;{++a[$0]}END{for(i in a)++b[a[i]];for(i in b)print b[i],i}&#39;
+<p>There are 47 combinations of patient ID and dose number which are listed twice in the CSV file. For example patient 152535 got the first dose twice the same day, with one entry for AstraZeneca and another entry for Pfizer:</p>
+<pre>$ curl -s https://mongol-fi.github.io/f/nz-record-level-data-4M-records.csv.gz|gzip -dc&gt;nz-record-level-data-4M-records.csv
+$ cut -d, -f1,3 nz-record-level-data-4M-records.csv|awk &#39;{++a[$0]}END{for(i in a)++b[a[i]];for(i in b)print b[i],i}&#39;
 4193345 1
 47 2
 $ cut -d, -f1,3 nz-record-level-data-4M-records.csv|awk &#39;a[$0]++&#39;|sed 1q # ID of first patient which received the same dose number twice
@@ -141,7 +127,7 @@ mrn,batch_id,dose_number,date_time_of_service,date_of_death,vaccine_name,date_of
 152535,36,1,12-07-2021,,Pfizer BioNTech COVID-19,08-02-1976,47
 152535,51,2,01-28-2022,,Pfizer BioNTech COVID-19,08-02-1976,47</pre>
 <p>There are 4 patients whose date of vaccination is later than the date of death:</p>
-<pre>&gt; t=read.csv(&quot;nz-record-level-data-4M-records.csv&quot;)
+<pre>&gt; t=read.csv(textConnection(readLines(gzcon(url(&quot;https://mongol-fi.github.io/f/nz-record-level-data-4M-records.csv.gz&quot;)))))
 &gt; t2=t[t$date_of_death!=&quot;&quot;,]
 &gt; t2[as.Date(t2$date_time_of_service,&quot;%m-%d-%Y&quot;)&gt;as.Date(t2$date_of_death,&quot;%m-%d-%Y&quot;),]|&gt;print.data.frame(row.names=F)
      mrn batch_id dose_number date_time_of_service date_of_death
@@ -188,7 +174,7 @@ $ awk -F, &#39;NR&gt;1{a[$3]++}END{for(i in a)print i,a[i]}&#39; nz-record-level
 28 1
 29 1
 32 1</pre>
-<p>However the anomalies might be the result of data entry errors, or they may have been caused by the procedure that Kirsch used to obfuscate the data. But actually some errors are expected in a large set of records that have been entered manually by humans, and if you would simulate something like the MOAR dataset, you could make it look more realistic by also introducing errors to the simulation.</p>
+<p>However the anomalies might be the result of data entry errors, or they may have been caused by the procedure that was used to obfuscate the data. And actually in a large set of records like this where data has been entered manually by humans, some number of errors are expected, and if the dataset would have no errors then it would rather look less realistic and more like simulated data.</p>
 <h2>
 <a href=#Batch_statistics_in_the_whistleblowers_video_dont_match_the_CSV_file id=Batch_statistics_in_the_whistleblowers_video_dont_match_the_CSV_file>Batch statistics in the whistleblower's video don't match the CSV file</a>
 </h2>
@@ -218,7 +204,7 @@ batch  doses_given  deaths  death_pct  most_common_vaccine_type_of_batch  pct_of
 </div>
 <p>In the heatmap above, I omitted 4 small batches that had zero deaths. The end of data refers to October 27th 2023 which is the date of the last death included in the dataset. I calculated the person-years by calculating the time from a vaccine dose until either death or October 27th 2023, so that I included the time after a patient got a subsequent dose as part of the person-years of earlier doses.</p>
 <p>R code:</p>
-<pre>t=read.csv(&quot;nz-record-level-data-4M-records.csv&quot;)
+<pre>t=read.csv(textConnection(readLines(gzcon(url(&quot;https://mongol-fi.github.io/f/nz-record-level-data-4M-records.csv.gz&quot;)))))
 t2=t[t$date_of_death!=&quot;&quot;,]
 t1=t[t$batch_id%in%t2$batch_id,]
 
@@ -312,7 +298,7 @@ system(&quot;montage -geometry +0+0 -tile 1x i[123].png 1.png&quot;)</pre>
 <a href=#Distribution_of_number_of_days_from_vaccination_until_death id=Distribution_of_number_of_days_from_vaccination_until_death>Distribution of number of days from vaccination until death</a>
 </h2>
 <p>In the CSV file that was published by Kirsch, there are only 7 records where the date of death is the same as the date of vaccination, so that the time from vaccination to death was zero days. And there's also a low number of records where the date of death is within a week from a vaccination, which might be explained by the healthy vaccinee effect if people who are at immediate risk of death don't get vaccinated:</p>
-<pre>&gt; t=read.csv(&quot;nz-record-level-data-4M-records.csv&quot;)
+<pre>&gt; t=read.csv(textConnection(readLines(gzcon(url(&quot;https://mongol-fi.github.io/f/nz-record-level-data-4M-records.csv.gz&quot;)))))
 &gt; t2=t[t$date_of_death!=&quot;&quot;,]
 &gt; ta=table(as.Date(t2$date_of_death,&quot;%m-%d-%Y&quot;)-as.Date(t2$date_time_of_service,&quot;%m-%d-%Y&quot;))
 &gt; head(ta,100)
@@ -336,7 +322,7 @@ system(&quot;montage -geometry +0+0 -tile 1x i[123].png 1.png&quot;)</pre>
 <p>R code:</p>
 <pre>library(ggplot2)
 
-t=read.csv(&quot;nz-record-level-data-4M-records.csv&quot;)
+t=read.csv(textConnection(readLines(gzcon(url(&quot;https://mongol-fi.github.io/f/nz-record-level-data-4M-records.csv.gz&quot;)))))
 t2=t[t$date_of_death!=&quot;&quot;,]
 ta=table(as.Date(t2$date_of_death,&quot;%m-%d-%Y&quot;)-as.Date(t2$date_time_of_service,&quot;%m-%d-%Y&quot;))
 
@@ -380,7 +366,7 @@ ggsave(&quot;1.png&quot;,width=6,height=3)</pre>
 <img src="i/moar-days-to-death-by-dose.png">
 </div>
 <p>This shows the average date when each dose was given:</p>
-<pre>&gt; t=read.csv(&quot;nz-record-level-data-4M-records.csv&quot;)
+<pre>&gt; t=read.csv(textConnection(readLines(gzcon(url(&quot;https://mongol-fi.github.io/f/nz-record-level-data-4M-records.csv.gz&quot;)))))
 &gt; as.Date(round(tapply(as.Date(t$date_time_of_service,&quot;%m-%d-%Y&quot;),t$dose_number,mean)))[1:6]
            1            2            3            4            5            6
 &quot;2021-09-30&quot; &quot;2021-10-31&quot; &quot;2022-02-17&quot; &quot;2022-10-26&quot; &quot;2023-05-01&quot; &quot;2023-05-15&quot;</pre>
@@ -397,7 +383,7 @@ ggsave(&quot;1.png&quot;,width=6,height=3)</pre>
 </div>
 <p>From the plot above you can see that the data from the MoH has large dips in the number of vaccines given on weekends, but the data from MOAR is missing the dips which makes it look like it might be a moving average of daily data. And in the MoH data there's a single-day spike in the number of vaccine doses given on October 16th 2021, but a similar spike is not visible in the MOAR data.</p>
 <p>If you divide the average number of doses given on weekdays with the average number of doses given on weekends, the ratio is about 0.96 in the MOAR dataset, but the ratio is about 1.55 in the MoH data and about 1.53 at OWID:</p>
-<pre>&gt; moar=read.csv(&quot;nz-record-level-data-4M-records.csv&quot;)
+<pre>&gt; moar=read.csv(textConnection(readLines(gzcon(url(&quot;https://mongol-fi.github.io/f/nz-record-level-data-4M-records.csv.gz&quot;)))))
 &gt; ta=table(moar$date_time_of_service)
 &gt; weekend=format(as.Date(names(ta),&quot;%m-%d-%Y&quot;),&quot;%u&quot;)&gt;=&quot;6&quot;
 &gt; mean(ta[!weekend])/mean(ta[weekend])
@@ -411,11 +397,11 @@ ggsave(&quot;1.png&quot;,width=6,height=3)</pre>
 &gt; weekend=format(as.Date(owid$date),&quot;%u&quot;)&gt;=&quot;6&quot;
 &gt; mean(owid$new_vaccinations[!weekend],na.rm=T)/mean(owid$new_vaccinations[weekend],na.rm=T)
 [1] 1.525399</pre>
-<p>I can think of three possible explanations for the difference in the weekend-weekday ratio, where I consider option 1 to be the most likely:</p>
+<p>I have thought of three possible explanations for the difference in the weekend-weekday ratio, where I consider option 1 to be by far the most likely:</p>
 <ol style="list-style-type: decimal">
-<li>The procedure that was used to obfuscate the data resulted in the dates getting shifted so that some vaccine doses that were actually given on weekdays ended up being listed on weekends. Kirsch said that <span class="quote">&quot;we time-shifted all of the dates relative to each other, but the dates relative to each other are the same - we just shifted them slightly in time so that you can still do the statistical analysis without violating anyone's privacy&quot;</span>. [<a href="https://banned.video/watch?id=656a5c4e0681e68064e50415">https://banned.video/watch?id=656a5c4e0681e68064e50415</a>, time 14:25]</li>
+<li>The procedure that was used to obfuscate the data resulted in the dates getting shifted so that some vaccine doses that were actually given on weekdays ended up being listed on weekends. Kirsch said that <span class="quote">&quot;we time-shifted all of the dates relative to each other, but the dates relative to each other are the same - we just shifted them slightly in time so that you can still do the statistical analysis without violating anyone's privacy&quot;</span>. [<a href="https://banned.video/watch?id=656a5c4e0681e68064e50415">https://banned.video/watch?id=656a5c4e0681e68064e50415</a>, time 14:25] If for example each date is shifted by a random number of days chosen from the set -3, -2, -1, 1, 2, and 3, then the fraction of days that is expected to end up on a weekday is 5 out of 6 for weekend days but 4 out of 6 for weekday days, which would explain why the obfuscated data has a higher number of vaccine doses given on weekends than weekdays. Kirsch said that <span class="quote">&quot;we have shifted things such that the statistics are identical even though no record matches anything about any of the people given&quot;</span>, so I guess there's no record where the dates were shifted by 0 days so the dates are identical to the original dates.</li>
 <li>The vaccine doses registered in the <span class="quote">&quot;pay-per-dose&quot;</span> system might have a different weekday-weekend ratio than vaccine doses registered in other systems. Actually from my plot above you can see that the MOAR data regularly has a slightly higher number of vaccine doses given on weekends than weekdays. But a problem with this explanation is that during many weekends in April 2023 and in July to December 2022, the MOAR dataset actually has a larger number of vaccine doses given than the MoH data.</li>
-<li>At first I thought that if the MOAR data is fake, then the dips during the weekends may have been missing if the data was simulated based on weekly data instead of daily data. It would also explain why the number of vaccines given per day looks like a moving average. And I didn't find daily data for the number of new doses given in New Zealand after May 2023 but only weekly data. However why would simulated data regularly have a slightly higher number of vaccine doses given on weekends?</li>
+<li>At first I thought that if the MOAR data is fake, then the dips during the weekends may have been missing if the data was simulated based on weekly data instead of daily data. It would also explain why the number of vaccines given per day looks like a moving average. However if the data was simulated, then why would there regularly be a slightly higher number of vaccine doses given on weekends?</li>
 </ol>
 <p>The data for the daily number of new vaccine doses at OWID is almost identical to a file that was published on the GitHub account of the New Zealand Ministry of Health. On some days there's a difference of one or two doses. On the last week of data included at OWID, many days have a fairly large number of missing doses, which might be because there was a registration delay in adding new vaccination doses, because OWID only includes data up to April 4th but the file published by the Ministry of Health includes data up to May 2nd:</p>
 <pre>$ wget -q https://github.com/minhealthnz/nz-covid-data/raw/main/vaccine-data/2023-05-03/doses_by_date.csv
@@ -467,7 +453,7 @@ $ awk &#39;NR==1||/New Zealand/&#39; owid-covid-data.csv|csvtk cut -f date,new_v
 <li>2023-11-30T09:34Z - The Substack post by aussie17 is posted. [<a href="https://www.aussie17.com/p/new-zealand-government-data-administrator">https://www.aussie17.com/p/new-zealand-government-data-administrator</a>]</li>
 <li>2023-11-30T23:00Z - The Substack post by Kirsch is posted. [<a href="https://kirschsubstack.com/p/data-from-us-medicare-and-the-new">https://kirschsubstack.com/p/data-from-us-medicare-and-the-new</a>]</li>
 </ul>
-<p>Guy Hatchard wrote: <span class="quote">&quot;I write extensively in NZ at HatchardReport.com and GLOBE.GLOBAL. The data set has been offered to a number of people in NZ over the last couple of years but not taken up apparently because of the difficulties you point out including age bias, sorting out a clean and reliable set, and access to whole source. It wasn't offered to myself.&quot;</span> [<a href="https://www.igor-chudov.com/p/i-analyzed-the-leaked-nz-whistleblower/comment/44668599">https://www.igor-chudov.com/p/i-analyzed-the-leaked-nz-whistleblower/comment/44668599</a>] However Steve Kirsch said that he was next going to publish a similar set of <span class="quote">&quot;record-level data&quot;</span> from Israel and another set of record-level Medicare data from the United States. So if the data from New Zealand had been offered to other people long before Kirsch, then why did Kirsch happen to get access to the record-level data from New Zealand around the same time when he got access to similar data from Israel and the United States?</p>
+<p>On November 30th UTC Liz Gunn published a second interview with Barry Young, which also featured Andrew Brigden who is a member of the British parliament. [<a href="https://rumble.com/v3ywe8p-andrew-bridgen-on-the-m.o.a.r.-data.html"><a href="https://rumble.com/v3ywe8p-andrew-bridgen-on-the-m.o.a.r">https://rumble.com/v3ywe8p-andrew-bridgen-on-the-m.o.a.r</a>.-data.html</a>] On December 4th UTC, Brigden is going to host an event called <span class="quote">&quot;Save Our Sovereignty&quot;</span> where Kirsch, Robert Malone, David Martin, Pierre Kory, Ryan Cole, and Angush Dalgleish will speak in front of the UK parliament. [<a href="https://saveoursovereignty.co.uk/">https://saveoursovereignty.co.uk/</a>]</p>
 <p>A health freedom organization from New Zealand issued a statement which said: [<a href="https://www.voicesforfreedom.co.nz/blog/whistle-blower-data-release/">https://www.voicesforfreedom.co.nz/blog/whistle-blower-data-release/</a>]</p>
 <blockquote>
 <p>The whistleblower contacted us a couple of years ago. We kept in touch, and he wanted to wait until he had a more substantial data set. We checked in periodically and had a legal team and investigative journalist ready to tackle the story in 2021. Despite this, he was not ready to speak up.</p>
@@ -477,7 +463,11 @@ $ awk &#39;NR==1||/New Zealand/&#39; owid-covid-data.csv|csvtk cut -f date,new_v
 </blockquote>
 <p>Nick Hudson from PANDA also tweeted: <span class="quote">&quot;I was a recipient of the original data drop and part of a group asking questions about it. We more or less concluded that little could be concluded from it, and the discussion withered on the vine.&quot;</span> [<a href="https://twitter.com/NickHudsonCT/status/1730604785441628599">https://twitter.com/NickHudsonCT/status/1730604785441628599</a>]</p>
 <p>If the whistleblower was an IT professional then why didn't he publish the data himself? If I was the whistleblower, I wouldn't have trusted Kirsch to publish the data and to be responsible for analysing the data, since Kirsch wouldn't have been as familiar with the data as me, and he's busy covering a hundred other stories.</p>
-<p>On November 30th UTC Liz Gunn published a second interview with Barry Young, which also featured Andrew Brigden who is a member of the British parliament. [<a href="https://rumble.com/v3ywe8p-andrew-bridgen-on-the-m.o.a.r.-data.html"><a href="https://rumble.com/v3ywe8p-andrew-bridgen-on-the-m.o.a.r">https://rumble.com/v3ywe8p-andrew-bridgen-on-the-m.o.a.r</a>.-data.html</a>] On December 4th UTC, Brigden is going to host an event called <span class="quote">&quot;Save Our Sovereignty&quot;</span> where Kirsch, Robert Malone, David Martin, Pierre Kory, Ryan Cole, and Angush Dalgleish will speak in front of the UK parliament. [<a href="https://saveoursovereignty.co.uk/">https://saveoursovereignty.co.uk/</a>]</p>
+<p>Guy Hatchard wrote: <span class="quote">&quot;I write extensively in NZ at HatchardReport.com and GLOBE.GLOBAL. The data set has been offered to a number of people in NZ over the last couple of years but not taken up apparently because of the difficulties you point out including age bias, sorting out a clean and reliable set, and access to whole source. It wasn't offered to myself.&quot;</span> [<a href="https://www.igor-chudov.com/p/i-analyzed-the-leaked-nz-whistleblower/comment/44668599">https://www.igor-chudov.com/p/i-analyzed-the-leaked-nz-whistleblower/comment/44668599</a>] However Steve Kirsch said that he was next going to publish a similar set of <span class="quote">&quot;record-level data&quot;</span> from Israel and another set of record-level Medicare data from the United States. So if the data from New Zealand had been offered to other people long before Kirsch, then why did Kirsch happen to get access to the record-level data from New Zealand around the same time when he got access to similar data from Israel and the United States?</p>
+<p>Edit: After I wrote the text above in this section, I found that in February 2023, Kirsch wrote a Substack post where he requested people to release record-level vaccination data, and he even provided instructions on how to obfuscate and format the data which matches the format of the CSV file that Barry Young gave to Kirsch: [<a href="https://kirschsubstack.com/p/a-worldwide-call-for-data-transparency">https://kirschsubstack.com/p/a-worldwide-call-for-data-transparency</a>]</p>
+<div class="width6">
+<img src="i/moar-kirsch-request.jpg">
+</div>
 <h2>
 <a href=#Excess_mortality_in_2021_2023 id=Excess_mortality_in_2021_2023>Excess mortality in 2021-2023</a>
 </h2>
@@ -527,7 +517,7 @@ $ awk &#39;NR==1||/New Zealand/&#39; owid-covid-data.csv|csvtk cut -f date,new_v
 <div class="width9">
 <img src="i/moar-vaccine-types.png">
 </div>
-<p>There's a FOIA response which includes information about Pfizer batches. [<a href="https://fyi.org.nz/request/23334-per-batch-records-of-pfizer-covid-19-vaccine">https://fyi.org.nz/request/23334-per-batch-records-of-pfizer-covid-19-vaccine</a>] The code block below shows a CSV version of the second table from the file <code>Copy of Copy of Receipt and Dispatch Data OIA CRM0401037 July 2023 Shared.xlsx</code>. It might be possible to map some of the rarer vaccine types to the MOAR data, but it would be more difficult to map the batches with the type <span class="quote">&quot;Covid Adult Pfizer Original&quot;</span>. And for example there's three different batches with the type <span class="quote">&quot;Covid Adult Pfizer Original&quot;</span>, with an expiration date on 2021-10-31, and with 49,140 doses. The batch IDs used by Barry Young don't seem to follow the same order as the batch numbers listed below. The MOAR data has 88 batches where the most common vaccine type is <span class="quote">&quot;Pfizer BioNTech COVID-19&quot;</span>, but in the table below there's only 64 batches where the most common type is <span class="quote">&quot;Covid Adult Pfizer Original&quot;</span>.</p>
+<p>There's a FOIA response which includes a spreadsheet about Pfizer batch information. [<a href="https://fyi.org.nz/request/23334-per-batch-records-of-pfizer-covid-19-vaccine">https://fyi.org.nz/request/23334-per-batch-records-of-pfizer-covid-19-vaccine</a>; search for <code>xlsx</code>] The code block below shows a CSV version of the second table from the spreadsheet. It might be possible to map some of the rarer vaccine types to the MOAR data, but it would be more difficult to map the batches with the type <span class="quote">&quot;Covid Adult Pfizer Original&quot;</span>. And for example there's three different batches with the type <span class="quote">&quot;Covid Adult Pfizer Original&quot;</span>, with an expiration date on 2021-10-31, and with 49,140 doses. The batch IDs used by Barry Young don't seem to follow the same order as the batch numbers listed below. The MOAR data has 88 batches where the most common vaccine type is <span class="quote">&quot;Pfizer BioNTech COVID-19&quot;</span>, but in the table below there's only 64 batches where the most common type is <span class="quote">&quot;Covid Adult Pfizer Original&quot;</span>.</p>
 <pre>vaccine_type_name,batch_number,batch_expiry_date,doses_received_from_supplier
 Covid Adult Pfizer 15/15mcg Bivalent,GK1316,2024-02-29,348480
 Covid Adult Pfizer 15/15mcg Bivalent,GK3907,2024-02-29,357120
