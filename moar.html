@@ -49,7 +49,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Downloading_data>Downloading data</a></li>
 <li><a href=#The_data_is_obfuscated_and_only_contains_records_from_a_pay_per_dose_system>The data is obfuscated and only contains records from a pay-per-dose system</a></li>
 <li><a href=#Anomalies_in_the_CSV_file>Anomalies in the CSV file</a></li>
-<li><a href=#Batch_statistics_in_the_whistleblowers_video_dont_match_the_CSV_file>Batch statistics in the whistleblower's video don't match the CSV file</a></li>
+<li><a href=#Table_for_ten_batches_with_highest_percentage_of_deaths>Table for ten batches with highest percentage of deaths</a></li>
 <li><a href=#Heatmap_for_statistics_per_batch>Heatmap for statistics per batch</a></li>
 <li><a href=#Counting_days_with_120_or_more_deaths>Counting days with 120 or more deaths</a></li>
 <li><a href=#Excess_mortality_compared_to_new_vaccinations>Excess mortality compared to new vaccinations</a></li>
@@ -176,13 +176,13 @@ $ awk -F, &#39;NR&gt;1{a[$3]++}END{for(i in a)print i,a[i]}&#39; nz-record-level
 32 1</pre>
 <p>However the anomalies might be the result of data entry errors, or they may have been caused by the procedure that was used to obfuscate the data. And actually in a large set of records like this where data has been entered manually by humans, some number of errors are expected, and if the dataset would have no errors then it would rather look less realistic and more like simulated data.</p>
 <h2>
-<a href=#Batch_statistics_in_the_whistleblowers_video_dont_match_the_CSV_file id=Batch_statistics_in_the_whistleblowers_video_dont_match_the_CSV_file>Batch statistics in the whistleblower's video don't match the CSV file</a>
+<a href=#Table_for_ten_batches_with_highest_percentage_of_deaths id=Table_for_ten_batches_with_highest_percentage_of_deaths>Table for ten batches with highest percentage of deaths</a>
 </h2>
-<p>Barry Young's presentation included the table below which shows the ten batches with the highest percentage of deaths per dose, but the numbers in the table don't match Kirsch's CSV file: [<a href="https://rumble.com/v3yqgsf-liz-gunn-the-mother-of-all-covid-19-vaccine-revelations-data-revealed-in-th.html">https://rumble.com/v3yqgsf-liz-gunn-the-mother-of-all-covid-19-vaccine-revelations-data-revealed-in-th.html</a>, time 47:00]</p>
+<p>Barry Young's presentation included the table below which shows the ten batches with the highest percentage of deaths per dose: [<a href="https://rumble.com/v3yqgsf-liz-gunn-the-mother-of-all-covid-19-vaccine-revelations-data-revealed-in-th.html">https://rumble.com/v3yqgsf-liz-gunn-the-mother-of-all-covid-19-vaccine-revelations-data-revealed-in-th.html</a>, time 47:00]</p>
 <div class="width6">
 <img src="i/moar-presentation-ten-batches.jpg">
 </div>
-<p>For example batch 1 has a total of 711 doses in the table above but 4,386 doses in Kirsch's CSV file. In the table above there's 5 different batches which have over 10% deaths, but in Kirsch's CSV file there's only one batch with over 10% deaths. In Kirsch's CSV file, the percentage of deaths for each batch also a weird distribution, because there is one batch with about 15% deaths but in the next-highest percentage of deaths by batch is only about 5%:</p>
+<p>I noticed that the numbers in Young's table don't match the CSV file published by Kirsch, because for example batch 1 has a total of 711 doses in the table above but 4,386 doses in the CSV file. In the table above there's 5 different batches which have over 10% deaths, but in the CSV file there's only one batch with over 10% deaths:</p>
 <pre>$ sed 1d nz-record-level-data-4M-records.csv|awk -F, &#39;{n[$2]++;t[$2][$6]++}$5{d[$2]++}END{for(i in d){max=0;maxn=&quot;&quot;;for(j in t[i])if(t[i][j]&gt;max)maxn=j;print i FS n[i]FS d[i]FS 100*d[i]/n[i]FS maxn FS 100*t[i][maxn]/n[i]}}&#39;|sort -t, -rnk4|head|(echo batch,doses_given,deaths,death_pct,most_common_vaccine_type_of_batch,pct_of_most_common_vaccine_type;cat)|column -ts,
 batch  doses_given  deaths  death_pct  most_common_vaccine_type_of_batch  pct_of_most_common_vaccine_type
 1      4386         674     15.3671    Pfizer BioNTech COVID-19           100
@@ -195,11 +195,7 @@ batch  doses_given  deaths  death_pct  most_common_vaccine_type_of_batch  pct_of
 71     20325        620     3.05043    Pfizer BioNTech COVID-19           95.7048
 35     103143       3141    3.04529    Pfizer BioNTech COVID-19           99.9157
 32     42178        1281    3.03713    Pfizer BioNTech COVID-19           99.8933</pre>
-<p>Added later: The reason for the discrepancy was eventually figured out by Uncle John Returns: [<a href="https://twitter.com/UncleJo46902375/status/1731625480527257928">https://twitter.com/UncleJo46902375/status/1731625480527257928</a>]</p>
-<div class="width5">
-<img src="i/moar-unclejohn.jpg">
-</div>
-<p>You can reproduce Young's table if you sort the records by vaccination date and select only the newest record for each patient ID:</p>
+<p>However Uncle John Returns figured out that people who later went on to have a subsequent vaccine dose were excluded from Young's table. [<a href="https://twitter.com/UncleJo46902375/status/1731625480527257928">https://twitter.com/UncleJo46902375/status/1731625480527257928</a>] You can reproduce Young's table if you sort the records by vaccination date and select only the newest record for each person:</p>
 <pre>&gt; t=read.csv(textConnection(readLines(gzcon(url(&quot;https://mongol-fi.github.io/f/nz-record-level-data-4M-records.csv.gz&quot;)))))
 &gt; t2=t
 &gt; for(i in grep(&quot;date&quot;,colnames(t2)))t2[,i]=as.Date(t2[,i],&quot;%m-%d-%Y&quot;)
@@ -221,7 +217,7 @@ batch  doses_given  deaths  death_pct  most_common_vaccine_type_of_batch  pct_of
     72  5882    280  4.760286
     62 18173    834  4.589226
     71 11019    504  4.573918</pre>
-<p>Young's method exaggerates the percentage of deaths per batch, because a common reason why someone would only get a vaccine from batch 1 but not subsequent batches was that they died before they could get more vaccine doses.</p>
+<p>However Young's method exaggerates the percentage of deaths per batch, because a common reason why someone would only get a vaccine from batch 1 but not subsequent batches was that they died before they could get more vaccine doses. And in Young's table, the seven batches with the highest percentage of deaths were all early batches with an ID below 10.</p>
 <h2>
 <a href=#Heatmap_for_statistics_per_batch id=Heatmap_for_statistics_per_batch>Heatmap for statistics per batch</a>
 </h2>
