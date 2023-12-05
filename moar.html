@@ -123,7 +123,7 @@ mrn,batch_id,dose_number,date_time_of_service,date_of_death,vaccine_name,date_of
 152535,36,1,12-07-2021,,Pfizer BioNTech COVID-19,08-02-1976,47
 152535,51,2,01-28-2022,,Pfizer BioNTech COVID-19,08-02-1976,47</pre>
 <p>There are 4 patients whose date of vaccination is later than the date of death:</p>
-<pre>&gt; nz-record-level-data-4M-records.csv
+<pre>&gt; t=read.csv(&quot;nz-record-level-data-4M-records.csv&quot;)
 &gt; t2=t[t$date_of_death!=&quot;&quot;,]
 &gt; t2[as.Date(t2$date_time_of_service,&quot;%m-%d-%Y&quot;)&gt;as.Date(t2$date_of_death,&quot;%m-%d-%Y&quot;),]|&gt;print.data.frame(row.names=F)
      mrn batch_id dose_number date_time_of_service date_of_death
@@ -192,13 +192,13 @@ batch  doses_given  deaths  death_pct  most_common_vaccine_type_of_batch  pct_of
 35     103143       3141    3.04529    Pfizer BioNTech COVID-19           99.9157
 32     42178        1281    3.03713    Pfizer BioNTech COVID-19           99.8933</pre>
 <p>However Uncle John Returns figured out that people who later went on to have a subsequent vaccine dose were excluded from Young's table. [<a href="https://twitter.com/UncleJo46902375/status/1731625480527257928">https://twitter.com/UncleJo46902375/status/1731625480527257928</a>] You can almost reproduce Young's table if you sort the records by vaccination date and select only the newest record for each person (apart from small discrepancies in the number of deaths for some batches):</p>
-<pre>&gt; nz-record-level-data-4M-records.csv
+<pre>&gt; t=read.csv(&quot;nz-record-level-data-4M-records.csv&quot;)
 &gt; t2=t
 &gt; for(i in grep(&quot;date&quot;,colnames(t2)))t2[,i]=as.Date(t2[,i],&quot;%m-%d-%Y&quot;)
 &gt; t2=t2[order(-as.numeric(t2$date_time_of_service)),]
 &gt; t2=t2[!duplicated(t2$mrn),]
 &gt; d=as.data.frame(table(t2$batch_id))|&gt;`colnames&lt;-`(c(&quot;batch&quot;,&quot;doses&quot;))
-&gt; d$deaths=table(factor(t2$batch_id[!is.na(t2$date_of_death)],sort(unique(t2$batch_id))))
+&gt; d$deaths=table(factor(t2$batch_id[!is.na(t2$date_of_death)],d$batch))
 &gt; d$pct=100*d$deaths/d$doses
 &gt; d=d[order(-d$pct),]
 &gt; head(d,10)|&gt;print.data.frame(row.names=F)
@@ -223,7 +223,7 @@ batch  doses_given  deaths  death_pct  most_common_vaccine_type_of_batch  pct_of
 </div>
 <p>In the heatmap above, I omitted 4 small batches that had zero deaths. The end of data refers to October 27th 2023 which is the date of the last death included in the dataset. I calculated the person-years by calculating the time from a vaccine dose until either death or October 27th 2023, so that I included the time after a patient got a subsequent dose as part of the person-years of earlier doses.</p>
 <p>R code:</p>
-<pre>nz-record-level-data-4M-records.csv
+<pre>t=read.csv(&quot;nz-record-level-data-4M-records.csv&quot;)
 t2=t[t$date_of_death!=&quot;&quot;,]
 t1=t[t$batch_id%in%t2$batch_id,]
 
@@ -329,7 +329,7 @@ system(&quot;montage -geometry +0+0 -tile 1x i[123].png 1.png&quot;)</pre>
 <a href=#Distribution_of_number_of_days_from_vaccination_until_death id=Distribution_of_number_of_days_from_vaccination_until_death>Distribution of number of days from vaccination until death</a>
 </h2>
 <p>In the CSV file that was published by Kirsch, there are only 7 records where the date of death is the same as the date of vaccination, so that the time from vaccination to death was zero days. And there's also a low number of records where the date of death is within a week from a vaccination, which might be explained by the healthy vaccinee effect if people who are at immediate risk of death don't get vaccinated:</p>
-<pre>&gt; nz-record-level-data-4M-records.csv
+<pre>&gt; t=read.csv(&quot;nz-record-level-data-4M-records.csv&quot;)
 &gt; t2=t[t$date_of_death!=&quot;&quot;,]
 &gt; ta=table(as.Date(t2$date_of_death,&quot;%m-%d-%Y&quot;)-as.Date(t2$date_time_of_service,&quot;%m-%d-%Y&quot;))
 &gt; head(ta,100)
@@ -353,7 +353,7 @@ system(&quot;montage -geometry +0+0 -tile 1x i[123].png 1.png&quot;)</pre>
 <p>R code:</p>
 <pre>library(ggplot2)
 
-nz-record-level-data-4M-records.csv
+t=read.csv(&quot;nz-record-level-data-4M-records.csv&quot;)
 t2=t[t$date_of_death!=&quot;&quot;,]
 ta=table(as.Date(t2$date_of_death,&quot;%m-%d-%Y&quot;)-as.Date(t2$date_time_of_service,&quot;%m-%d-%Y&quot;))
 
@@ -397,7 +397,7 @@ ggsave(&quot;1.png&quot;,width=6,height=3)</pre>
 <img src="i/moar-days-to-death-by-dose.png">
 </div>
 <p>This shows the average date when each dose was given:</p>
-<pre>&gt; nz-record-level-data-4M-records.csv
+<pre>&gt; t=read.csv(&quot;nz-record-level-data-4M-records.csv&quot;)
 &gt; as.Date(round(tapply(as.Date(t$date_time_of_service,&quot;%m-%d-%Y&quot;),t$dose_number,mean)))[1:6]
            1            2            3            4            5            6
 &quot;2021-09-30&quot; &quot;2021-10-31&quot; &quot;2022-02-17&quot; &quot;2022-10-26&quot; &quot;2023-05-01&quot; &quot;2023-05-15&quot;</pre>
@@ -414,7 +414,7 @@ ggsave(&quot;1.png&quot;,width=6,height=3)</pre>
 </div>
 <p>From the plot above you can see that the data from the MoH has large dips in the number of vaccines given on weekends, but the data from MOAR is missing the dips which makes it look like it might be a moving average of daily data. And in the MoH data there's a single-day spike in the number of vaccine doses given on October 16th 2021, but a similar spike is not visible in the MOAR data.</p>
 <p>If you divide the average number of doses given on weekdays with the average number of doses given on weekends, the ratio is about 0.96 in the MOAR dataset, but the ratio is about 1.55 in the MoH data and about 1.53 at OWID:</p>
-<pre>&gt; moar=read.csv(&quot;nz-record-level-data-4M-records.csv&quot;
+<pre>&gt; moar=read.csv(&quot;nz-record-level-data-4M-records.csv&quot;)
 &gt; ta=table(moar$date_time_of_service)
 &gt; weekend=format(as.Date(names(ta),&quot;%m-%d-%Y&quot;),&quot;%u&quot;)&gt;=&quot;6&quot;
 &gt; mean(ta[!weekend])/mean(ta[weekend])
