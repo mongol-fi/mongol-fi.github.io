@@ -199,6 +199,27 @@ batch  doses_given  deaths  death_pct  most_common_vaccine_type_of_batch  pct_of
 <div class="width5">
 <img src="i/moar-unclejohn.jpg">
 </div>
+<pre>&gt; t=read.csv(textConnection(readLines(gzcon(url(&quot;https://mongol-fi.github.io/f/nz-record-level-data-4M-records.csv.gz&quot;)))))
+&gt; t2=t
+&gt; for(i in grep(&quot;date&quot;,colnames(t2)))t2[,i]=as.Date(t2[,i],&quot;%m-%d-%Y&quot;)
+&gt; t2=t2[order(-as.numeric(t2$date_time_of_service)),]
+&gt; t2=t2[!duplicated(t2$mrn),]
+&gt; d=as.data.frame(table(t2$batch_id))|&gt;`colnames&lt;-`(c(&quot;batch&quot;,&quot;doses&quot;))
+&gt; d$deaths=table(factor(t2$batch_id[!is.na(t2$date_of_death)],sort(unique(t2$batch_id))))
+&gt; d$pct=100*d$deaths/d$doses
+&gt; d=d[order(-d$pct),]
+&gt; head(d,10)|&gt;print.data.frame(row.names=F)
+ batch doses deaths       pct
+     1   711    152 21.378340
+     8   221     38 17.194570
+     3   310     48 15.483871
+     4   364     37 10.164835
+     6  1006    102 10.139165
+     2  1018     99  9.724951
+     7    38      3  7.894737
+    72  5882    280  4.760286
+    62 18173    834  4.589226
+    71 11019    504  4.573918</pre>
 <h2>
 <a href=#Heatmap_for_statistics_per_batch id=Heatmap_for_statistics_per_batch>Heatmap for statistics per batch</a>
 </h2>
@@ -415,7 +436,7 @@ ggsave(&quot;1.png&quot;,width=6,height=3)</pre>
 [1] 1.525399</pre>
 <p>I have thought of three possible explanations for the difference in the weekend-weekday ratio, where I consider option 1 to be by far the most likely:</p>
 <ol style="list-style-type: decimal">
-<li>The procedure that was used to obfuscate the data resulted in the dates getting shifted so that some vaccine doses that were actually given on weekdays ended up being listed on weekends. Kirsch said that <span class="quote">&quot;we time-shifted all of the dates relative to each other, but the dates relative to each other are the same - we just shifted them slightly in time so that you can still do the statistical analysis without violating anyone's privacy&quot;</span>. [<a href="https://banned.video/watch?id=656a5c4e0681e68064e50415">https://banned.video/watch?id=656a5c4e0681e68064e50415</a>, time 14:25] If for example each date is shifted by a random number of days chosen from the set -3, -2, -1, 1, 2, and 3, then the fraction of days that is expected to end up on a weekday is 5 out of 6 for weekend days but 4 out of 6 for weekday days, which would explain why the obfuscated data has a higher number of vaccine doses given on weekends than weekdays. Kirsch said that <span class="quote">&quot;we have shifted things such that the statistics are identical even though no record matches anything about any of the people given&quot;</span>, so I guess there's no record where the dates were shifted by 0 days so the dates are identical to the original dates.</li>
+<li>The procedure that was used to obfuscate the data resulted in the dates getting shifted so that some vaccine doses that were actually given on weekdays ended up being shifted to weekends. Kirsch said that <span class="quote">&quot;we time-shifted all of the dates relative to each other, but the dates relative to each other are the same - we just shifted them slightly in time so that you can still do the statistical analysis without violating anyone's privacy&quot;</span>. [<a href="https://banned.video/watch?id=656a5c4e0681e68064e50415">https://banned.video/watch?id=656a5c4e0681e68064e50415</a>, time 14:25] If for example each date is shifted by a random number of days chosen from the set -3, -2, -1, 1, 2, and 3, then the fraction of days that is expected to end up on a weekday is 5 out of 6 for weekend days but 4 out of 6 for weekday days, which would explain why the obfuscated data has a higher number of vaccine doses given on weekends than weekdays. Kirsch said that <span class="quote">&quot;we have shifted things such that the statistics are identical even though no record matches anything about any of the people given&quot;</span>, so I guess there's no record where the dates were shifted by 0 days so the dates would've remained identical to the original dates.</li>
 <li>The vaccine doses registered in the <span class="quote">&quot;pay-per-dose&quot;</span> system might have a different weekday-weekend ratio than vaccine doses registered in other systems. Actually from my plot above you can see that the MOAR data regularly has a slightly higher number of vaccine doses given on weekends than weekdays. But a problem with this explanation is that during many weekends in April 2023 and in July to December 2022, the MOAR dataset actually has a larger number of vaccine doses given than the MoH data.</li>
 <li>At first I thought that if the MOAR data is fake, then the dips during the weekends may have been missing if the data was simulated based on weekly data instead of daily data. It would also explain why the number of vaccines given per day looks like a moving average. However if the data was simulated, then why would there regularly be a slightly higher number of vaccine doses given on weekends?</li>
 </ol>
@@ -451,23 +472,23 @@ $ awk &#39;NR==1||/New Zealand/&#39; owid-covid-data.csv|csvtk cut -f date,new_v
 <h2>
 <a href=#Table_for_deaths_by_vaccination_site id=Table_for_deaths_by_vaccination_site>Table for deaths by vaccination site</a>
 </h2>
-<p>Barry Young's presentation included this table which showed the vaccination sites with the highest percentage of deaths per vaccination: [<a href="https://rumble.com/v3ynskd-operation-m.o.a.r-mother-of-all-revelations.html">https://rumble.com/v3ynskd-operation-m.o.a.r-mother-of-all-revelations.html</a>, time 41:50]</p>
+<p>Barry Young's presentation included this table which showed the vaccination sites with the highest percentage of deaths per vaccination: [<a href="https://rumble.com/v3ynskd-operation-m.o.a.r-mother-of-all-revelations.html">https://rumble.com/v3ynskd-operation-m.o.a.r-mother-of-all-revelations.html</a>]</p>
 <div class="width6">
 <img src="i/moar-deaths-per-site.jpg">
 </div>
 <p>The vaccination site on the first row of the table is called <span class="quote">&quot;Te Hopai Home &amp; Hospital&quot;</span>, which has 191 vaccinations and 61 deaths which results in ratio of about 32% deaths per vaccination. I don't know if the number of vaccinations refers to the number of vaccine doses given or the number of vaccinated patients, because data about vaccination sites was not included in the files published by Kirsch.</p>
-<p>But in any case, <span class="quote">&quot;The Hopai Home &amp; Hospital&quot;</span> is a nursing home. [<a href="https://www.tehopai.co.nz/">https://www.tehopai.co.nz/</a>] The dataset published by the whistleblower includes about two and half years of data, so over that period of time, it's not that unusual that about 30% of vaccine doses in a nursing home would've been given to people who are now dead. Even though actually in a comment at Igor Chudov's Substack, someone wrote: <span class="quote">&quot;Te Hopai was a vaccination centre for the public, not just aged care residents. Teenagers got jabs there so you are being very misleading here.&quot;</span> [<a href="https://www.igor-chudov.com/p/i-analyzed-the-leaked-nz-whistleblower/comment/44717804">https://www.igor-chudov.com/p/i-analyzed-the-leaked-nz-whistleblower/comment/44717804</a>]</p>
+<p>But in any case, The Hopai Home &amp; Hospital is a nursing home. [<a href="https://www.tehopai.co.nz/">https://www.tehopai.co.nz/</a>] The dataset published by the whistleblower includes about two and half years of data, so over that period of time, it's not that unusual that about 30% of vaccine doses in a nursing home would've been given to people who are now dead. Even though actually in a comment at Igor Chudov's Substack, someone wrote: <span class="quote">&quot;Te Hopai was a vaccination centre for the public, not just aged care residents. Teenagers got jabs there so you are being very misleading here.&quot;</span> [<a href="https://www.igor-chudov.com/p/i-analyzed-the-leaked-nz-whistleblower/comment/44717804">https://www.igor-chudov.com/p/i-analyzed-the-leaked-nz-whistleblower/comment/44717804</a>]</p>
 <h2>
 <a href=#Origins_of_MOAR_data_and_video id=Origins_of_MOAR_data_and_video>Origins of MOAR data and video</a>
 </h2>
 <p>Barry Young was interviewed by Liz Gunn, who used to be the host of three different shows on mainstream TV according to her IMDB profile. Highlights of the video were posted on Twitter by aussie17, and he also posted an early Substack post about the video, but his Twitter bio says that he is a former executive in big pharma. So it sounds like the kind of cast of characters who are usually rolling out the Stew Peters psyops. Alex Jones compared the MOAR data to the release of Team Enigma's data two years earlier. The first big presentations about Team Enigma's data were done by Latypova and Yeadon, who are both former executives in the pharmaceutical industry, and when Latypova did her presentation on the Stew Peters Show, she was interviewed by Stew Peters and Jane Ruby who both used to work in mainstream TV.</p>
 <p>About 12 hours after the original MOAR video was posted on Rumble, aussie17 posted highlights of the video on Twitter and a Substack post about the video:</p>
 <ul>
-<li>2023-11-29T21:28Z - The video by New Zealand Loyal is posted on Rumble. [<a href="https://rumble.com/v3ynskd-operation-m.o.a.r-mother-of-all-revelations.html">https://rumble.com/v3ynskd-operation-m.o.a.r-mother-of-all-revelations.html</a>]</li>
-<li>2023-11-29T21:44Z - The full video by New Zealand Loyal is posted on Twitter. [<a href="https://twitter.com/NZLoyal/status/1729979785634574561">https://twitter.com/NZLoyal/status/1729979785634574561</a>]</li>
-<li>2023-11-30T09:06Z - A 9-minute highlight video is posted on Twitter by aussie17. [<a href="https://twitter.com/_aussie17/status/1730151291937280468">https://twitter.com/_aussie17/status/1730151291937280468</a>]</li>
-<li>2023-11-30T09:34Z - The Substack post by aussie17 is posted. [<a href="https://www.aussie17.com/p/new-zealand-government-data-administrator">https://www.aussie17.com/p/new-zealand-government-data-administrator</a>]</li>
-<li>2023-11-30T23:00Z - The Substack post by Kirsch is posted. [<a href="https://kirschsubstack.com/p/data-from-us-medicare-and-the-new">https://kirschsubstack.com/p/data-from-us-medicare-and-the-new</a>]</li>
+<li>2023-11-29 21:28 UTZ - The video by New Zealand Loyal is posted on Rumble. [<a href="https://rumble.com/v3ynskd-operation-m.o.a.r-mother-of-all-revelations.html">https://rumble.com/v3ynskd-operation-m.o.a.r-mother-of-all-revelations.html</a>]</li>
+<li>2023-11-29 21:44 UTZ - The full video by New Zealand Loyal is posted on Twitter. [<a href="https://twitter.com/NZLoyal/status/1729979785634574561">https://twitter.com/NZLoyal/status/1729979785634574561</a>]</li>
+<li>2023-11-30 09:06 UTZ - A 9-minute highlight video is posted on Twitter by aussie17. [<a href="https://twitter.com/_aussie17/status/1730151291937280468">https://twitter.com/_aussie17/status/1730151291937280468</a>]</li>
+<li>2023-11-30 09:34 UTZ - The Substack post by aussie17 is posted. [<a href="https://www.aussie17.com/p/new-zealand-government-data-administrator">https://www.aussie17.com/p/new-zealand-government-data-administrator</a>]</li>
+<li>2023-11-30 23:00 UTZ - The Substack post by Kirsch is posted. [<a href="https://kirschsubstack.com/p/data-from-us-medicare-and-the-new">https://kirschsubstack.com/p/data-from-us-medicare-and-the-new</a>]</li>
 </ul>
 <p>On November 30th UTC Liz Gunn published a second interview with Barry Young, which also featured Andrew Brigden who is a member of the British parliament. [<a href="https://rumble.com/v3ywe8p-andrew-bridgen-on-the-m.o.a.r.-data.html"><a href="https://rumble.com/v3ywe8p-andrew-bridgen-on-the-m.o.a.r">https://rumble.com/v3ywe8p-andrew-bridgen-on-the-m.o.a.r</a>.-data.html</a>] On December 4th UTC, Brigden is going to host an event called <span class="quote">&quot;Save Our Sovereignty&quot;</span> where Kirsch, Robert Malone, David Martin, Pierre Kory, Ryan Cole, and Angush Dalgleish will speak in front of the UK parliament. [<a href="https://saveoursovereignty.co.uk/">https://saveoursovereignty.co.uk/</a>]</p>
 <p>A health freedom organization from New Zealand issued a statement which said: [<a href="https://www.voicesforfreedom.co.nz/blog/whistle-blower-data-release/">https://www.voicesforfreedom.co.nz/blog/whistle-blower-data-release/</a>]</p>
