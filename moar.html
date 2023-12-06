@@ -49,7 +49,6 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#The_data_is_obfuscated_and_only_contains_records_from_a_pay_per_dose_system>The data is obfuscated and only contains records from a pay-per-dose system</a></li>
 <li><a href=#Anomalies_in_the_CSV_file>Anomalies in the CSV file</a></li>
 <li><a href=#Table_for_ten_batches_with_highest_percentage_of_deaths>Table for ten batches with highest percentage of deaths</a></li>
-<li><a href=#Heatmap_for_statistics_per_batch>Heatmap for statistics per batch</a></li>
 <li><a href=#Counting_days_with_more_than_120_deaths>Counting days with more than 120 deaths</a></li>
 <li><a href=#Excess_mortality_compared_to_new_vaccinations>Excess mortality compared to new vaccinations</a></li>
 <li><a href=#Distribution_of_number_of_days_from_vaccination_until_death>Distribution of number of days from vaccination until death</a></li>
@@ -57,6 +56,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Table_for_deaths_by_vaccination_site>Table for deaths by vaccination site</a></li>
 <li><a href=#Origins_of_Youngs_data_and_video>Origins of Young's data and video</a></li>
 <li><a href=#Plots_for_statistics_relative_to_date_of_vaccination>Plots for statistics relative to date of vaccination</a></li>
+<li><a href=#Plots_for_statistics_per_batch>Plots for statistics per batch</a></li>
 <li><a href=#Table_of_vaccine_types_by_batch>Table of vaccine types by batch</a></li>
 <li><a href=#Tweet_by_Kirsch_about_excess_mortality_in_2021_2023>Tweet by Kirsch about excess mortality in 2021-2023</a></li>
 <li><a href=#Tweet_about_excess_deaths_by_Clare_Craig>Tweet about excess deaths by Clare Craig</a></li>
@@ -222,70 +222,6 @@ batch  doses_given  deaths  death_pct  most_common_vaccine_type_of_batch  pct_of
     71 11019    504  4.573918</pre>
 <p>However Young's method exaggerates the percentage of deaths per batch, because a common reason why someone would only get a vaccine from batch 1 but not subsequent batches was that they died before they could get more vaccine doses. And in Young's table, the seven batches with the highest percentage of deaths were all early batches with an ID below 10.</p>
 <h2>
-<a href=#Heatmap_for_statistics_per_batch id=Heatmap_for_statistics_per_batch>Heatmap for statistics per batch</a>
-</h2>
-<p>In batch 1 which has by far the highest percentage of deaths per dose, the average age at death is 86 when rounded to the nearest integer, and the average age at vaccination is 66 for all recipients and 85 for dead recipients, and the average number of days between death and vaccination is about 403. The average age at vaccination among dead recipients is below 85 for all batches with an ID between 2 and 93, but in batch 94 and some newer batches, the average age at vaccination among dead recipients reaches above 85. But compared to batch 1, the newer batches were given much more recently, so they have a smaller percentage of deaths per dose because there's not as many people who have died of old age since vaccination:</p>
-<div class="width12">
-<img src="i/moar-heat.png">
-</div>
-<p>In the heatmap above, I omitted 4 small batches that had zero deaths. The end of data refers to October 27th 2023 which is the date of the last death included in the dataset. I calculated the person-years by calculating the time from a vaccine dose until either death or October 27th 2023, so that I included the time after a patient got a subsequent dose as part of the person-years of earlier doses.</p>
-<p>R code:</p>
-<pre>t=read.csv(&quot;nz-record-level-data-4M-records.csv&quot;)
-t2=t[t$date_of_death!=&quot;&quot;,]
-t1=t[t$batch_id%in%t2$batch_id,]
-
-doses=table(t1$batch_id)
-deaths=table(t2$batch_id)
-vax1=as.Date(t1$date_time_of_service,&quot;%m-%d-%Y&quot;)
-death1=as.Date(t1$date_of_death,&quot;%m-%d-%Y&quot;)
-birth1=as.Date(t1$date_of_birth,&quot;%m-%d-%Y&quot;)
-vax2=as.Date(t2$date_time_of_service,&quot;%m-%d-%Y&quot;)
-death2=as.Date(t2$date_of_death,&quot;%m-%d-%Y&quot;)
-birth2=as.Date(t2$date_of_birth,&quot;%m-%d-%Y&quot;)
-dend=max(death2)
-
-d=data.frame(`Doses given`=c(doses),check.names=F)
-d$`Deaths`=deaths
-d$`Percentage of deaths per dose`=100*deaths/doses
-d$`Percentage of deaths per person-year`=deaths/(tapply(pmin(death1,dend,na.rm=T)-vax1,t1$batch_id,sum)/365.2422)*1e2
-d$`Average days between vaccination and death`=tapply(death2-vax2,t2$batch_id,mean)
-d$`Average age at vaccination`=tapply(vax1-birth1,t1$batch_id,mean)/365.2422
-d$`Average age at vaccination for dead recipients`=tapply(vax2-birth2,t2$batch_id,mean)/365.2422
-d$`Average days from dose given to end of data`=tapply(dend-vax2,t2$batch_id,mean)
-d$`Average days from death to end of data`=tapply(dend-death2,t2$batch_id,mean)
-
-m=t(apply(d,2,\(x)(x-min(x))/(max(x)-min(x))))
-
-kimir2=\(x){x[]=ifelse(or(x&gt;=1e6,x&lt;=-1e6),paste0(round(x/1e6,ifelse(abs(x)&lt;1e7,1,0)),&quot;M&quot;),ifelse(or(x&gt;=1e3,x&lt;=-1e3),paste0(round(x/1e3,ifelse(abs(x)&lt;1e4,1,0)),&quot;k&quot;),round(x)));x}
-disp=kimir2(t(d))
-disp[3,]=sprintf(&quot;%.1f&quot;,d[,3])
-disp[4,]=sprintf(&quot;%.1f&quot;,d[,4])
-
-slices=3
-for(i in 1:slices){
-  step=ceiling(ncol(m)/slices)
-  start=(i-1)*step+1
-  end=min(start+step-1,ncol(m))
-  pheatmap::pheatmap(
-    m[,start:end],
-    filename=paste0(&quot;i&quot;,i,&quot;.png&quot;),
-    cluster_rows=F,
-    cluster_cols=F,
-    legend=F,
-    cellwidth=20,
-    cellheight=20,
-    fontsize=9,
-    border_color=NA,
-    display_numbers=disp[,start:end],
-    fontsize_number=8,
-    number_color=&quot;black&quot;,
-    na_col=&quot;white&quot;,
-    breaks=seq(0,1,,256),
-    colorRampPalette(hex(HSV(c(210,210,130,60,40,20,0),c(0,.5,.5,.5,.5,.5,.5),1)))(256)
-  )
-}
-system(&quot;montage -geometry +0+0 -tile 1x i[123].png 1.png&quot;)</pre>
-<h2>
 <a href=#Counting_days_with_more_than_120_deaths id=Counting_days_with_more_than_120_deaths>Counting days with more than 120 deaths</a>
 </h2>
 <p>In his presentation Barry Young pointed out that in the 2010s, New Zealand had only a handful of days which had more than 120 deaths, such as during the Christchurch earthquake in 2011, but in 2021 and 2022 after COVID vaccines had been rolled out, there was a much higher number of days which had more than 120 deaths:</p>
@@ -355,8 +291,8 @@ system(&quot;montage -geometry +0+0 -tile 1x i[123].png 1.png&quot;)</pre>
 <div class="width9">
 <img src="i/moar-histogram.png">
 </div>
-<p>It seems unusual that there were only 7 deaths which occurred on the same day as a vaccination. In 2021-2023, the average number of deaths per day in New Zealand was about 101, and even if the MOAR dataset would only include about a third of all vaccination records, a third of 101 would would still be about 34. Even though I guess if people got vaccinated during the working day, then the average time of day for vaccination might be after midday, and if someone died at 4 AM then they likely hadn't been vaccinated the same day. And Barry Young's dataset is also missing deaths among unvaccinated people.</p>
-<p>The earliest date of vaccination in Young's dataset is on April 18th 2021, and the number of missing vaccination doses is disproportionately high in the first half of 2021. The latest date of death is on October 27th 2023. So in the histogram above, the number of deaths tapers off at the end of the x-axis and there is only a small number of deaths that occurred more than 800 days after a vaccination, but that's because the dataset only includes a small number of people who were vaccinated early enough that it was possible for them to die more than 800 days from the vaccination.</p>
+<p>It seems unusual that there were only 7 deaths which occurred on the same day as a vaccination. In 2021-2023, the average number of deaths per day in New Zealand was about 101, and even if the Young's dataset would only include about a third of all vaccination records, a third of 101 would would still be about 34. Even though I guess if people got vaccinated during the working day, then the average time of day for vaccination might be after midday, and if someone died at 4 AM then they likely hadn't been vaccinated the same day. And the dataset is also missing deaths among unvaccinated people.</p>
+<p>The earliest date of vaccination in the dataset is on April 18th 2021, and the number of missing vaccination doses is disproportionately high in the first half of 2021. The last date of death is on October 27th 2023. So in the histogram above, the number of deaths tapers off at the end of the x-axis and there is only a small number of deaths that occurred more than 800 days after a vaccination, but that's because the dataset only includes a small number of people who were vaccinated early enough that it was possible for them to die more than 800 days from the vaccination.</p>
 <p>R code:</p>
 <pre>library(ggplot2)
 
@@ -408,16 +344,7 @@ ggsave(&quot;1.png&quot;,width=6,height=3)</pre>
 <img src="i/moar-days-to-death-by-dose-2.png">
 </div>
 <p>In the plots above I counted all doses a person received, but if I would've counted only the last dose before death, then the average time from vaccination until death would've been lower.</p>
-<p>This shows the average date when each dose was given:</p>
-<pre>&gt; t=read.csv(&quot;nz-record-level-data-4M-records.csv&quot;)
-&gt; as.Date(round(tapply(as.Date(t$date_time_of_service,&quot;%m-%d-%Y&quot;),t$dose_number,mean)))[1:6]
-           1            2            3            4            5            6
-&quot;2021-09-30&quot; &quot;2021-10-31&quot; &quot;2022-02-17&quot; &quot;2022-10-26&quot; &quot;2023-05-01&quot; &quot;2023-05-15&quot;</pre>
-<p>Among the people who died after receiving a dose, the average date of death was in October 2022 for the first and second dose, December 2022 for the third dose, and March 2023 for the 4th dose:</p>
-<pre>&gt; as.Date(round(tapply(as.Date(t$date_of_death,&quot;%m-%d-%Y&quot;),t$dose_number,mean,na.rm=T)))[1:6]
-           1            2            3            4            5            6
-&quot;2022-10-02&quot; &quot;2022-10-16&quot; &quot;2022-12-10&quot; &quot;2023-03-29&quot; &quot;2023-07-18&quot; &quot;2023-07-21&quot;</pre>
-<p>In the plot below where I included vaccinations which were given at least 51 weeks before the last death and I only included deaths that happened within 51 weeks from vaccination, the number of deaths no longer tapered off at the end of the x-axis. In the plot below dose 3 has a bump above the trend line around weeks 15-30, which was probably caused by COVID deaths in 2022, but afterwards the line for dose 3 goes below the trend line, which might be because of a pull forward effect or because there was a period with low overall mortality in late 2022:</p>
+<p>In the plot below I included vaccinations which were given at least 51 weeks before the last death in the dataset, and I only included deaths that happened within 51 weeks from vaccination, so now the number of deaths no longer tapers off at the end of the x-axis. In the plot below dose 3 has a bump above the trend line around weeks 15-30, which was probably caused by COVID deaths in 2022, but afterwards the line for dose 3 goes below the trend line, which might be because of a pull forward effect or because there was a period with low overall mortality in late 2022:</p>
 <div class="width6">
 <img src="i/moar-days-to-death-by-dose-3.png">
 </div>
@@ -438,9 +365,7 @@ doses=table(t$dose_number)
 t=t[!is.na(t$date_of_death),]
 
 ta=as.data.frame(table(floor((t$date_of_death-t$date_time_of_service)/7),t$dose_number))
-xy=data.frame(x=levels(ta$Var1),y=c(ta$Freq/doses[ta$Var2]),z=ta$Var2)
-xy$x=as.numeric(xy$x)
-xy$z=paste0(&quot;Dose &quot;,xy$z)
+xy=data.frame(x=as.numeric(levels(ta$Var1)),y=c(ta$Freq/doses[ta$Var2]),z=paste0(&quot;Dose &quot;,ta$Var2))
 
 tap=tapply(ta$Freq,ta$Var1,sum)
 xy=rbind(data.frame(x=as.numeric(names(tap)),y=tap/sum(doses),z=&quot;Total&quot;),xy)
@@ -589,6 +514,134 @@ $ awk &#39;NR==1||/New Zealand/&#39; owid-covid-data.csv|csvtk cut -f date,new_v
 <img src=i/moar-by-date-1.png height=450px><img src=i/moar-by-date-3.png height=450px><img src=i/moar-by-date-2.png height=450px><img src=i/moar-by-date-4.png height=450px><img src=i/moar-by-date-5.png height=450px>
 </div>
 <h2>
+<a href=#Plots_for_statistics_per_batch id=Plots_for_statistics_per_batch>Plots for statistics per batch</a>
+</h2>
+<p>In batch 1 which has by far the highest percentage of deaths per dose, the average age at death is 86 when rounded to the nearest integer, and the average age at vaccination is 66 for all recipients and 85 for dead recipients, and the average number of days between death and vaccination is about 403. The average age at vaccination among dead recipients is below 85 for all batches with an ID between 2 and 93, but in batch 94 and some newer batches, the average age at vaccination among dead recipients reaches above 85. But compared to batch 1, the newer batches were given much more recently, so they have a smaller percentage of deaths per dose because there's not as many people who have died of old age since vaccination:</p>
+<div class="width12">
+<img src="i/moar-heat.png">
+</div>
+<p>In the heatmap above, I omitted 4 small batches that had zero deaths. The end of data refers to October 27th 2023 which is the date of the last death included in the dataset. I calculated the person-years by calculating the time from a vaccine dose until either death or October 27th 2023, so that I included the time after a patient got a subsequent dose as part of the person-years of earlier doses.</p>
+<p>R code:</p>
+<pre>t=read.csv(&quot;nz-record-level-data-4M-records.csv&quot;)
+t2=t[t$date_of_death!=&quot;&quot;,]
+t1=t[t$batch_id%in%t2$batch_id,]
+
+doses=table(t1$batch_id)
+deaths=table(t2$batch_id)
+vax1=as.Date(t1$date_time_of_service,&quot;%m-%d-%Y&quot;)
+death1=as.Date(t1$date_of_death,&quot;%m-%d-%Y&quot;)
+birth1=as.Date(t1$date_of_birth,&quot;%m-%d-%Y&quot;)
+vax2=as.Date(t2$date_time_of_service,&quot;%m-%d-%Y&quot;)
+death2=as.Date(t2$date_of_death,&quot;%m-%d-%Y&quot;)
+birth2=as.Date(t2$date_of_birth,&quot;%m-%d-%Y&quot;)
+dend=max(death2)
+
+d=data.frame(`Doses given`=c(doses),check.names=F)
+d$`Deaths`=deaths
+d$`Percentage of deaths per dose`=100*deaths/doses
+d$`Percentage of deaths per person-year`=deaths/(tapply(pmin(death1,dend,na.rm=T)-vax1,t1$batch_id,sum)/365.2422)*1e2
+d$`Average days between vaccination and death`=tapply(death2-vax2,t2$batch_id,mean)
+d$`Average age at vaccination`=tapply(vax1-birth1,t1$batch_id,mean)/365.2422
+d$`Average age at vaccination for dead recipients`=tapply(vax2-birth2,t2$batch_id,mean)/365.2422
+d$`Average days from dose given to end of data`=tapply(dend-vax2,t2$batch_id,mean)
+d$`Average days from death to end of data`=tapply(dend-death2,t2$batch_id,mean)
+
+m=t(apply(d,2,\(x)(x-min(x))/(max(x)-min(x))))
+
+kimir2=\(x){x[]=ifelse(or(x&gt;=1e6,x&lt;=-1e6),paste0(round(x/1e6,ifelse(abs(x)&lt;1e7,1,0)),&quot;M&quot;),ifelse(or(x&gt;=1e3,x&lt;=-1e3),paste0(round(x/1e3,ifelse(abs(x)&lt;1e4,1,0)),&quot;k&quot;),round(x)));x}
+disp=kimir2(t(d))
+disp[3,]=sprintf(&quot;%.1f&quot;,d[,3])
+disp[4,]=sprintf(&quot;%.1f&quot;,d[,4])
+
+slices=3
+for(i in 1:slices){
+  step=ceiling(ncol(m)/slices)
+  start=(i-1)*step+1
+  end=min(start+step-1,ncol(m))
+  pheatmap::pheatmap(
+    m[,start:end],
+    filename=paste0(&quot;i&quot;,i,&quot;.png&quot;),
+    cluster_rows=F,
+    cluster_cols=F,
+    legend=F,
+    cellwidth=20,
+    cellheight=20,
+    fontsize=9,
+    border_color=NA,
+    display_numbers=disp[,start:end],
+    fontsize_number=8,
+    number_color=&quot;black&quot;,
+    na_col=&quot;white&quot;,
+    breaks=seq(0,1,,256),
+    colorRampPalette(hex(HSV(c(210,210,130,60,40,20,0),c(0,.5,.5,.5,.5,.5,.5),1)))(256)
+  )
+}
+system(&quot;montage -geometry +0+0 -tile 1x i[123].png 1.png&quot;)</pre>
+<p>The plot below shows the average days from vaccination to death by average date of vaccination for each batch. Batch 1 is below the trend line as expected, because it has one of the highest average ages at death, but unexpectedly there are also a couple of batches that have a relatively young age at death but that are still below the trend line, like the batches with the IDs 17, 20, 21, 22, 23, and 25:</p>
+<div class="width7">
+<img src="i/moar-batch-xy.png">
+</div>
+<p>R code:</p>
+<pre>library(ggplot2)
+
+t=as.data.frame(data.table::fread(&quot;nz-record-level-data-4M-records.csv&quot;)) # this is faster than `read.csv`
+for(i in grep(&quot;date&quot;,colnames(t)))t[,i]=as.Date(t[,i],&quot;%m-%d-%Y&quot;)
+
+x=as.Date(round(tapply(t$date_time_of_service,t$batch_id,mean)),&quot;1970-1-1&quot;)
+t2=t[!is.na(t$date_of_death),]
+y=tapply(t2$date_of_death-t2$date_time_of_service,t2$batch_id,mean)
+z=tapply((t2$date_of_death-t2$date_of_birth)/365.2422,t2$batch_id,mean)[names(y)]
+xy=data.frame(x=x[names(y)],y)
+name=names(y)
+
+xstart=as.Date(&quot;2021-5-1&quot;)
+xend=as.Date(&quot;2023-9-1&quot;)
+xbreak=seq(xstart,xend,&quot;1 month&quot;)
+xlab=xbreak|&gt;format(&quot;%b 1 %y&quot;)
+xlab[c(F,T)]=&quot;&quot;
+
+candidates=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
+ystep=candidates[which.min(abs(candidates-max(xy$y)/6))]
+ystart=0
+yend=ystep*ceiling(max(xy$y)/ystep)
+ybreak=seq(ystart,yend,ystep)
+
+ggplot(xy,aes(x,y))+
+geom_smooth(method=&quot;lm&quot;,formula=y~x,linewidth=.3,se=F,color=&quot;black&quot;,linetype=2)+
+geom_vline(xintercept=xstart,linewidth=.3)+
+geom_hline(yintercept=0,linewidth=.3)+
+geom_point(aes(color=z),size=.5)+
+ggrepel::geom_text_repel(label=name,size=2.3,max.overlaps=Inf,segment.size=.2,min.segment.length=.2,force=10,force_pull=2,box.padding=.13)+
+scale_x_date(limits=c(xstart,xend),breaks=xbreak,labels=xlab,expand=c(0,0))+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,expand=c(0,0))+
+scale_color_gradientn(colors=colorspace::hex(colorspace::HSV(c(210,210,120,60,0,0),c(.5,rep(1,5)),c(1,.7,.7,.7,.7,0))),name=&quot;Average age at death&quot;)+
+coord_cartesian(clip=&quot;off&quot;)+
+labs(title=&quot;Vaccine batches in leaked NZ data: average days from vaccination to death\nby average date of vaccination&quot;,x=&quot;Average date of vaccination&quot;,y=&quot;Average days from vaccination to death&quot;)+
+theme(
+  axis.text=element_text(size=8,color=&quot;black&quot;),
+  axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
+  axis.ticks=element_line(linewidth=.3,color=&quot;black&quot;),
+  axis.ticks.length=unit(.2,&quot;lines&quot;),
+  axis.title=element_text(size=9),
+  axis.title.x=element_text(margin=margin(4,0,0,0)),
+  legend.position=c(.97,.90),
+  legend.justification=&quot;right&quot;,
+  legend.direction=&quot;horizontal&quot;,
+  legend.key.width=unit(1,&quot;lines&quot;),
+  legend.key.height=unit(1,&quot;lines&quot;),
+  legend.spacing.y=unit(.05,&quot;cm&quot;),
+  legend.text=element_text(size=8,vjust=.5),
+  legend.title=element_text(size=8,vjust=.8),
+  panel.background=element_rect(fill=&quot;white&quot;),
+  panel.grid=element_blank(),
+  plot.background=element_rect(fill=&quot;white&quot;),
+  plot.margin=margin(.4,.5,.4,.5,&quot;lines&quot;),
+  plot.subtitle=element_text(size=9),
+  plot.title=element_text(size=10)
+)
+
+ggsave(&quot;1.png&quot;,width=5.5,height=4)</pre>
+<h2>
 <a href=#Table_of_vaccine_types_by_batch id=Table_of_vaccine_types_by_batch>Table of vaccine types by batch</a>
 </h2>
 <p>In the first 23 batches, the type of all vaccines is listed as <span class="quote">&quot;Pfizer BioNTech COVID-19&quot;</span>, but later batches all contain a mixture of two or more vaccine types. However most vaccines in all batches are by Pfizer.</p>
@@ -678,33 +731,47 @@ Covid Paediatric Pfizer,GE0694,2023-10-31,249600</pre>
 <img src="i/moar-kirsch-excess.jpg">
 </div>
 <p>Kirsch substituted the period from October 2022 to September 2023 for the year 2023, but you can tell that he used regular years for the other years because his number of deaths in 2021 and 2022 is identical to figures published by the New Zealand government. However when Kirsch calculated the total excess mortality in 2021-2023, he counted the period from October to December 2022 twice, and it happened to be a period with fairly high excess mortality. To avoid counting the period twice, I used years that ended in September for each year in my analysis below.</p>
-<p>Another flaw in Kirsch's analysis is that he used the average number of deaths in 2017-2019 as the baseline, which exaggerates excess mortality because New Zealand has an increasing trend in the number of deaths per year. When I used the linear trend in 2012-2019 as the baseline instead, and I used years that started in October and ended in September for each year, I got only about 1,600 excess deaths from October 2020 to September 2023:</p>
+<p>Another flaw in Kirsch's analysis is that he used the average number of deaths in 2017-2019 as the baseline, which exaggerates excess mortality because New Zealand has an increasing trend in the number of deaths per year. When I used the linear trend in 2012-2019 as the baseline instead, and I used years that started in October and ended in September for each year, I got only about 2,600 excess deaths from October 2020 to September 2023:</p>
 <pre>&gt; t=read.csv(&quot;https://www.mortality.org/File/GetDocument/Public/STMF/Outputs/NZL_NPstmfout.csv&quot;)
-&gt; isoweek=\(year,week,weekday=1){d=as.Date(paste0(year,&quot;-1-7&quot;));d-(as.integer(format(d,&quot;%w&quot;))+6)%%7-1+7*(week-1)+weekday} # `as.Date` doesn&#39;t support `%V` (ISO 8601 week number)
-&gt; dafi=\(x){q=seq(min(as.Date(x[,1])),max(as.Date(x[,1])),1);d=data.frame(x=as.character(c(x[,1],as.character(q))),y=c(x[,2],rep(NA,length(q))));d=d[!duplicated(d[,1]),];d=d[order(d[,1]),];rownames(d)=NULL;d[,1]=as.Date(d[,1]);d}
-&gt; dafin=\(x){x=dafi(x);x[,2]=zoo::na.approx(x[,2],na.rm=F);x} # date fill NA approximate (interpolate missing days in a dataframe that has dates in the first column and numeric values in the second column)
-&gt; xy=dafin(data.frame(x=isoweek(t2$Year,t2$Week,4),y=t2$Total/7)) # convert weekly data to daily data
+&gt; t=t[t$Sex==&quot;b&quot;,]
+&gt; isoweek=\(year,week,weekday=1){d=as.Date(paste0(year,&quot;-1-7&quot;));d-(as.integer(format(d,&quot;%w&quot;))+6)%%7-1+7*(week-1)+weekday}
+&gt; xy=data.frame(x=isoweek(t$Year,t$Week,4),y=t$Total/7)
+&gt; xy=rbind(xy,data.frame(x=seq(min(xy$x),max(xy$x),1),y=NA))
+&gt; xy=xy[!duplicated(xy$x),]
+&gt; xy=xy[order(xy$x),]
+&gt; xy$y=zoo::na.approx(xy$y)
 &gt; starts=grep(&quot;-10-01&quot;,xy$x)
 &gt; d=data.frame(year_ending_september=2012:2023,deaths=cbind(head(starts,-1),starts[-1]+1)|&gt;apply(1,\(x)sum(xy$y[x[1]:x[2]])))
-&gt; d$model=predict(lm(d$deaths~d$year),d)
+&gt; d$model=predict(lm(deaths~year_ending_september,head(d,8)),d)
 &gt; d$excess=d$deaths-d$model
 &gt; d$excess_pct=round(d$excess/d$model*100,1)
 &gt; print.data.frame(d,row.names=F)
  year_ending_september   deaths    model      excess excess_pct
-                  2012 30329.96 29424.28   905.67870        3.1
-                  2013 29850.44 30113.62  -263.17955       -0.9
-                  2014 30478.69 30802.96  -324.26229       -1.1
-                  2015 32039.45 31492.29   547.15498        1.7
-                  2016 31408.53 32181.63  -773.10123       -2.4
-                  2017 33635.98 32870.97   765.00991        2.3
-                  2018 33267.37 33560.31  -292.94018       -0.9
-                  2019 34180.82 34249.65   -68.82904       -0.2
-                  2020 32822.14 34938.98 -2116.84035       -6.1
-                  2021 34813.47 35628.32  -814.85166       -2.3
-                  2022 38070.00 36317.66  1752.34111        4.8
-                  2023 37690.82 37007.00   683.81960        1.8
+                  2012 30329.96 29695.51   634.45408        2.1
+                  2013 29850.44 30325.05  -474.60897       -1.6
+                  2014 30478.69 30954.59  -475.89650       -1.5
+                  2015 32039.45 31584.13   455.31596        1.4
+                  2016 31408.53 32213.68  -805.14504       -2.5
+                  2017 33635.98 32843.22   792.76130        2.4
+                  2018 33267.37 33472.76  -205.39359       -0.6
+                  2019 34180.82 34102.30    78.51276        0.2
+                  2020 32822.14 34731.85 -1909.70335       -5.5
+                  2021 34813.47 35361.39  -547.91946       -1.5
+                  2022 38070.00 35990.93  2079.06851        5.8
+                  2023 37690.82 36620.47  1070.34220        2.9
 &gt; sum(tail(d$excess,3))
-[1] 1621.309</pre>
+[1] 2601.491</pre>
+<p>And when I used a seasonality-adjusted linear trend from 2015 to 2019 as the baseline, I got about negative 1732 excess deaths since the start of 2020:</p>
+<pre>&gt; prediction=xy$x&lt;=&quot;2019-12-31&quot;&amp;xy$x&gt;=&quot;2015-01-01&quot;
+&gt; linear=predict(lm(y~x,xy[prediction,]),xy)
+&gt; days=substr(xy$x,6,10)
+&gt; daily=tapply(xy$y[prediction]-linear[prediction],days[prediction],mean)
+&gt; seasonal=linear+daily[days]
+&gt; sum((xy$y-seasonal)[xy$x&gt;=&quot;2020-01-01&quot;])
+[1] -1732.31</pre>
+<div class="width6">
+<img src="i/moar-seasonal-excess.png">
+</div>
 <h2>
 <a href=#Tweet_about_excess_deaths_by_Clare_Craig id=Tweet_about_excess_deaths_by_Clare_Craig>Tweet about excess deaths by Clare Craig</a>
 </h2>
