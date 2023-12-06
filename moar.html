@@ -50,10 +50,10 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Anomalies_in_the_CSV_file>Anomalies in the CSV file</a></li>
 <li><a href=#Table_for_ten_batches_with_highest_percentage_of_deaths>Table for ten batches with highest percentage of deaths</a></li>
 <li><a href=#Counting_days_with_more_than_120_deaths>Counting days with more than 120 deaths</a></li>
+<li><a href=#Table_for_deaths_by_vaccination_site>Table for deaths by vaccination site</a></li>
 <li><a href=#Excess_mortality_compared_to_new_vaccinations>Excess mortality compared to new vaccinations</a></li>
 <li><a href=#Distribution_of_number_of_days_from_vaccination_until_death>Distribution of number of days from vaccination until death</a></li>
 <li><a href=#Distribution_of_vaccine_doses_given_per_day>Distribution of vaccine doses given per day</a></li>
-<li><a href=#Table_for_deaths_by_vaccination_site>Table for deaths by vaccination site</a></li>
 <li><a href=#Origins_of_Youngs_data_and_video>Origins of Young's data and video</a></li>
 <li><a href=#Plots_for_statistics_relative_to_date_of_vaccination>Plots for statistics relative to date of vaccination</a></li>
 <li><a href=#Plots_for_statistics_per_batch>Plots for statistics per batch</a></li>
@@ -186,20 +186,20 @@ mrn,batch_id,dose_number,date_time_of_service,date_of_death,vaccine_name,date_of
 <div class="width6">
 <img src="i/moar-presentation-ten-batches.jpg">
 </div>
-<p>I noticed that the numbers in Young's table don't match the CSV file published by Kirsch, because for example batch 1 has a total of 711 doses in the table above but 4,386 doses in the CSV file. In the table above there's 5 different batches which have over 10% deaths, but in the CSV file there's only one batch with over 10% deaths:</p>
-<pre>$ sed 1d nz-record-level-data-4M-records.csv|awk -F, &#39;{n[$2]++;t[$2][$6]++}$5{d[$2]++}END{for(i in d){max=0;maxn=&quot;&quot;;for(j in t[i])if(t[i][j]&gt;max)maxn=j;print i FS n[i]FS d[i]FS 100*d[i]/n[i]FS maxn FS 100*t[i][maxn]/n[i]}}&#39;|sort -t, -rnk4|head|(echo batch,doses_given,deaths,death_pct,most_common_vaccine_type_of_batch,pct_of_most_common_vaccine_type;cat)|column -ts,
-batch  doses_given  deaths  death_pct  most_common_vaccine_type_of_batch  pct_of_most_common_vaccine_type
-1      4386         674     15.3671    Pfizer BioNTech COVID-19           100
-3      6213         317     5.10221    Pfizer BioNTech COVID-19           100
-8      3986         203     5.09282    Pfizer BioNTech COVID-19           100
-2      16627        754     4.53479    Pfizer BioNTech COVID-19           100
-7      1288         56      4.34783    Pfizer BioNTech COVID-19           100
-72     10624        356     3.3509     Pfizer BioNTech COVID-19           96.4232
-4      7111         237     3.33286    Pfizer BioNTech COVID-19           100
-71     20325        620     3.05043    Pfizer BioNTech COVID-19           95.7048
-35     103143       3141    3.04529    Pfizer BioNTech COVID-19           99.9157
-32     42178        1281    3.03713    Pfizer BioNTech COVID-19           99.8933</pre>
-<p>However Uncle John Returns figured out that people who later went on to have a subsequent vaccine dose were excluded from Young's table. [<a href="https://x.com/UncleJo46902375/status/1731625480527257928">https://x.com/UncleJo46902375/status/1731625480527257928</a>] You can almost reproduce Young's table if you sort the records by vaccination date and select only the newest record for each person (apart from small discrepancies in the number of deaths for some batches):</p>
+<p>I noticed that the numbers in Young's table don't match the CSV file published by Kirsch, because for example batch 1 has a total of 711 doses in the table above but 4,386 doses in the CSV file. In the table above there's 5 different batches which have over 10% deaths, but in the CSV file there's only one batch with over 10% deaths. Some people received two doses from the same batch, so they are counted twice in columns 2-4 below but only once in columns 5-7, so for example there are 375 people who died after receiving batch 1, but many of them received two doses from batch 1 so there are 674 doses in batch 1 which led to a death:</p>
+<pre>$ awk -F, &#39;NR&gt;1{n[$2]++;n2[$2][$1]}$5{d[$2]++;d2[$2][$1]}END{for(i in d)print i FS n[i]FS d[i]FS 100*d[i]/n[i]FS length(n2[i])FS length(d2[i])FS 100*length(d2[i])/length(n2[i])}&#39; nz-record-level-data-4M-records.csv|sort -t, -rnk4|(echo batch,doses_given,doses_leading_to_deaths,doses_leading_to_deaths_pct,persons,deaths,deaths_per_person_pct;head)|column -ts,
+batch  doses_given  doses_leading_to_death  doses_leading_to_death_pct  persons  deaths  deaths_per_person_pct
+1      4386         674                     15.3671                     2979     375     12.5881
+3      6213         317                     5.10221                     4875     264     5.41538
+8      3986         203                     5.09282                     3774     193     5.11394
+2      16627        754                     4.53479                     13518    596     4.40894
+7      1288         56                      4.34783                     1232     51      4.13961
+72     10624        356                     3.3509                      10622    356     3.35153
+4      7111         237                     3.33286                     7015     233     3.32145
+71     20325        620                     3.05043                     20276    619     3.05287
+35     103143       3141                    3.04529                     102759   3129    3.04499
+32     42178        1281                    3.03713                     41866    1277    3.05021</pre>
+<p>Uncle John Returns figured out that people who later went on to have a subsequent vaccine dose were excluded from Young's table. [<a href="https://x.com/UncleJo46902375/status/1731625480527257928">https://x.com/UncleJo46902375/status/1731625480527257928</a>] You can almost reproduce the table if you sort the records by vaccination date and select only the newest record for each person (apart from small discrepancies in the number of deaths for some batches):</p>
 <pre>&gt; t=read.csv(&quot;nz-record-level-data-4M-records.csv&quot;)
 &gt; t2=t
 &gt; for(i in grep(&quot;date&quot;,colnames(t2)))t2[,i]=as.Date(t2[,i],&quot;%m-%d-%Y&quot;)
@@ -250,6 +250,15 @@ batch  doses_given  deaths  death_pct  most_common_vaccine_type_of_batch  pct_of
 &gt; table(factor(as.numeric(substr(dates,1,4)),2011:2023))
 2011 2012 2013 2014 2015 2016 2017 2018 2019 2020 2021 2022 2023
    3    2    0    0    3    0    4    0    1    0    1   11    1</pre>
+<h2>
+<a href=#Table_for_deaths_by_vaccination_site id=Table_for_deaths_by_vaccination_site>Table for deaths by vaccination site</a>
+</h2>
+<p>Barry Young's presentation included this table which showed the vaccination sites with the highest percentage of deaths per vaccination: [<a href="https://rumble.com/v3ynskd-operation-m.o.a.r-mother-of-all-revelations.html">https://rumble.com/v3ynskd-operation-m.o.a.r-mother-of-all-revelations.html</a>]</p>
+<div class="width6">
+<img src="i/moar-deaths-per-site.jpg">
+</div>
+<p>The vaccination site on the first row of the table is called <span class="quote">&quot;Te Hopai Home &amp; Hospital&quot;</span>, which has 191 vaccinations and 61 deaths which results in ratio of about 32% deaths per vaccination. I don't know if the number of vaccinations refers to the number of vaccine doses given or the number of vaccinated persons, because data about vaccination sites was not included in the files published by Kirsch.</p>
+<p>But in any case, The Hopai Home &amp; Hospital is a nursing home. [<a href="https://www.tehopai.co.nz/">https://www.tehopai.co.nz/</a>] The dataset published by the whistleblower includes about two and half years of data, so over that period of time, it's not that unusual that about 30% of vaccine doses in a nursing home would've been given to people who are now dead. Even though actually in a comment at Igor Chudov's Substack, someone wrote: <span class="quote">&quot;Te Hopai was a vaccination centre for the public, not just aged care residents. Teenagers got jabs there so you are being very misleading here.&quot;</span> [<a href="https://www.igor-chudov.com/p/i-analyzed-the-leaked-nz-whistleblower/comment/44717804">https://www.igor-chudov.com/p/i-analyzed-the-leaked-nz-whistleblower/comment/44717804</a>]</p>
 <h2>
 <a href=#Excess_mortality_compared_to_new_vaccinations id=Excess_mortality_compared_to_new_vaccinations>Excess mortality compared to new vaccinations</a>
 </h2>
@@ -473,15 +482,6 @@ $ awk &#39;NR==1||/New Zealand/&#39; owid-covid-data.csv|csvtk cut -f date,new_v
 2023-04-03 19746 19488.0
 2023-04-04 20129 19733.0</pre>
 <h2>
-<a href=#Table_for_deaths_by_vaccination_site id=Table_for_deaths_by_vaccination_site>Table for deaths by vaccination site</a>
-</h2>
-<p>Barry Young's presentation included this table which showed the vaccination sites with the highest percentage of deaths per vaccination: [<a href="https://rumble.com/v3ynskd-operation-m.o.a.r-mother-of-all-revelations.html">https://rumble.com/v3ynskd-operation-m.o.a.r-mother-of-all-revelations.html</a>]</p>
-<div class="width6">
-<img src="i/moar-deaths-per-site.jpg">
-</div>
-<p>The vaccination site on the first row of the table is called <span class="quote">&quot;Te Hopai Home &amp; Hospital&quot;</span>, which has 191 vaccinations and 61 deaths which results in ratio of about 32% deaths per vaccination. I don't know if the number of vaccinations refers to the number of vaccine doses given or the number of vaccinated patients, because data about vaccination sites was not included in the files published by Kirsch.</p>
-<p>But in any case, The Hopai Home &amp; Hospital is a nursing home. [<a href="https://www.tehopai.co.nz/">https://www.tehopai.co.nz/</a>] The dataset published by the whistleblower includes about two and half years of data, so over that period of time, it's not that unusual that about 30% of vaccine doses in a nursing home would've been given to people who are now dead. Even though actually in a comment at Igor Chudov's Substack, someone wrote: <span class="quote">&quot;Te Hopai was a vaccination centre for the public, not just aged care residents. Teenagers got jabs there so you are being very misleading here.&quot;</span> [<a href="https://www.igor-chudov.com/p/i-analyzed-the-leaked-nz-whistleblower/comment/44717804">https://www.igor-chudov.com/p/i-analyzed-the-leaked-nz-whistleblower/comment/44717804</a>]</p>
-<h2>
 <a href=#Origins_of_Youngs_data_and_video id=Origins_of_Youngs_data_and_video>Origins of Young's data and video</a>
 </h2>
 <p>Barry Young was interviewed by Liz Gunn, who used to be the host of three different shows on mainstream TV according to her IMDB profile. Highlights of the video were posted on Twitter by Aussie17, and he also posted an early Substack post about the video, but his Twitter bio says that he is a former executive in big pharma. So it sounds like the kind of cast of characters who are usually rolling out the Stew Peters psyops. Alex Jones compared the release of Young's data to the release of Team Enigma's data two years earlier. The first big presentations about Team Enigma's data were done by Latypova and Yeadon, who are both former executives in the pharmaceutical industry, and when Latypova did her presentation on the Stew Peters Show, she was interviewed by Stew Peters and Jane Ruby who both used to work in mainstream TV.</p>
@@ -521,7 +521,7 @@ $ awk &#39;NR==1||/New Zealand/&#39; owid-covid-data.csv|csvtk cut -f date,new_v
 <div class="width12">
 <img src="i/moar-heat.png">
 </div>
-<p>In the heatmap above, I omitted 4 small batches that had zero deaths. The end of data refers to October 27th 2023 which is the date of the last death included in the dataset. I calculated the person-years by calculating the time from a vaccine dose until either death or October 27th 2023, so that I included the time after a patient got a subsequent dose as part of the person-years of earlier doses.</p>
+<p>In the heatmap above, I omitted 4 small batches that had zero deaths. The end of data refers to October 27th 2023 which is the date of the last death included in the dataset. I calculated the person-years by calculating the time from a vaccine dose until either death or October 27th 2023, so that I included the time after a person got a subsequent dose as part of the person-years of earlier doses.</p>
 <p>There are some people who got two doses from the same batch and who died later, but they are counted as two deaths under the same batch, which partially explains the high percentage of deaths for batch 1. Batch 1 has a large number of people who got both their first and second doses from the batch, so there are 4,386 doses for batch 1 but only 2,979 unique people who got a dose from batch 1, and 674 doses were given to people who died later but there are only 375 unique people who died after receiving batch 1.</p>
 <p>R code:</p>
 <pre>t=read.csv(&quot;nz-record-level-data-4M-records.csv&quot;)
