@@ -111,7 +111,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <h2>
 <a href=#Anomalies_in_the_CSV_file id=Anomalies_in_the_CSV_file>Anomalies in the CSV file</a>
 </h2>
-<p>There are several anomalies in the CSV file published by Kirsch, but they may have been caused by the procedure that was used to obfuscate the data, or they may be the result of errors in data entry which are expected in data that has been manually entered by humans.</p>
+<p>There are several anomalies in the CSV file published by Kirsch, but they may have been caused by the procedure that was used to obfuscate the data, or they may have been the result of errors in manual data entry by humans.</p>
 <p>There are 47 combinations of patient ID and dose number which are listed twice in the CSV file. For example patient 152535 got the first dose twice the same day, with one entry for AstraZeneca and another entry for Pfizer:</p>
 <pre>$ cut -d, -f1,3 nz-record-level-data-4M-records.csv|awk &#39;{++a[$0]}END{for(i in a)++b[a[i]];for(i in b)print b[i],i}&#39;
 4193345 1
@@ -171,7 +171,7 @@ $ awk -F, &#39;NR&gt;1{a[$3]++}END{for(i in a)print i,a[i]}&#39; nz-record-level
 28 1
 29 1
 32 1</pre>
-<p>There are 581 people who have different birthdays on different lines, but it might be an artifact of the obfuscation procedure where the dates of birth and vaccination were shifted by a random number of days:</p>
+<p>There are 581 people who have different birthdays on different lines, but it might be an artifact of the obfuscation procedure where the dates of birth and vaccination were shifted by a random number of days (even though I thought that all dates of the same person were always shifted by the same amount of days):</p>
 <pre>$ cut -d, -f1,7 nz-record-level-data-4M-records.csv|awk &#39;!a[$0]++&#39;|awk -F, &#39;++a[$1]==2&#39;|wc -l
 581
 $ awk &#39;NR==1||/^292629,/&#39; nz-record-level-data-4M-records.csv
@@ -417,6 +417,77 @@ ggsave(&quot;1.png&quot;,width=6,height=3)</pre>
 <pre>&gt; as.Date(round(tapply(as.Date(t$date_of_death,&quot;%m-%d-%Y&quot;),t$dose_number,mean,na.rm=T)))[1:6]
            1            2            3            4            5            6
 &quot;2022-10-02&quot; &quot;2022-10-16&quot; &quot;2022-12-10&quot; &quot;2023-03-29&quot; &quot;2023-07-18&quot; &quot;2023-07-21&quot;</pre>
+<p>In the plot below where I included vaccinations which were given at least 51 weeks before the last death and I only included deaths that happened within 51 weeks from vaccination, the number of deaths no longer tapered off at the end of the x-axis. In the plot below dose 3 has a bump above the trend line around weeks 15-30, which was probably caused by COVID deaths in 2022, but afterwards the line for dose 3 goes below the trend line, which might be because of a pull forward effect or because there was a period with low overall mortality in late 2022:</p>
+<div class="width6">
+<img src="i/moar-days-to-death-by-dose-3.png">
+</div>
+<p>R code:</p>
+<pre>library(ggplot2)
+
+t=as.data.frame(data.table::fread(&quot;nz-record-level-data-4M-records.csv&quot;)) # this is faster than `read.csv`
+for(i in grep(&quot;date&quot;,colnames(t)))t[,i]=as.Date(t[,i],&quot;%m-%d-%Y&quot;)
+
+weeks=51
+date1=max(t$date_of_death,na.rm=T)
+date2=date1-weeks*7+1
+t=t[t$date_time_of_service&lt;=date2,]
+t=t[t$date_of_death-t$date_time_of_service&lt;weeks*7,]
+t=t[t$date_time_of_service&lt;=t$date_of_death,]
+t=t[t$dose_number&lt;=4,]
+doses=table(t$dose_number)
+t=t[!is.na(t$date_of_death),]
+
+ta=as.data.frame(table(floor((t$date_of_death-t$date_time_of_service)/7),t$dose_number))
+xy=data.frame(x=levels(ta$Var1),y=c(ta$Freq/doses[ta$Var2]),z=ta$Var2)
+xy$x=as.numeric(xy$x)
+xy$z=paste0(&quot;Dose &quot;,xy$z)
+
+tap=tapply(ta$Freq,ta$Var1,sum)
+xy=rbind(data.frame(x=as.numeric(names(tap)),y=tap/sum(doses),z=&quot;Total&quot;),xy)
+xy$y=1e3*xy$y
+xy$z=factor(xy$z,unique(xy$z))
+xy$a=split(xy,xy$z)|&gt;lapply(\(i)lm(y~x,i)|&gt;predict(i))|&gt;unlist()
+
+xstart=0
+xend=weeks-1
+xstep=5
+candidates=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
+ystep=candidates[which.min(abs(candidates-max(xy$y)/6))]
+ystart=0
+yend=ystep*ceiling(max(xy$y)/ystep)
+xbreak=seq(xstart,xend,xstep)
+ybreak=seq(ystart,yend,ystep)
+
+labels=data.frame(x=as.Date(xstart+.03*(xend-xstart)),y=seq(.97*yend,,-yend/15,nlevels(xy$z)),label=levels(xy$z))
+
+color=c(&quot;black&quot;,hcl(c(210,120,60,0,300)+15,70,50))
+
+ggplot(xy,aes(x,y))+
+geom_hline(yintercept=ystart,color=&quot;black&quot;,linewidth=.3,lineend=&quot;square&quot;)+
+geom_vline(xintercept=xstart,color=&quot;black&quot;,linewidth=.3,lineend=&quot;square&quot;)+
+geom_line(aes(color=z),size=.4)+
+geom_line(aes(y=a,color=z),linetype=2,size=.4)+
+geom_label(data=labels,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.7),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.04,&quot;lines&quot;),label.size=0,color=color[1:nlevels(xy$z)],size=3.4,hjust=0,vjust=1)+
+labs(x=&quot;Weeks from vaccination to death&quot;,y=&quot;Deaths per thousand doses&quot;,title=paste0(&quot;Deaths per thousand doses by weeks since vaccination, last time of death &quot;,date1,&quot;, last time of vaccination &quot;,date2,&quot; (&quot;,weeks,&quot;*7-1 days earlier). Week 0 extends from day of vaccination to 6 days later.&quot;)|&gt;stringr::str_wrap(70))+
+coord_cartesian(clip=&quot;off&quot;)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,expand=c(0,0))+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,expand=c(0,0))+
+scale_color_manual(values=color)+
+theme(
+  axis.text=element_text(size=8,color=&quot;black&quot;),
+  axis.ticks=element_line(linewidth=.3,color=&quot;black&quot;),
+  axis.ticks.length=unit(.2,&quot;lines&quot;),
+  axis.title=element_text(size=9),
+  legend.position=&quot;none&quot;,
+  panel.background=element_rect(fill=&quot;white&quot;),
+  panel.grid=element_blank(),
+  plot.background=element_rect(fill=&quot;white&quot;),
+  plot.margin=margin(.4,.5,.4,.5,&quot;lines&quot;),
+  plot.subtitle=element_text(size=9),
+  plot.title=element_text(size=10)
+)
+
+ggsave(&quot;1.png&quot;,width=5,height=3.5)</pre>
 <h2>
 <a href=#Distribution_of_vaccine_doses_given_per_day id=Distribution_of_vaccine_doses_given_per_day>Distribution of vaccine doses given per day</a>
 </h2>
