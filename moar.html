@@ -544,8 +544,8 @@ d$`Average age at death`=tapply(dead$date_of_death-dead$date_of_birth,fa,mean)/3
 # d$`Average age at vaccination for dead recipients`=tapply(dead$date_time_of_service-dead$date_of_birth,dead$batch_id,mean)/365.2422
 d$`Average days from dose to end of data`=tapply(maxdate-dead$date_time_of_service,fa,mean)
 d$`Average days from death to end of data`=tapply(maxdate-dead$date_of_death,fa,mean)
-d$`Persons`=persons
-d$`Deaths`=uniqdeaths
+d$Persons=persons
+d$Deaths=uniqdeaths
 d$`Percentage of deaths per person`=100*uniqdeaths/persons
 d$`Doses per person`=doses/persons
 
@@ -576,62 +576,6 @@ for(i in 1:slices){
     fontsize_number=8,
     number_color=&quot;black&quot;,
     na_col=&quot;gray90&quot;,
-    breaks=seq(0,1,,256),
-    colorRampPalette(hex(HSV(c(210,210,130,60,40,20,0),c(0,.5,.5,.5,.5,.5,.5),1)))(256)
-  )
-}
-system(&quot;montage -geometry +0+0 -tile 1x i[123].png 1.png&quot;)
-
-t=read.csv(&quot;nz-record-level-data-4M-records.csv&quot;)
-t2=t[t$date_of_death!=&quot;&quot;,]
-t1=t[t$batch_id%in%t2$batch_id,]
-
-doses=table(t1$batch_id)
-deaths=table(t2$batch_id)
-vax1=as.Date(t1$date_time_of_service,&quot;%m-%d-%Y&quot;)
-death1=as.Date(t1$date_of_death,&quot;%m-%d-%Y&quot;)
-birth1=as.Date(t1$date_of_birth,&quot;%m-%d-%Y&quot;)
-vax2=as.Date(t2$date_time_of_service,&quot;%m-%d-%Y&quot;)
-death2=as.Date(t2$date_of_death,&quot;%m-%d-%Y&quot;)
-birth2=as.Date(t2$date_of_birth,&quot;%m-%d-%Y&quot;)
-dend=max(death2)
-
-d=data.frame(`Doses given`=c(doses),check.names=F)
-d$`Deaths`=deaths
-d$`Percentage of deaths per dose`=100*deaths/doses
-d$`Percentage of deaths per person-year`=deaths/(tapply(pmin(death1,dend,na.rm=T)-vax1,t1$batch_id,sum)/365.2422)*1e2
-d$`Average days between vaccination and death`=tapply(death2-vax2,t2$batch_id,mean)
-d$`Average age at vaccination`=tapply(vax1-birth1,t1$batch_id,mean)/365.2422
-d$`Average age at vaccination for dead recipients`=tapply(vax2-birth2,t2$batch_id,mean)/365.2422
-d$`Average days from dose given to end of data`=tapply(dend-vax2,t2$batch_id,mean)
-d$`Average days from death to end of data`=tapply(dend-death2,t2$batch_id,mean)
-
-m=t(apply(d,2,\(x)(x-min(x))/(max(x)-min(x))))
-
-kimir2=\(x){x[]=ifelse(or(x&gt;=1e6,x&lt;=-1e6),paste0(round(x/1e6,ifelse(abs(x)&lt;1e7,1,0)),&quot;M&quot;),ifelse(or(x&gt;=1e3,x&lt;=-1e3),paste0(round(x/1e3,ifelse(abs(x)&lt;1e4,1,0)),&quot;k&quot;),round(x)));x}
-disp=kimir2(t(d))
-disp[3,]=sprintf(&quot;%.1f&quot;,d[,3])
-disp[4,]=sprintf(&quot;%.1f&quot;,d[,4])
-
-slices=3
-for(i in 1:slices){
-  step=ceiling(ncol(m)/slices)
-  start=(i-1)*step+1
-  end=min(start+step-1,ncol(m))
-  pheatmap::pheatmap(
-    m[,start:end],
-    filename=paste0(&quot;i&quot;,i,&quot;.png&quot;),
-    cluster_rows=F,
-    cluster_cols=F,
-    legend=F,
-    cellwidth=20,
-    cellheight=20,
-    fontsize=9,
-    border_color=NA,
-    display_numbers=disp[,start:end],
-    fontsize_number=8,
-    number_color=&quot;black&quot;,
-    na_col=&quot;white&quot;,
     breaks=seq(0,1,,256),
     colorRampPalette(hex(HSV(c(210,210,130,60,40,20,0),c(0,.5,.5,.5,.5,.5,.5),1)))(256)
   )
