@@ -54,6 +54,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Excess_mortality_compared_to_new_vaccinations>Excess mortality compared to new vaccinations</a></li>
 <li><a href=#Distribution_of_number_of_days_from_vaccination_until_death>Distribution of number of days from vaccination until death</a></li>
 <li><a href=#Distribution_of_vaccine_doses_given_per_day>Distribution of vaccine doses given per day</a></li>
+<li><a href=#Reverse_engineering_the_age_column>Reverse engineering the age column</a></li>
 <li><a href=#Origins_of_Youngs_data_and_video>Origins of Young's data and video</a></li>
 <li><a href=#Plots_for_statistics_relative_to_date_of_vaccination>Plots for statistics relative to date of vaccination</a></li>
 <li><a href=#Plots_for_statistics_per_batch>Plots for statistics per batch</a></li>
@@ -61,7 +62,6 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Tweet_by_Kirsch_about_excess_mortality_in_2021_2023>Tweet by Kirsch about excess mortality in 2021-2023</a></li>
 <li><a href=#Tweet_about_excess_deaths_by_Clare_Craig>Tweet about excess deaths by Clare Craig</a></li>
 <li><a href=#Research_by_other_people>Research by other people</a></li>
-<li><a href=#Reverse_engineering_the_age_column>Reverse engineering the age column</a></li>
 </ul>
 
 <h2>
@@ -497,6 +497,19 @@ $ awk &#39;NR==1||/New Zealand/&#39; owid-covid-data.csv|csvtk cut -f date,new_v
 2023-04-03 19746 19488.0
 2023-04-04 20129 19733.0</pre>
 <h2>
+<a href=#Reverse_engineering_the_age_column id=Reverse_engineering_the_age_column>Reverse engineering the age column</a>
+</h2>
+<p>The value of the age column is always the same on each line of a patient so that it doesn't match the age at vaccination. For example patient 1 was vaccinated in 2021 and 2023 but their age was 72 both times:</p>
+<pre>$ awk &#39;NR==1||/^1,/&#39; nz-record-level-data-4M-records.csv|csvtk pretty|sed 2d
+mrn   batch_id   dose_number   date_time_of_service   date_of_death   vaccine_name                                         date_of_birth   age
+1     1          2             07-24-2021                             Pfizer BioNTech COVID-19                             05-23-1951      72
+1     1          1             06-19-2021                             Pfizer BioNTech COVID-19                             05-23-1951      72
+1     104        5             05-07-2023                             Pfizer Comirnaty Original/Omicron BA.4-5 15/15 mcg   05-23-1951      72</pre>
+<p>So I thought that maybe the age corresponds to the actual unobfuscated age of the patient on a certain date, but the date of birth has been obfuscated. In order to reverse engineer which date the ages correspond to, I checked how many days in 2020-2025 match the age of each patient. The peak date was on December 1st 2023, the last non-zero date was on December 9th 2024, and the number of matching dates went linearly almost down to zero around November 30th 2022 when there's an inflection point, but after that it takes over a year until the number of matching dates goes to completely zero in August 2021. So basically the age column seems to correspond to the age around December 1st 2023, and the dates of birth seem to have been shifted by at most around 8 days backwards or forwards.</p>
+<div class="width6">
+<img src="i/moar-age-reverse-engineer.png">
+</div>
+<h2>
 <a href=#Origins_of_Youngs_data_and_video id=Origins_of_Youngs_data_and_video>Origins of Young's data and video</a>
 </h2>
 <p>Barry Young was interviewed by Liz Gunn, who used to be the host of three different shows on mainstream TV according to her IMDB profile. Highlights of the video were posted on Twitter by Aussie17, and he also posted an early Substack post about the video, but his Twitter bio says that he is a former executive in big pharma. So it sounds like the kind of cast of characters who are usually rolling out the Stew Peters psyops. Alex Jones compared the release of Young's data to the release of Team Enigma's data two years earlier. The first big presentations about Team Enigma's data were done by Latypova and Yeadon, who are both former executives in the pharmaceutical industry, and when Latypova did her presentation on the Stew Peters Show, she was interviewed by Stew Peters and Jane Ruby who both used to work in mainstream TV.</p>
@@ -827,75 +840,6 @@ Covid Paediatric Pfizer,GE0694,2023-10-31,249600</pre>
 <img src=i/moar-uncle-4.png class=width5><img src=i/moar-uncle-5.png class=width5>
 </div>
 </blockquote>
-<h2>
-<a href=#Reverse_engineering_the_age_column id=Reverse_engineering_the_age_column>Reverse engineering the age column</a>
-</h2>
-<p>The value of the age column is always the same on each line of a patient so that it doesn't match the age at vaccination. For example patient 1 was vaccinated in 2021 and 2023 but their age was 72 both times:</p>
-<pre>$ awk &#39;NR==1||/^1,/&#39; nz-record-level-data-4M-records.csv|csvtk pretty|sed 2d
-mrn   batch_id   dose_number   date_time_of_service   date_of_death   vaccine_name                                         date_of_birth   age
-1     1          2             07-24-2021                             Pfizer BioNTech COVID-19                             05-23-1951      72
-1     1          1             06-19-2021                             Pfizer BioNTech COVID-19                             05-23-1951      72
-1     104        5             05-07-2023                             Pfizer Comirnaty Original/Omicron BA.4-5 15/15 mcg   05-23-1951      72</pre>
-<p>So I thought that maybe the age corresponds to the actual unobfuscated age of the patient on a certain date, but the date of birth has been obfuscated. In order to reverse engineer which date the ages correspond to, I ran the script below which tests how many days in 2020-2025 match the age of each patient.</p>
-<p>The peak date was on December 1st 2023, the last non-zero date was on December 9th 2024, and the distribution of the error went linearly almost down to zero around November 30th 2022 when there's an inflection point, but after that it takes over a year until the error goes to completely zero in August 2021. So basically the age column seems to correspond to the age around December 1st 2023, and the dates of birth seem to have been shifted by at most around 8 days backwards or forwards.</p>
-<div class="width6">
-<img src="i/moar-age-reverse-engineer.png">
-</div>
-<pre>library(ggplot)
-
-t=as.data.frame(data.table::fread(&quot;nz-record-level-data-4M-records.csv&quot;))
-for(i in grep(&quot;date&quot;,colnames(t)))t[,i]=as.Date(t[,i],&quot;%m-%d-%Y&quot;)
-
-t2=head(t,1e5)
-
-xstart=as.Date(&quot;2020-1-1&quot;)
-xend=as.Date(&quot;2026-1-1&quot;)
-dates=seq(xstart,xend,1)
-
-xy=data.frame(x=dates)
-years=as.numeric(substring(t2$date_of_birth,1,4))
-days=substring(t2$date_of_birth,6,12)
-xy$y=sapply(dates,\(x)sum(t2$age==as.numeric(substring(x,1,4))-years-as.integer(substring(x,6,12)&lt;days)))
-xy=xy[xy$y!=0,]
-
-xbreak=seq(xstart,xend,&quot;3 month&quot;)
-candidates=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
-ystep=candidates[which.min(abs(candidates-max(xy$y)/6))]
-ystart=0
-yend=ystep*ceiling(max(xy$y)/ystep)
-ybreak=seq(ystart,yend,ystep)
-
-l1=lm(y~as.double(x),xy[grepl(&quot;2022-10&quot;,xy$x),])
-l2=lm(y~as.double(x),xy[grepl(&quot;2023-01&quot;,xy$x),])
-cm=rbind(coef(l1),coef(l2))
-inflect=as.Date(c(-solve(cbind(cm[,2],-1))%*%cm[,1])[1])
-
-ggplot(xy,aes(x,y))+
-geom_hline(yintercept=ystart,color=&quot;gray50&quot;,linewidth=.3,lineend=&quot;square&quot;)+
-geom_vline(xintercept=xstart,color=&quot;gray50&quot;,linewidth=.3,lineend=&quot;square&quot;)+
-geom_line(size=.4)+
-labs(x=NULL,y=&quot;Number of days when age matches date of birth&quot;,title=&quot;Leaked NZ data: number of days for each date where age column matches date of birth column (first 100,000 records checked, peak on &quot;|&gt;paste0(xy$x[which.max(xy$y)],&quot;, minimum non-zero &quot;,xy$x[1],&quot;, maximum non-zero &quot;,tail(xy$x,1),&quot;, inflection point &quot;,inflect,&quot;)&quot;)|&gt;stringr::str_wrap(80))+
-coord_cartesian(clip=&quot;off&quot;)+
-scale_x_date(limits=c(xstart,xend),breaks=xbreak,expand=c(0,0),date_labels=&quot;%b 1 %y&quot;)+
-scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,expand=c(0,0),labels=kimir)+
-scale_color_manual(values=color)+
-theme(
-  axis.text=element_text(size=8,color=&quot;black&quot;),
-  axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
-  axis.ticks=element_line(linewidth=.3,color=&quot;gray50&quot;),
-  axis.ticks.length=unit(.2,&quot;lines&quot;),
-  axis.title=element_text(size=9),
-  legend.position=&quot;none&quot;,
-  panel.background=element_rect(fill=&quot;white&quot;),
-  panel.grid=element_blank(),
-  plot.background=element_rect(fill=&quot;white&quot;),
-  plot.margin=margin(.4,.5,.4,.5,&quot;lines&quot;),
-  plot.subtitle=element_text(size=9),
-  plot.title=element_text(size=10)
-)
-
-ggsave(&quot;1.png&quot;,width=6,height=3.5)
-system(&quot;mogrify -trim -border 24 -bordercolor white 1.png&quot;)</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
