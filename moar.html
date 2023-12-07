@@ -61,6 +61,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Tweet_by_Kirsch_about_excess_mortality_in_2021_2023>Tweet by Kirsch about excess mortality in 2021-2023</a></li>
 <li><a href=#Tweet_about_excess_deaths_by_Clare_Craig>Tweet about excess deaths by Clare Craig</a></li>
 <li><a href=#Research_by_other_people>Research by other people</a></li>
+<li><a href=#Reverse_engineering_the_age_column>Reverse engineering the age column</a></li>
 </ul>
 
 <h2>
@@ -205,7 +206,8 @@ batch  doses   doses_leading_to_death  doses_leading_to_death_pct  persons  deat
 &gt; for(i in grep(&quot;date&quot;,colnames(t2)))t2[,i]=as.Date(t2[,i],&quot;%m-%d-%Y&quot;)
 &gt; t2=t2[rev(order(t2$date_time_of_service)),]
 &gt; t2=t2[!duplicated(t2$mrn),]
-&gt; d=as.data.frame(table(t2$batch_id))|&gt;`colnames&lt;-`(c(&quot;batch&quot;,&quot;doses&quot;))
+&gt; d=as.data.frame(table(doses=t2$batch_id))
+&gt; colnames(d)[1]=&quot;batch&quot;
 &gt; d$deaths=table(factor(t2$batch_id[!is.na(t2$date_of_death)],d$batch))
 &gt; d$pct=100*d$deaths/d$doses
 &gt; d=d[order(-d$pct),]
@@ -778,13 +780,13 @@ Covid Paediatric Pfizer,GE0694,2023-10-31,249600</pre>
                   2023 37690.82 36620.47  1070.34220        2.9
 &gt; sum(tail(d$excess,3))
 [1] 2601.491</pre>
-<p>When I used a seasonality-adjusted linear trend from 2015 to 2019 as the baseline, I got about negative 1732 excess deaths since the start of 2020:</p>
+<p>Thinking Slow got about 10,400 excess deaths from January 2020 to June 2023, but he used the average number of deaths in each January of 2015-2019 as the baseline for January and similarly for other months. [<a href="https://twitter.com/ThinkingSlow1/status/1732606827731321215">https://twitter.com/ThinkingSlow1/status/1732606827731321215</a>] Below I first calculated a linear trend in deaths in 2015-2019, and then I adjusted it for seasonality so that for each 366 days of the year, I calculated the average difference from the trend during the day and I added the difference to my trend for all years. I got about negative 1732 excess deaths since January 2020:</p>
 <pre>&gt; prediction=xy$x&lt;=&quot;2019-12-31&quot;&amp;xy$x&gt;=&quot;2015-01-01&quot;
 &gt; linear=predict(lm(y~x,xy[prediction,]),xy)
 &gt; days=substr(xy$x,6,10)
 &gt; daily=tapply(xy$y[prediction]-linear[prediction],days[prediction],mean)
 &gt; seasonal=linear+daily[days]
-&gt; sum((xy$y-seasonal)[xy$x&gt;=&quot;2020-01-01&quot;])
+&gt; sum((xy$y-seasonal)[xy$x&gt;=&quot;2020-01-01&quot;&amp;xy$x&lt;=&quot;2020-06-30&quot;])
 [1] -1732.31</pre>
 <div class="width6">
 <img src="i/moar-seasonal-excess.png">
@@ -804,8 +806,96 @@ Covid Paediatric Pfizer,GE0694,2023-10-31,249600</pre>
 <h2>
 <a href=#Research_by_other_people id=Research_by_other_people>Research by other people</a>
 </h2>
-<p>Uncle John Returns calculated monthly age-standardized mortality rates. [<a href="https://twitter.com/UncleJo46902375/status/1732496623123517742">https://twitter.com/UncleJo46902375/status/1732496623123517742</a>, <a href="https://twitter.com/UncleJo46902375/status/1732770174896329107">https://twitter.com/UncleJo46902375/status/1732770174896329107</a>]</p>
-<p>WelcomeTheEagle made an interactive dashboard for browsing the data, and he estimated what percentage of the population is missing in different age groups. [<a href="https://www.vaersaware.com/new-zealand">https://www.vaersaware.com/new-zealand</a>, <a href="https://twitter.com/welcometheeagle/status/1731965868505276654/">https://twitter.com/welcometheeagle/status/1731965868505276654/</a>]</p>
+<p>WelcomeTheEagle made an interactive dashboard for browsing the data. [<a href="https://www.vaersaware.com/new-zealand">https://www.vaersaware.com/new-zealand</a>] He also made the table below which shows that Young's dataset seems to include almost all of the New Zealand population aged 85 and above, but more than half of the population is missing in age groups 50-54 and below (the VAXXED column shows the number of people included in Young's dataset and not all vaccinated people): [<a href="https://twitter.com/welcometheeagle/status/1731965868505276654/">https://twitter.com/welcometheeagle/status/1731965868505276654/</a>]</p>
+<div class="width9">
+<img src="i/moar-eagle.jpg">
+</div>
+<p>Uncle John Returns calculated monthly age-standardized mortality rates for the data: [<a href="https://twitter.com/UncleJo46902375/status/1732496623123517742">https://twitter.com/UncleJo46902375/status/1732496623123517742</a>]</p>
+<div class="width5">
+<img src="i/moar-uncle-0.png">
+</div>
+<p>Uncle John Returns also made age-standardized plots for mortality per weeks after vaccination: [<a href="https://twitter.com/UncleJo46902375/status/1732770174896329107">https://twitter.com/UncleJo46902375/status/1732770174896329107</a>]</p>
+<blockquote>
+<p>Same data but age-standardised:</p>
+<p><img src=i/moar-uncle-1.png class=width5></p>
+<p>The proportion of old people in the early weeks is much higher since they are getting boosted ~week 26 and circling back to week 0, that's why there are 4.2 million in week 0 declining to 140 thousand by week 10. That's going to really screw up crude mortality rates:</p>
+<div class="width0">
+<img src=i/moar-uncle-2.png class=width5><img src=i/moar-uncle-3.png class=width5>
+</div>
+<p>Looking at crude rates for individual age bands, the early plunge is much more prevalent in the old than in the young and middle-aged:</p>
+<div class="width0">
+<img src=i/moar-uncle-4.png class=width5><img src=i/moar-uncle-5.png class=width5>
+</div>
+</blockquote>
+<h2>
+<a href=#Reverse_engineering_the_age_column id=Reverse_engineering_the_age_column>Reverse engineering the age column</a>
+</h2>
+<p>The value of the age column is always the same on each line of a patient so that it doesn't match the age at vaccination. For example patient 1 was vaccinated in 2021 and 2023 but their age was 72 both times:</p>
+<pre>$ awk &#39;NR==1||/^1,/&#39; nz-record-level-data-4M-records.csv|csvtk pretty|sed 2d
+mrn   batch_id   dose_number   date_time_of_service   date_of_death   vaccine_name                                         date_of_birth   age
+1     1          2             07-24-2021                             Pfizer BioNTech COVID-19                             05-23-1951      72
+1     1          1             06-19-2021                             Pfizer BioNTech COVID-19                             05-23-1951      72
+1     104        5             05-07-2023                             Pfizer Comirnaty Original/Omicron BA.4-5 15/15 mcg   05-23-1951      72</pre>
+<p>So I thought that maybe the age corresponds to the actual unobfuscated age of the patient on a certain date, but the date of birth has been obfuscated. In order to reverse engineer which date the ages correspond to, I ran the script below which tests how many days in 2020-2025 match the age of each patient.</p>
+<p>The peak date was on December 1st 2023, the last non-zero date was on December 9th 2024, and the distribution of the error went linearly almost down to zero around November 30th 2022 when there's an inflection point, but after that it takes over a year until the error goes to completely zero in August 2021. So basically the age column seems to correspond to the age around December 1st 2023, and the dates of birth seem to have been shifted by at most around 8 days backwards or forwards.</p>
+<div class="width6">
+<img src="i/moar-age-reverse-engineer.png">
+</div>
+<pre>library(ggplot)
+
+t=as.data.frame(data.table::fread(&quot;nz-record-level-data-4M-records.csv&quot;))
+for(i in grep(&quot;date&quot;,colnames(t)))t[,i]=as.Date(t[,i],&quot;%m-%d-%Y&quot;)
+
+t2=head(t,1e5)
+
+xstart=as.Date(&quot;2020-1-1&quot;)
+xend=as.Date(&quot;2026-1-1&quot;)
+dates=seq(xstart,xend,1)
+
+xy=data.frame(x=dates)
+years=as.numeric(substring(t2$date_of_birth,1,4))
+days=substring(t2$date_of_birth,6,12)
+xy$y=sapply(dates,\(x)sum(t2$age==as.numeric(substring(x,1,4))-years-as.integer(substring(x,6,12)&lt;days)))
+xy=xy[xy$y!=0,]
+
+xbreak=seq(xstart,xend,&quot;3 month&quot;)
+candidates=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
+ystep=candidates[which.min(abs(candidates-max(xy$y)/6))]
+ystart=0
+yend=ystep*ceiling(max(xy$y)/ystep)
+ybreak=seq(ystart,yend,ystep)
+
+l1=lm(y~as.double(x),xy[grepl(&quot;2022-10&quot;,xy$x),])
+l2=lm(y~as.double(x),xy[grepl(&quot;2023-01&quot;,xy$x),])
+cm=rbind(coef(l1),coef(l2))
+inflect=as.Date(c(-solve(cbind(cm[,2],-1))%*%cm[,1])[1])
+
+ggplot(xy,aes(x,y))+
+geom_hline(yintercept=ystart,color=&quot;gray50&quot;,linewidth=.3,lineend=&quot;square&quot;)+
+geom_vline(xintercept=xstart,color=&quot;gray50&quot;,linewidth=.3,lineend=&quot;square&quot;)+
+geom_line(size=.4)+
+labs(x=NULL,y=&quot;Number of days when age matches date of birth&quot;,title=&quot;Leaked NZ data: number of days for each date where age column matches date of birth column (first 100,000 records checked, peak on &quot;|&gt;paste0(xy$x[which.max(xy$y)],&quot;, minimum non-zero &quot;,xy$x[1],&quot;, maximum non-zero &quot;,tail(xy$x,1),&quot;, inflection point &quot;,inflect,&quot;)&quot;)|&gt;stringr::str_wrap(80))+
+coord_cartesian(clip=&quot;off&quot;)+
+scale_x_date(limits=c(xstart,xend),breaks=xbreak,expand=c(0,0),date_labels=&quot;%b 1 %y&quot;)+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,expand=c(0,0),labels=kimir)+
+scale_color_manual(values=color)+
+theme(
+  axis.text=element_text(size=8,color=&quot;black&quot;),
+  axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
+  axis.ticks=element_line(linewidth=.3,color=&quot;gray50&quot;),
+  axis.ticks.length=unit(.2,&quot;lines&quot;),
+  axis.title=element_text(size=9),
+  legend.position=&quot;none&quot;,
+  panel.background=element_rect(fill=&quot;white&quot;),
+  panel.grid=element_blank(),
+  plot.background=element_rect(fill=&quot;white&quot;),
+  plot.margin=margin(.4,.5,.4,.5,&quot;lines&quot;),
+  plot.subtitle=element_text(size=9),
+  plot.title=element_text(size=10)
+)
+
+ggsave(&quot;1.png&quot;,width=6,height=3.5)
+system(&quot;mogrify -trim -border 24 -bordercolor white 1.png&quot;)</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
