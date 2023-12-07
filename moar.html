@@ -521,10 +521,68 @@ $ awk &#39;NR==1||/New Zealand/&#39; owid-covid-data.csv|csvtk cut -f date,new_v
 <div class="width12">
 <img src="i/moar-heat.png">
 </div>
-<p>In the heatmap above, I omitted 4 small batches that had zero deaths. The end of data refers to October 27th 2023 which is the date of the last death included in the dataset. I calculated the person-years by calculating the time from a vaccine dose until either death or October 27th 2023, so that I included the time after a person got a subsequent dose as part of the person-years of earlier doses.</p>
-<p>There are some people who got two doses from the same batch and who died later, but they are counted as two deaths under the same batch, which partially explains the high percentage of deaths for batch 1. Batch 1 has a large number of people who got both their first and second doses from the batch, so there are 4,386 doses for batch 1 but only 2,979 unique people who got a dose from batch 1, and 674 doses were given to people who died later but there are only 375 unique people who died after receiving batch 1.</p>
+<p>In the heatmap above, the end of data refers to October 27th 2023 which is the date of the last death included in the dataset. I calculated the person-years by calculating the time from a vaccine dose until either death or October 27th 2023, so that I included the time after a person got a subsequent dose as part of the person-years of earlier doses.</p>
+<p>The first 8 rows in the heatmap above are per-dose but the last 4 rows are per-person. There are some people who got two doses from the same batch and who died later, but they are counted twice on the row for doses leading to deaths. Batch 1 has the highest percentage of people with 2 doses from the same batch, and the people who got 2 doses from batch 1 are more likely to have died later than the people who got only a single dose from batch 1, so in batch 1 the percentage of deaths per person is lower than the percentage of doses leading to deaths out of all doses.</p>
 <p>R code:</p>
-<pre>t=read.csv(&quot;nz-record-level-data-4M-records.csv&quot;)
+<pre>t=as.data.frame(data.table::fread(&quot;nz-record-level-data-4M-records.csv&quot;)) # faster than `read.csv`
+for(i in grep(&quot;date&quot;,colnames(t)))t[,i]=as.Date(t[,i],&quot;%m-%d-%Y&quot;)
+
+dead=t[!is.na(t$date_of_death),]
+doses=table(t$batch_id)
+fa=factor(dead$batch_id,names(doses))
+persons=table(t$batch_id[!duplicated(t[,c(&quot;mrn&quot;,&quot;batch_id&quot;)])])
+uniqdeaths=table(fa[!duplicated(dead[,c(&quot;mrn&quot;,&quot;batch_id&quot;)])])
+deaths=table(fa)
+maxdate=max(dead$date_of_death)
+
+d=data.frame(Doses=c(doses))
+d$`Doses leading to a death`=deaths
+d$`Percentage of deaths per dose`=100*deaths/doses
+d$`Average days between vaccination and death`=tapply(dead$date_of_death-dead$date_time_of_service,fa,mean)
+d$`Average age at vaccination`=tapply(t$date_time_of_service-birth1,t$batch_id,mean)/365.2422
+d$`Average age at death`=tapply(dead$date_of_death-dead$date_of_birth,fa,mean)/365.2422
+# d$`Average age at vaccination for dead recipients`=tapply(dead$date_time_of_service-dead$date_of_birth,dead$batch_id,mean)/365.2422
+d$`Average days from dose to end of data`=tapply(maxdate-dead$date_time_of_service,fa,mean)
+d$`Average days from death to end of data`=tapply(maxdate-dead$date_of_death,fa,mean)
+d$`Persons`=persons
+d$`Deaths`=uniqdeaths
+d$`Percentage of deaths per person`=100*uniqdeaths/persons
+d$`Doses per person`=doses/persons
+
+m=t(apply(d,2,\(x)(x-min(x,na.rm=T))/(max(x,na.rm=T)-min(x,na.rm=T))))
+
+kimir2=\(x){x[]=ifelse(or(x&gt;=1e6,x&lt;=-1e6),paste0(round(x/1e6,ifelse(abs(x)&lt;1e7,1,0)),&quot;M&quot;),ifelse(or(x&gt;=1e3,x&lt;=-1e3),paste0(round(x/1e3,ifelse(abs(x)&lt;1e4,1,0)),&quot;k&quot;),round(x)));x}
+disp=kimir2(t(d))
+disp[3,]=sprintf(&quot;%.1f&quot;,d[,3])
+disp[11,]=sprintf(&quot;%.1f&quot;,d[,11])
+disp[12,]=sprintf(&quot;%.2f&quot;,d[,12])
+
+slices=3
+for(i in 1:slices){
+  step=ceiling(ncol(m)/slices)
+  start=(i-1)*step+1
+  end=min(start+step-1,ncol(m))
+  pheatmap::pheatmap(
+    m[,start:end],
+    filename=paste0(&quot;i&quot;,i,&quot;.png&quot;),
+    cluster_rows=F,
+    cluster_cols=F,
+    legend=F,
+    cellwidth=20,
+    cellheight=20,
+    fontsize=9,
+    border_color=NA,
+    display_numbers=disp[,start:end],
+    fontsize_number=8,
+    number_color=&quot;black&quot;,
+    na_col=&quot;gray90&quot;,
+    breaks=seq(0,1,,256),
+    colorRampPalette(hex(HSV(c(210,210,130,60,40,20,0),c(0,.5,.5,.5,.5,.5,.5),1)))(256)
+  )
+}
+system(&quot;montage -geometry +0+0 -tile 1x i[123].png 1.png&quot;)
+
+t=read.csv(&quot;nz-record-level-data-4M-records.csv&quot;)
 t2=t[t$date_of_death!=&quot;&quot;,]
 t1=t[t$batch_id%in%t2$batch_id,]
 
@@ -763,7 +821,7 @@ Covid Paediatric Pfizer,GE0694,2023-10-31,249600</pre>
                   2023 37690.82 36620.47  1070.34220        2.9
 &gt; sum(tail(d$excess,3))
 [1] 2601.491</pre>
-<p>And when I used a seasonality-adjusted linear trend from 2015 to 2019 as the baseline, I got about negative 1732 excess deaths since the start of 2020:</p>
+<p>When I used a seasonality-adjusted linear trend from 2015 to 2019 as the baseline, I got about negative 1732 excess deaths since the start of 2020:</p>
 <pre>&gt; prediction=xy$x&lt;=&quot;2019-12-31&quot;&amp;xy$x&gt;=&quot;2015-01-01&quot;
 &gt; linear=predict(lm(y~x,xy[prediction,]),xy)
 &gt; days=substr(xy$x,6,10)
