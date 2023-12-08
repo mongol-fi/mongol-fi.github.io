@@ -443,6 +443,85 @@ theme(
 )
 
 ggsave(&quot;1.png&quot;,width=5,height=3.5)</pre>
+<p>Next I tried calculating a crude mortality rate for each dose so that I divided the number of deaths each week with the number of people who had received a dose that week. Now there's an increase in crude mortality rate of each dose after the sample size becomes small, because then the population largely consists of old and vulnerable people who received the dose earliest:</p>
+<div class="width7">
+<img src="i/moar-days-to-death-by-dose-5.png">
+</div>
+<p>R code:</p>
+<pre>library(ggplot2)
+
+t=as.data.frame(data.table::fread(&quot;nz-record-level-data-4M-records.csv&quot;)) # this is faster than `read.csv`
+for(i in grep(&quot;date&quot;,colnames(t)))t[,i]=as.Date(t[,i],&quot;%m-%d-%Y&quot;)
+
+# t=t[rev(order(t$date_time_of_service)),]
+# t=t[!duplicated(t$mrn),]
+
+maxdose=5
+maxdate=max(t$date_of_death,na.rm=T)
+pop=table(floor((pmin(t$date_of_death,maxdate,na.rm=T)-t$date_time_of_service)/7),t$dose_number)|&gt;apply(2,\(x)rev(cumsum(rev(x))))
+
+doses=table(t$dose_number)
+t=t[!is.na(t$date_of_death),]
+
+death=as.data.frame(table(floor((t$date_of_death-t$date_time_of_service)/7),t$dose_number))
+death=death[as.numeric(death$Var2)&lt;=maxdose,]
+pops=pop[cbind(death$Var1,death$Var2)]
+xy=data.frame(x=as.numeric(levels(death$Var1)),y=c(death$Freq)/pops,z=paste0(&quot;Dose &quot;,death$Var2),pop=pops)
+
+tap=tapply(death$Freq,factor(death$Var1,rownames(pop)),sum)
+xy=rbind(data.frame(x=as.numeric(names(tap)),y=tap/rowSums(pop),z=&quot;All doses&quot;,pop=rowSums(pop)),xy)
+
+xy$y=xy$y*365.2422/7*100
+xy$z=factor(xy$z,unique(xy$z))
+xy$y[xy$pop&lt;1e3]=NA
+xy=na.omit(xy)
+xy$trend=split(xy,xy$z)|&gt;lapply(\(i)predict(lm(y~x,i),i))|&gt;unlist()
+xy$pop[xy$z==&quot;All doses&quot;]=NA
+
+xstart=0;xend=130;xstep=10
+candidates=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
+ystep=candidates[which.min(abs(candidates-max(xy$y)/6))]
+ystart=0
+yend=ystep*ceiling(max(xy$y)/ystep)
+xbreak=seq(xstart,xend,xstep)
+ybreak=seq(ystart,yend,ystep)
+ystep2=candidates[which.min(abs(candidates-max(xy$pop,na.rm=T)/6))]
+yend2=ceiling(max(xy$pop,na.rm=T)/ystep2)*ystep2
+secmult=yend/yend2
+
+color=c(&quot;black&quot;,hcl(c(210,120,60,0,310,260)+15,70,50))
+
+labels=data.frame(x=as.Date(xstart+.975*(xend-xstart),&quot;1970-1-1&quot;),y=seq(.97*yend,,-yend/15,nlevels(xy$z)),label=levels(xy$z))
+
+kimi=\(x)ifelse(abs(x)&gt;=1e6,paste0(x/1e6,&quot;M&quot;),ifelse(abs(x)&gt;=1e3,paste0(x/1e3,&quot;k&quot;),x))
+
+ggplot(xy,aes(x,y))+
+geom_hline(yintercept=c(ystart),color=&quot;black&quot;,linewidth=.3,lineend=&quot;square&quot;)+
+geom_vline(xintercept=c(xstart,xend),color=&quot;black&quot;,linewidth=.3,lineend=&quot;square&quot;)+
+geom_line(aes(color=z),linewidth=.4)+
+geom_line(aes(y=pop*secmult,color=z),linewidth=.4,linetype=2)+
+# geom_line(aes(y=trend,color=z),linetype=2,size=.4)+
+geom_label(data=labels,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.7),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.04,&quot;lines&quot;),label.size=0,color=color[1:nlevels(xy$z)],size=3.2,hjust=1,vjust=1)+
+labs(x=&quot;Weeks from vaccination to death&quot;,y=&quot;Deaths per 100 person-years&quot;,title=&quot;Leaked NZ data: crude mortality rate by weeks from vaccination to death&quot;,subtitle=&quot;For people with multiple doses listed, all doses are included and not only the last dose before death. Weeks with population size below 1,000 are omitted. Week 0 extends from day of vaccination until 6 days later.&quot;|&gt;stringr::str_wrap(84))+
+coord_cartesian(clip=&quot;off&quot;)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,expand=c(0,0))+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,expand=c(0,0),sec.axis=sec_axis(trans=~./secmult,breaks=seq(0,yend2,ystep2),name=&quot;Population size&quot;,labels=kimi))+
+scale_color_manual(values=color)+
+theme(
+  axis.text=element_text(size=8,color=&quot;black&quot;),
+  axis.ticks=element_line(linewidth=.3,color=&quot;black&quot;),
+  axis.ticks.length=unit(.2,&quot;lines&quot;),
+  axis.title=element_text(size=9),
+  axis.title.y.right=element_text(margin=margin(0,0,0,5)),
+  legend.position=&quot;none&quot;,
+  panel.background=element_rect(fill=&quot;white&quot;),
+  panel.grid=element_blank(),
+  plot.margin=margin(.3,.3,.3,.3,&quot;lines&quot;),
+  plot.subtitle=element_text(size=8.5,margin=margin(0,0,.4,0,&quot;lines&quot;)),
+  plot.title=element_text(size=10.2,margin=margin(.1,0,.4,0,&quot;lines&quot;))
+)
+
+ggsave(&quot;1.png&quot;,width=5.3,height=3.5,dpi=400)</pre>
 <h2>
 <a href=#Distribution_of_vaccine_doses_given_per_day id=Distribution_of_vaccine_doses_given_per_day>Distribution of vaccine doses given per day</a>
 </h2>
