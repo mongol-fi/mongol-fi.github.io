@@ -11,10 +11,11 @@ h2{font-size:1.6em}
 h3{font-size:1.23em}
 pre,code{white-space:pre-wrap;word-wrap:break-word;font:13px Menlo,'DejaVu Sans Mono','Liberation Mono',Consolas,monospace;background:#dbdbdb}
 pre{padding:3px}
-blockquote{margin-left:45px;margin-right:0;max-width:475px}
-blockquote blockquote{max-width:430px}
-blockquote blockquote blockquote{max-width:385px}
-blockquote,.quote{color:hsl(38,60%,30%)}
+blockquote{margin-left:45px;margin-right:0}
+blockquote p{max-width:475px}
+blockquote blockquote p{max-width:430px}
+blockquote blockquote blockquote p{max-width:385px}
+blockquote,.quote{color:hsl(38,65%,30%)}
 blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(38,45%,50%)}
 blockquote blockquote blockquote,blockquote .quote .quote,.quote .quote .quote{color:hsl(38,70%,60%)}
 blockquote pre,blockquote code{color:black}
@@ -38,6 +39,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 .width13{max-width:1300px}
 .width14,.width0{max-width:1400px}
 .width00{margin-left:calc(-1 * max(0px, min(50vw - 260px, 100vw - 1200px)) + 6px)}
+.width00 img,.width0 img{margin:0 -1.5px -1.5px 0;vertical-align:bottom}
 @media print{body{margin:0px;zoom:.75;print-color-adjust:exact;-webkit-print-color-adjust:exact}}
 </style>
 <title>R and shell code for COVID statistics</title>
@@ -59,11 +61,13 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#CDC_and_United_States>CDC and United States</a>
 <ul>
 <li><a href=#Plot_excess_mortality_and_PCR_positivity_rate_for_U_S_states>Plot excess mortality and PCR positivity rate for U.S. states</a></li>
+<li><a href=#Make_a_heatmap_of_the_percentage_of_COVID_deaths_in_young_age_groups_by_state_and_month>Make a heatmap of the percentage of COVID deaths in young age groups by state and month</a></li>
 <li><a href=#Plot_PCR_positivity_rate_on_a_map>Plot PCR positivity rate on a map</a></li>
 <li><a href=#Calculate_correlation_between_cumulative_number_of_vaccines_and_excess_mortality_in_U_S_states>Calculate correlation between cumulative number of vaccines and excess mortality in U.S. states</a></li>
 <li><a href=#Make_a_heatmap_of_weekly_COVID_deaths_per_capita_in_U_S_counties>Make a heatmap of weekly COVID deaths per capita in U.S. counties</a></li>
 <li><a href=#Make_a_GIF_map_for_monthly_excess_mortality_by_U_S_county>Make a GIF map for monthly excess mortality by U.S. county</a></li>
 </ul></li>
+<li><a href=#Make_a_heatmap_of_monthly_PCR_positivity_rate_by_US_state>Make a heatmap of monthly PCR positivity rate by US state</a></li>
 <li><a href=#UK_Office_for_National_Statistics>UK Office for National Statistics</a>
 <ul>
 <li><a href=#Make_a_heatmap_of_weekly_excess_mortality_percentage_by_age_group>Make a heatmap of weekly excess mortality percentage by age group</a></li>
@@ -744,6 +748,69 @@ for(state in intersect(pcr$state_name,excess$State)){
 <img src="i/stat-us-state-excess-vs-pcr.png">
 </div>
 <h3>
+<a href=#Make_a_heatmap_of_the_percentage_of_COVID_deaths_in_young_age_groups_by_state_and_month id=Make_a_heatmap_of_the_percentage_of_COVID_deaths_in_young_age_groups_by_state_and_month>Make a heatmap of the percentage of COVID deaths in young age groups by state and month</a>
+</h3>
+<p>CDC dataset: <a href="https://data.cdc.gov/NCHS/Provisional-COVID-19-Deaths-by-Sex-and-Age/9bhg-hcku">https://data.cdc.gov/NCHS/Provisional-COVID-19-Deaths-by-Sex-and-Age/9bhg-hcku</a>.</p>
+<pre># install.packages(&quot;BiocManager&quot;)
+# BiocManager::install(&quot;ComplexHeatmap&quot;)
+# install.packages(&quot;circlize&quot;
+# install.packages(&quot;colorspace&quot;)
+library(ComplexHeatmap)
+library(circlize) # for colorRamp2
+library(colorspace)
+
+# download.file(&quot;https://data.cdc.gov/api/views/9bhg-hcku/rows.csv?accessType=DOWNLOAD&quot;,&quot;Provisional_COVID-19_Deaths_by_Sex_and_Age.csv&quot;)
+
+t=read.csv(&quot;d/cd/Provisional_COVID-19_Deaths_by_Sex_and_Age.csv&quot;)
+
+t2=t[t$Group==&quot;By Month&quot;&amp;t$Sex==&quot;All Sexes&quot;,]
+
+age1=t2[t2$Age.Group%in%c(&quot;All Ages&quot;),]
+age2=t2[t2$Age.Group%in%c(&quot;55-64 years&quot;,&quot;65-74 years&quot;,&quot;75-84 years&quot;,&quot;85 years and over&quot;),]
+ag1=aggregate(age1$COVID.19.Deaths,list(paste0(age1$Year,&quot;/&quot;,sprintf(&quot;%02d&quot;,age1$Month)),age1$State),sum)
+ag2=aggregate(age2$COVID.19.Deaths,list(paste0(age2$Year,&quot;/&quot;,sprintf(&quot;%02d&quot;,age2$Month)),age2$State),sum)
+m=wide(cbind(ag1[,-3],100*(1-ag2[,3]/ag1[,3])))|t
+
+disp=ifelse(is.na(m),&quot;&quot;,round(m))
+
+rowmax=t(apply(m,1,\(x)x==max(x,na.rm=T)))
+rowmax[is.na(rowmax)]=F
+
+png(&quot;1.png&quot;,w=ncol(m)*30+1000,h=nrow(m)*30+1000,res=72)
+
+ht_opt$COLUMN_ANNO_PADDING=unit(0,&quot;mm&quot;)
+ht_opt$ROW_ANNO_PADDING=unit(0,&quot;mm&quot;)
+
+maxcolor=.8*max(m,na.rm=T)
+
+Heatmap(
+  m,
+  show_heatmap_legend=F,
+  show_column_names=F,
+  show_row_names=F,
+  width=unit(ncol(m)*30,&quot;pt&quot;),
+  height=unit(nrow(m)*30,&quot;pt&quot;),
+  row_dend_width=unit(200,&quot;pt&quot;),
+  cluster_columns=F,
+  cluster_rows=F,
+  na_col=&quot;white&quot;,
+  column_title=stringr::str_wrap(&quot;Percentage of COVID deaths in people between ages 0-54 out of all COVID deaths (data.cdc.gov/NCHS/Provisional-COVID-19-Deaths-by-Sex-and-Age/9bhg-hcku). There is a large number of empty squares because the number of deaths in the CDC dataset is hidden on rows with 1-9 deaths, and in many states the monthly number of COVID deaths was less than 10 in one or more age groups.&quot;,160),
+  column_title_gp=gpar(fontsize=22),
+  rect_gp=gpar(col=&quot;gray80&quot;,lwd=0),
+  top_annotation=columnAnnotation(text=anno_text(gt_render(colnames(m),padding=unit(c(3,3,3,3),&quot;mm&quot;)),just=&quot;left&quot;,rot=90,location=unit(0,&quot;npc&quot;),gp=gpar(fontsize=17,border=&quot;gray70&quot;,lwd=1))),
+  bottom_annotation=columnAnnotation(text=anno_text(gt_render(colnames(m),padding=unit(c(3,3,3,3),&quot;mm&quot;)),just=&quot;left&quot;,rot=270,gp=gpar(fontsize=17,border=&quot;gray70&quot;,lwd=1))),
+  left_annotation=rowAnnotation(text=anno_text(gt_render(rownames(m),padding=unit(c(3,3,3,3),&quot;mm&quot;)),just=&quot;right&quot;,location=unit(1,&quot;npc&quot;),gp=gpar(fontsize=17,border=&quot;gray70&quot;,lwd=1))),
+  right_annotation=rowAnnotation(text=anno_text(gt_render(rownames(m),padding=unit(c(3,3,3,3),&quot;mm&quot;)),just=&quot;left&quot;,location=unit(0,&quot;npc&quot;),gp=gpar(fontsize=17,border=&quot;gray70&quot;,lwd=1))),
+  col=colorRamp2(seq(-maxcolor,maxcolor,,9),hex(HSV(c(210,210,210,210,0,0,0,0,0),c(.7,.7,.6,.3,0,.3,.6,.7,.7),c(.3,.65,1,1,1,1,1,.65,.3)))),
+  cell_fun=\(j,i,x,y,w,h,fill)grid.text(disp[i,j],x,y,gp=gpar(fontface=ifelse(rowmax[i,j],4,&quot;plain&quot;),fontsize=16,col=ifelse(abs(m[i,j])&gt;=maxcolor*.5,&quot;white&quot;,&quot;black&quot;)))
+)
+
+dev.off()
+system(&quot;mogrify -gravity center -trim -border 16 -bordercolor white 1.png&quot;)</pre>
+<div class="width8">
+<img src="i/us-states-deaths-under-age-55-percentage-by-month.png">
+</div>
+<h3>
 <a href=#Plot_PCR_positivity_rate_on_a_map id=Plot_PCR_positivity_rate_on_a_map>Plot PCR positivity rate on a map</a>
 </h3>
 <pre>library(ggplot2)
@@ -980,6 +1047,74 @@ system(paste(&quot;mogrify -gravity center -trim -border 16 -bordercolor white&q
 <img src="i/usexcess.gif">
 </div>
 <h2>
+<a href=#Make_a_heatmap_of_monthly_PCR_positivity_rate_by_US_state id=Make_a_heatmap_of_monthly_PCR_positivity_rate_by_US_state>Make a heatmap of monthly PCR positivity rate by US state</a>
+</h2>
+<pre># install.packages(&quot;BiocManager&quot;)
+# BiocManager::install(&quot;ComplexHeatmap&quot;)
+# install.packages(&quot;circlize&quot;
+# install.packages(&quot;colorspace&quot;)
+library(ComplexHeatmap)
+library(circlize) # for colorRamp2
+library(colorspace)
+
+# https://healthdata.gov/dataset/COVID-19-Diagnostic-Laboratory-Testing-PCR-Testing/j8mb-icvb/about_data
+download.file(&quot;https://healthdata.gov/api/views/j8mb-icvb/rows.csv&quot;,&quot;statespcr.csv&quot;) # https://healthdata.gov/dataset/COVID-19-Diagnostic-Laboratory-Testing-PCR-Testing/j8mb-icvb
+
+t=read.csv(&quot;statespcr.csv&quot;)
+pos=t[t$overall_outcome==&quot;Positive&quot;,]
+ag1=aggregate(t$new_results_reported,list(state=t$state_name,month=substr(t$date,1,7)),sum)
+ag2=aggregate(pos$new_results_reported,list(state=pos$state_name,month=substr(pos$date,1,7)),sum)
+
+me=merge(ag1,ag2,by=c(1,2),all=T)
+me[3][me[3]&lt;10]=NA
+me$pct=100*me[,4]/me[,3]
+me$pct[me$pct&gt;50]=NA
+wide=\(x,row=1,col=2,val=3,default=NA){c1=as.character(x[,row]);c2=as.character(x[,col]);u1=unique(c1);u2=unique(c2);o=matrix(default,length(u1),length(u2),,list(u1,u2));o[cbind(c1,c2)]=x[,val];o}
+m=wide(me,1,2,5)
+
+disp=round(m)
+m=m^.8
+
+rowmax=t(apply(m,1,\(x)x==max(x,na.rm=T)))
+rowmax[is.na(rowmax)]=F
+
+png(&quot;1.png&quot;,w=ncol(m)*30+1000,h=nrow(m)*30+1000,res=72)
+
+ht_opt$COLUMN_ANNO_PADDING=unit(0,&quot;mm&quot;)
+ht_opt$ROW_ANNO_PADDING=unit(0,&quot;mm&quot;)
+
+maxcolor=max(m,na.rm=T)
+
+m2=replace(m,is.na(m),0)
+hc=as.hclust(reorder(as.dendrogram(hclust(dist(m2))),prcomp(m2)$x[,1]))
+
+Heatmap(
+  m,
+  show_heatmap_legend=F,
+  show_column_names=F,
+  show_row_names=F,
+  width=unit(ncol(m)*30,&quot;pt&quot;),
+  height=unit(nrow(m)*30,&quot;pt&quot;),
+  cluster_columns=F,
+  cluster_rows=hc,
+  row_dend_width=unit(200,&quot;pt&quot;),
+  column_title=stringr::str_wrap(paste0(&quot;PCR positivity rate by state, CDC dataset \&quot;COVID-19 Diagnostic Laboratory Testing (PCR Testing) Time Series\&quot;. Months with less than 10 tests omitted. Months with over 50% positivity are omitted, because in 2023 some states some states only began to report positive results, or limited testing produced very high positivity rates that are not indicative of the actual prevalence of COVID.&quot;),190),
+  column_title_gp=gpar(fontsize=22),
+  rect_gp=gpar(col=&quot;gray80&quot;,lwd=0),
+  top_annotation=columnAnnotation(text=anno_text(gt_render(colnames(m),padding=unit(c(3,3,3,3),&quot;mm&quot;)),just=&quot;left&quot;,rot=90,location=unit(0,&quot;npc&quot;),gp=gpar(fontsize=17,border=&quot;gray70&quot;,lwd=1))),
+  bottom_annotation=columnAnnotation(text=anno_text(gt_render(colnames(m),padding=unit(c(3,3,3,3),&quot;mm&quot;)),just=&quot;left&quot;,rot=270,gp=gpar(fontsize=17,border=&quot;gray70&quot;,lwd=1))),
+  left_annotation=rowAnnotation(text=anno_text(gt_render(rownames(m),padding=unit(c(3,3,3,3),&quot;mm&quot;)),just=&quot;right&quot;,location=unit(1,&quot;npc&quot;),gp=gpar(fontsize=17,border=&quot;gray70&quot;,lwd=1))),
+  right_annotation=rowAnnotation(text=anno_text(gt_render(rownames(m),padding=unit(c(3,3,3,3),&quot;mm&quot;)),just=&quot;left&quot;,location=unit(0,&quot;npc&quot;),gp=gpar(fontsize=17,border=&quot;gray70&quot;,lwd=1))),
+  col=colorRamp2(seq(0,maxcolor,,16),hex(HSV(c(210,210,210,210,150,100,60,45,30,15,0,0,0,0,0,0),c(0,.166,.333,rep(.5,9),.7,.9,1,1),c(rep(1,12),.75,.5,.25,0)))),
+  cell_fun=\(j,i,x,y,w,h,fill)grid.text(disp[i,j],x,y,gp=gpar(fontface=ifelse(rowmax[i,j],4,&quot;plain&quot;),fontsize=16,col=ifelse(abs(m[i,j])&gt;=maxcolor*.75,&quot;white&quot;,&quot;black&quot;)))
+)
+
+dev.off()
+system(&quot;mogrify -gravity center -trim -border 16 -bordercolor white 1.png&quot;)</pre>
+<div class="width10">
+<img src="i/pcr-states-heat.png">
+</div>
+<h2>
 <a href=#UK_Office_for_National_Statistics id=UK_Office_for_National_Statistics>UK Office for National Statistics</a>
 </h2>
 <h3>
@@ -1064,7 +1199,7 @@ system(&quot;mogrify -gravity center -trim -border 16 -bordercolor white 1.png&q
 &gt; tapply(t4$Person.years,t4[,4],sum)/tapply(t3$Person.years,t3[,4],sum)
      18-39      40-49      50-59      60-69      70-79      80-89        90+
  0.1355542  0.2381953  1.5760131  3.5165494  9.5796245 15.7584568 15.7678801</pre>
-<p>People aged 80-89 make up 4% of the 2013 European Standard Population. But in the group <span class="quote">&quot;Third dose or booster, at least 21 days ago&quot;</span> in December 2022, people aged 80-89 and over accounted for only about 0.9% of total person-years, but they are still given 4% weight when calculating the ASMR value, so they are overrepresented by a factor of about 4.6 in the ASMR figure relative to their population size:</p>
+<p>People aged 80-89 make up 4% of the 2013 European Standard Population. But in the group <span class="quote">&quot;Third dose or booster, at least 21 days ago&quot;</span> in December 2022, people aged 80-89 accounted for only about 0.9% of total person-years, but they are still given 4% weight when calculating the ASMR value, so they are overrepresented by a factor of about 4.6 in the ASMR figure relative to their population size:</p>
 <pre>&gt; t=read.table(sep=&quot;\t&quot;,&quot;https://sars2.net/f/ons-august-2023-table-2.tsv&quot;,na.strings=c(&quot;x&quot;,&quot;&lt;3&quot;),header=T)
 &gt; t=t[t$Cause.of.Death==&quot;All causes&quot;&amp;t$Month==&quot;December&quot;&amp;t$Year==2022&amp;t[,5]==&quot;Third dose or booster, at least 21 days ago&quot;,]
 &gt; data.frame(age_group=t$Age.group,person_years_pct=100*t$Person.years/sum(t$Person.years))
