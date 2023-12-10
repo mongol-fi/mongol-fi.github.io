@@ -566,40 +566,44 @@ $ sed 3q data-transparency/New\ Zealand/time-series\ summaries/month_dose_week_s
 month    dose  week  age  alive  dead
 2021-01  0     0     1    248    0
 2021-01  0     0     2    248    0</pre>
-<p>You can use the file to generate a plot for CMR by dose so that once a person has received a second dose, they are no longer included under the first dose. The plot shows that after around week 22 when the crude mortality rate of all doses begins to decrease, the average age of all doses also decreases. Kirsch said that the peak in mortality around weeks 20-25 was a sign of deaths caused by vaccines, but actually he should've calculated ASMR instead of CMR, or he should've stratified the CMR by age:</p>
+<p>I used the file to generate a plot for CMR by dose so that once a person has received a second dose, they are no longer included under the first dose. My plot shows that after around week 22 when the crude mortality rate of all doses begins to decrease, the average age of all doses also decreases. Kirsch said that the peak in mortality around weeks 20-25 was a sign of deaths caused by vaccines, but actually he should've calculated ASMR instead of CMR, or he should've stratified the CMR by age. From the plot below you can see that the cohort size of the first dose drops rapidly during the first 10 weeks, because people are likely to have gotten the second dose within 2 months of the first dose:</p>
 <div class="width7">
 <img src="i/moar-days-to-death-by-dose-6.png">
+</div>
+<p>The peak in CMR around 20 weeks is missing from age-stratified plots:</p>
+<div class="width10">
+<img src="i/moar-weeks-to-death-age-groups.png">
 </div>
 <p>R code:</p>
 <pre>library(ggplot2)
 
 t=read.table(&quot;data-transparency/New Zealand/time-series summaries/month_dose_week_single_age.txt&quot;,header=T)
 
-ag=aggregate(t[,c(5,6)],t[,c(2:4)],sum)
+ag=aggregate(list(pop=t$alive+t$dead,dead=t$dead),t[,c(2:4)],sum)
 ag=ag[ag$dose&lt;=5&amp;ag$dose&gt;0,]
-ag=merge(ag,aggregate(ag$alive,ag[,1:2],sum),by=1:2)
+ag=merge(ag,aggregate(ag$pop,ag[,1:2],sum),by=1:2)
 colnames(ag)[6]=&quot;allagepop&quot;
 
 xy=aggregate(ag[,c(4:5)],ag[,1:2],sum)
-xy=merge(xy,aggregate(ag$age*ag$alive/ag$allagepop,ag[,c(1:2)],sum),by=1:2)
+xy=merge(xy,aggregate(ag$age*ag$pop/ag$allagepop,ag[,c(1:2)],sum),by=1:2)
 colnames(xy)[5]=&quot;age&quot;
 xy$dose=paste0(&quot;Dose &quot;,xy$dose)
 
 total=aggregate(ag[,4:5],ag[,&quot;week&quot;,drop=F],sum)
 total$dose=&quot;All doses&quot;
-total$age=tapply(ag$age*ag$alive,ag$week,sum)/tapply(ag$alive,ag$week,sum)
+total$age=tapply(ag$age*ag$pop,ag$week,sum)/tapply(ag$pop,ag$week,sum)
 xy=rbind(total[,colnames(xy)],xy)
 
-xy$alive=xy$alive/12
-xy$cmr=xy$dead/xy$alive*365.2422/7*1e3
+xy$pop=xy$pop/12
+xy$cmr=xy$dead/xy$pop*365.2422/7*1e3
 
 xy$dose=factor(xy$dose,unique(xy$dose))
 minpop=1e4
-xy$cmr[xy$alive&lt;minpop]=NA
+xy$cmr[xy$pop&lt;minpop]=NA
 xy=na.omit(xy)
 
 # xy$trend=split(xy,xy$dose)|&gt;lapply(\(i)predict(lm(cmr~week,i),i))|&gt;unlist()
-xy$alive[xy$dose==&quot;All doses&quot;]=NA
+xy$pop[xy$dose==&quot;All doses&quot;]=NA
 
 xstart=0;xend=120;xstep=10
 candidates=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
@@ -609,9 +613,9 @@ yend=ystep*ceiling(max(xy$cmr)/ystep)
 xbreak=seq(xstart,xend,xstep)
 ybreak=seq(ystart,yend,ystep)
 
-# ystep2=candidates[which.min(abs(candidates-max(xy$alive,na.rm=T)/6))]
-# yend2=ceiling(max(xy$alive,na.rm=T)/ystep2)*ystep2
-# secmult=yend/yend2
+ystep2=candidates[which.min(abs(candidates-max(xy$pop,na.rm=T)/6))]
+yend2=ceiling(max(xy$pop,na.rm=T)/ystep2)*ystep2
+secmult=yend/yend2
 
 xy=xy[sample(nrow(xy)),] # get random pattern of overlap between dots
 
@@ -623,18 +627,17 @@ kimi=\(x)ifelse(abs(x)&gt;=1e6,paste0(x/1e6,&quot;M&quot;),ifelse(abs(x)&gt;=1e3
 
 ggplot(xy,aes(x=week,y=cmr))+
 geom_hline(yintercept=ystart,color=&quot;black&quot;,linewidth=.3,lineend=&quot;square&quot;)+
-geom_vline(xintercept=xstart,color=&quot;black&quot;,linewidth=.3,lineend=&quot;square&quot;)+
+geom_vline(xintercept=c(xstart,xend),color=&quot;black&quot;,linewidth=.3,lineend=&quot;square&quot;)+
 geom_line(aes(color=dose),linewidth=.4)+
 geom_point(aes(y=age,color=dose),size=.4)+
-geom_line(aes(y=alive/1e4,color=dose),linewidth=.4,linetype=2)+
-# geom_line(aes(y=alive*secmult,color=dose),linewidth=.4,linetype=2)+
-# geom_line(aes(y=trend,color=z),linetype=2,size=.4)+
+geom_line(aes(y=pop*secmult,color=dose),linewidth=.4,linetype=2)+
+# geom_line(aes(y=trend,color=dose),linetype=2,size=.4)+
 geom_label(data=labels,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.7),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.04,&quot;lines&quot;),label.size=0,color=color[1:nlevels(xy$dose)],size=3.2,hjust=1,vjust=1)+
-labs(x=&quot;Weeks from vaccination to death&quot;,y=&quot;Deaths per 1,000 person-years (solid)\nAverage age (dots)\nCohort size times 10,000 (dashed)&quot;,title=&quot;Leaked NZ data: crude mortality rate by weeks from vaccination to death&quot;,subtitle=paste0(&quot;Based on month_dose_week_single_age.txt generated with buckets.py. People with multiple doses are only included under the most recent dose. Weeks with cohort size below &quot;,formatC(minpop,digits=0,format=&quot;f&quot;,big.mark=&quot;,&quot;),&quot; are omitted.&quot;)|&gt;stringr::str_wrap(84))+
+labs(x=&quot;Weeks from vaccination to death&quot;,y=&quot;Deaths per 1,000 person-years (solid)\nAverage age (dots)&quot;,title=&quot;Leaked NZ data: crude mortality rate by weeks from vaccination to death&quot;,subtitle=paste0(&quot;Based on month_dose_week_single_age.txt generated with buckets.py. People with multiple doses are only included under the most recent dose. Weeks with cohort size below &quot;,formatC(minpop,digits=0,format=&quot;f&quot;,big.mark=&quot;,&quot;),&quot; are omitted.&quot;)|&gt;stringr::str_wrap(84))+
 coord_cartesian(clip=&quot;off&quot;)+
 scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,expand=c(0,0))+
-scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,expand=c(0,0))+
-# scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,expand=c(0,0),sec.axis=sec_axis(trans=~./secmult,breaks=seq(0,yend2,ystep2),name=&quot;Cohort size (dashed)&quot;,labels=kimi))+
+## scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,expand=c(0,0))+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,expand=c(0,0),sec.axis=sec_axis(trans=~./secmult,breaks=seq(0,yend2,ystep2),name=&quot;Cohort size (dashed)&quot;,labels=kimi))+
 scale_color_manual(values=color)+
 theme(
   axis.text=element_text(size=8,color=&quot;black&quot;),
