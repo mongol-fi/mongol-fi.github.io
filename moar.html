@@ -409,10 +409,15 @@ weeks=51
 date1=max(t$date_of_death,na.rm=T)
 date2=date1-weeks*7+1
 t=t[t$date_time_of_service&lt;=date2,]
-t=t[t$date_of_death-t$date_time_of_service&lt;weeks*7,]
 t=t[t$date_time_of_service&lt;=t$date_of_death,]
 t=t[t$dose_number&lt;=4,]
+
 doses=table(t$dose_number)
+t=t[t$date_of_death-t$date_time_of_service&lt;weeks*7,]
+
+## t=t[rev(order(t$date_time_of_service)),]
+## t=t[!duplicated(t$mrn),]
+
 t=t[!is.na(t$date_of_death),]
 
 ta=as.data.frame(table(floor((t$date_of_death-t$date_time_of_service)/7),t$dose_number))
@@ -434,7 +439,7 @@ yend=ystep*ceiling(max(xy$y)/ystep)
 xbreak=seq(xstart,xend,xstep)
 ybreak=seq(ystart,yend,ystep)
 
-labels=data.frame(x=as.Date(xstart+.03*(xend-xstart)),y=seq(.97*yend,,-yend/15,nlevels(xy$z)),label=levels(xy$z))
+labels=data.frame(x=xstart+.03*(xend-xstart),y=seq(.97*yend,,-yend/15,nlevels(xy$z)),label=levels(xy$z))
 
 color=c(&quot;black&quot;,hcl(c(210,120,60,0,300)+15,70,50))
 
@@ -444,7 +449,7 @@ geom_vline(xintercept=xstart,color=&quot;black&quot;,linewidth=.3,lineend=&quot;
 geom_line(aes(color=z),size=.4)+
 geom_line(aes(y=a,color=z),linetype=2,size=.4)+
 geom_label(data=labels,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.7),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.04,&quot;lines&quot;),label.size=0,color=color[1:nlevels(xy$z)],size=3.4,hjust=0,vjust=1)+
-labs(x=&quot;Weeks from vaccination to death&quot;,y=&quot;Deaths per thousand doses&quot;,title=paste0(&quot;Deaths per thousand doses by weeks since vaccination, last time of death &quot;,date1,&quot;, last time of vaccination &quot;,date2,&quot; (&quot;,weeks,&quot;*7-1 days earlier). Week 0 extends from day of vaccination to 6 days later.&quot;)|&gt;stringr::str_wrap(70))+
+labs(x=&quot;Weeks from vaccination to death&quot;,y=&quot;Deaths per thousand doses&quot;,title=paste0(&quot;Deaths per thousand doses by weeks since vaccination, last time of death &quot;,date1,&quot;, last time of vaccination &quot;,date2,&quot; (&quot;,weeks,&quot;*7-1 days earlier). Week 0 extends from day of vaccination to 6 days later. For people with multiple doses, all doses are included and not only the most recent dose.&quot;)|&gt;stringr::str_wrap(70))+
 coord_cartesian(clip=&quot;off&quot;)+
 scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,expand=c(0,0))+
 scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,expand=c(0,0))+
@@ -463,8 +468,9 @@ theme(
   plot.title=element_text(size=10)
 )
 
-ggsave(&quot;1.png&quot;,width=5,height=3.5)</pre>
-<p>Next I tried calculating a crude mortality rate for each dose so that I divided the number of deaths each week with the number of people who had received a dose that week. Now there's an increase in crude mortality rate of each dose after the sample size becomes small, because then a large part of the population consists of old and vulnerable people who received the dose the earliest:</p>
+ggsave(&quot;1.png&quot;,width=5,height=3.5)
+system(&quot;mogrify -trim -border 24 -bordercolor white 1.png&quot;)</pre>
+<p>Next I tried calculating a crude mortality rate for each dose so that I divided the number of deaths each week with the number of people who had received a dose that week. Now there was an increase in crude mortality rate of each dose after the sample size becomes small, which I though was probably because then a large part of the population consists of old or vulnerable people who received the dose the earliest. However when I also included the average age of dead persons in the plot, at the point when the cohort size went close to zero and mortality rate shot up, for some reason the age at death decreased for the 4th and 5th doses even though it increased for the first three does:</p>
 <div class="width7">
 <img src="i/moar-days-to-death-by-dose-5.png">
 </div>
@@ -482,18 +488,23 @@ maxdate=max(t$date_of_death,na.rm=T)
 pop=table(floor((pmin(t$date_of_death,maxdate,na.rm=T)-t$date_time_of_service)/7),t$dose_number)|&gt;apply(2,\(x)rev(cumsum(rev(x))))
 
 doses=table(t$dose_number)
-t=t[!is.na(t$date_of_death),]
+dead=t[!is.na(t$date_of_death),]
 
-death=as.data.frame(table(floor((t$date_of_death-t$date_time_of_service)/7),t$dose_number))
-death=death[as.numeric(death$Var2)&lt;=maxdose,]
-pops=pop[cbind(death$Var1,death$Var2)]
-xy=data.frame(x=as.numeric(levels(death$Var1)),y=c(death$Freq)/pops,z=paste0(&quot;Dose &quot;,death$Var2),pop=pops)
+age=aggregate(as.numeric((dead$date_time_of_service-dead$date_of_birth)/365.2422),list(as.numeric(floor((dead$date_of_death-dead$date_time_of_service)/7)),dead$dose_number),mean)
 
-tap=tapply(death$Freq,factor(death$Var1,rownames(pop)),sum)
-xy=rbind(data.frame(x=as.numeric(names(tap)),y=tap/rowSums(pop),z=&quot;All doses&quot;,pop=rowSums(pop)),xy)
+death=floor((dead$date_of_death-dead$date_time_of_service)/7)|&gt;table(dead$dose_number)|&gt;as.data.frame()|&gt;sapply(as.numeric)
 
-xy$y=xy$y*365.2422/7*100
-xy$z=factor(xy$z,unique(xy$z))
+death=merge(death,age,by=c(1,2),all=T)
+death=death[death$Var2&lt;=maxdose,]
+pops=pop[cbind(as.character(death$Var1),as.character(death$Var2))]
+xy=data.frame(x=death$Var1,y=death$Freq/pops,z=paste0(&quot;Dose &quot;,death$Var2),pop=pops,age=death[,4])
+
+ages=split(xy,xy$x)|&gt;sapply(\(x)weighted.mean(x$age,x$pop,na.rm=T))
+tap=tapply(death$Freq,factor(death$Var1,rownames(pop)),sum,na.rm=T)
+xy=rbind(data.frame(x=as.numeric(names(tap)),y=tap/rowSums(pop),z=&quot;All doses&quot;,pop=rowSums(pop),age=ages[names(tap)]),xy)
+
+xy$y=xy$y*365.2422/7*1e3
+xy$z=factor(xy$z,sort(unique(xy$z)))
 xy$y[xy$pop&lt;1e3]=NA
 xy=na.omit(xy)
 xy$trend=split(xy,xy$z)|&gt;lapply(\(i)predict(lm(y~x,i),i))|&gt;unlist()
@@ -504,11 +515,14 @@ candidates=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
 ystep=candidates[which.min(abs(candidates-max(xy$y)/6))]
 ystart=0
 yend=ystep*ceiling(max(xy$y)/ystep)
+yend=90
 xbreak=seq(xstart,xend,xstep)
 ybreak=seq(ystart,yend,ystep)
 ystep2=candidates[which.min(abs(candidates-max(xy$pop,na.rm=T)/6))]
 yend2=ceiling(max(xy$pop,na.rm=T)/ystep2)*ystep2
 secmult=yend/yend2
+
+xy=xy[sample(nrow(xy)),]
 
 color=c(&quot;black&quot;,hcl(c(210,120,60,0,310,260)+15,70,50))
 
@@ -520,13 +534,14 @@ ggplot(xy,aes(x,y))+
 geom_hline(yintercept=c(ystart),color=&quot;black&quot;,linewidth=.3,lineend=&quot;square&quot;)+
 geom_vline(xintercept=c(xstart,xend),color=&quot;black&quot;,linewidth=.3,lineend=&quot;square&quot;)+
 geom_line(aes(color=z),linewidth=.4)+
+geom_point(aes(y=age,color=z),size=.4)+
 geom_line(aes(y=pop*secmult,color=z),linewidth=.4,linetype=2)+
 # geom_line(aes(y=trend,color=z),linetype=2,size=.4)+
 geom_label(data=labels,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.7),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.04,&quot;lines&quot;),label.size=0,color=color[1:nlevels(xy$z)],size=3.2,hjust=1,vjust=1)+
-labs(x=&quot;Weeks from vaccination to death&quot;,y=&quot;Deaths per 100 person-years&quot;,title=&quot;Leaked NZ data: crude mortality rate by weeks from vaccination to death&quot;,subtitle=&quot;For people with multiple doses listed, all doses are included and not only the last dose before death. Weeks with population size below 1,000 are omitted. Week 0 extends from day of vaccination until 6 days later.&quot;|&gt;stringr::str_wrap(84))+
+labs(x=&quot;Weeks from vaccination to death&quot;,y=&quot;Deaths per 1,000 person-years (solid)\nAverage age at death (dots)&quot;,title=&quot;Leaked NZ data: crude mortality rate by weeks from vaccination to death&quot;,subtitle=&quot;For people with multiple doses, all doses are included and not only the last dose before death, so that a person who gets a subsequent dose also remains classified under previous doses. Weeks with cohort size below 1,000 are omitted. Week 0 extends from day of vaccination until 6 days later.&quot;|&gt;stringr::str_wrap(84))+
 coord_cartesian(clip=&quot;off&quot;)+
 scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,expand=c(0,0))+
-scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,expand=c(0,0),sec.axis=sec_axis(trans=~./secmult,breaks=seq(0,yend2,ystep2),name=&quot;Population size&quot;,labels=kimi))+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,expand=c(0,0),sec.axis=sec_axis(trans=~./secmult,breaks=seq(0,yend2,ystep2),name=&quot;Cohort size (dashed)&quot;,labels=kimi))+
 scale_color_manual(values=color)+
 theme(
   axis.text=element_text(size=8,color=&quot;black&quot;),
@@ -539,10 +554,103 @@ theme(
   panel.grid=element_blank(),
   plot.margin=margin(.3,.3,.3,.3,&quot;lines&quot;),
   plot.subtitle=element_text(size=8.5,margin=margin(0,0,.4,0,&quot;lines&quot;)),
-  plot.title=element_text(size=10.2,margin=margin(.1,0,.4,0,&quot;lines&quot;))
+  plot.title=element_text(size=10.2,margin=margin(.2,0,.5,0,&quot;lines&quot;))
 )
 
 ggsave(&quot;1.png&quot;,width=5.3,height=3.5,dpi=400)</pre>
+<p>One of the files generated by the <code>buckets.py</code> script shows mortality by month, dose number, and weeks since vaccination:</p>
+<pre>$ wget -q https://getdatatransparency.com/data-transparency.zip
+$ unzip data-transparency.zip
+[...]
+$ sed 3q data-transparency/New\ Zealand/time-series\ summaries/month_dose_week_single_age.txt|column -t
+month    dose  week  age  alive  dead
+2021-01  0     0     1    248    0
+2021-01  0     0     2    248    0</pre>
+<p>You can use the file to generate a plot for CMR by dose so that once a person has received a second dose, they are no longer included under the first dose. The plot shows that after around week 22 when the crude mortality rate of all doses begins to decrease, the average age of all doses also decreases. Kirsch said that the peak in mortality around weeks 20-25 was a sign of deaths caused by vaccines, but actually he should've calculated ASMR instead of CMR, or he should've stratified the CMR by age:</p>
+<div class="width7">
+<img src="i/moar-days-to-death-by-dose-6.png">
+</div>
+<p>R code:</p>
+<pre>library(ggplot2)
+
+t=read.table(&quot;data-transparency/New Zealand/time-series summaries/month_dose_week_single_age.txt&quot;,header=T)
+
+ag=aggregate(t[,c(5,6)],t[,c(2:4)],sum)
+ag=ag[ag$dose&lt;=5&amp;ag$dose&gt;0,]
+ag=merge(ag,aggregate(ag$alive,ag[,1:2],sum),by=1:2)
+colnames(ag)[6]=&quot;allagepop&quot;
+
+xy=aggregate(ag[,c(4:5)],ag[,1:2],sum)
+xy=merge(xy,aggregate(ag$age*ag$alive/ag$allagepop,ag[,c(1:2)],sum),by=1:2)
+colnames(xy)[5]=&quot;age&quot;
+xy$dose=paste0(&quot;Dose &quot;,xy$dose)
+
+total=aggregate(ag[,4:5],ag[,&quot;week&quot;,drop=F],sum)
+total$dose=&quot;All doses&quot;
+total$age=tapply(ag$age*ag$alive,ag$week,sum)/tapply(ag$alive,ag$week,sum)
+xy=rbind(total[,colnames(xy)],xy)
+
+xy$alive=xy$alive/12
+xy$cmr=xy$dead/xy$alive*365.2422/7*1e3
+
+xy$dose=factor(xy$dose,unique(xy$dose))
+minpop=1e4
+xy$cmr[xy$alive&lt;minpop]=NA
+xy=na.omit(xy)
+
+# xy$trend=split(xy,xy$dose)|&gt;lapply(\(i)predict(lm(cmr~week,i),i))|&gt;unlist()
+xy$alive[xy$dose==&quot;All doses&quot;]=NA
+
+xstart=0;xend=120;xstep=10
+candidates=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
+ystep=candidates[which.min(abs(candidates-max(xy$cmr)/6))]
+ystart=0
+yend=ystep*ceiling(max(xy$cmr)/ystep)
+xbreak=seq(xstart,xend,xstep)
+ybreak=seq(ystart,yend,ystep)
+
+# ystep2=candidates[which.min(abs(candidates-max(xy$alive,na.rm=T)/6))]
+# yend2=ceiling(max(xy$alive,na.rm=T)/ystep2)*ystep2
+# secmult=yend/yend2
+
+xy=xy[sample(nrow(xy)),] # get random pattern of overlap between dots
+
+color=c(&quot;black&quot;,hcl(c(210,120,60,0,310,260)+15,70,50))
+
+labels=data.frame(x=as.Date(xstart+.975*(xend-xstart),&quot;1970-1-1&quot;),y=seq(.97*yend,,-yend/15,nlevels(xy$dose)),label=levels(xy$dose))
+
+kimi=\(x)ifelse(abs(x)&gt;=1e6,paste0(x/1e6,&quot;M&quot;),ifelse(abs(x)&gt;=1e3,paste0(x/1e3,&quot;k&quot;),x))
+
+ggplot(xy,aes(x=week,y=cmr))+
+geom_hline(yintercept=ystart,color=&quot;black&quot;,linewidth=.3,lineend=&quot;square&quot;)+
+geom_vline(xintercept=xstart,color=&quot;black&quot;,linewidth=.3,lineend=&quot;square&quot;)+
+geom_line(aes(color=dose),linewidth=.4)+
+geom_point(aes(y=age,color=dose),size=.4)+
+geom_line(aes(y=alive/1e4,color=dose),linewidth=.4,linetype=2)+
+# geom_line(aes(y=alive*secmult,color=dose),linewidth=.4,linetype=2)+
+# geom_line(aes(y=trend,color=z),linetype=2,size=.4)+
+geom_label(data=labels,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.7),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.04,&quot;lines&quot;),label.size=0,color=color[1:nlevels(xy$dose)],size=3.2,hjust=1,vjust=1)+
+labs(x=&quot;Weeks from vaccination to death&quot;,y=&quot;Deaths per 1,000 person-years (solid)\nAverage age (dots)\nCohort size times 10,000 (dashed)&quot;,title=&quot;Leaked NZ data: crude mortality rate by weeks from vaccination to death&quot;,subtitle=paste0(&quot;Based on month_dose_week_single_age.txt generated with buckets.py. People with multiple doses are only included under the most recent dose. Weeks with cohort size below &quot;,formatC(minpop,digits=0,format=&quot;f&quot;,big.mark=&quot;,&quot;),&quot; are omitted.&quot;)|&gt;stringr::str_wrap(84))+
+coord_cartesian(clip=&quot;off&quot;)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,expand=c(0,0))+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,expand=c(0,0))+
+# scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,expand=c(0,0),sec.axis=sec_axis(trans=~./secmult,breaks=seq(0,yend2,ystep2),name=&quot;Cohort size (dashed)&quot;,labels=kimi))+
+scale_color_manual(values=color)+
+theme(
+  axis.text=element_text(size=8,color=&quot;black&quot;),
+  axis.ticks=element_line(linewidth=.3,color=&quot;black&quot;),
+  axis.ticks.length=unit(.2,&quot;lines&quot;),
+  axis.title=element_text(size=9),
+  axis.title.y.right=element_text(margin=margin(0,0,0,5)),
+  legend.position=&quot;none&quot;,
+  panel.background=element_rect(fill=&quot;white&quot;),
+  panel.grid=element_blank(),
+  plot.margin=margin(.3,.8,.3,.3,&quot;lines&quot;),
+  plot.subtitle=element_text(size=8.5,margin=margin(0,0,.4,0,&quot;lines&quot;)),
+  plot.title=element_text(size=10.2,margin=margin(.2,0,.5,0,&quot;lines&quot;))
+)
+
+ggsave(&quot;1.png&quot;,width=5.5,height=3.5,dpi=400)</pre>
 <h3>
 <a href=#Distribution_of_vaccine_doses_given_per_day id=Distribution_of_vaccine_doses_given_per_day>Distribution of vaccine doses given per day</a>
 </h3>
@@ -615,6 +723,7 @@ mrn   batch_id   dose_number   date_time_of_service   date_of_death   vaccine_na
 <img src="i/moar-age-reverse-engineer.png">
 </div>
 <p>In an X Space where Kirsch was asked to describe the obfuscation procedure, he said: <span class="quote">&quot;The transformation is very unlikely to have shifted someone's data by over 30 days. It's very unlikely to have shifted someone's data by over 10 days.&quot;</span> [<a href="https://twitter.com/stkirsch/status/1733531453978489209">https://twitter.com/stkirsch/status/1733531453978489209</a>, time 19:31] So maybe the number of days is selected using a random variable with a normal distribution, so the maximum number of days can be even higher than 7 or 8. In fact when I repeated my procedure above but I checked all records instead of only the first 100,000 records, the peak date was on December 2nd 2023, and the maximum non-zero date was on December 11th 2024, so there may have been a single person who was born on November 30th or December 1st but whose birthday was shifted 11 or 10 days forwards (depending on whether the age column corresponds to the age on December 1st or 2nd).</p>
+<p>Later Kirsch tweeted: <span class="quote">&quot;I've updated the data-transparency/New Zealand/code directory with the obfuscation algorithm we used on the Health New Zealand data. It's 3 lines of code. [...] essentially all dates are shifted by a non-zero random number picked from a normal distribution centered on zero.&quot;</span> [<a href="https://twitter.com/stkirsch/status/1733655982843273357">https://twitter.com/stkirsch/status/1733655982843273357</a>]</p>
 <h3>
 <a href=#Statistics_relative_to_date_of_vaccination id=Statistics_relative_to_date_of_vaccination>Statistics relative to date of vaccination</a>
 </h3>
