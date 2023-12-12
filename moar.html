@@ -73,6 +73,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Statistics_per_batch>Statistics per batch</a></li>
 <li><a href=#Table_of_vaccine_types_by_batch>Table of vaccine types by batch</a></li>
 <li><a href=#Daily_vaccine_doses_per_age_group_compared_to_excess_mortality_by_age_group>Daily vaccine doses per age group compared to excess mortality by age group</a></li>
+<li><a href=#Baseline_for_deaths_by_week_after_first_dose>Baseline for deaths by week after first dose</a></li>
 </ul></li>
 <li><a href=#Miscellaneous>Miscellaneous</a>
 <ul>
@@ -1326,6 +1327,30 @@ theme(
 )
 
 ggsave(&quot;1.png&quot;,width=5.8,height=4.5)</pre>
+<h3>
+<a href=#Baseline_for_deaths_by_week_after_first_dose id=Baseline_for_deaths_by_week_after_first_dose>Baseline for deaths by week after first dose</a>
+</h3>
+<p>Kirsch posted this plot which showed the number of deaths on each week after the first dose, but he drew the baseline for the expected number of deaths at about 69 deaths per week: [<a href="https://kirschsubstack.com/p/medicare-death-data-proves-the-covid">https://kirschsubstack.com/p/medicare-death-data-proves-the-covid</a>]</p>
+<div class="width6">
+<img src="i/moar-first-dose-1.png">
+</div>
+<p>Kirsch didn't use the <span class="quote">&quot;bucket&quot;</span> system in his plot, so people who later got subsequent doses remained included under the first dose.</p>
+<p>I tried using the age composition of the cohort to calculate a baseline for the expected number of deaths per week. I used data from <a href=https://infoshare.stats.govt.nz>infoshare.stats.govt.nz</a> to calculate a CMR for each single-year age in 2021-2022, and I indexed an associative array of CMR values for each age with a vector of the ages of people in my cohort, and I took the average value of the resulting vector, which gave me a baseline for the CMR. And I multiplied it by the cohort size to get the baseline for the number of deaths. My baseline for the weekly number of deaths ended up being about 96-100, so it's much higher than Kirsch's baseline:</p>
+<div class="width6">
+<img src="i/moar-first-dose-2.png">
+</div>
+<p>My baseline gets higher over time because a year after the day of vaccination people are a year older, and also because younger people got the first dose later so they run into the end of the dataset earlier. The date of the last death included in the dataset is October 26th 2023, so I'm using it as the date of the end of data. The average number of weeks from the first dose until end of data is about 115 in the age band 80-89 but about 109 in the age band 30-39:</p>
+<pre>&gt; t=as.data.frame(data.table::fread(&quot;nz-record-level-data-4M-records.csv&quot;))
+&gt; for(i in grep(&quot;date&quot;,colnames(t)))t[,i]=as.Date(t[,i],&quot;%m-%d-%Y&quot;)
+&gt; t=t[t$dose==1,]
+&gt; age=(t$date_time_of_service-t$date_of_birth)/365 # age is age at vaccination
+&gt; tapply(floor(max(t$date_of_death,na.rm=T)-t$date_time_of_service)/7,floor(age/10)*10,mean)|&gt;round()
+  0  10  20  30  40  50  60  70  80  90 100 110
+ 86 105 108 109 110 111 113 115 115 113 111 102</pre>
+<p>Uncle John Returns got similar results: [<a href="https://twitter.com/UncleJo46902375/status/1734606430739873865">https://twitter.com/UncleJo46902375/status/1734606430739873865</a>]</p>
+<div class="width8">
+<img src="i/moar-first-dose-3.png">
+</div>
 <h2>
 <a href=#Miscellaneous id=Miscellaneous>Miscellaneous</a>
 </h2>
