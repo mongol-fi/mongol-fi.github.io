@@ -66,6 +66,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Mortality_rate_3_5_weeks_after_vaccination_compared_to_actual_CMR>Mortality rate 3-5 weeks after vaccination compared to actual CMR</a></li>
 <li><a href=#Using_a_variable_baseline_CMR_based_on_age_composition>Using a variable baseline CMR based on age composition</a></li>
 <li><a href=#Baseline_for_deaths_by_week_after_first_dose>Baseline for deaths by week after first dose</a></li>
+<li><a href=#Calculating_an_accurate_baseline_for_deaths_after_third_dose_in_ages_70_79>Calculating an accurate baseline for deaths after third dose in ages 70-79</a></li>
 </ul></li>
 <li><a href=#Plots_and_data_analysis>Plots and data analysis</a>
 <ul>
@@ -920,7 +921,7 @@ cmr=data.frame(x=0:94,y=colMeans(death)/colMeans(pop)*1e5)
 cmr=c(cmr$y,predict(loess(y~x,cmr,control=loess.control(surface=&quot;direct&quot;)),95:120))
 
 weeks=0:max(endweek)
-pop=rev(cumsum(rev(table(endweek))))
+pop=rev(cumsum(rev(table(factor(endweek,weeks)))))
 baseline=weeks|&gt;sapply(\(i)mean(cmr[floor(age[i&lt;=endweek]+(i/365*7))+1]))
 
 xy=data.frame(week=weeks,baseline,pop)
@@ -986,6 +987,27 @@ theme(
 )
 
 ggsave(&quot;1.png&quot;,width=5.5,height=3.8,dpi=400)</pre>
+<h3>
+<a href=#Calculating_an_accurate_baseline_for_deaths_after_third_dose_in_ages_70_79 id=Calculating_an_accurate_baseline_for_deaths_after_third_dose_in_ages_70_79>Calculating an accurate baseline for deaths after third dose in ages 70-79</a>
+</h3>
+<p>Kirsch also posted this tweet where he arbitrarily used 35 deaths per week as the baseline because it was the number of deaths on days 9-15 after vaccination: [<a href="https://twitter.com/stkirsch/status/1733608287332073708">https://twitter.com/stkirsch/status/1733608287332073708</a>]</p>
+<div class="width5">
+<img src="i/moar-stratified-baseline-1.jpg">
+</div>
+<p>However when I used the same data for deaths after dose 3 in ages 70-79 but I calculated the baseline for the CMR based on the age composition of the cohort, my baseline was at around 53 deaths on week 1 but it gradually increased to about 59 deaths by week 80:</p>
+<div class="width6">
+<img src="i/moar-stratified-baseline-2.png">
+</div>
+<p>In the plot above the number of deaths is above the baseline from around week 15 to week 30, but it could be because of the first wave of COVID deaths in early 2022. Among the people whose age listed in the age column is between 70 and 79, the vast majority of third doses were given between December 2021 and February 2022:</p>
+<pre>&gt; t=as.data.frame(data.table::fread(&quot;nz-record-level-data-4M-records.csv&quot;))
+&gt; t=t[t$dose==3&amp;t$age&gt;=70&amp;t$age&lt;80,]
+&gt; table(sub(&quot;(.*)-.*-(.*)&quot;,&quot;\\2-\\1&quot;,t$date_time_of_service))
+2021-09 2021-10 2021-11 2021-12 2022-01 2022-02 2022-03 2022-04 2022-05 2022-06
+      5     143    4063   26900   84546   26367    4666     791     518     360
+2022-07 2022-08 2022-09 2022-10 2022-11 2022-12 2023-01 2023-02 2023-03 2023-04
+    570     343     168      98      96      95      54      35      53     209
+2023-05 2023-06 2023-07 2023-08 2023-09
+    153      91      24      21       8</pre>
 <h2>
 <a href=#Plots_and_data_analysis id=Plots_and_data_analysis>Plots and data analysis</a>
 </h2>
@@ -1469,9 +1491,7 @@ ggsave(&quot;1.png&quot;,width=5.8,height=4.5)</pre>
 <div class="width8">
 <img src="i/moar-medicare-4.png">
 </div>
-<pre>library(ggplot2)
-
-med=read.csv(&quot;https://mongol-fi.github.io/f/kirsch_medicare_all_states_subset.csv&quot;)
+<pre>med=read.csv(&quot;https://mongol-fi.github.io/f/kirsch_medicare_all_states_subset.csv&quot;)
 med[,2]=as.Date(med[,2])
 med[,3]=as.Date(med[,3])
 med=med[med[,2]&gt;=&quot;2021-01-01&quot;&amp;med[,2]&lt;=&quot;2021-12-31&quot;,]
