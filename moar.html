@@ -78,7 +78,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Daily_vaccine_doses_per_age_group_compared_to_excess_mortality_by_age_group>Daily vaccine doses per age group compared to excess mortality by age group</a></li>
 <li><a href=#Sensitivity_analysis_for_deaths_after_third_dose_by_month>Sensitivity analysis for deaths after third dose by month</a></li>
 </ul></li>
-<li><a href=#Other_datasets_published_by_Kirsch>Other datasets published by Kirsch</a>
+<li><a href=#Other_data_published_by_Kirsch>Other data published by Kirsch</a>
 <ul>
 <li><a href=#Increasing_trend_in_deaths_by_days_after_vaccination_in_US_Medicare_data>Increasing trend in deaths by days after vaccination in US Medicare data</a></li>
 </ul></li>
@@ -97,11 +97,11 @@ th{background:#eee;text-align:left;font-weight:bold}
 <h3>
 <a href=#Downloading_the_data id=Downloading_the_data>Downloading the data</a>
 </h3>
-<p>This downloads the New Zealand data and other vaccination data published on Kirsch's S3 server (about 1.3 GB):</p>
+<p>This downloads the New Zealand data and other vaccination data published on Kirsch's S3 server (about 1.3 GB</p>
 <pre>brew install rclone
 printf %s\\n &#39;[kirsch]&#39; type=s3 provider=Other access_key_id=g42m54xwZS80yQpAO20Q secret_access_key=Kq77gLL47mbypnnRc0UP7sPTvrvjn6y0D5FSEK5H endpoint=kirsch.izt.world:443 acl=private&gt;~/.config/rclone/rclone.conf
 rclone sync kirsch:/data-transparency data-transparency</pre>
-<p>You can also download the data with Cyberduck: <a href="https://cyberduck.io">https://cyberduck.io</a>. Click <span class="quote">&quot;Open Connection&quot;</span>, set the service type to Amazon S3, set the server to <span class="quote">&quot;kirsch.izt.world&quot;</span>, set Access Key ID to <span class="quote">&quot;g42m54xwZS80yQpAO20Q&quot;</span>, set Secret Access Key to <span class="quote">&quot;Kq77gLL47mbypnnRc0UP7sPTvrvjn6y0D5FSEK5H&quot;</span>, and click <span class="quote">&quot;Connect&quot;</span>.</p>
+<p>You can also download the data with Cyberduck: <a href="https://cyberduck.io">https://cyberduck.io</a>. Click <span class="quote">&quot;Open Connection&quot;</span>, set the service type to Amazon S3, set the server to <code>kirsch.izt.world</code>, set Access Key ID to <code>g42m54xwZS80yQpAO20Q</code>, set Secret Access Key to <code>Kq77gLL47mbypnnRc0UP7sPTvrvjn6y0D5FSEK5H</code>, and click <span class="quote">&quot;Connect&quot;</span>.</p>
 <p>There's also direct download links for the data here: <a href="https://getdatatransparency.com">https://getdatatransparency.com</a>, <a href="http://www.oretek.com/vsrf/">http://www.oretek.com/vsrf/</a>.</p>
 <h3>
 <a href=#Background id=Background>Background</a>
@@ -1227,9 +1227,10 @@ month    dose  batch  week  age  alive  dead
 2021-01  0     0      0     1    248    0
 2021-01  0     0      0     2    248    0</pre>
 <p>You can use the file to calculate the person-years of each batch so that once a person gets a new batch, they are no longer included under the person-years of the previous batch, and you can also calculate an ASMR for each batch:</p>
-<div class="width12">
+<div class="width11">
 <img src="i/moar-heat-bucket.png">
 </div>
+<p>In the plot above where I used the bucket system, early batches got high excess CMR relative to the age composition of the cohort. But that's because the people who survived after getting a vaccine from an early batch typically went on to get a new vaccine from another batch, so a common reason why one of the early batches would be the final batch of a person was that the person died before they could get a vaccine from a later batch.</p>
 <pre>bat=as.data.frame(data.table::fread(&quot;data-transparency/New Zealand/time-series summaries/all_all_buckets_with_batch id.txt&quot;))
 bat=bat[bat$batch!=0,]
 
@@ -1240,21 +1241,31 @@ ag=aggregate(ag$x,ag[,2:3],mean)
 ag=merge(ag,aggregate(bat$dead,bat[,c(3,5)],sum),by=1:2)
 colnames(ag)[3:4]=c(&quot;alive&quot;,&quot;dead&quot;)
 
-fa=factor(ag$batch,sort(unique(ag$batch)))
-mult=365.2422/7
+pop=tail(read.csv(&quot;https://mongol-fi.github.io/f/nz_infoshare_population.csv&quot;),2)[,2:96]
+death=tail(read.csv(&quot;https://mongol-fi.github.io/f/nz_infoshare_deaths.csv&quot;),2)[,2:96]
+cmr=data.frame(x=0:94,y=colMeans(death)/colMeans(pop)*1e5)
+cmr=c(cmr$y,predict(loess(y~x,cmr,control=loess.control(surface=&quot;direct&quot;)),95:120))
 
-d=data.frame(`Person-years`=tapply(ag$alive,fa,sum)/mult,check.names=F)
+fa=factor(ag$batch,sort(unique(ag$batch)))
+pdays=tapply(ag$alive,fa,sum)
+
+d=data.frame(`Person-years`=pdays/365*7,check.names=F)
 d$Deaths=tapply(ag$dead,fa,sum)
-d$`Crude mortality rate per 100k person-years`=tapply(ag$dead,fa,sum)/tapply(ag$alive,fa,sum)*mult*1e5
-d$`Age-standardized mortality rate per 100k person-years`=tapply(ifelse(ag$alive&lt;1e2,0,ag$dead/ag$alive*mult)*esp[pmin(ag$age,95)%/%5+1],fa,sum,na.rm=T)
-d$`Average age`=tapply(ag$age*ag$alive,fa,sum)/tapply(ag$alive,fa,sum)
+d$`Crude mortality rate per 100k person-years`=tapply(ag$dead,fa,sum)/pdays*365/7*1e5
+d$`Baseline for CMR based on age composition`=tapply(ag$alive*cmr[ag$age+1],fa,sum)/pdays
+d$`Excess CMR percent`=ifelse(d[,2]==0,NA,100*(d[,3]-d[,4])/d[,4])
+d$`Age-standardized mortality rate per 100k person-years`=tapply(ifelse(ag$alive&lt;1e2,0,ag$dead/ag$alive*365/7)*esp[pmin(ag$age,95)%/%5+1],fa,sum,na.rm=T)
+d$`Average age`=tapply(ag$age*ag$alive,fa,sum)/pdays
 
 m=t(apply(d,2,\(x)(x-min(x,na.rm=T))/(max(x,na.rm=T)-min(x,na.rm=T))))
+
+m[3,]=d[,3]/max(d[,3:4])
+m[4,]=d[,4]/max(d[,3:4])
 
 kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;x[]=ifelse(abs(x)&lt;1,x,paste0(round(x/1e3^(e2-1),ifelse(e%%3==0,1,0)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2]));x}
 disp=kimi(t(d))
 
-slices=3
+slices=4
 for(i in 1:slices){
   step=ceiling(ncol(m)/slices)
   start=(i-1)*step+1
@@ -1277,7 +1288,7 @@ for(i in 1:slices){
     colorRampPalette(colorspace::hex(colorspace::HSV(c(210,210,130,60,40,20,0),c(0,.5,.5,.5,.5,.5,.5),1)))(256)
   )
 }
-system(&quot;montage -geometry +0+0 -tile 1x i[123].png 1.png&quot;)</pre>
+system(&quot;montage -geometry +0+0 -tile 1x i[1234].png 1.png&quot;)</pre>
 <h3>
 <a href=#Table_of_vaccine_types_by_batch id=Table_of_vaccine_types_by_batch>Table of vaccine types by batch</a>
 </h3>
@@ -1495,9 +1506,6 @@ ggsave(&quot;1.png&quot;,width=5.8,height=4.5)</pre>
 </blockquote>
 <p>Kirsch wrote that the peak in deaths was always around day 170 regardless of which month the vaccine doses were given. However the plots above actually show that the deaths peaked on days 171-198 in November 2021 but on days 115-142 in March 2022, so the time until the peak seems to have been getting shorter over time. When I also included further months past March 2022 and I used 30-day bins instead of 28-day bins, I got a linear trend where the deaths peaked on days 180-209 for doses given in January 2022, on days 150-179 for doses given in February, on days 120-149 for doses given in March, and on days 90-119 for doses given in April (or actually for doses given in January there was a second even higher peak around days 510-599):</p>
 <p><img src=i/moar-sensitivity-7.png style=max-width:697px></p>
-<p>If you look at first doses instead of third doses, there is also a similar linear pattern where the number of deaths peaks on days 420-449 for vaccines given in May 2021, and over the next months the peak shifts by about 30 days each month:</p>
-<p><img src=i/moar-sensitivity-8.png style=max-width:854px></p>
-<p>So in the case of both the first and third doses, the deaths seem to peak around July 2022, when there was elevated mortality because it was winter, and when there was still a fairly high number of COVID deaths, even though both COVID deaths and excess mortality dropped rapidly in August 2022.</p>
 <pre>t=as.data.frame(data.table::fread(&quot;nz-record-level-data-4M-records.csv&quot;))
 for(i in grep(&quot;date&quot;,colnames(t)))t[,i]=as.Date(t[,i],&quot;%m-%d-%Y&quot;)
 
@@ -1529,8 +1537,19 @@ pheatmap::pheatmap(
 )
 
 system(&quot;convert -trim 0.png -bordercolor white -gravity northwest -splice x14 -size `identify -format %w 0.png`x -pointsize 45 caption:\&quot;$(fold -sw 109 &lt;&lt;&lt;&#39;Dose 3: Days from vaccination to death by month of vaccination, 30-day bins.&#39;)\&quot; +swap -append -trim -border 24 +repage 1.png&quot;)</pre>
+<p>If you look at first doses instead of third doses, there is also a similar linear pattern where the number of deaths peaks on days 420-449 for vaccines given in May 2021, and over the next months the peak shifts by about 30 days each month:</p>
+<p><img src=i/moar-sensitivity-8.png style=max-width:854px></p>
+<p>So in the case of both the first and third doses, the deaths seem to peak around July 2023, when there was elevated mortality because it was winter, and the peak in COVID deaths in New Zealand was in June 2023 (even though exces mortality was lower in winter 2023 than winter 2022).</p>
+<p>When I showed Kirsch the plot for dose 3 above, he pointed out that there was an increasing number of deaths per month for doses given in January 2022, and he said that the expected number of deaths should be decreasing because the cohort gets smaller:</p>
+<div class="width4">
+<img src="i/moar-sensitivity-9.png">
+</div>
+<p>However part of the reason why the number of deaths was increasing in the screenshot above was that it was getting closer to winter, because the rightmost square in the screenshot showed the number of deaths around July 2023. And also the baseline for the expected number of deaths increases over time because the cohort gets older, as you can see from this plot which shows third doses given in January 2022 like Kirsch's screenshot:</p>
+<div class="width5">
+<img src="i/moar-sensitivity-10.png">
+</div>
 <h2>
-<a href=#Other_datasets_published_by_Kirsch id=Other_datasets_published_by_Kirsch>Other datasets published by Kirsch</a>
+<a href=#Other_data_published_by_Kirsch id=Other_data_published_by_Kirsch>Other data published by Kirsch</a>
 </h2>
 <h3>
 <a href=#Increasing_trend_in_deaths_by_days_after_vaccination_in_US_Medicare_data id=Increasing_trend_in_deaths_by_days_after_vaccination_in_US_Medicare_data>Increasing trend in deaths by days after vaccination in US Medicare data</a>
@@ -1673,7 +1692,7 @@ ggsave(&quot;1.png&quot;,width=5.5,height=3.5,dpi=400)</pre>
 <p><img src=i/moar-medicare-6.png width=600></p>
 </blockquote>
 <p>However the reason why the pneumococcal vaccines had a flat curve was probably because they were distributed more evenly throughout the year, like how COVID vaccines also got a flat curve in my plot above when I sampled the same number of vaccines from each month. From the spreadsheets on Kirsch's S3 server, you can't see the dates when the pneumococcal vaccines were given. And also if you selected a sample of the pneumococcal vaccines so that their distribution of vaccination dates would have a similar shape as the COVID vaccines, you'd probably get a similar increasing curve for the number of deaths by weeks from vaccination.</p>
-<p>If you look at the average number of deaths in the United States following each 51-week period from a vaccination date in the Medicare dataset, it also forms a curve that mostly increases from week 16 onwards, apart from a dent around week 36. There's a decreasing trend during the first 16 weeks, but in the Medicare data it probably gets canceled out by the healthy vaccinee effect. I don't know why the dent around week 36 is not visible in the Medicare data though:</p>
+<p>If you take the date of each vaccine dose in the Medicare COVID data, select the number of all-cause deaths in the United States during the 51-week period starting from the date, and take the average number of weekly deaths across all doses, you get a curve that mostly increases from week 16 apart from a dent around week 37. There's a decreasing trend during the first 16 weeks, but in the Medicare data it probably gets canceled out by the healthy vaccinee effect. But I don't know why the dent around week 36 is not visible in the Medicare data though:</p>
 <div class="width5">
 <img src="i/moar-medicare-7.png">
 </div>
@@ -1798,7 +1817,7 @@ ggsave(&quot;1.png&quot;,width=6,height=4)</pre>
 <div class="width11">
 <img src="i/moar-craig-2.jpg">
 </div>
-<p>Craig's tweet said: <span class="quote">&quot;9,408 excess deaths since Oct 2000. This factors in the size of the population. By this measure mortality had been steady for many years.&quot;</span> However her tweet was a bit misleading because the first image in her tweet showed crude mortality rate which had remained flat for several years before COVID, but in the second image in her tweet the figure of 9,408 excess deaths was calculated based on the raw number of deaths, which has been increasing at a fairly sharp rate.</p>
+<p>Craig's tweet said: <span class="quote">&quot;9,408 excess deaths since Oct 2000. This factors in the size of the population. By this measure mortality had been steady for many years.&quot;</span> However her tweet was misleading because the first image in her tweet showed crude mortality rate which had remained flat for several years before COVID, but in the second image in her tweet the figure of 9,408 excess deaths was calculated based on the raw number of deaths, which has been increasing at a fairly sharp rate.</p>
 <h3>
 <a href=#Tweets_by_Uncle_John_Returns id=Tweets_by_Uncle_John_Returns>Tweets by Uncle John Returns</a>
 </h3>
