@@ -97,7 +97,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <h3>
 <a href=#Downloading_the_data id=Downloading_the_data>Downloading the data</a>
 </h3>
-<p>This downloads the New Zealand data and other vaccination data published on Kirsch's S3 server (about 1.3 GB</p>
+<p>This downloads the New Zealand data and other vaccination data published on Kirsch's S3 server (about 1.3 GB):</p>
 <pre>brew install rclone
 printf %s\\n &#39;[kirsch]&#39; type=s3 provider=Other access_key_id=g42m54xwZS80yQpAO20Q secret_access_key=Kq77gLL47mbypnnRc0UP7sPTvrvjn6y0D5FSEK5H endpoint=kirsch.izt.world:443 acl=private&gt;~/.config/rclone/rclone.conf
 rclone sync kirsch:/data-transparency data-transparency</pre>
@@ -1108,11 +1108,22 @@ persons=table(t$batch_id[!duplicated(t[,c(&quot;mrn&quot;,&quot;batch_id&quot;)]
 uniqdeaths=table(fa[!duplicated(dead[,c(&quot;mrn&quot;,&quot;batch_id&quot;)])])
 deaths=table(fa)
 maxdate=max(dead$date_of_death)
+pyear=tapply(pmin(t$date_of_death,maxdate,na.rm=T)-t$date_time_of_service,t$batch_id,sum)/365.2422
+
+pop=tail(read.csv(&quot;https://mongol-fi.github.io/f/nz_infoshare_population.csv&quot;),2)[,2:96]
+death=tail(read.csv(&quot;https://mongol-fi.github.io/f/nz_infoshare_deaths.csv&quot;),2)[,2:96]
+cmr=data.frame(x=0:94,y=colMeans(death)/colMeans(pop)*1e5)
+cmr=c(cmr$y,predict(loess(y~x,cmr,control=loess.control(surface=&quot;direct&quot;)),95:120))
+
+meanage=as.numeric(pmean(pmin(maxdate,t$date_of_death,na.rm=T),t$date_time_of_service)-t$date_of_birth)/365.2422
 
 d=data.frame(Doses=c(doses))
 d$`Doses leading to a death`=deaths
 d$`Percentage of deaths per dose`=100*deaths/doses
-d$`Deaths per 100 person-years`=deaths/(tapply(pmin(t$date_of_death,maxdate,na.rm=T)-t$date_time_of_service,t$batch_id,sum)/365.2422)*1e2
+d$`Person-years`=pyear
+d$`Deaths per 100,000 person-years (CMR)`=deaths/pyear*1e5
+d$`Baseline for CMR based on age composition`=tapply(cmr[floor(meanage)+1],t$batch_id,mean)
+d$`Excess CMR percent`=(d[,5]-d[,6])/d[,6]*100
 d$`Average days between vaccination and death`=tapply(dead$date_of_death-dead$date_time_of_service,fa,mean)
 d$`Average age at vaccination`=tapply(t$date_time_of_service-t$date_of_birth,t$batch_id,mean)/365.2422
 d$`Average age at death`=tapply(dead$date_of_death-dead$date_of_birth,fa,mean)/365.2422
@@ -1126,12 +1137,14 @@ d$`Doses per person`=doses/persons
 
 m=t(apply(d,2,\(x)(x-min(x,na.rm=T))/(max(x,na.rm=T)-min(x,na.rm=T))))
 
-kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;x[]=ifelse(abs(x)&lt;1,x,paste0(round(x/1e3^(e2-1),ifelse(e%%3==0,1,0)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2]));x}
-disp=kimi(t(d))
+m[5,]=d[,5]/max(d[,5:6])
+m[6,]=d[,6]/max(d[,5:6])
+
+kimir2=\(x){x[]=ifelse(or(x&gt;=1e6,x&lt;=-1e6),paste0(round(x/1e6,ifelse(abs(x)&lt;1e7,1,0)),&quot;M&quot;),ifelse(or(x&gt;=1e3,x&lt;=-1e3),paste0(round(x/1e3,ifelse(abs(x)&lt;1e4,1,0)),&quot;k&quot;),round(x)));x}
+disp=kimir2(t(d))
 disp[3,]=sprintf(&quot;%.1f&quot;,d[,3])
-disp[4,]=sprintf(&quot;%.1f&quot;,d[,4])
-disp[12,]=sprintf(&quot;%.1f&quot;,d[,12])
-disp[13,]=sprintf(&quot;%.2f&quot;,d[,13])
+disp[15,]=sprintf(&quot;%.1f&quot;,d[,15])
+disp[16,]=sprintf(&quot;%.2f&quot;,d[,16])
 
 slices=3
 for(i in 1:slices){
@@ -1230,7 +1243,6 @@ month    dose  batch  week  age  alive  dead
 <div class="width11">
 <img src="i/moar-heat-bucket.png">
 </div>
-<p>In the plot above where I used the bucket system, early batches got high excess CMR relative to the age composition of the cohort. But that's because the people who survived after getting a vaccine from an early batch typically went on to get a new vaccine from another batch, so a common reason why one of the early batches would be the final batch of a person was that the person died before they could get a vaccine from a later batch.</p>
 <pre>bat=as.data.frame(data.table::fread(&quot;data-transparency/New Zealand/time-series summaries/all_all_buckets_with_batch id.txt&quot;))
 bat=bat[bat$batch!=0,]
 
