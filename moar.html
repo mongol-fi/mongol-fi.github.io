@@ -1396,7 +1396,7 @@ Covid Paediatric Pfizer,GE0694,2023-10-31,249600</pre>
 <div class="width8">
 <img src="i/moar-new-doses-vs-excess-mortality.png">
 </div>
-<p>In the plot above the age groups 0-15 and age groups have negative excess mortality eAnd also if the vaccines were killing a lot of young people, then why do the age groups 0-14 and 15-64 have negative excess deaths even for most of 2022 and 2023? I calculated excess deaths relative to a seasonality-adjusted linear projection of the weekly number of deaths in 2015-2019.</p>
+<p>And also if the vaccines were killing a lot of young people, then why do the age groups 0-14 and 15-64 have negative excess deaths even for most of 2022 and 2023? I calculated excess deaths relative to a seasonality-adjusted linear projection of the weekly number of deaths in 2015-2019.</p>
 <pre>library(ggplot2)
 
 t=as.data.frame(data.table::fread(&quot;nz-record-level-data-4M-records.csv&quot;))
@@ -1765,7 +1765,7 @@ ggsave(&quot;1.png&quot;,width=6,height=4)</pre>
 <div class="width6">
 <img src="i/moar-owid.png">
 </div>
-<p>The plot by Denis Rancourt below appears to show that New Zealand had an increase in all-cause mortality in mid-2021 when the vaccines were rolled out: [<a href="https://twitter.com/kenoconnor18/status/1735467225740689612">https://twitter.com/kenoconnor18/status/1735467225740689612</a>]</p>
+<p>Someone on Twitter posted this plot by Denis Rancourt, which appears to show that New Zealand had an increase in all-cause mortality in mid-2021 when the vaccines were rolled out: [<a href="https://twitter.com/kenoconnor18/status/1735467225740689612">https://twitter.com/kenoconnor18/status/1735467225740689612</a>]</p>
 <div class="width5">
 <img src="i/moar-rancourt.jpg">
 </div>
@@ -1773,7 +1773,7 @@ ggsave(&quot;1.png&quot;,width=6,height=4)</pre>
 <div class="width6">
 <img src="i/moar-rancourt-2.png">
 </div>
-<p>When Kirsch posted the same plot by Rancourt, he wrote that the plot showed that <span class="quote">&quot;all cause mortality moving average is at an all time high&quot;</span>. [<a href="https://kirschsubstack.com/p/the-nz-data-is-crystal-clear-that">https://kirschsubstack.com/p/the-nz-data-is-crystal-clear-that</a>] However Rancourt's plot ended in the second quarter of 2023, and my plot above shows that in the third quarter of 2023 the 1-year moving average fell below the pre-pandemic trend in deaths.</p>
+<p>When Kirsch posted the same plot by Rancourt, he wrote that the plot showed that <span class="quote">&quot;all cause mortality moving average is at an all time high&quot;</span>. [<a href="https://kirschsubstack.com/p/the-nz-data-is-crystal-clear-that">https://kirschsubstack.com/p/the-nz-data-is-crystal-clear-that</a>] However Rancourt's plot ended in the second quarter of 2023, and my plot above shows that in the third quarter of 2023 the 1-year moving average fell below the pre-pandemic linear trend.</p>
 <p>In the presentation that Kirsch gave at MIT, he included the following slide which made it seem like there may have already been high excess mortality in 2021 since the year labeled 2021/2022 had high excess mortality, but couldn't tell from the slide that it took about a year after vaccination started until there was the first clear increase in excess mortality: [<a href="https://www.skirsch.com/covid/Isitsafe.pdf">https://www.skirsch.com/covid/Isitsafe.pdf</a>]</p>
 <div class="width6">
 <img src="i/moar-mit-1.jpg">
@@ -1834,6 +1834,76 @@ ggsave(&quot;1.png&quot;,width=6,height=4)</pre>
 <div class="width6">
 <img src="i/moar-seasonal-excess.png">
 </div>
+<pre>library(ggplot2)
+
+t=read.csv(&quot;https://www.mortality.org/File/GetDocument/Public/STMF/Outputs/NZL_NPstmfout.csv&quot;)
+t=t[t$Sex==&quot;b&quot;,]
+isoweek=\(year,week,weekday=1){d=as.Date(paste0(year,&quot;-1-7&quot;));d-(as.integer(format(d,&quot;%w&quot;))+6)%%7-1+7*(week-1)+weekday} # `as.Date` doesn&#39;t support `%V` (ISO 8601 week number)
+xy=data.frame(x=isoweek(t$Year,t$Week,4),y=t$Total/7)
+xy=rbind(xy,data.frame(x=seq(min(xy$x),max(xy$x),1),y=NA))
+xy=xy[!duplicated(xy$x),]
+xy=xy[order(xy$x),]
+xy$y=zoo::na.approx(xy$y,na.rm=F)
+prediction=xy$x&lt;=&quot;2019-12-31&quot;&amp;xy$x&gt;=&quot;2015-01-01&quot;
+linear=predict(lm(y~x,xy[prediction,]),xy)
+days=substr(xy$x,6,10)
+daily=tapply(xy$y[prediction]-linear[prediction],days[prediction],mean)
+seasonal=linear+daily[days]
+sum=sum((xy$y-seasonal)[xy$x&gt;=&quot;2020-01-01&quot;])
+
+names(xy)[2]=&quot;Actual deaths&quot;
+xy$`Linear projection`=linear
+xy$`Seasonality-adjusted linear projection`=seasonal
+xy$`Actual deaths minus seasonality-adjusted linear projection`=xy[,2]-seasonal
+
+long=\(x)data.frame(x=x[,1],y=unname(c(unlist(x[,-1]))),z=colnames(x)[-1][col(x[,-1])])
+xy=long(xy)
+
+xstart=as.Date(&quot;2011-1-1&quot;)
+xend=as.Date(&quot;2024-1-1&quot;)
+
+xy=xy[xy$x&gt;=xstart&amp;xy$x&lt;=xend,]
+
+candidates=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
+ybreak=candidates[which.min(abs(candidates-max(xy$y,na.rm=T)/8))]
+ystart=ybreak*floor(min(xy$y,na.rm=T)/ybreak)
+yend=ybreak*ceiling(max(xy$y,na.rm=T)/ybreak)
+
+group=factor(xy$z,unique(xy$z))
+
+color=c(&quot;black&quot;,hcl(c(210,120,0)+15,95,50))
+
+ystep=(yend-ystart)/15
+labels=data.frame(x=as.Date(xstart+.03*(xend-xstart),origin=&quot;1970-1-1&quot;),y=seq(62,by=-ystep,length.out=nlevels(group)),label=levels(group))
+
+ggplot(xy,aes(x=x,y=y,color=group))+
+geom_hline(yintercept=c(ystart,0,yend),color=&quot;gray65&quot;,linewidth=.3)+
+geom_vline(xintercept=c(xstart,xend,as.Date(c(&quot;2020-1-1&quot;,&quot;2015-1-1&quot;))),color=&quot;gray65&quot;,linewidth=.3)+
+geom_line(aes(color=group),linewidth=.3)+
+annotate(geom=&quot;label&quot;,x=as.Date(&quot;2022-1-1&quot;),y=44,label=paste0(&quot;Total seasonality-adjusted\nexcess mortality since\nstart of 2020: &quot;,round(sum)),size=2.4,fill=&quot;gray90&quot;,label.r=unit(0,&quot;lines&quot;),label.padding=unit(.3,&quot;lines&quot;),label.size=0,hjust=.5)+
+geom_label(data=labels,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.7),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.04,&quot;lines&quot;),label.size=0,color=color[1:nrow(labels)],size=2.6,hjust=0)+
+labs(title=&quot;Daily number of deaths in New Zealand (prediction interval 2015-2019)&quot;,x=NULL,y=NULL)+
+coord_cartesian(clip=&quot;off&quot;)+
+scale_x_date(limits=c(xstart,xend),breaks=seq(xstart,xend,&quot;6 month&quot;),expand=expansion(0),labels=c(rbind(&quot;&quot;,2011:2023),&quot;&quot;))+
+scale_y_continuous(limits=c(ystart,yend),breaks=seq(ystart,yend,ybreak),expand=expansion(0))+
+scale_color_manual(values=color)+
+theme(
+  axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.text.x=element_text(angle=90,vjust=.5,hjust=.5),
+  axis.ticks=element_line(linewidth=.3,color=&quot;gray65&quot;),
+  axis.ticks.length=unit(.2,&quot;lines&quot;),
+  axis.ticks.x=element_line(color=c(&quot;gray65&quot;,NA)),
+  axis.title=element_text(size=8),
+  legend.position=&quot;none&quot;,
+  panel.background=element_rect(fill=&quot;white&quot;),
+  panel.grid=element_blank(),
+  plot.background=element_rect(fill=&quot;white&quot;),
+  plot.margin=margin(.4,.6,.4,.5,&quot;lines&quot;),
+  plot.subtitle=element_text(size=7),
+  plot.title=element_text(size=8.5)
+)
+
+ggsave(&quot;1.png&quot;,width=4.6,height=3.3)</pre>
 <h3>
 <a href=#Tweet_by_Clare_Craig_about_excess_deaths id=Tweet_by_Clare_Craig_about_excess_deaths>Tweet by Clare Craig about excess deaths</a>
 </h3>
