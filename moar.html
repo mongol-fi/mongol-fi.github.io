@@ -1774,6 +1774,56 @@ ggsave(&quot;1.png&quot;,width=6,height=4)</pre>
 <img src="i/moar-maldives-1.png">
 </div>
 <p>I took the percentage of vaccinated population from OWID so it may not match the dataset which Kirsch was given. Most deaths are of course in older people, and older people are more likely to be vaccinated than younger people.</p>
+<p>My heatmap above shows that in July 2021 when COVID deaths peaked, about 40% of deaths were in vaccinated people even though about 58% of the population was listed as vaccinated at OWID, so the ratio was about 0.69. But the ratio was closer to 1 during months when there was a lower number of COVID deaths, which appears to indicate that unvaccinated people were dying at a disproportionately high rate during the months when there was a large number of COVID deaths.</p>
+<pre>t=read.csv(&quot;https://mongol-fi.github.io/f/kirsch_maldives.csv&quot;)
+owid=read.csv(&quot;https://covid.ourworldindata.org/data/owid-covid-data.csv&quot;)|&gt;subset(location==&quot;Maldives&quot;)
+
+jabs=rowSums(t[,7:10]!=&quot;&quot;)
+months=substring(seq(as.Date(&quot;2020-1-1&quot;),as.Date(&quot;2023-10-1&quot;),&quot;1 month&quot;),1,7)
+m=table(jabs!=0,factor(substring(t$date_of_death,1,7),months))
+
+rownames(m)=c(&quot;Unvaccinated deaths&quot;,&quot;Vaccinated deaths&quot;)
+m=rbind(m,&quot;Percentage of deaths in vaccinated&quot;=m[2,]/colSums(m)*100)
+
+cov=.Primitive(&quot;|&quot;)(grepl(&quot;Covid&quot;,t$remarks_1),grepl(&quot;Covid&quot;,t$remarks_2))
+m2=table(jabs[cov]!=0,factor(substring(t$date_of_death[cov],1,7),months))
+rownames(m2)=c(&quot;Unvaccinated COVID deaths&quot;,&quot;Vaccinated COVID deaths&quot;)
+
+m2=rbind(m2,&quot;Percentage of COVID deaths in vaccinated&quot;=m2[2,]/colSums(m2)*100)
+m=rbind(m,m2)
+
+m=rbind(m,&quot;Vaccinated population percent&quot;=tapply(owid$people_vaccinated_per_hundred,factor(substring(owid$date,1,7),months),mean,na.rm=T))
+m[7,37]=mean(m[7,c(36,38)])
+
+m=rbind(m,&quot;Vax deaths % vs vax population %&quot;=m[3,]/m[7,])
+
+disp=round(m)
+disp[8,]=sprintf(&quot;%.2f&quot;,m[8,])
+m=t(apply(m,1,\(x)x/max(x,na.rm=T)))
+
+for(i in 1:4){
+  start=(i-1)*12+1
+  end=min((i-1)*12+12,ncol(m))
+  pheatmap::pheatmap(
+    m[,start:end],
+    filename=paste0(&quot;i&quot;,i,&quot;.png&quot;),
+    cluster_rows=F,
+    cluster_cols=F,
+    legend=F,
+    cellwidth=21,
+    cellheight=21,
+    fontsize=9,
+    border_color=NA,
+    display_numbers=disp[,start:end],
+    fontsize_number=8,
+    na_col=&quot;white&quot;,
+    number_color=ifelse(m[,start:end]&gt;.5,&quot;white&quot;,&quot;black&quot;),
+    breaks=seq(0,1,,256),
+    sapply(255:0,\(i)rgb(i,i,i,maxColorValue=255))
+  )
+}
+
+system(&quot;mogrify -shave 0x17 i[1234].png;montage -geometry +0+0 -tile 1x i[1234].png 1.png;mogrify -trim -bordercolor white -border 22 1.png&quot;)</pre>
 <p>The data from the Maldives even includes columns for the names and addresses of the dead people and the cause of death. At some points of the dataset about half of all deaths are listed as COVID deaths, which are indicated by a pink background color:</p>
 <div class="width12">
 <img src="i/moar-maldives-2.jpg">
