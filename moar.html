@@ -77,6 +77,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Statistics_per_batch>Statistics per batch</a></li>
 <li><a href=#Table_of_vaccine_types_by_batch>Table of vaccine types by batch</a></li>
 <li><a href=#Daily_vaccine_doses_per_age_group_compared_to_excess_mortality_by_age_group>Daily vaccine doses per age group compared to excess mortality by age group</a></li>
+<li><a href=#Plot_by_John_Sullivan_for_crude_mortality_rate_by_date_in_ages_80_89>Plot by John Sullivan for crude mortality rate by date in ages 80-89</a></li>
 </ul></li>
 <li><a href=#Excess_mortality_in_New_Zealand>Excess mortality in New Zealand</a>
 <ul>
@@ -1572,6 +1573,135 @@ theme(
 )
 
 ggsave(&quot;1.png&quot;,width=5.8,height=4.5)</pre>
+<h3>
+<a href=#Plot_by_John_Sullivan_for_crude_mortality_rate_by_date_in_ages_80_89 id=Plot_by_John_Sullivan_for_crude_mortality_rate_by_date_in_ages_80_89>Plot by John Sullivan for crude mortality rate by date in ages 80-89</a>
+</h3>
+<p>Kirsch wrote: [<a href="https://kirschsubstack.com/p/the-nz-data-is-crystal-clear-that">https://kirschsubstack.com/p/the-nz-data-is-crystal-clear-that</a>]</p>
+<blockquote>
+<p>Sullivan uses a completely different approach to the typical time-series cohort I used analysis. He basically creates a cohort of everyone, aged 80 to 90 who had Dose 1 by putting in everyone who got Dose 1,2, or 3 but eliminating duplicates. He admitted this wasn't perfect, but said there isn't a perfect way to analyze this data which is true.</p>
+<p>What he did was basically add people to his cohort on the day they were vaccinated so he's not guessing as to dates. So his cohort grows over time as people are added so the death rate will get more precise over time since he has more people available to die. He then can compute a mortality rate because he knows exactly the number of people he has alive and dead on every day (Note: he did NOT take out the people who died so his denominator is too large so the mortality rate is even higher than he calculated). So we'd expect this to be noisy from the start and then get more precise which is exactly what happens as you can see from the orange line:</p>
+<p><img src=i/moar-sullivan-1.png class=width7></p>
+<p>He thinks the high mortality rate when the shots are first given out is the red flag. But in my view, the key is the orange mortality rate goes from around 2,500 in August to over 5,000 in December. <strong>This is a serious safety signal, a doubling of mortality rate in just 5 months.</strong> Moreover, he notes that there is no COVID yet and also is aware, but doesn't explicitly point out, that mortality seasonality peaks in August, and would be falling by 17% (3342/2856 from StatsNZ monthly numbers in August vs. Dec 2021).</p>
+<blockquote>
+<p><strong>Bottom line:</strong> A 50% increase in mortality rate at the same time when mortality rate should be falling by 17% is a huge anomaly and cannot be explained. This is, in effect, a 67% deviation from normal and the numbers are large enough to make this statistically significant.</p>
+</blockquote>
+</blockquote>
+<p>I calculated average crude mortality rates for single-year age groups in New Zealand in 2021-2022 by using data from <a href=https://infoshare.stats.govt.nz>infoshare.stats.govt.nz</a>. Then I calculated a baseline for the crude mortality rate by taking the weighted average of the CMRs of each age, where the weight was the number of people of the age in my cohort.</p>
+<p>In June 2022 when the CMR peaked in ages 80-89, it barely reached above the baseline, even though June 2022 was in the middle of the first wave of COVID deaths, and it was also winter but I didn't adjust for seasonality in my baseline for the CMR:</p>
+<div class="width6">
+<img src="i/moar-sullivan-2.png">
+</div>
+<p>In the plot above the crude mortality rate is far below the baseline in 2021, but it could be partially because of the healthy vaccinee effect and partially because there was negative excess mortality in 2021. The healthy vaccinee effect seems to be stronger in older age groups.</p>
+<p>When I included all age groups, the mortality rate remained below the baseline until August 2022, apart from short dips above the baseline in May 2021 and March 2022:</p>
+<div class="width6">
+<img src="i/moar-sullivan-3.png">
+</div>
+<pre>library(ggplot2)
+library(lubridate)
+
+t=as.data.frame(data.table::fread(&quot;nz-record-level-data-4M-records.csv&quot;,showProgress=F))
+for(i in grep(&quot;date&quot;,colnames(t)))t[,i]=as.Date(t[,i],&quot;%m-%d-%Y&quot;)
+
+t=t[t$dose!=0,]
+t=t[order(t$date_time_of_service),]
+t=t[!duplicated(t$mrn),]
+t=t[-which(t$date_of_death&lt;t$date_time_of_service),]
+
+age=time_length(difftime(t$date_time_of_service,t$date_of_birth),&quot;years&quot;)
+t=t[age&gt;=80&amp;age&lt;90,]
+
+dates=Reduce(seq,as.numeric(range(t$date_time_of_service,t$date_of_death,na.rm=T)))
+ages=1:120
+age=floor(time_length(difftime(t$date_time_of_service,t$date_of_birth),&quot;years&quot;))
+m=table(factor(as.numeric(t$date_time_of_service),dates),factor(age,ages))
+
+enddate=pmin(max(t$date_of_death,na.rm=T),t$date_of_death,na.rm=T)
+
+for(i in 2021:2023){
+  bday=&quot;year&lt;-&quot;(t$date_of_birth,i)
+  age=floor(time_length(difftime(bday,t$date_of_birth),&quot;years&quot;))
+  pick=bday&gt;t$date_time_of_service&amp;bday&lt;enddate
+  ta=table(factor(as.numeric(bday[pick]),dates),factor(age[pick],ages))
+  m=m+ta
+  m=m-cbind(ta[,-1],0)
+}
+
+death=table(factor(as.numeric(t$date_of_death),dates),factor(floor(time_length(difftime(t$date_of_death,t$date_of_birth),&quot;years&quot;)),ages))
+m=m-death
+m2=apply(m,2,cumsum)
+
+nzpop=tail(read.csv(&quot;https://mongol-fi.github.io/f/nz_infoshare_population.csv&quot;),2)[,3:96]
+nzdeath=tail(read.csv(&quot;https://mongol-fi.github.io/f/nz_infoshare_deaths.csv&quot;),2)[,3:96]
+cmr=data.frame(x=1:94,y=colMeans(nzdeath)/colMeans(nzpop)*1e5)
+cmr=c(cmr$y,predict(loess(y~x,cmr,control=loess.control(surface=&quot;direct&quot;)),95:120))
+
+agepop=data.frame(date=as.Date(dates,&quot;1970-1-1&quot;)[row(m2)],pop=c(m2),age=ages[col(m2)])
+
+mav=\(x,y){l=length(x);s=e=y%/%2;if(y%%2==0)e=e-1;setNames(sapply(1:l,\(i)mean(x[max(1,i-s):min(l,i+e)],na.rm=T)),names(x))}
+
+xy=data.frame(x=as.Date(dates,&quot;1970-1-1&quot;))
+xy$pop=rowSums(m2)
+xy$death=rowSums(death)
+xy$baseline=tapply(agepop$pop*cmr[agepop$age+1],agepop$date,sum,na.rm=T)/tapply(agepop$pop,agepop$date,sum,na.rm=T)
+xy$cmr=mav(xy$death/xy$pop*1e5*365,14)
+xy$age=colSums(t(m2)*ages)/rowSums(m2)
+
+dead=t[!is.na(t$date_of_death),]
+xy$deadage=tapply(time_length(difftime(dead$date_of_death,dead$date_of_birth),&quot;years&quot;),factor(as.numeric(dead$date_of_death),dates),mean)|&gt;mav(14)
+
+# minpop=1e3
+# xy$cmr[xy$pop&lt;minpop]=NA
+xy=na.omit(xy)
+
+xstart=as.Date(&quot;2021-3-1&quot;)
+xend=as.Date(&quot;2023-11-1&quot;)
+
+candidates=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
+ystep=candidates[which.min(abs(candidates-max(xy$cmr)/6))]
+ystart=0
+yend=ystep*ceiling(max(xy$cmr,xy$age)/ystep)
+ybreak=seq(ystart,yend,ystep)
+
+ystep2=candidates[which.min(abs(candidates-max(xy$age,xy$deadage,na.rm=T)/6))]
+yend2=ceiling(max(xy$age,xy$deadage,na.rm=T)/ystep2)*ystep2
+secmult=yend/yend2
+
+color1=c(&quot;black&quot;,&quot;gray40&quot;,&quot;#00aa00&quot;)
+color2=c(hcl(60,100,35),hcl(60,90,60))
+
+label1=data.frame(x=xstart+.02*(xend-xstart),y=ystart+(1.6+c(2:0))*(yend-ystart)/13,label=c(&quot;Deaths per 100k person-years (14-day moving average)&quot;,&quot;Baseline for CMR&quot;,&quot;Population in thousands of people&quot;))
+label2=data.frame(x=xstart+.98*(xend-xstart),y=ystart+(1.6+c(1:0))*(yend-ystart)/13,label=c(&quot;Average age at death (14-day moving average)&quot;,&quot;Average age of population&quot;))
+
+ggplot(xy,aes(x=x,y=cmr))+
+geom_hline(yintercept=ystart,color=&quot;black&quot;,linewidth=.3,lineend=&quot;square&quot;)+
+geom_vline(xintercept=c(xstart,xend),color=&quot;black&quot;,linewidth=.3,lineend=&quot;square&quot;)+
+geom_line(aes(y=age*secmult),linewidth=.4,color=color2[2])+
+geom_line(aes(y=deadage*secmult),linewidth=.4,color=color2[1])+
+geom_line(aes(y=baseline),linewidth=.4,alpha=.5,color=color1[2])+
+geom_line(aes(y=pop/1e3),linewidth=.4,color=color1[3])+
+geom_line(linewidth=.4,color=color1[1])+
+geom_label(data=label1,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.8),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.04,&quot;lines&quot;),label.size=0,size=3.2,hjust=0,vjust=1.7,color=color1)+
+geom_label(data=label2,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.8),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.04,&quot;lines&quot;),label.size=0,size=3.2,hjust=1,vjust=1.7,color=color2)+
+labs(x=NULL,y=NULL,title=&quot;NZ data: Crude mortality rate by date, ages 80-89&quot;,subtitle=paste0(&quot;Only the earliest dose is included for each person. The baseline for the CMR was calculated based on average CMR in 2021-2022 for single-year age groups, where the CMR of each age was weighted by the person-days of the age. The moving averages have a centered window.&quot;)|&gt;stringr::str_wrap(80))+
+coord_cartesian(clip=&quot;off&quot;)+
+scale_x_date(limits=c(xstart,xend),breaks=seq(xstart,xend,&quot;2 month&quot;),expand=c(0,0),date_labels=&quot;%b 1 %y&quot;)+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,expand=c(0,0),labels=\(x)ifelse(abs(x)&gt;=1e3,paste0(x/1e3,&quot;k&quot;),x),sec.axis=sec_axis(trans=~./secmult,breaks=seq(0,yend2,ystep2)))+
+theme(
+  axis.text=element_text(size=8,color=&quot;black&quot;),
+  axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
+  axis.ticks=element_line(linewidth=.3,color=&quot;black&quot;),
+  axis.ticks.length=unit(.2,&quot;lines&quot;),
+  axis.title=element_text(size=9),
+  axis.title.y.right=element_text(margin=margin(0,0,0,5)),
+  legend.position=&quot;none&quot;,
+  panel.background=element_rect(fill=&quot;white&quot;),
+  panel.grid=element_blank(),
+  plot.margin=margin(.3,.3,.3,.3,&quot;lines&quot;),
+  plot.subtitle=element_text(size=8.8,margin=margin(0,0,.5,0,&quot;lines&quot;)),
+  plot.title=element_text(size=10.2,margin=margin(.2,0,.5,0,&quot;lines&quot;))
+)
+
+ggsave(&quot;1.png&quot;,width=5.5,height=3.8,dpi=400)</pre>
 <h2>
 <a href=#Excess_mortality_in_New_Zealand id=Excess_mortality_in_New_Zealand>Excess mortality in New Zealand</a>
 </h2>
@@ -1937,7 +2067,16 @@ ggsave(&quot;1.png&quot;,width=6,height=4)</pre>
 <div class="width11">
 <img src="i/moar-maldives-2.jpg">
 </div>
-<p>I uploaded a CSV file for the data here: <a href=f/kirsch_maldives.csv>f/kirsch_maldives.csv</a>. I changed the date format, and I deleted some redundant columns which could be calculated based on the other columns (like whether the person had received a first dose or not, and the number of days from the most recent dose to death). There are some people who are listed as having received a dose but who don't have a date listed for the dose, which in my file is indicated by the value <span class="quote">&quot;unknown&quot;</span> in place of a vaccination date.</p>
+<p>I uploaded a CSV file for the data here: <a href=f/kirsch_maldives.csv>f/kirsch_maldives.csv</a>. I changed the date format, and I deleted some redundant columns which it was possible to calculate based on the other columns (like whether the person had received a first dose or not, and the number of days from the most recent dose to death). There are some people who are listed as having received a dose but who don't have a date listed for the dose, which in my file is indicated by the value <span class="quote">&quot;unknown&quot;</span> in place of a vaccination date.</p>
+<pre>$ wget -q https://mongol-fi.github.io/f/kirsch_maldives.csv
+$ sed -u 3q kirsch_maldives.csv
+name,age,gender,address,island,date_of_death,dose_1,dose_2,booster_1,booster_2,vaccine_types,sudden_death_if_known,remarks_1,remarks_2
+Abdulla Ali,73,m,Nalahiyaage,HDh. Makunudhoo,2020-02-02,,,,,,,,
+Abdul Rasheed,,,,,2020-02-17,,,,,,,Col Nazim&#39;s father,
+$ awk -F, &#39;NR==1||$7==&quot;unknown&quot;&#39; kirsch_maldives.csv|sed 3q
+name,age,gender,address,island,date_of_death,dose_1,dose_2,booster_1,booster_2,vaccine_types,sudden_death_if_known,remarks_1,remarks_2
+,88,m,,,2021-04-20,unknown,2021-04-12,,,,,,
+,65,m,,,2021-05-01,unknown,2021-04-18,,,,,,</pre>
 <p>In the file <code>data-transparency/Maldives/About the maldives data.docx</code>, there are the following comments even though it is not indicated who wrote them:</p>
 <div class="width6">
 <img src="i/moar-maldives-5.png">
@@ -2061,17 +2200,17 @@ UN World Population Prospects
 </table>
 <p>Notes on the table:</p>
 <ul>
-<li>The second sheet of Kirsch's spreadsheet includes one table for the yearly number of deaths in Maldives and another table for monthly deaths where the total number of deaths is lower, which I think were provided to him by the people from Maldives who sent him the spreadsheet, since their comments said that <span class="quote">&quot;2nd worksheet gives the death statistics of previous years&quot;</span>. In the yearly table there's a separate row for deaths in infants with low birth weight, but for some reason there's only 3 low birth weight deaths listed in 2020.</li>
-<li>The yearly numbers of deaths reported by the Maldives Bureau of Statistics are identical to figures listed on the UN's UNData website. [<a href="https://statisticsmaldives.gov.mv/yearbook/2022/">https://statisticsmaldives.gov.mv/yearbook/2022/</a> and <a href="https://statisticsmaldives.gov.mv/yearbook/2020/">https://statisticsmaldives.gov.mv/yearbook/2020/</a>, click <span class="quote">&quot;Population&quot;</span>, Table 3.7; <a href="https://unstats.un.org/unsd/demographic-social/crvs/">https://unstats.un.org/unsd/demographic-social/crvs/</a>, <a href="http://data.un.org/Data.aspx?d=POP&f=tableCode%3a6">http://data.un.org/Data.aspx?d=POP&amp;f=tableCode%3a6</a>] If deaths due to low birth weight are subtracted from the yearly table of deaths in Kirsch's spreadsheet, then the number of deaths in 2017 and 2019 is identical to the figures reported by Statistics Maldives, but there's a small discrepancy in 2018 and 2020 and a large discrepancy in 2021.</li>
-<li>The UN World Population Prospects dataset probably uses modeled data for 2021 and later years, because the UN's website says that the adult and old age mortality statistics for Maldives are based on <span class="quote">&quot;Estimates derived from: (a) deaths by age and sex available from Register through 2020; (b) adjusted for underregistration; (c) estimates of under-five, adult and old age mortality.&quot;</span> [<a href="https://population.un.org/wpp/DataSources/462">https://population.un.org/wpp/DataSources/462</a>] And the website says: <span class="quote">&quot;Life expectancy at birth and age pattern of mortality based on: (a) official estimates through 2007; (b) registered deaths by age and sex available through 2020; (c) adjusted for underreporting of infant and child deaths; (d) adult deaths adjusted for underregistration using death distribution methods; (e) mortality rates for older ages were adjusted; (f) estimates using CD West model life tables and estimates of under-five mortality (5q0), and adult mortality (45q15).&quot;</span> And the version of the WPP dataset I used was published in 2022 so it definitely uses modeled data for 2023. [<a href="https://population.un.org/wpp/Download/Standard/MostUsed/">https://population.un.org/wpp/Download/Standard/MostUsed/</a>]</li>
+<li>Kirsch's spreadsheet includes one table for the yearly number of deaths in the Maldives and another table for monthly deaths, but the total number of deaths is lower in the monthly table. I think the tables were provided to Kirsch by the people from the Maldives who sent him the data, since their comments said that <span class="quote">&quot;2nd worksheet gives the death statistics of previous years&quot;</span>. In the yearly table there's a separate row for deaths in infants with low birth weight, but for some reason there's only 3 low birth weight deaths listed in 2020.</li>
+<li>The yearly number of deaths reported by the Maldives Bureau of Statistics is identical to figures listed on the UN's UNData website. [<a href="https://statisticsmaldives.gov.mv/yearbook/2022/">https://statisticsmaldives.gov.mv/yearbook/2022/</a> and <a href="https://statisticsmaldives.gov.mv/yearbook/2020/">https://statisticsmaldives.gov.mv/yearbook/2020/</a>, Table 3.7 under <span class="quote">&quot;Population&quot;</span>; <a href="https://unstats.un.org/unsd/demographic-social/crvs/">https://unstats.un.org/unsd/demographic-social/crvs/</a>, <a href="http://data.un.org/Data.aspx?d=POP&f=tableCode%3a6">http://data.un.org/Data.aspx?d=POP&amp;f=tableCode%3a6</a>] If deaths due to low birth weight are subtracted from the yearly table of deaths in Kirsch's spreadsheet, then the number of deaths in 2017 and 2019 is identical to the figures reported by Statistics Maldives, but there are small discrepancies in 2018 and 2020 and a large discrepancy in 2021.</li>
+<li>The UN World Population Prospects dataset probably uses modeled data for 2021 and later years, because the UN's website says that the adult and old age mortality statistics for the Maldives are based on <span class="quote">&quot;Estimates derived from: (a) deaths by age and sex available from Register through 2020; (b) adjusted for underregistration; (c) estimates of under-five, adult and old age mortality.&quot;</span> [<a href="https://population.un.org/wpp/DataSources/462">https://population.un.org/wpp/DataSources/462</a>] And the website says: <span class="quote">&quot;Life expectancy at birth and age pattern of mortality based on: (a) official estimates through 2007; (b) registered deaths by age and sex available through 2020; (c) adjusted for underreporting of infant and child deaths; (d) adult deaths adjusted for underregistration using death distribution methods; (e) mortality rates for older ages were adjusted; (f) estimates using CD West model life tables and estimates of under-five mortality (5q0), and adult mortality (45q15).&quot;</span> And the version of the World Population Prospects dataset I used was published in 2022, so it definitely uses modeled data for 2023. [<a href="https://population.un.org/wpp/Download/Standard/MostUsed/">https://population.un.org/wpp/Download/Standard/MostUsed/</a>]</li>
 </ul>
 <p>In the file <code>data-transparency/Maldives/Maldives Days from Dose till death plots.xlsx</code>, a comment by Kirsch says: <span class="quote">&quot;47.7% of people who died are not vaccinated. That makes no sense since 88% were vaccinated and the vaccine makes you more likely to die from all-causes and from COVID. This means that a lot of people are missing vaccination data. You can also tell this from the data where most of the newer records lack vaccination data.&quot;</span> However in the file <code>About the maldives data.docx</code>, the person who sent the data to Kirsch wrote: <span class="quote">&quot;The data are complete for the year 2021 &amp; 2022 with vaccination history. (We haven't received the vaccination history of those who died in 2023 yet.)&quot;</span></p>
 <p>The vaccination data seems to be only missing from 2023 and from part of December 2022, because up until November 2022 the percentage of deaths in unvaccinated people remains between 20% and 33% on each month of 2022:</p>
 <div class="width9">
 <img src="i/moar-maldives-1.png">
 </div>
-<p>In the heatmap above I took the percentage of vaccinated population from OWID. Most deaths are of course in older people, and older people are more likely to be vaccinated than younger people. So if you took a weighted average of the percentage of vaccinated people in each age group where the weight was the number of people in the age group in Kirsch's data, you'd probably get a much lower percentage of unvaccinated people.</p>
-<p>In May 2021 when COVID deaths peaked, there were 122 deaths in unvaccinated people and 81 deaths in vaccinated people, and the percentage of unvaccinated people was 41.992% based on the average daily percentage of unvaccinated people at OWID. So based on the calculation <code>(122/41.992)/(81/(100-41.992))</code>, unvaccinated people had about 2.1 times higher mortality than vaccinated people in May 2021. However on months with a lower number of COVID deaths, the ratio between unvaccinated and vaccinated mortality was lower, which seems to indicate that vaccines prevented COVID deaths.</p>
+<p>The heatmap above shows that in May 2021 when COVID deaths peaked, there were 122 deaths in unvaccinated people and 81 deaths in vaccinated people. And in May 2021 the percentage of unvaccinated people was 41.992% based on the average daily percentage of unvaccinated people at OWID, so based on the calculation <code>(122/41.992)/(81/(100-41.992))</code>, unvaccinated people had about 2.1 times higher mortality than vaccinated people in May 2021. However on months with a lower number of COVID deaths, the ratio between unvaccinated and vaccinated mortality was lower, which seems to indicate that vaccines prevented COVID deaths. For example the ratio was only about 0.94 in March 2021 which was before the COVID wave, and the ratio was only about 1.28 in August 2021 which was after the COVID wave.</p>
+<p>Most deaths are of course in older people, and older people are more likely to be vaccinated than younger people. So if you took a weighted average of the percentage of vaccinated people in each age group where the weight was the number of people in the age group in Kirsch's data, you'd probably get a much lower percentage of unvaccinated people than the percentage in the total population.</p>
 <pre>t=read.csv(&quot;https://mongol-fi.github.io/f/kirsch_maldives.csv&quot;)
 
 jabs=rowSums(t[,7:10]!=&quot;&quot;)
