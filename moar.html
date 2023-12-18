@@ -1132,8 +1132,7 @@ library(lubridate)
 
 t=as.data.frame(data.table::fread(&quot;nz-record-level-data-4M-records.csv&quot;,showProgress=F))
 for(i in grep(&quot;date&quot;,colnames(t)))t[,i]=as.Date(t[,i],&quot;%m-%d-%Y&quot;)
-t=t[t$dose!=0,]
-t=t[-which(t$date_of_death&lt;t$date_time_of_service),]
+t=t[!(!is.na(t$date_of_death)&amp;t$date_of_death&lt;t$date_time_of_service),]
 
 dates=as.character(Reduce(\(...)seq(...,by=1),range(t$date_time_of_service,t$date_of_death,na.rm=T)))
 ages=1:120
@@ -1705,14 +1704,13 @@ ggsave(&quot;1.png&quot;,width=5.8,height=4.5)</pre>
 <div class="width6">
 <img src="i/moar-sullivan-3.png">
 </div>
-<p>I came up with a fairly efficient vectorized way to calculate the daily number of people of each age in my cohort. I first made a matrix with one column for each age between 0 and 120 and one row for each date in the range 2021-04-08 to 2023-10-27, where the matrix showed the number of people of each age who were first vaccinated on each date. Then on the birthday of each person, I added 1 to the column for their new age and subtracted 1 from the column for their previous age. And when a person died or I ran out of the date range included in the data, I subtracted 1 from the column for the age of the person. And then I simply calculated the cumulative sums for each column of the matrix:</p>
+<p>I came up with a fairly efficient vectorized way to calculate the daily number of people of each age in my cohort. I first made a matrix with one column for each age between 0 and 120 and one row for each date in the range 2021-04-08 to 2023-10-27, where the matrix showed the number of people of each age who were first vaccinated on each date. Then on the birthday of each person, I added 1 to the column for their new age and subtracted 1 from the column for their previous age. And when a person died, I subtracted 1 from the column for the age of the person. And then I simply calculated the cumulative sums for each column of the matrix:</p>
 <pre>library(ggplot2)
 library(lubridate)
 
 t=as.data.frame(data.table::fread(&quot;nz-record-level-data-4M-records.csv&quot;,showProgress=F))
 for(i in grep(&quot;date&quot;,colnames(t)))t[,i]=as.Date(t[,i],&quot;%m-%d-%Y&quot;)
 
-t=t[t$dose!=0,]
 t=t[order(t$date_time_of_service),]
 t=t[!duplicated(t$mrn),]
 t=t[-which(t$date_of_death&lt;t$date_time_of_service),]
