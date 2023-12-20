@@ -2320,9 +2320,9 @@ system(&quot;convert 0.png -bordercolor white \\( -gravity northwest -splice 22x
     624     544     820     354     113       6
 &gt; sum(ta[2:4])/sum(ta)
 [1] 0.5950051</pre>
-<p>In the plot below I looked at deaths during the first 51 weeks after vaccination, and I included doses for all months of 2021, but I picked the same number of doses from each month. The minimum monthly number of doses in 2021 was 1,161, so I simply selected 1,161 random doses from each month. However now I no longer got Kirsch's <span class="quote">&quot;monotonically increasing&quot;</span> curve, but I got a curve that remained more or less flat after around week 7:</p>
+<p>In the plot below I looked at deaths during the first 51 weeks after vaccination, and I included doses for all months of 2021, but I picked a random sample of doses from each month. I took repeat doses from some months so I got the total number of doses to match the original data. However now I no longer got Kirsch's <span class="quote">&quot;monotonically increasing&quot;</span> curve, but I got a curve that remained more or less flat after around week 7, and actually there is a decreasing trend in deaths starting around day 250 from vaccination, which is partially because doses given in the second quarter of 2021 have a clearly decreasing trend starting around day 300:</p>
 <div class="width6">
-<img src="i/moar-medicare-5.png">
+<img src="i/moar-medicare-13.png">
 </div>
 <pre>library(ggplot2)
 
@@ -2334,8 +2334,8 @@ med=med[grep(2021,med$date_of_vaccination),]
 
 month=substring(med$date_of_vaccination,1,7)
 maxpermonth=min(table(month))
-weeks=as.integer(med$date_of_death-med$date_of_vaccination)%/%7
-ta2=table(unlist(tapply(weeks,month,sample,maxpermonth)))
+weeks=as.integer(med$date_of_death-med$date_of_vaccination)%/%1
+ta2=table(unlist(tapply(weeks,month,sample,nrow(med)/12,replace=T)))
 ta=table(weeks)
 
 xy=data.frame(x=as.numeric(names(ta)),y=c(ta),z=&quot;All doses given in 2021 (heavily biased towards Q1)&quot;)
@@ -2343,32 +2343,37 @@ xy=rbind(xy,data.frame(x=as.numeric(names(ta2)),y=c(ta2),z=&quot;Same number of 
 qu=table(weeks,(as.numeric(substring(med$date_of_vaccination,6,7))-1)%/%3+1)
 xy=rbind(xy,data.frame(x=as.numeric(rownames(qu)[row(qu)]),y=c(unlist(qu)),z=paste0(&quot;Doses given in 2021 Q&quot;,colnames(qu)[col(qu)])))
 
-xy=xy[xy$x&lt;=50,]
+# xy=xy[xy$x&lt;=50,]
 xy$z=factor(xy$z,unique(xy$z))
 
-ystart=xstart=0;xend=50;xstep=5
+ystart=xstart=0;xend=750;xstep=30
 candidates=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
 ystep=candidates[which.min(abs(candidates-max(xy$y)/6))]
 yend=ystep*ceiling(max(xy$y)/ystep)
 xbreak=seq(xstart,xend,xstep)
 ybreak=seq(ystart,yend,ystep)
 
+mav=\(x,y){l=length(x);s=e=y%/%2;if(y%%2==0)e=e-1;x[]=sapply(1:l,\(i)mean(x[max(1,i-s):min(l,i+e)],na.rm=T));x}
+xy$y=mav(xy$y,7)
+
 color=c(&quot;black&quot;,&quot;gray50&quot;,hcl(c(210,120,60,0)+15,70,50))
 
-labels=data.frame(x=xstart+.025*(xend-xstart),y=seq(.96*yend,,-yend/15,nlevels(xy$z)),label=levels(xy$z))
+labels=data.frame(x=xstart+.975*(xend-xstart),y=seq(.96*yend,,-yend/15,nlevels(xy$z)),label=levels(xy$z))
 
 ggplot(xy,aes(x,y))+
 geom_hline(yintercept=c(ystart,yend),color=&quot;black&quot;,linewidth=.3,lineend=&quot;square&quot;)+
 geom_vline(xintercept=c(xstart,xend),color=&quot;black&quot;,linewidth=.3,lineend=&quot;square&quot;)+
+geom_vline(xintercept=c(397),color=&quot;gray50&quot;,linewidth=.3,linetype=&quot;dashed&quot;,lineend=&quot;square&quot;)+
 geom_line(aes(color=z),linewidth=.4)+
-geom_label(data=labels,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.7),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.04,&quot;lines&quot;),label.size=0,color=color[1:nlevels(xy$z)],size=3.2,hjust=0,vjust=1)+
-labs(x=NULL,y=NULL,title=&quot;US Medicare data: Deaths by weeks since vaccination&quot;)+
+geom_label(data=labels,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.7),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.04,&quot;lines&quot;),label.size=0,color=color[1:nlevels(xy$z)],size=3.2,hjust=1,vjust=1)+
+labs(x=NULL,y=NULL,title=&quot;US Medicare data: Deaths by days since vaccination (7-day centered moving average)&quot;,caption=&quot;The last death included in the dataset is on 2023-02-01, so people vaccinated in 2021-12-31 cannot have died more than 397 days after their vaccination. There are also many deaths in late January 2023 missing because of a registration delay.&quot;|&gt;stringr::str_wrap(95),subtitle=&quot;Source: kirschsubstack.com/p/data-from-us-medicare-and-the-new, file data-transparency/USA/Medicare/Medicare-2-1-23.xlsx, sheet \&quot;Medicare all states subset\&quot;&quot;|&gt;stringr::str_wrap(95))+
 coord_cartesian(clip=&quot;off&quot;)+
 scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,expand=c(0,0))+
 scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,expand=c(0,0))+
 scale_color_manual(values=color)+
 theme(
   axis.text=element_text(size=8,color=&quot;black&quot;),
+  axis.text.x=element_text(angle=90,hjust=1,vjust=.5),
   axis.ticks=element_line(linewidth=.3,color=&quot;black&quot;),
   axis.ticks.length=unit(.2,&quot;lines&quot;),
   axis.title=element_text(size=9),
@@ -2378,18 +2383,18 @@ theme(
   panel.grid=element_blank(),
   panel.grid.major.y=element_line(linewidth=.3,color=&quot;gray80&quot;),
   plot.margin=margin(.3,.7,.3,.3,&quot;lines&quot;),
-  plot.subtitle=element_text(size=8.5,margin=margin(0,0,.4,0,&quot;lines&quot;)),
-  plot.title=element_text(size=10.2,margin=margin(.2,0,.6,0,&quot;lines&quot;))
+  plot.subtitle=element_text(size=8,margin=margin(0,0,.4,0,&quot;lines&quot;)),
+  plot.caption=element_text(size=8,hjust=0),
+  plot.title=element_text(size=9.5,margin=margin(.2,0,.6,0,&quot;lines&quot;))
 )
-
-ggsave(&quot;1.png&quot;,width=5.5,height=3.5,dpi=400)</pre>
+ggsave(&quot;1.png&quot;,width=5.5,height=3.9,dpi=400)</pre>
 <p>Kirsch compared the plot for COVID vaccines which showed a so-called monotonic increase in deaths to pneumococcal vaccines which had a curve that remained more or less flat: [<a href="https://kirschsubstack.com/p/medicare-death-data-proves-the-covid">https://kirschsubstack.com/p/medicare-death-data-proves-the-covid</a>]</p>
 <blockquote>
 <p>This is the pneumococcal vaccine curve from Medicare in 2021. All ages. It looks at people who were vaccinated sometime in 2021, and looks for 1 year after the shot to see if they died. The x-axis is the days relative to the shot day that they died.</p>
 <p>The pneu vax is given throughout 2021. Follow-up is 1 year from shot date for each person. Age stratifying the results shows the same shape for both vaccines. So 65-75, 75-85, and 85 and up is same shape, just different height and more negative slope for the older cohorts. There are fewer total people who got this shot (it is not an annual shot), so that is why the absolute death numbers are smaller. But 300 deaths per day is plenty to establish a signal with very little noise as you can see from the chart.</p>
 <p><img src=i/moar-medicare-6.png width=600></p>
 </blockquote>
-<p>However the reason why the pneumococcal vaccines had a flat curve was probably because they were distributed more evenly throughout the year, like how COVID vaccines also got a flat curve in my plot above when I sampled the same number of vaccines from each month. From the spreadsheets on Kirsch's S3 server, you can't see the dates when the pneumococcal vaccines were given. And also if you selected a sample of the pneumococcal vaccines so that their distribution of vaccination dates would have a similar shape as the COVID vaccines, you'd probably get a similar increasing curve for the number of deaths by weeks from vaccination.</p>
+<p>However the reason why the pneumococcal vaccines had a flat curve was probably because they were distributed more evenly throughout the year, like how COVID vaccines also got a flat curve in my plot above when I sampled the same number of vaccines from each month. From the spreadsheets on Kirsch's S3 server, you can't see the dates when the pneumococcal vaccines were given. And also if you'd select a sample of the pneumococcal vaccines so that their vaccination dates would have a similar distribution as the COVID vaccines, you'd probably get a similar increasing curve for the number of deaths by weeks from vaccination.</p>
 <p>If you take the date of each vaccine dose in the Medicare COVID data, select the number of all-cause deaths in the United States during the 51-week period starting from the date, and take the average number of weekly deaths across all doses, you get a curve that mostly increases from week 16 apart from a dent around week 37. There's a decreasing trend during the first 16 weeks, but in the Medicare data it probably gets canceled out by the healthy vaccinee effect. But I don't know why the dent around week 36 is not visible in the Medicare data though:</p>
 <div class="width5">
 <img src="i/moar-medicare-7.png">
@@ -2448,11 +2453,7 @@ ggsave(&quot;1.png&quot;,width=6,height=4)</pre>
 <div class="width9">
 <img src="i/moar-medicare-9.jpg">
 </div>
-<p>A comment in the sheet above says: <span class="quote">&quot;The vax date listed in the record is the date of the FIRST vaccine (that Medicare knows about for the patient) ONLY&quot;</span>. However I don't know if the full data includes multiple doses per some people and not just one dose. In the subset of the data, there seems to be depressed mortality for around 50 days after vaccination, but in the full data the period with the most clearly depressed mortality only lasts for about 20-25 days, and there's a sharp inflection point at around day 20-25. It might be if people who got the second dose within 3 weeks from the first dose are included twice under the first 3 weeks, because the recommended minimum delay between the first two doses of the Pfizer vaccine was 3 weeks, and in the New Zealand data there's a large number of people who got the first two doses 21 days apart from each other.</p>
-<p>However if you sample the same number of doses from each month, then for some reason there seems to be a sharper inflection point around day 20-30:</p>
-<div class="width6">
-<img src="i/moar-medicare-13.png">
-</div>
+<p>A comment in the sheet above says: <span class="quote">&quot;The vax date listed in the record is the date of the FIRST vaccine (that Medicare knows about for the patient) ONLY&quot;</span>. However I don't know if the full data includes multiple doses per some people and not just one dose. In the data from the <span class="quote">&quot;Medicare all states subset&quot;</span> sheet, there seems to be a period with clearly depressed mortality for around 50 days after vaccination, but in the full data the period with the most clearly depressed mortality only lasts for about 20-25 days, and there's a sharp inflection point at around day 20-25. It might be if people who got the second dose within 3 weeks from the first dose are included twice under the first 3 weeks, because the recommended minimum delay between the first two doses of the Pfizer vaccine was 3 weeks, and in the New Zealand data there's a large number of people who got the first two doses 21 days apart from each other. However if you take the data in the <span class="quote">&quot;Medicare all states subset&quot;</span> sheet but you sample the same number of doses from each month, then for some reason there seems to be a sharper inflection point in mortality around day 20-30.</p>
 <h3>
 <a href=#Data_for_deaths_in_2020_2023_in_Maldives id=Data_for_deaths_in_2020_2023_in_Maldives>Data for deaths in 2020-2023 in Maldives</a>
 </h3>
