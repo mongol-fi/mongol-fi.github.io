@@ -70,6 +70,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Calculating_an_accurate_baseline_for_deaths_after_third_dose_in_ages_70_79>Calculating an accurate baseline for deaths after third dose in ages 70-79</a></li>
 <li><a href=#Sensitivity_analysis_for_deaths_by_month_after_third_dose>Sensitivity analysis for deaths by month after third dose</a></li>
 <li><a href=#Deaths_by_weeks_since_vaccination_in_people_vaccinated_in_August_2021>Deaths by weeks since vaccination in people vaccinated in August 2021</a></li>
+<li><a href=#Heatmaps_for_excess_mortality_by_month_of_death_and_month_of_vaccination>Heatmaps for excess mortality by month of death and month of vaccination</a></li>
 </ul></li>
 <li><a href=#Plots_and_data_analysis>Plots and data analysis</a>
 <ul>
@@ -79,7 +80,6 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Table_of_vaccine_types_by_batch>Table of vaccine types by batch</a></li>
 <li><a href=#Daily_vaccine_doses_per_age_group_compared_to_excess_mortality_by_age_group>Daily vaccine doses per age group compared to excess mortality by age group</a></li>
 <li><a href=#Plot_by_John_Sullivan_for_mortality_rate_by_date_in_ages_80_89>Plot by John Sullivan for mortality rate by date in ages 80-89</a></li>
-<li><a href=#Heatmaps_for_excess_mortality_by_month_of_death_and_month_of_vaccination>Heatmaps for excess mortality by month of death and month of vaccination</a></li>
 </ul></li>
 <li><a href=#Excess_mortality_in_New_Zealand>Excess mortality in New Zealand</a>
 <ul>
@@ -87,6 +87,10 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Tweet_by_Kirsch_about_excess_mortality_in_2021_2023>Tweet by Kirsch about excess mortality in 2021-2023</a></li>
 <li><a href=#Plot_for_excess_mortality_by_Denis_Rancourt>Plot for excess mortality by Denis Rancourt</a></li>
 <li><a href=#Tweet_by_Clare_Craig_about_excess_deaths>Tweet by Clare Craig about excess deaths</a></li>
+</ul></li>
+<li><a href=#Comments_to_Substack_posts_by_Kirsch>Comments to Substack posts by Kirsch</a>
+<ul>
+<li><a href=#Reason_why_dose_4_has_more_deaths_within_14_days_from_vaccination_than_dose_3>Reason why dose 4 has more deaths within 14 days from vaccination than dose 3</a></li>
 </ul></li>
 <li><a href=#Other_datasets_published_by_Kirsch>Other datasets published by Kirsch</a>
 <ul>
@@ -1118,6 +1122,307 @@ system(&quot;convert -trim 0.png -bordercolor white -gravity northwest -splice x
 <img src="i/moar-august-3.png">
 </div>
 <p>So my plot is further evidence that the healthy vaccinee effect lasts longer than 3 weeks contrary to what Kirsch claims.</p>
+<h3>
+<a href=#Heatmaps_for_excess_mortality_by_month_of_death_and_month_of_vaccination id=Heatmaps_for_excess_mortality_by_month_of_death_and_month_of_vaccination>Heatmaps for excess mortality by month of death and month of vaccination</a>
+</h3>
+<p>In my previous heatmaps where I plotted the number of deaths by month of death and month of vaccination, the reason why there was a low number of deaths on the same month as vaccination was partially because people who got vaccinated at the middle of the month couldn't have died on earlier in the month. But now I made similar heatmaps where I calculated an excess mortality rate instead, so that for example a person who got vaccinated on the second-last day of a month was only counted for 2 person-days under the month. However there's still months where the month of vaccination has as low as -70% excess mortality:</p>
+<div class="width14">
+<img src="i/moar-excess-heat-2.png">
+</div>
+<p>In the heatmap above, the reason why there is high mortality in people vaccinated in April-June 2021 might be because vulnerable people were given the vaccine earlier, because the people who were vaccinated in April-June 2021 continue to have high excess mortality even in 2022 and 2023. And the reason why there is high mortality in people vaccinated in March-May 2022 might be because fourth doses were given in three waves, where there was later high mortality among a small number of people received the fourth dose during the first wave which peaked in March 2022, but there was later low mortality among the much larger number of people who received the fourth dose during the second wave which peaked in July 2022.</p>
+<p>In the image below which shows heatmaps for each dose, the first five doses all have a pattern where people who received the dose the earliest later had high excess mortality, but people who received the dose during the peak of the rollout later had low excess mortality, and for some reason people who received the dose in the earlier part of the peak seem to have lower mortality than people who received the dose in the later part of the peak:</p>
+<div class="width14">
+<img src="i/moar-dose-big-heat.png">
+</div>
+<pre>t=as.data.frame(data.table::fread(&quot;nz-record-level-data-4M-records.csv&quot;,showProgress=F))
+for(i in grep(&quot;date&quot;,colnames(t)))t[,i]=as.Date(t[,i],&quot;%m-%d-%Y&quot;)
+t=t[!(!is.na(t$date_of_death)&amp;t$date_of_death&lt;t$date_time_of_service),]
+
+nzpop=tail(read.csv(&quot;https://mongol-fi.github.io/f/nz_infoshare_population.csv&quot;),2)[,3:96]
+nzdeath=tail(read.csv(&quot;https://mongol-fi.github.io/f/nz_infoshare_deaths.csv&quot;),2)[,3:96]
+cmr=data.frame(x=1:94,y=colMeans(nzdeath)/colMeans(nzpop)*1e5)
+cmr=c(cmr$y,predict(loess(y~x,cmr,control=loess.control(surface=&quot;direct&quot;)),95:120))
+
+dates=as.character(Reduce(\(...)seq(...,by=1),range(t$date_time_of_service,t$date_of_death,na.rm=T)))
+ages=1:120
+age=floor(time_length(difftime(t$date_time_of_service,t$date_of_birth),&quot;years&quot;))
+month=format(t$date_time_of_service,&quot;%Y-%m&quot;)
+months=format(seq(as.Date(&quot;2021-4-1&quot;),as.Date(&quot;2023-9-1&quot;),&quot;1 month&quot;),&quot;%Y-%m&quot;)
+enddate=pmin(max(t$date_of_death,na.rm=T),t$date_of_death,na.rm=T)
+pop=table(factor(as.character(t$date_time_of_service),dates),factor(month,months),factor(age,ages))
+
+for(i in 2021:2023){
+  bday=&quot;year&lt;-&quot;(t$date_of_birth,i)
+  newage=floor(time_length(difftime(bday,t$date_of_birth),&quot;years&quot;))
+  pick=bday&gt;t$date_time_of_service&amp;bday&lt;enddate
+  ta=table(factor(as.character(bday[pick]),dates),factor(month[pick],months),factor(newage[pick],ages))
+  pop=pop+ta
+  ta2=ta[,,c(2:120,120)]
+  ta2[,,120]=0
+  pop=pop-ta2
+}
+
+pick=!is.na(t$date_of_death)
+deadage=factor(floor(time_length(difftime(t$date_of_death[pick],t$date_of_birth[pick]),&quot;years&quot;)),ages)
+death=table(factor(as.character(t$date_of_death[pick]),dates),factor(month[pick],months),deadage)
+pop=pop-death
+
+d=as.data.frame(pop)|&gt;&quot;colnames&lt;-&quot;(c(&quot;date&quot;,&quot;vaxmonth&quot;,&quot;age&quot;,&quot;pop&quot;))
+d$pop=unlist(tapply(d$pop,d[,2:3],cumsum))
+d$death=c(death)
+d$deathmonth=factor(format(as.Date(levels(d$date)),&quot;%Y-%m&quot;)[d$date],months)
+
+mpop=tapply(d$pop,d[,c(2,6)],sum)
+mdeath=tapply(d$death,d[,c(2,6)],sum)
+baseline=tapply(d$pop*cmr[d$age],d[,c(2,6)],sum)/mpop
+crude=mdeath/mpop*1e5*365
+crude[mpop==0]=NA
+
+daysinmonth=lubridate::days_in_month(paste0(months,&quot;-1&quot;))
+m2=t(t(mpop/daysinmonth)/daysinmonth)*365/12
+
+m=(crude-baseline)/ifelse(crude&gt;=baseline,baseline,crude)*100
+disp=round((crude-baseline)/baseline*100)
+m[mpop==0]=NA
+m[m2&lt;100]=NA
+disp[is.na(m)]=&quot;NA&quot;
+disp[lower.tri(disp)]=&quot;&quot;
+exp=.86
+m=abs(m)^exp*sign(m)
+# maxcolor=max(abs(m[is.finite(m)]),na.rm=T)*.7
+maxcolor=400^exp
+m[is.infinite(m)]=-maxcolor
+
+pheatmap::pheatmap(
+  m,
+  filename=&quot;mort.png&quot;,
+  cluster_rows=F,
+  cluster_cols=F,
+  legend=F,
+  cellwidth=19,
+  cellheight=19,
+  fontsize=9,
+  border_color=NA,
+  display_numbers=disp,
+  fontsize_number=8,
+  na_col=&quot;white&quot;,
+  number_color=ifelse(!(is.na(m))&amp;abs(m)&gt;.5*maxcolor,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(-maxcolor,maxcolor,,256),
+  colorRampPalette(colorspace::hex(colorspace::HSV(c(210,210,210,210,0,0,0,0,0),c(.9,.75,.6,.3,0,.3,.6,.75,.9),c(.4,.65,1,1,1,1,1,.65,.4))))(256)
+)
+
+m2[lower.tri(m2)]=NA
+kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;x[]=ifelse(abs(x)&lt;1,x,paste0(round(x/1e3^(e2-1),ifelse(e%%3==0,1,0)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2]));x}
+
+disp2=kimir2(m2)
+disp2[is.na(m2)]=&quot;&quot;
+disp2[upper.tri(m2)&amp;is.na(m2)]=0
+exp2=.6
+m2=m2^exp2
+# maxcolor2=max0(m2)
+maxcolor2=4.5e5^exp2
+
+pheatmap::pheatmap(
+  m2,
+  filename=&quot;pop.png&quot;,
+  cluster_rows=F,
+  cluster_cols=F,
+  legend=F,
+  cellwidth=19,
+  cellheight=19,
+  fontsize=9,
+  border_color=NA,
+  display_numbers=disp2,
+  fontsize_number=8,
+  na_col=&quot;white&quot;,
+  breaks=seq(0,maxcolor2,,256),
+  number_color=ifelse(!(is.na(m2))&amp;m2&gt;maxcolor2*.5,&quot;white&quot;,&quot;black&quot;),
+  sapply(seq(1,0,,256),\(i)rgb(i,i,i))
+)</pre>
+<p>The image below also shows that among people who received a dose during a month when a large number of other people received the same dose, excess mortality was generally low or even negative. And the total excess mortality was negative for the first five doses even though it was positive for the sixth dose, but there's only about 7,000 people in the dataset who have received the sixth dose. I looked excess mortality up to September 2023, because the New Zealand dataset is missing many deaths in October 2023 because of a registration delay:</p>
+<div class="width8">
+<img src="i/moar-excess-heat-3.png">
+</div>
+<pre>t=as.data.frame(data.table::fread(&quot;nz-record-level-data-4M-records.csv&quot;,showProgress=F))
+for(i in grep(&quot;date&quot;,colnames(t)))t[,i]=as.Date(t[,i],&quot;%m-%d-%Y&quot;)
+t=t[!(!is.na(t$date_of_death)&amp;t$date_of_death&lt;t$date_time_of_service),]
+
+nzpop=tail(read.csv(&quot;https://mongol-fi.github.io/f/nz_infoshare_population.csv&quot;),2)[,3:96]
+nzdeath=tail(read.csv(&quot;https://mongol-fi.github.io/f/nz_infoshare_deaths.csv&quot;),2)[,3:96]
+cmr=data.frame(x=1:94,y=colMeans(nzdeath)/colMeans(nzpop)*1e5)
+cmr=c(cmr$y,predict(loess(y~x,cmr,control=loess.control(surface=&quot;direct&quot;)),95:120))
+
+dates=as.character(Reduce(\(...)seq(...,by=1),range(t$date_time_of_service,t$date_of_death,na.rm=T)))
+ages=1:120
+age=floor(lubridate::time_length(difftime(t$date_time_of_service,t$date_of_birth),&quot;years&quot;))
+month=format(t$date_time_of_service,&quot;%Y-%m&quot;)
+months=format(seq(as.Date(&quot;2021-4-1&quot;),as.Date(&quot;2023-9-1&quot;),&quot;1 month&quot;),&quot;%Y-%m&quot;)
+enddate=pmin(max(t$date_of_death,na.rm=T),t$date_of_death,na.rm=T)+1
+doses=1:6
+pop=table(factor(as.character(t$date_time_of_service),dates),factor(month,months),factor(age,ages),factor(t$dose,doses))
+
+for(i in 2021:2023){
+  bday=lubridate::&quot;year&lt;-&quot;(t$date_of_birth,i)
+  newage=floor(lubridate::time_length(difftime(bday,t$date_of_birth),&quot;years&quot;))
+  pick=bday&gt;t$date_time_of_service&amp;bday&lt;enddate
+  ta=table(factor(as.character(bday[pick]),dates),factor(month[pick],months),factor(newage[pick],ages),factor(t$dose[pick],doses))
+  pop=pop+ta
+  ta2=ta[,,c(2:120,120),]
+  ta2[,,120,]=0
+  pop=pop-ta2
+}
+
+pick=!is.na(t$date_of_death)
+deadage=factor(floor(lubridate::time_length(difftime(t$date_of_death[pick],t$date_of_birth[pick]),&quot;years&quot;)),ages)
+death=table(factor(as.character(t$date_of_death[pick]),dates),factor(month[pick],months),deadage,factor(t$dose[pick],doses))
+pop=pop-death
+
+d=as.data.frame(pop)|&gt;&quot;colnames&lt;-&quot;(c(&quot;date&quot;,&quot;vaxmonth&quot;,&quot;age&quot;,&quot;dose&quot;,&quot;pop&quot;))
+d$pop=unlist(tapply(d$pop,d[,c(2:4)],cumsum))
+d$death=c(death)
+d$month=factor(format(as.Date(levels(d$date)),&quot;%Y-%m&quot;)[d$date],months)
+
+d=d[d$pop&gt;0,]
+
+ag=aggregate(d[,5:6],d[,c(2,7,3,4)],sum)
+ag2=ag[ag$pop&gt;0,]
+
+mpop=tapply(ag$pop,ag[,c(4,1)],sum)
+mdeath=tapply(ag$death,ag[,c(4,1)],sum)
+baseline=tapply(ag$pop*cmr[ag$age],ag[,c(4,1)],sum)/mpop
+
+mpop=cbind(mpop,Total=rowSums(mpop,na.rm=T))
+mdeath=cbind(mdeath,Total=rowSums(mdeath,na.rm=T))
+baseline=cbind(baseline,Total=tapply(ag$pop*cmr[ag$age],ag$dose,sum,na.rm=T)/tapply(ag$pop,ag$dose,sum,na.rm=T))
+
+crude=mdeath/mpop*1e5*365
+crude[mpop==0]=NA
+
+m=(crude-baseline)/ifelse(crude&gt;=baseline,baseline,crude)*100
+disp=round((crude-baseline)/baseline*100)
+m[mpop==0]=NA
+m[mpop/365&lt;100]=NA
+disp[is.na(m)]=&quot;NA&quot;
+exp=.86
+m=abs(m)^exp*sign(m)
+# maxcolor=max(abs(m[is.finite(m)]),na.rm=T)*.7
+maxcolor=400^exp
+m[is.infinite(m)]=-maxcolor
+rownames(m)=paste0(&quot;Dose &quot;,rownames(m))
+
+pheatmap::pheatmap(
+  m,
+  filename=&quot;1.png&quot;,
+  cluster_rows=F,
+  cluster_cols=F,
+  legend=F,
+  cellwidth=19,
+  cellheight=19,
+  fontsize=9,
+  border_color=NA,
+  display_numbers=disp,
+  fontsize_number=8,
+  na_col=&quot;white&quot;,
+  number_color=ifelse((abs(m)&gt;.6*maxcolor)&amp;!is.na(m),&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(-maxcolor,maxcolor,,256),
+  colorRampPalette(colorspace::hex(colorspace::HSV(c(210,210,210,210,0,0,0,0,0),c(1,.8,.6,.3,0,.3,.6,.8,1),c(.3,.65,1,1,1,1,1,.65,.3))))(256)
+)
+
+exp2=.6
+mpop2=(mpop/365)^exp2
+mpop2[is.na(mpop2)]=0
+rownames(mpop2)=paste0(&quot;Dose &quot;,rownames(mpop2))
+# maxcolor2=max(mpop2,na.rm=T)
+maxcolor2=6e5^exp2
+
+kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;x[]=ifelse(abs(x)&lt;1e3,round(x),paste0(sprintf(paste0(&quot;%.&quot;,ifelse(e%%3==0,1,0),&quot;f&quot;),x/1e3^(e2-1)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2]));x}
+
+disp2=mpop
+disp2[!is.na(mpop)]=kimi(mpop[!is.na(mpop)]/365)
+disp2[is.na(mpop)]=0
+
+pheatmap::pheatmap(
+  mpop2,
+  filename=&quot;2.png&quot;,
+  cluster_rows=F,
+  cluster_cols=F,
+  legend=F,
+  cellwidth=19,
+  cellheight=19,
+  fontsize=9,
+  border_color=NA,
+  display_numbers=disp2,
+  fontsize_number=8,
+  na_col=&quot;white&quot;,
+  breaks=seq(0,maxcolor2,,256),
+  number_color=ifelse(mpop2&gt;maxcolor2*.6,&quot;white&quot;,&quot;black&quot;),
+  sapply(seq(1,0,,256),\(i)rgb(i,i,i))
+)
+
+system(&quot;convert -trim 1.png -gravity northwest -splice x14 -size `identify -format %w 1.png`x -pointsize 48 caption:&#39;Excess mortality percent by dose and month of vaccination (from day of vaccination up to September 2023)&#39; +swap -append -trim -bordercolor white -border 24 +repage 1..png&quot;)
+system(&quot;convert -trim 2.png -gravity northwest -splice x14 -size `identify -format %w 2.png`x -pointsize 48 caption:&#39;Population size by dose and month of vaccination (in person-years up to September 2023)&#39; +swap -append -trim -bordercolor white -border 24 +repage 2..png&quot;)
+system(&quot;montage -geometry +0+0 -tile 1x [12]..png 0.png&quot;)</pre>
+<p>In the image below where I used the bucket system and I calculated excess mortality by dose and by weeks after vaccination, doses 2-5 got negative excess mortality for the first 20 weeks after vaccination, but dose 1 behaved in a completely different way, because its the excess mortality went from about -50% during weeks 0-3 to about 36% during weeks 4-7 and about 162% during weeks 8-11:</p>
+<div class="width8">
+<img src="i/moar-excess-heat-4.png">
+</div>
+<p>The reason why dose 1 behaves in a different way than doses 2-5 could be that some people who have dose 1 as their terminal dose might have otherwise gotten more doses but they happened to die before their second dose. Or people who got an adverse reaction to their first jab may have decided to not get further jabs, and then either their adverse reaction may have later contributed to their death, or their adverse reaction may have been caused by their poor health which contributed to their death. Or it could also be that some people transitioned from being healthy vaccinees to unhealthy vaccinees after the first dose, so they were no longer given subsequent doses.</p>
+<pre>t=read.table(&quot;data-transparency/New Zealand/time-series summaries/month_dose_week_single_age.txt&quot;,header=T)
+t=t[t$dose&gt;=1&amp;t$dose&lt;=7,]
+t$week=t$week%/%4*4
+
+tmp=paste0(&quot;Dose &quot;,t$dose);t$dose=factor(tmp,unique(tmp))
+tmp=paste0(t$week,&quot;-&quot;,t$week+3);t$week=factor(tmp,unique(tmp))
+t=rbind(t,cbind(aggregate(t[,5:6],t[,c(1,3,4)],sum),dose=&quot;Total&quot;)[,colnames(t)])
+t=rbind(t,cbind(aggregate(t[,5:6],t[,c(1,2,4)],sum),week=&quot;Total&quot;)[,colnames(t)])
+
+nzpop=tail(read.csv(&quot;https://mongol-fi.github.io/f/nz_infoshare_population.csv&quot;),2)[,3:96]
+nzdeath=tail(read.csv(&quot;https://mongol-fi.github.io/f/nz_infoshare_deaths.csv&quot;),2)[,3:96]
+cmr=data.frame(x=1:94,y=colMeans(nzdeath)/colMeans(nzpop)*1e5)
+cmr=c(cmr$y,predict(loess(y~x,cmr,control=loess.control(surface=&quot;direct&quot;)),95:120))
+
+ag=aggregate(t[,5:6],t[,2:3],sum)
+baseline=(tapply(cmr[t$age]*t$alive,t[,2:3],sum)/tapply(ag$alive,ag[,1:2],sum))[matrix(unlist(ag[,1:2]),nrow(ag))]
+crude=ag$dead/ag$alive*1e5*365
+excess=100*(crude-baseline)/baseline
+ratio=(crude-baseline)/ifelse(crude&gt;=baseline,baseline,crude)*100
+
+mpop=tapply(ag$alive,ag[,1:2],sum)/365
+m=tapply(ratio,ag[,1:2],sum)
+disp=round(tapply(excess,ag[,1:2],sum))
+hide=!is.na(mpop)&amp;mpop&lt;10;m[hide]=disp[hide]=NA
+exp=.86
+m=abs(m)^exp*sign(m)
+maxcolor=400^exp
+m[is.infinite(m)]=-maxcolor
+
+pheatmap::pheatmap(
+  m,filename=&quot;i1.png&quot;,display_numbers=disp,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,border_color=NA,na_col=&quot;white&quot;,
+  number_color=ifelse((abs(m)&gt;.55*maxcolor)&amp;!is.na(m),&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(-maxcolor,maxcolor,,256),
+  colorRampPalette(colorspace::hex(colorspace::HSV(c(210,210,210,210,0,0,0,0,0),c(1,.8,.6,.3,0,.3,.6,.8,1),c(.3,.65,1,1,1,1,1,.65,.3))))(256)
+)
+
+exp2=.6
+mpop2=mpop^exp2
+mpop2[is.na(mpop2)]=0
+maxcolor2=max(mpop2[-nrow(m),-ncol(m)])
+
+kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;x[]=ifelse(abs(x)&lt;1e3,round(x),paste0(sprintf(paste0(&quot;%.&quot;,ifelse(e%%3==0,1,0),&quot;f&quot;),x/1e3^(e2-1)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2]));x}
+disp2=mpop;disp2[is.na(disp2)]=0;disp2=kimi(disp2)
+
+pheatmap::pheatmap(
+  mpop2,filename=&quot;i2.png&quot;,display_numbers=disp2,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,border_color=NA,na_col=&quot;white&quot;,
+  number_color=ifelse(mpop2&gt;maxcolor2*.45,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(0,maxcolor2,,256),
+  sapply(seq(1,0,,256),\(i)rgb(i,i,i))
+)
+
+system(&quot;convert -trim i1.png -gravity northwest -splice x14 -size `identify -format %w i1.png`x -pointsize 46 caption:&#39;Excess mortality percent by dose and weeks after vaccination (people are removed under previous doses after a new dose)&#39; +swap -append -trim -bordercolor white -border 24 +repage 1..png&quot;)
+system(&quot;convert -trim i2.png -gravity northwest -splice x14 -size `identify -format %w i2.png`x -pointsize 46 caption:&#39;Person-years by dose and weeks after vaccination (people are removed under previous doses after a new dose)&#39; +swap -append -trim -bordercolor white -border 24 +repage 2..png&quot;)
+system(&quot;montage -geometry +0+0 -tile 1x [12]..png 1.png&quot;)</pre>
 <h2>
 <a href=#Plots_and_data_analysis id=Plots_and_data_analysis>Plots and data analysis</a>
 </h2>
@@ -1727,246 +2032,6 @@ theme(
 )
 
 ggsave(&quot;1.png&quot;,width=5.5,height=3.8,dpi=400)</pre>
-<h3>
-<a href=#Heatmaps_for_excess_mortality_by_month_of_death_and_month_of_vaccination id=Heatmaps_for_excess_mortality_by_month_of_death_and_month_of_vaccination>Heatmaps for excess mortality by month of death and month of vaccination</a>
-</h3>
-<p>In my previous heatmaps where I plotted the number of deaths by month of death and month of vaccination, the reason why there was a low number of deaths on the same month as vaccination was partially because people who got vaccinated at the middle of the month couldn't have died on earlier in the month. But now I made similar heatmaps where I calculated an excess mortality rate instead, so that for example a person who got vaccinated on the second-last day of a month was only counted for 2 person-days under the month. However there's still months where the month of vaccination has as low as -70% excess mortality:</p>
-<div class="width14">
-<img src="i/moar-excess-heat-2.png">
-</div>
-<p>In the heatmap above, the reason why there is high mortality in people vaccinated in April-June 2021 might be because vulnerable people were given the vaccine earlier, because the people who were vaccinated in April-June 2021 continue to have high excess mortality even in 2022 and 2023. And the reason why there is high mortality in people vaccinated in March-May 2022 might be because fourth doses were given in three waves, where there was later high mortality among a small number of people received the fourth dose during the first wave which peaked in March 2022, but there was later low mortality among the much larger number of people who received the fourth dose during the second wave which peaked in July 2022.</p>
-<p>In the image below which shows heatmaps for each dose, the first five doses all have a pattern where people who received the dose the earliest later had high excess mortality, but people who received the dose during the peak of the rollout later had low excess mortality, and for some reason people who received the dose in the earlier part of the peak seem to have lower mortality than people who received the dose in the later part of the peak:</p>
-<div class="width14">
-<img src="i/moar-dose-big-heat.png">
-</div>
-<pre>t=as.data.frame(data.table::fread(&quot;nz-record-level-data-4M-records.csv&quot;,showProgress=F))
-for(i in grep(&quot;date&quot;,colnames(t)))t[,i]=as.Date(t[,i],&quot;%m-%d-%Y&quot;)
-t=t[!(!is.na(t$date_of_death)&amp;t$date_of_death&lt;t$date_time_of_service),]
-
-nzpop=tail(read.csv(&quot;https://mongol-fi.github.io/f/nz_infoshare_population.csv&quot;),2)[,3:96]
-nzdeath=tail(read.csv(&quot;https://mongol-fi.github.io/f/nz_infoshare_deaths.csv&quot;),2)[,3:96]
-cmr=data.frame(x=1:94,y=colMeans(nzdeath)/colMeans(nzpop)*1e5)
-cmr=c(cmr$y,predict(loess(y~x,cmr,control=loess.control(surface=&quot;direct&quot;)),95:120))
-
-dates=as.character(Reduce(\(...)seq(...,by=1),range(t$date_time_of_service,t$date_of_death,na.rm=T)))
-ages=1:120
-age=floor(time_length(difftime(t$date_time_of_service,t$date_of_birth),&quot;years&quot;))
-month=format(t$date_time_of_service,&quot;%Y-%m&quot;)
-months=format(seq(as.Date(&quot;2021-4-1&quot;),as.Date(&quot;2023-9-1&quot;),&quot;1 month&quot;),&quot;%Y-%m&quot;)
-enddate=pmin(max(t$date_of_death,na.rm=T),t$date_of_death,na.rm=T)
-pop=table(factor(as.character(t$date_time_of_service),dates),factor(month,months),factor(age,ages))
-
-for(i in 2021:2023){
-  bday=&quot;year&lt;-&quot;(t$date_of_birth,i)
-  newage=floor(time_length(difftime(bday,t$date_of_birth),&quot;years&quot;))
-  pick=bday&gt;t$date_time_of_service&amp;bday&lt;enddate
-  ta=table(factor(as.character(bday[pick]),dates),factor(month[pick],months),factor(newage[pick],ages))
-  pop=pop+ta
-  ta2=ta[,,c(2:120,120)]
-  ta2[,,120]=0
-  pop=pop-ta2
-}
-
-pick=!is.na(t$date_of_death)
-deadage=factor(floor(time_length(difftime(t$date_of_death[pick],t$date_of_birth[pick]),&quot;years&quot;)),ages)
-death=table(factor(as.character(t$date_of_death[pick]),dates),factor(month[pick],months),deadage)
-pop=pop-death
-
-d=as.data.frame(pop)|&gt;&quot;colnames&lt;-&quot;(c(&quot;date&quot;,&quot;vaxmonth&quot;,&quot;age&quot;,&quot;pop&quot;))
-d$pop=unlist(tapply(d$pop,d[,2:3],cumsum))
-d$death=c(death)
-d$deathmonth=factor(format(as.Date(levels(d$date)),&quot;%Y-%m&quot;)[d$date],months)
-
-mpop=tapply(d$pop,d[,c(2,6)],sum)
-mdeath=tapply(d$death,d[,c(2,6)],sum)
-baseline=tapply(d$pop*cmr[d$age],d[,c(2,6)],sum)/mpop
-crude=mdeath/mpop*1e5*365
-crude[mpop==0]=NA
-
-daysinmonth=lubridate::days_in_month(paste0(months,&quot;-1&quot;))
-m2=t(t(mpop/daysinmonth)/daysinmonth)*365/12
-
-m=(crude-baseline)/ifelse(crude&gt;=baseline,baseline,crude)*100
-disp=round((crude-baseline)/baseline*100)
-m[mpop==0]=NA
-m[m2&lt;100]=NA
-disp[is.na(m)]=&quot;NA&quot;
-disp[lower.tri(disp)]=&quot;&quot;
-exp=.86
-m=abs(m)^exp*sign(m)
-# maxcolor=max(abs(m[is.finite(m)]),na.rm=T)*.7
-maxcolor=400^exp
-m[is.infinite(m)]=-maxcolor
-
-pheatmap::pheatmap(
-  m,
-  filename=&quot;mort.png&quot;,
-  cluster_rows=F,
-  cluster_cols=F,
-  legend=F,
-  cellwidth=19,
-  cellheight=19,
-  fontsize=9,
-  border_color=NA,
-  display_numbers=disp,
-  fontsize_number=8,
-  na_col=&quot;white&quot;,
-  number_color=ifelse(!(is.na(m))&amp;abs(m)&gt;.5*maxcolor,&quot;white&quot;,&quot;black&quot;),
-  breaks=seq(-maxcolor,maxcolor,,256),
-  colorRampPalette(colorspace::hex(colorspace::HSV(c(210,210,210,210,0,0,0,0,0),c(.9,.75,.6,.3,0,.3,.6,.75,.9),c(.4,.65,1,1,1,1,1,.65,.4))))(256)
-)
-
-m2[lower.tri(m2)]=NA
-kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;x[]=ifelse(abs(x)&lt;1,x,paste0(round(x/1e3^(e2-1),ifelse(e%%3==0,1,0)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2]));x}
-
-disp2=kimir2(m2)
-disp2[is.na(m2)]=&quot;&quot;
-disp2[upper.tri(m2)&amp;is.na(m2)]=0
-exp2=.6
-m2=m2^exp2
-# maxcolor2=max0(m2)
-maxcolor2=4.5e5^exp2
-
-pheatmap::pheatmap(
-  m2,
-  filename=&quot;pop.png&quot;,
-  cluster_rows=F,
-  cluster_cols=F,
-  legend=F,
-  cellwidth=19,
-  cellheight=19,
-  fontsize=9,
-  border_color=NA,
-  display_numbers=disp2,
-  fontsize_number=8,
-  na_col=&quot;white&quot;,
-  breaks=seq(0,maxcolor2,,256),
-  number_color=ifelse(!(is.na(m2))&amp;m2&gt;maxcolor2*.5,&quot;white&quot;,&quot;black&quot;),
-  sapply(seq(1,0,,256),\(i)rgb(i,i,i))
-)</pre>
-<p>The image below also shows that among people who received a dose during a month when a large number of other people received the same dose, excess mortality was generally low or even negative. And the total excess mortality was negative for the first five doses even though it was positive for the sixth dose, but there's only about 7,000 people in the dataset who have received the sixth dose. I looked excess mortality up to September 2023, because the New Zealand dataset is missing many deaths in October 2023 because of a registration delay:</p>
-<div class="width8">
-<img src="i/moar-excess-heat-3.png">
-</div>
-<pre>t=as.data.frame(data.table::fread(&quot;nz-record-level-data-4M-records.csv&quot;,showProgress=F))
-for(i in grep(&quot;date&quot;,colnames(t)))t[,i]=as.Date(t[,i],&quot;%m-%d-%Y&quot;)
-t=t[!(!is.na(t$date_of_death)&amp;t$date_of_death&lt;t$date_time_of_service),]
-
-nzpop=tail(read.csv(&quot;https://mongol-fi.github.io/f/nz_infoshare_population.csv&quot;),2)[,3:96]
-nzdeath=tail(read.csv(&quot;https://mongol-fi.github.io/f/nz_infoshare_deaths.csv&quot;),2)[,3:96]
-cmr=data.frame(x=1:94,y=colMeans(nzdeath)/colMeans(nzpop)*1e5)
-cmr=c(cmr$y,predict(loess(y~x,cmr,control=loess.control(surface=&quot;direct&quot;)),95:120))
-
-dates=as.character(Reduce(\(...)seq(...,by=1),range(t$date_time_of_service,t$date_of_death,na.rm=T)))
-ages=1:120
-age=floor(lubridate::time_length(difftime(t$date_time_of_service,t$date_of_birth),&quot;years&quot;))
-month=format(t$date_time_of_service,&quot;%Y-%m&quot;)
-months=format(seq(as.Date(&quot;2021-4-1&quot;),as.Date(&quot;2023-9-1&quot;),&quot;1 month&quot;),&quot;%Y-%m&quot;)
-enddate=pmin(max(t$date_of_death,na.rm=T),t$date_of_death,na.rm=T)+1
-doses=1:6
-pop=table(factor(as.character(t$date_time_of_service),dates),factor(month,months),factor(age,ages),factor(t$dose,doses))
-
-for(i in 2021:2023){
-  bday=lubridate::&quot;year&lt;-&quot;(t$date_of_birth,i)
-  newage=floor(lubridate::time_length(difftime(bday,t$date_of_birth),&quot;years&quot;))
-  pick=bday&gt;t$date_time_of_service&amp;bday&lt;enddate
-  ta=table(factor(as.character(bday[pick]),dates),factor(month[pick],months),factor(newage[pick],ages),factor(t$dose[pick],doses))
-  pop=pop+ta
-  ta2=ta[,,c(2:120,120),]
-  ta2[,,120,]=0
-  pop=pop-ta2
-}
-
-pick=!is.na(t$date_of_death)
-deadage=factor(floor(lubridate::time_length(difftime(t$date_of_death[pick],t$date_of_birth[pick]),&quot;years&quot;)),ages)
-death=table(factor(as.character(t$date_of_death[pick]),dates),factor(month[pick],months),deadage,factor(t$dose[pick],doses))
-pop=pop-death
-
-d=as.data.frame(pop)|&gt;&quot;colnames&lt;-&quot;(c(&quot;date&quot;,&quot;vaxmonth&quot;,&quot;age&quot;,&quot;dose&quot;,&quot;pop&quot;))
-d$pop=unlist(tapply(d$pop,d[,c(2:4)],cumsum))
-d$death=c(death)
-d$month=factor(format(as.Date(levels(d$date)),&quot;%Y-%m&quot;)[d$date],months)
-
-d=d[d$pop&gt;0,]
-
-ag=aggregate(d[,5:6],d[,c(2,7,3,4)],sum)
-ag2=ag[ag$pop&gt;0,]
-
-mpop=tapply(ag$pop,ag[,c(4,1)],sum)
-mdeath=tapply(ag$death,ag[,c(4,1)],sum)
-baseline=tapply(ag$pop*cmr[ag$age],ag[,c(4,1)],sum)/mpop
-
-mpop=cbind(mpop,Total=rowSums(mpop,na.rm=T))
-mdeath=cbind(mdeath,Total=rowSums(mdeath,na.rm=T))
-baseline=cbind(baseline,Total=tapply(ag$pop*cmr[ag$age],ag$dose,sum,na.rm=T)/tapply(ag$pop,ag$dose,sum,na.rm=T))
-
-crude=mdeath/mpop*1e5*365
-crude[mpop==0]=NA
-
-m=(crude-baseline)/ifelse(crude&gt;=baseline,baseline,crude)*100
-disp=round((crude-baseline)/baseline*100)
-m[mpop==0]=NA
-m[mpop/365&lt;100]=NA
-disp[is.na(m)]=&quot;NA&quot;
-exp=.86
-m=abs(m)^exp*sign(m)
-# maxcolor=max(abs(m[is.finite(m)]),na.rm=T)*.7
-maxcolor=400^exp
-m[is.infinite(m)]=-maxcolor
-rownames(m)=paste0(&quot;Dose &quot;,rownames(m))
-
-pheatmap::pheatmap(
-  m,
-  filename=&quot;1.png&quot;,
-  cluster_rows=F,
-  cluster_cols=F,
-  legend=F,
-  cellwidth=19,
-  cellheight=19,
-  fontsize=9,
-  border_color=NA,
-  display_numbers=disp,
-  fontsize_number=8,
-  na_col=&quot;white&quot;,
-  number_color=ifelse((abs(m)&gt;.6*maxcolor)&amp;!is.na(m),&quot;white&quot;,&quot;black&quot;),
-  breaks=seq(-maxcolor,maxcolor,,256),
-  colorRampPalette(colorspace::hex(colorspace::HSV(c(210,210,210,210,0,0,0,0,0),c(1,.8,.6,.3,0,.3,.6,.8,1),c(.3,.65,1,1,1,1,1,.65,.3))))(256)
-)
-
-exp2=.6
-mpop2=(mpop/365)^exp2
-mpop2[is.na(mpop2)]=0
-rownames(mpop2)=paste0(&quot;Dose &quot;,rownames(mpop2))
-# maxcolor2=max(mpop2,na.rm=T)
-maxcolor2=6e5^exp2
-
-kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;x[]=ifelse(abs(x)&lt;1e3,round(x),paste0(sprintf(paste0(&quot;%.&quot;,ifelse(e%%3==0,1,0),&quot;f&quot;),x/1e3^(e2-1)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2]));x}
-
-disp2=mpop
-disp2[!is.na(mpop)]=kimi(mpop[!is.na(mpop)]/365)
-disp2[is.na(mpop)]=0
-
-pheatmap::pheatmap(
-  mpop2,
-  filename=&quot;2.png&quot;,
-  cluster_rows=F,
-  cluster_cols=F,
-  legend=F,
-  cellwidth=19,
-  cellheight=19,
-  fontsize=9,
-  border_color=NA,
-  display_numbers=disp2,
-  fontsize_number=8,
-  na_col=&quot;white&quot;,
-  breaks=seq(0,maxcolor2,,256),
-  number_color=ifelse(mpop2&gt;maxcolor2*.6,&quot;white&quot;,&quot;black&quot;),
-  sapply(seq(1,0,,256),\(i)rgb(i,i,i))
-)
-
-system(&quot;convert -trim 1.png -gravity northwest -splice x14 -size `identify -format %w 1.png`x -pointsize 48 caption:&#39;Excess mortality percent by dose and month of vaccination (from day of vaccination up to September 2023)&#39; +swap -append -trim -bordercolor white -border 24 +repage 1..png&quot;)
-system(&quot;convert -trim 2.png -gravity northwest -splice x14 -size `identify -format %w 2.png`x -pointsize 48 caption:&#39;Population size by dose and month of vaccination (in person-years up to September 2023)&#39; +swap -append -trim -bordercolor white -border 24 +repage 2..png&quot;)
-system(&quot;montage -geometry +0+0 -tile 1x [12]..png 0.png&quot;)</pre>
 <h2>
 <a href=#Excess_mortality_in_New_Zealand id=Excess_mortality_in_New_Zealand>Excess mortality in New Zealand</a>
 </h2>
@@ -2133,6 +2198,54 @@ ggsave(&quot;1.png&quot;,width=4.6,height=3.3)</pre>
 <img src="i/moar-craig-2.png">
 </div>
 <p>Craig's tweet said: <span class="quote">&quot;9,408 excess deaths since Oct 2000. This factors in the size of the population. By this measure mortality had been steady for many years.&quot;</span> However her tweet was misleading because the first image in her tweet showed crude mortality rate which had remained fairly flat for several years before COVID, but in the second image in her tweet the figure of 9,408 excess deaths was calculated based on the raw number of deaths, which has been increasing at a fairly sharp rate.</p>
+<h2>
+<a href=#Comments_to_Substack_posts_by_Kirsch id=Comments_to_Substack_posts_by_Kirsch>Comments to Substack posts by Kirsch</a>
+</h2>
+<h3>
+<a href=#Reason_why_dose_4_has_more_deaths_within_14_days_from_vaccination_than_dose_3 id=Reason_why_dose_4_has_more_deaths_within_14_days_from_vaccination_than_dose_3>Reason why dose 4 has more deaths within 14 days from vaccination than dose 3</a>
+</h3>
+<p>Kirsch wrote: [<a href="https://kirschsubstack.com/p/exclusive-stunning-new-charts-from">https://kirschsubstack.com/p/exclusive-stunning-new-charts-from</a>]</p>
+<blockquote>
+<p>The death counts for all ages (not gender specific), within 14 days of a specific shot goes from 260 (shot 3) vs. 315 (shot 4), a 21% increase. There are two possible causes for that: we might have more death data for shot 4, and shot 4 may be given at a time of year when deaths were high so the first 14 days would not be representative. There are 15% lower deaths in Dose 4, but the background deaths were 36% higher when Dose 4 was given. Guess what 36%-15% equals? 21%! So the absolute non-gender specific death number disparity in Dose 3 and 4 is easily explained by those two effects! Isn’t it stunning how math works?</p>
+<p><img src=i/moar-kirsch-dose-3-4.png class=width3></p>
+</blockquote>
+<p>The table above was based on the bucket system where a person was no longer classified under dose 2 after they got dose 1, because the total person-years for dose 1 are identical to the files generated by <code>buckets.py</code>:</p>
+<pre>$ awk &#39;$2==1{x+=$5}END{print x}&#39; data-transparency/New\ Zealand/time-series\ summaries/month_dose_week_single_age.txt
+124544187</pre>
+<p>Kirsch pointed out that compared to dose 3, dose 4 had more death within 14 days from vaccination but less total deaths. However it's probably because the person-days of dose 4 are about 210 million and the person-days of dose 3 are about 510 million, so dose 4 has a much higher mortality rate of deaths per person-days, and therefore it also has a higher mortality rate of deaths per 14 person-days.</p>
+<p>The mortality rate of deaths per 100k person-years is about 2,148 for dose 4 but only about 1,036 for dose 3. When I calculated excess mortality for each dose by comparing the CMR to a baseline derived from the age composition of the cohort, I got about -7% excess mortality for dose 3 and about -18% excess mortality for dose 4:</p>
+<pre>&gt; t=read.table(&quot;data-transparency/New Zealand/time-series summaries/month_dose_week_single_age.txt&quot;,header=T)
+&gt; t=t[t$dose&gt;=1&amp;t$dose&lt;=7,]
+&gt; # t=t[t$week&lt;=1,]
+&gt; pop=tail(read.csv(&quot;https://mongol-fi.github.io/f/nz_infoshare_population.csv&quot;),2)[,3:96]
+&gt; death=tail(read.csv(&quot;https://mongol-fi.github.io/f/nz_infoshare_deaths.csv&quot;),2)[,3:96]
+&gt; cmr=data.frame(x=1:94,y=colMeans(death)/colMeans(pop)*1e5)
+&gt; cmr=c(cmr$y,predict(loess(y~x,cmr,control=loess.control(surface=&quot;direct&quot;)),95:120))
+&gt; ag=aggregate(t[,5:6],t[,c(2,4)],sum)
+&gt; doses=aggregate(ag[,3:4],ag[,1,drop=F],sum)
+&gt; doses$baseline=tapply(ag$alive*cmr[ag$age],ag$dose,sum)/tapply(ag$alive,ag$dose,sum)
+&gt; doses$cmr=doses$dead/doses$alive*1e5*365
+&gt; doses$excess=(doses$cmr-doses$baseline)/doses$baseline*100
+&gt; doses$age=tapply(ag$age*ag$alive,ag$dose,sum)/tapply(ag$alive,ag$dose,sum)
+&gt; doses$age_at_death=tapply(ag$age*ag$dead,ag$dose,sum)/tapply(ag$dead,ag$dose,sum)
+&gt; print.data.frame(round(doses),row.names=F)
+ dose     alive  dead baseline  cmr excess age age_at_death
+    1 124544187  1149      301  337     12  31           69
+    2 442004510  5426      479  448     -6  37           72
+    3 509902998 14474     1110 1036     -7  50           79
+    4 213213534 12550     2606 2148    -18  67           82
+    5  57824852  3590     3242 2266    -30  71           83
+    6    950562    92     2312 3533     53  68           75
+    7     10771     1     1061 3389    219  64           66</pre>
+<p>And during the first 14 days from vaccination (where the day of vaccination is day 1), I got about -60% excess mortality for dose 3 and about -62% excess mortality for dose 4:</p>
+<pre> dose    alive dead baseline  cmr excess age age_at_death
+    1 13531399   96      635  259    -59  40           67
+    2 14485101  148      749  373    -50  42           72
+    3 14743266  232     1453  574    -60  53           80
+    4 10667070  280     2497  958    -62  65           83
+    5  5165691  173     3242 1222    -62  71           84
+    6    92480    2     2319  789    -66  68           74
+    7     1059    0     1194    0   -100  64          NaN</pre>
 <h2>
 <a href=#Other_datasets_published_by_Kirsch id=Other_datasets_published_by_Kirsch>Other datasets published by Kirsch</a>
 </h2>
