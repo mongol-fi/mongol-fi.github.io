@@ -1239,7 +1239,9 @@ pheatmap::pheatmap(
 <div class="width8">
 <img src="i/moar-excess-heat-3.png">
 </div>
-<pre>t=as.data.frame(data.table::fread(&quot;nz-record-level-data-4M-records.csv&quot;,showProgress=F))
+<pre>library(colorspace);library(lubridate)
+
+t=as.data.frame(data.table::fread(&quot;nz-record-level-data-4M-records.csv&quot;,showProgress=F))
 for(i in grep(&quot;date&quot;,colnames(t)))t[,i]=as.Date(t[,i],&quot;%m-%d-%Y&quot;)
 t=t[!(!is.na(t$date_of_death)&amp;t$date_of_death&lt;t$date_time_of_service),]
 
@@ -1250,7 +1252,7 @@ cmr=c(cmr$y,predict(loess(y~x,cmr,control=loess.control(surface=&quot;direct&quo
 
 dates=as.character(Reduce(\(...)seq(...,by=1),range(t$date_time_of_service,t$date_of_death,na.rm=T)))
 ages=1:120
-age=floor(lubridate::time_length(difftime(t$date_time_of_service,t$date_of_birth),&quot;years&quot;))
+age=floor(time_length(difftime(t$date_time_of_service,t$date_of_birth),&quot;years&quot;))
 month=format(t$date_time_of_service,&quot;%Y-%m&quot;)
 months=format(seq(as.Date(&quot;2021-4-1&quot;),as.Date(&quot;2023-9-1&quot;),&quot;1 month&quot;),&quot;%Y-%m&quot;)
 enddate=pmin(max(t$date_of_death,na.rm=T),t$date_of_death,na.rm=T)+1
@@ -1258,8 +1260,8 @@ doses=1:6
 pop=table(factor(as.character(t$date_time_of_service),dates),factor(month,months),factor(age,ages),factor(t$dose,doses))
 
 for(i in 2021:2023){
-  bday=lubridate::&quot;year&lt;-&quot;(t$date_of_birth,i)
-  newage=floor(lubridate::time_length(difftime(bday,t$date_of_birth),&quot;years&quot;))
+  bday=&quot;year&lt;-&quot;(t$date_of_birth,i)
+  newage=floor(time_length(difftime(bday,t$date_of_birth),&quot;years&quot;))
   pick=bday&gt;t$date_time_of_service&amp;bday&lt;enddate
   ta=table(factor(as.character(bday[pick]),dates),factor(month[pick],months),factor(newage[pick],ages),factor(t$dose[pick],doses))
   pop=pop+ta
@@ -1269,27 +1271,24 @@ for(i in 2021:2023){
 }
 
 pick=!is.na(t$date_of_death)
-deadage=factor(floor(lubridate::time_length(difftime(t$date_of_death[pick],t$date_of_birth[pick]),&quot;years&quot;)),ages)
+deadage=factor(floor(time_length(difftime(t$date_of_death[pick],t$date_of_birth[pick]),&quot;years&quot;)),ages)
 death=table(factor(as.character(t$date_of_death[pick]),dates),factor(month[pick],months),deadage,factor(t$dose[pick],doses))
 pop=pop-death
 
 d=as.data.frame(pop)|&gt;&quot;colnames&lt;-&quot;(c(&quot;date&quot;,&quot;vaxmonth&quot;,&quot;age&quot;,&quot;dose&quot;,&quot;pop&quot;))
-d$pop=unlist(tapply(d$pop,d[,c(2:4)],cumsum))
+d$pop=unlist(tapply(d$pop,d[,2:4],cumsum))
 d$death=c(death)
 d$month=factor(format(as.Date(levels(d$date)),&quot;%Y-%m&quot;)[d$date],months)
 
 d=d[d$pop&gt;0,]
 
 ag=aggregate(d[,5:6],d[,c(2,7,3,4)],sum)
-ag2=ag[ag$pop&gt;0,]
+ag=rbind(ag,cbind(aggregate(ag[,5:6],ag[,1:3],sum),dose=&quot;Total&quot;))
+ag=rbind(ag,cbind(aggregate(ag[,5:6],ag[,2:4],sum),vaxmonth=&quot;Total&quot;))
 
 mpop=tapply(ag$pop,ag[,c(4,1)],sum)
 mdeath=tapply(ag$death,ag[,c(4,1)],sum)
 baseline=tapply(ag$pop*cmr[ag$age],ag[,c(4,1)],sum)/mpop
-
-mpop=cbind(mpop,Total=rowSums(mpop,na.rm=T))
-mdeath=cbind(mdeath,Total=rowSums(mdeath,na.rm=T))
-baseline=cbind(baseline,Total=tapply(ag$pop*cmr[ag$age],ag$dose,sum,na.rm=T)/tapply(ag$pop,ag$dose,sum,na.rm=T))
 
 crude=mdeath/mpop*1e5*365
 crude[mpop==0]=NA
@@ -1304,30 +1303,19 @@ m=abs(m)^exp*sign(m)
 # maxcolor=max(abs(m[is.finite(m)]),na.rm=T)*.7
 maxcolor=400^exp
 m[is.infinite(m)]=-maxcolor
-rownames(m)=paste0(&quot;Dose &quot;,rownames(m))
+rownames(m)=sub(&quot;^(0-9)+$&quot;,&quot;Dose \\1&quot;,rownames(m))
 
 pheatmap::pheatmap(
-  m,
-  filename=&quot;1.png&quot;,
-  cluster_rows=F,
-  cluster_cols=F,
-  legend=F,
-  cellwidth=19,
-  cellheight=19,
-  fontsize=9,
-  border_color=NA,
-  display_numbers=disp,
-  fontsize_number=8,
-  na_col=&quot;white&quot;,
+  m,filename=&quot;i1.png&quot;,display_numbers=disp,
+  cluster_rows=F,cluster_cols=F,legend=F,border_color=NA,na_col=&quot;white&quot;,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,
   number_color=ifelse((abs(m)&gt;.6*maxcolor)&amp;!is.na(m),&quot;white&quot;,&quot;black&quot;),
   breaks=seq(-maxcolor,maxcolor,,256),
-  colorRampPalette(colorspace::hex(colorspace::HSV(c(210,210,210,210,0,0,0,0,0),c(1,.8,.6,.3,0,.3,.6,.8,1),c(.3,.65,1,1,1,1,1,.65,.3))))(256)
+  colorRampPalette(hex(HSV(c(210,210,210,210,0,0,0,0,0),c(1,.8,.6,.3,0,.3,.6,.8,1),c(.3,.65,1,1,1,1,1,.65,.3))))(256)
 )
 
 exp2=.6
 mpop2=(mpop/365)^exp2
 mpop2[is.na(mpop2)]=0
-rownames(mpop2)=paste0(&quot;Dose &quot;,rownames(mpop2))
 # maxcolor2=max(mpop2,na.rm=T)
 maxcolor2=6e5^exp2
 
@@ -1336,28 +1324,19 @@ kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;x[]=ifelse(ab
 disp2=mpop
 disp2[!is.na(mpop)]=kimi(mpop[!is.na(mpop)]/365)
 disp2[is.na(mpop)]=0
+rownames(mpop2)=sub(&quot;^(0-9)+$&quot;,&quot;Dose \\1&quot;,rownames(mpop2))
 
-pheatmap::pheatmap(
-  mpop2,
-  filename=&quot;2.png&quot;,
-  cluster_rows=F,
-  cluster_cols=F,
-  legend=F,
-  cellwidth=19,
-  cellheight=19,
-  fontsize=9,
-  border_color=NA,
-  display_numbers=disp2,
-  fontsize_number=8,
-  na_col=&quot;white&quot;,
+pheatmap(
+  mpop2,filename=&quot;i2.png&quot;,display_numbers=disp2,
+  cluster_rows=F,cluster_cols=F,legend=F,border_color=NA,na_col=&quot;white&quot;,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,
   breaks=seq(0,maxcolor2,,256),
   number_color=ifelse(mpop2&gt;maxcolor2*.6,&quot;white&quot;,&quot;black&quot;),
   sapply(seq(1,0,,256),\(i)rgb(i,i,i))
 )
 
-system(&quot;convert -trim 1.png -gravity northwest -splice x14 -size `identify -format %w 1.png`x -pointsize 48 caption:&#39;Excess mortality percent by dose and month of vaccination (from day of vaccination up to September 2023)&#39; +swap -append -trim -bordercolor white -border 24 +repage 1..png&quot;)
-system(&quot;convert -trim 2.png -gravity northwest -splice x14 -size `identify -format %w 2.png`x -pointsize 48 caption:&#39;Population size by dose and month of vaccination (in person-years up to September 2023)&#39; +swap -append -trim -bordercolor white -border 24 +repage 2..png&quot;)
-system(&quot;montage -geometry +0+0 -tile 1x [12]..png 0.png&quot;)</pre>
+system(&quot;convert -trim i1.png -gravity northwest -splice x14 -size `identify -format %w i1.png`x -pointsize 48 caption:&#39;Excess mortality percent by dose and month of vaccination (from day of vaccination up to September 2023)&#39; +swap -append -trim -bordercolor white -border 24 +repage i1..png&quot;)
+system(&quot;convert -trim i2.png -gravity northwest -splice x14 -size `identify -format %w i2.png`x -pointsize 48 caption:&#39;Population size by dose and month of vaccination (in person-years up to September 2023)&#39; +swap -append -trim -bordercolor white -border 24 +repage i2..png&quot;)
+system(&quot;montage -geometry +0+0 -tile 1x i[12]..png 1.png&quot;)</pre>
 <p>In the image below where I used the bucket system and I calculated excess mortality by dose and by weeks after vaccination, doses 2-5 got negative excess mortality for the first 20 weeks after vaccination, but dose 1 behaved in a completely different way, because its the excess mortality went from about -50% during weeks 0-3 to about 36% during weeks 4-7 and about 162% during weeks 8-11:</p>
 <div class="width8">
 <img src="i/moar-excess-heat-4.png">
@@ -1419,6 +1398,10 @@ pheatmap::pheatmap(
 system(&quot;convert -trim i1.png -gravity northwest -splice x14 -size `identify -format %w i1.png`x -pointsize 46 caption:&#39;Excess mortality percent by dose and weeks after vaccination (people are removed under previous doses after a new dose)&#39; +swap -append -trim -bordercolor white -border 24 +repage 1..png&quot;)
 system(&quot;convert -trim i2.png -gravity northwest -splice x14 -size `identify -format %w i2.png`x -pointsize 46 caption:&#39;Person-years by dose and weeks after vaccination (people are removed under previous doses after a new dose)&#39; +swap -append -trim -bordercolor white -border 24 +repage 2..png&quot;)
 system(&quot;montage -geometry +0+0 -tile 1x [12]..png 1.png&quot;)</pre>
+<p>For the first four doses in the heatmap below, there is always negative excess mortality during the month when the person-years of the dose peak, but the excess mortality becomes positive after a new dose is introduced and the stragglers remain under dose n-1. For example the excess mortality of dose 2 goes from about -17% in January 2022 to about 55% in March 2022 when the third dose is rolled out. And in the case of the first five doses, there's always one month during the rollout peak where excess mortality is below -50%. The total mortality of aggregated doses remains negative during all months except a few months in winters 2022 and 2023, but it's because I didn't adjust the excess mortality for seasonality:</p>
+<div class="width8">
+<img src="i/moar-excess-heat-5.png">
+</div>
 <h2>
 <a href=#Plots_and_data_analysis id=Plots_and_data_analysis>Plots and data analysis</a>
 </h2>
@@ -2268,11 +2251,11 @@ ggsave(&quot;1.png&quot;,width=4.6,height=3.3)</pre>
 <img src="i/moar-medicare-3.png">
 </div>
 <p>In the heatmap below where I plotted the days from vaccination to death grouped by month of vaccination, the peaks in the number of deaths form a linear pattern, where the peak is on days 360-389 in January, 330-359 in February, 300-329 in March, and so on up to December when the peak is on days 30-59. So did the vaccines start to kill people a lot faster in late 2021 than in early 2021? Or was the peak in deaths around January 2022 rather caused by the appearance of Omicron combined with the usual increase in deaths during the winter?</p>
-<div class="width8">
+<div class="width7">
 <img src="i/moar-medicare-4.png">
 </div>
 <p>From the plot below which shows the date of death on the y-axis instead of the number of days until death, you can see even more clearly that there is one peak in deaths around January 2022 and another peak around December 2022. As evidence that the healthy vaccinee effect lasts longer than a couple of weeks like Kirsch argues, vaccines given in January 2022 have a low number of deaths in February 2022, even though there was high overall mortality in February 2022, and for example in deaths peak in February 2022 for vaccines given in November 2021:</p>
-<div class="width8">
+<div class="width7">
 <img src="i/moar-medicare-8.png">
 </div>
 <pre>med=read.csv(&quot;https://mongol-fi.github.io/f/kirsch_medicare_all_states_subset.csv&quot;)
@@ -2318,10 +2301,12 @@ system(&quot;convert 0.png -bordercolor white \\( -gravity northwest -splice 22x
     624     544     820     354     113       6
 &gt; sum(ta[2:4])/sum(ta)
 [1] 0.5950051</pre>
+<p>One reason why shots from 2021 Q1 are overrepresented is because the Medicare dataset only includes the earliest vaccine dose of each person. Most of the people in the dataset are elderly because the dataset only includes people who died later, and elderly people are likely to have gotten their first shot in the first quarter of 2021. And another reason why doses from 2020 Q1 are overrepresented is that the dataset only includes people who died later, but people who were vaccinated earlier have had more time to die since vaccination than people who were vaccinated later.</p>
 <p>In the plot below I looked at deaths during the first 51 weeks after vaccination, and I included doses for all months of 2021, but I picked a random sample of doses from each month. I took repeat doses from some months so I got the total number of doses to match the original data. However now I no longer got Kirsch's <span class="quote">&quot;monotonically increasing&quot;</span> curve, but I got a curve that remained more or less flat after around week 7, and actually there is a decreasing trend in deaths starting around day 250 from vaccination, which is partially because doses given in the second quarter of 2021 have a clearly decreasing trend starting around day 300:</p>
 <div class="width7">
 <img src="i/moar-medicare-13.png">
 </div>
+<p>The last death included in the Medicare data is on February 1st 2023, so people vaccinated on December 31st 2021 cannot have died more than 397 days after the vaccination. Many deaths in late January 2023 are also missing because of a registration delay. However the deaths in people vaccinated in 2021 Q1 already start to drop around day 330, but you can tell it's not because people start running out of follow-up time because the follow-up time only starts to run out around day 660 (even though there's probably also a smaller number of deaths that are missing earlier because of a registration delay). But anyway, people vaccinated in 2021 Q1 have so much follow-up time that you can even see how the reduced mortality in summer 2022 start to increase again as summer turns to winter.</p>
 <pre>library(ggplot2)
 
 med=read.csv(&quot;https://mongol-fi.github.io/f/kirsch_medicare_all_states_subset.csv&quot;)
@@ -2450,7 +2435,7 @@ ggsave(&quot;1.png&quot;,width=6,height=4)</pre>
 <div class="width9">
 <img src="i/moar-medicare-9.jpg">
 </div>
-<p>The screenshot above says: <span class="quote">&quot;The vax date listed in the record is the date of the FIRST vaccine (that Medicare knows about for the patient) ONLY&quot;</span>. However I don't know if the full Medicare data includes multiple doses per some people and not just one dose. In the data from the <span class="quote">&quot;Medicare all states subset&quot;</span> sheet, there seems to be a period with clearly depressed mortality for around 50 days after vaccination, but in the full dataset the period with the most clearly depressed mortality only lasts for about 20-25 days, and there's a sharp inflection point at around day 20-25. It might be if people who got the second dose within 3 weeks from the first dose are included twice under the first 3 weeks, because the recommended minimum delay between the first two doses of the Pfizer vaccine was 3 weeks, and in the New Zealand data there's a large number of people who got the first two doses 21 days apart from each other. However if you take the data in the <span class="quote">&quot;Medicare all states subset&quot;</span> sheet but you sample the same number of doses from each month, then for some reason there seems to be a sharper inflection point in mortality around days 20-30.</p>
+<p>The screenshot above says: <span class="quote">&quot;The vax date listed in the record is the date of the FIRST vaccine (that Medicare knows about for the patient) ONLY&quot;</span>. However I don't know if the full Medicare data includes multiple doses per some people and not just one dose. The period with clearly depressed mortality after vaccination seems to last only about 20-25 days in the full dataset and there is a sharp inflection point around days 20-25, but in the data from the <span class="quote">&quot;all states subset&quot;</span> spreadsheet, the period with clearly depressed mortality seems to last around 50 days and there is no sharp inflection point. It might be if people who got two shots are counted twice in the full dataset, so then people who got the second dose after 3 weeks from the first dose and who died 2 weeks later would be included as one death under 5 weeks and another death under 2 weeks. The recommended minimum delay between the first two doses of the Pfizer vaccine was 3 weeks, and in the New Zealand data there's a large number of people who got the second dose exactly 21 days after the first dose. (But I don't know if my hypothesis is correct, because if you take the data in the <span class="quote">&quot;Medicare all states subset&quot;</span> sheet but you sample the same number of doses from each month, then for some reason there seems to be a sharper inflection point in mortality around days 20-30.)</p>
 <h3>
 <a href=#Data_for_deaths_in_2020_2023_in_Maldives id=Data_for_deaths_in_2020_2023_in_Maldives>Data for deaths in 2020-2023 in Maldives</a>
 </h3>
