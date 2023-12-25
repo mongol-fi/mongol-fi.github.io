@@ -101,6 +101,8 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Reason_why_dose_4_has_more_deaths_within_14_days_from_vaccination_than_dose_3>Reason why dose 4 has more deaths within 14 days from vaccination than dose 3</a></li>
 <li><a href=#The_deaths_are_probably_by_date_of_occurrence_and_not_date_of_registration>The deaths are probably by date of occurrence and not date of registration</a></li>
 <li><a href=#Excess_mortality_by_age_group>Excess mortality by age group</a></li>
+<li><a href=#Excess_seasonality_adjusted_ASMR_in_New_Zealand>Excess seasonality-adjusted ASMR in New Zealand</a></li>
+<li><a href=#Tweet_by_Kirsch_about_mortality_in_doses_3_and_4_combined_together>Tweet by Kirsch about mortality in doses 3 and 4 combined together</a></li>
 </ul></li>
 </ul>
 
@@ -2779,6 +2781,74 @@ Total 0 0 0 0 0 1 1 0 2 0  2  3  3  4  3  5  8 14 17 20    83</pre>
 <div class="width14">
 <img src="i/moar-morta-under-20-triangle.png">
 </div>
+<h3>
+<a href=#Excess_seasonality_adjusted_ASMR_in_New_Zealand id=Excess_seasonality_adjusted_ASMR_in_New_Zealand>Excess seasonality-adjusted ASMR in New Zealand</a>
+</h3>
+<p>Kirsch posted this tweet: [<a href="https://twitter.com/stkirsch/status/1739033294107467805">https://twitter.com/stkirsch/status/1739033294107467805</a>]</p>
+<div class="width5">
+<img src="i/moar-asmr-1.png">
+</div>
+<p>However there's an increasing trend in CMR in New Zealand so using the 2017-2019 baseline as the average exaggerates excess mortality.</p>
+<p>I calculated excess ASMR in New Zealand using a spreadsheet from here titled <span class="quote">&quot;Monthly death registrations by ethnicity, age, sex: January 2010 to December 2022&quot;</span>: <a href="https://www.stats.govt.nz/information-releases/births-and-deaths-year-ended-december-2022-including-abridged-period-life-table/">https://www.stats.govt.nz/information-releases/births-and-deaths-year-ended-december-2022-including-abridged-period-life-table/</a>. I first calculated a polynomial trend from 2010 to 2019, and then I calculated the average ratio between actual ASMR and the trend for each 12 months, and I multiplied the trend with the ratio of each month. I got negative excess ASMR for every month of 2021 except for March and December. So why weren't the vaccines killing people in mid-2021 when the daily number of new vaccine doses peaked?</p>
+<div class="width4">
+<img src="i/moar-asmr-2.png">
+</div>
+<p>The reason why the heatmap above has low exess mortality in July 2022 could partially be because the deaths are by date of registration so some deaths that occurred in July may have been registered in August.</p>
+<pre>death=read.csv(&quot;https://mongol-fi.github.io/f/nz_monthly_deaths_by_age.csv&quot;)|&gt;subset(ethnicity==&quot;Total&quot;)
+a=with(death,aggregate(count,list(year=year_reg,month=month_reg,age=as.numeric(substr(age_group,1,2))),sum))
+
+esp=c(1000,4000,5500,5500,5500,6000,6000,6500,7000,7000,7000,7000,6500,6000,5500,5000,4000,2500,1500,800,200)
+espage=c(0,1,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95)
+
+pop=read.csv(&quot;https://mongol-fi.github.io/f/nz_infoshare_population.csv&quot;,r=1,check=F)
+pop=pop[as.numeric(rownames(pop))&gt;=2010,]
+cut=cut(as.numeric(colnames(pop)),c(espage,Inf),,T,F)
+pop2=tapply(unlist(pop),list(row(pop),rep(cut,each=nrow(pop))),sum,na.rm=T)
+
+me=merge(a,expand.grid(list(year=as.numeric(rownames(pop)),age=espage))|&gt;cbind(pop=c(pop2)),all=T)
+me$pop=me$pop/365*lubridate::days_in_month(as.Date(paste0(me$year,&quot;-&quot;,me$month,&quot;-1&quot;)))
+
+me$month=factor(me$month,1:12)
+ag=aggregate(me$x/me$pop*esp[match(me$age,espage)],me[,c(1,3)],sum)
+ag$date=as.numeric(as.Date(paste0(ag$year,&quot;-&quot;,ag$month,&quot;-15&quot;)))
+levels(ag$month)=month.abb
+
+ag$baseline=predict(lm(x~poly(date,2),ag[ag$year&lt;=2019&amp;ag$year&gt;=2010,]),ag)
+mult=with(ag|&gt;subset(year&lt;2020),tapply(x/baseline,month,mean))
+ag$baseline=ag$baseline*mult[ag$month]
+
+m=with(ag,xtabs((x-baseline)/baseline~year+month))
+m=cbind(m,Mean=rowMeans(m))
+disp=round(m*100)
+
+m=abs(m)^1.3*sign(m)
+maxcolor=max(abs(m))
+
+library(colorspace)
+pheatmap::pheatmap(
+  m,filename=&quot;0.png&quot;,
+  display_numbers=disp,
+  gaps_col=12,
+  cluster_rows=F,cluster_cols=F,legend=F,border_color=NA,na_col=&quot;white&quot;,
+  cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,
+  number_color=ifelse(abs(m)&gt;maxcolor*.6,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(-maxcolor,maxcolor,,256),
+  colorRampPalette(hex(HSV(c(210,210,210,210,0,0,0,0,0),c(.9,.75,.6,.3,0,.3,.6,.75,.9),c(.4,.65,1,1,1,1,1,.65,.4))))(256)
+)
+
+system(&quot;convert -trim 0.png -gravity northwest -splice x14 -size `identify -format %w 0.png`x -pointsize 45 caption:&#39;Excess seasonality-adjusted ASMR percent in New Zealand relative to polynomial projection of data from 2010-2019&#39; +swap -append -trim -bordercolor white -border 24 +repage 1.png&quot;)</pre>
+<h3>
+<a href=#Tweet_by_Kirsch_about_mortality_in_doses_3_and_4_combined_together id=Tweet_by_Kirsch_about_mortality_in_doses_3_and_4_combined_together>Tweet by Kirsch about mortality in doses 3 and 4 combined together</a>
+</h3>
+<p>Kirsch posted this tweet: [<a href="https://twitter.com/stkirsch/status/1739043222822023526">https://twitter.com/stkirsch/status/1739043222822023526</a>]</p>
+<div class="width5">
+<img src="i/moar-kirsch-tweet-1.jpg">
+</div>
+<p>However dose 4 had greater negative excess mortality during the rollout than dose 3, and the negative excess mortality cancels out the decreasing trend in seasonal mortality:</p>
+<div class="width0">
+<img src=i/moar-kirsch-tweet-3.png width=550><img src=i/moar-kirsch-tweet-4.png width=550><img src=i/moar-kirsch-tweet-2.png width=550>
+</div>
+<p>Older age groups have more seasonal fluctuation in mortality than younger age groups, so I calculated the seasonality-adjusted mortality based on monthly mortality in 5-year age groups. I used the spreadsheet from here titled <span class="quote">&quot;Monthly death registrations by ethnicity, age, sex: January 2010 to December 2022&quot;</span>: <a href="https://www.stats.govt.nz/information-releases/births-and-deaths-year-ended-december-2022-including-abridged-period-life-table/">https://www.stats.govt.nz/information-releases/births-and-deaths-year-ended-december-2022-including-abridged-period-life-table/</a>. First I did a linear regression for monthly deaths in 5-year age groups in 2015-2019, and then I calculated the average difference from the trend for each month as percentage of the trend. And then I interpolated monthly data to daily data, and I made a matrix of daily multipliers for each 366 days of the year for each 5-year age group, and I used them to multiply my regular baseline for the CMR which was based on the age composition of the cohort.</p>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
