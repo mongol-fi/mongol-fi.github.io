@@ -5,7 +5,7 @@ pre{max-width:76em;margin:6px auto;color:white;white-space:pre-wrap;word-wrap:br
 .output{color:hsl(210,85%,85%)}
 .comment{color:#aaa}</style>
 <pre>
-<span class=title># use NA instead of zero for missing values in long to wide conversion</span></span>
+<span class=title># use NA instead of zero for missing values in `xtabs`</span></span>
 <span class=prompt>&gt;</span> <span class=code>d=data.frame(month=month.name[c(1,1,2)],year=c(2022,2023,2023),val=c(5,2,9))</span>
 <span class=prompt>&gt;</span> <span class=code>d</span>
 <span class=output>     month year val</span>
@@ -35,7 +35,7 @@ pre{max-width:76em;margin:6px auto;color:white;white-space:pre-wrap;word-wrap:br
 <span class=output>6 female  Jan 2023 69</span>
 <span class=output>7   male  Feb 2023 85</span>
 <span class=output>8 female  Feb 2023 94</span>
-<span class=prompt>&gt;</span> <span class=code>as.data.frame(as.table(a))</span><span class=comment> # this converts the first three columns to factors</span>
+<span class=prompt>&gt;</span> <span class=code>as.data.frame.table(a)</span><span class=comment> # this converts the first three columns to factors</span>
 <span class=output>    Var1 Var2 Var3 Freq</span>
 <span class=output>1   male  Jan 2022   76</span>
 <span class=output>2 female  Jan 2022   70</span>
@@ -211,11 +211,22 @@ pre{max-width:76em;margin:6px auto;color:white;white-space:pre-wrap;word-wrap:br
 <span class=output>[1] 2 0 1 3</span>
 <span class=output>
 <span class=title># get difference between dates in years</span></span>
-<span class=prompt>&gt;</span> <span class=code>lubridate::time_length(difftime(&quot;2023-12-01&quot;,&quot;2020-01-23&quot;),&quot;years&quot;)</span>
-<span class=output>[1] 3.854894</span>
-<span class=prompt>&gt;</span> <span class=code>x=&quot;2023-12-01&quot;;y=&quot;2020-01-23&quot;</span>
-<span class=prompt>&gt;</span> <span class=code>as.numeric(substr(x,1,4))-as.numeric(substr(y,1,4))-as.numeric(substr(x,5,10)&lt;substr(y,5,10))</span><span class=comment> # floored years</span>
-<span class=output>[1] 3</span>
+<span class=prompt>&gt;</span> <span class=code>d1=as.Date(&quot;2020-02-01&quot;);d2=as.Date(&quot;2022-02-01&quot;)</span>
+<span class=prompt>&gt;</span> <span class=code>lubridate::interval(d1,d2)/lubridate::years()</span><span class=comment> # this is slower but it treats leap years correctly</span>
+<span class=output>[1] 2</span>
+<span class=prompt>&gt;</span> <span class=code>d1%--%d2/years()</span><span class=comment> # another lubridate option which was about as fast as the previous option in my benchmark</span>
+<span class=output>[1] 2</span>
+<span class=prompt>&gt;</span> <span class=code>lubridate::time_length(difftime(d2,d1),&quot;years&quot;)</span>
+<span class=comment># this was about 40 times faster but it uses 365.25 days as the length of each year</span>
+<span class=output>[1] 2.001369</span>
+<span class=prompt>&gt;</span> <span class=code>as.numeric(d2-d1)/365.25</span><span class=comment> # this is similar to the previous option but it was about twice faster</span>
+<span class=output>[1] 2.001369</span>
+<span class=prompt>&gt;</span> <span class=code>as.numeric(format(d2,&quot;%Y&quot;))-as.numeric(format(d1,&quot;%Y&quot;))-as.numeric(format(d2,&quot;%m-%d&quot;)&lt;format(d1,&quot;%m-%d&quot;))</span>
+<span class=comment># floored years (this was about as slow as the first two lubridate options in my benchmark)</span>
+<span class=output>[1] 2</span>
+<span class=prompt>&gt;</span> <span class=code>as.numeric(substr(x,1,4))-as.numeric(substr(y,1,4))-as.numeric(substr(x,5,10)&lt;substr(y,5,10))</span>
+<span class=comment># floored years (this was over twice as slow as the previous option)</span>
+<span class=output>[1] 2</span>
 <span class=output>
 <span class=title># difference between maximum an minimum value in vector</span></span>
 <span class=prompt>&gt;</span> <span class=code>diff(range(c(2,-3,5,9)))</span>
@@ -284,7 +295,9 @@ pre{max-width:76em;margin:6px auto;color:white;white-space:pre-wrap;word-wrap:br
 <span class=output>4 a 53 February</span>
 <span class=output>5 b 54 February</span>
 <span class=output>6 c 55 February</span>
-<span class=prompt>&gt;</span> <span class=code>as.data.frame(as.table(m))</span><span class=comment> # the first two columns get converted to factors</span>
+<span class=prompt>&gt;</span> <span class=code>as.data.frame.table(m)</span>
+<span class=comment># the first two columns get converted to factors</span>
+<span class=comment># you can also use `as.data.frame(as.table(m))`</span>
 <span class=output>  Var1     Var2 Freq</span>
 <span class=output>1    a  January   50</span>
 <span class=output>2    b  January   51</span>
@@ -358,11 +371,11 @@ pre{max-width:76em;margin:6px auto;color:white;white-space:pre-wrap;word-wrap:br
 <span class=output>[1] &quot;2023-12&quot;</span>
 <span class=output>
 <span class=title># remove dataframe rows with one or more NA column</span></span>
-<span class=prompt>&gt;</span> <span class=code>d=data.frame(x=c(1,2,NA),y=letters[1:3])</span>
+<span class=prompt>&gt;</span> <span class=code>d=data.frame(x=c(1,NA,3),y=letters[1:3])</span>
 <span class=prompt>&gt;</span> <span class=code>na.omit(d)</span>
 <span class=output>  x y</span>
 <span class=output>1 1 a</span>
-<span class=output>2 2 b</span>
+<span class=output>3 3 c</span>
 <span class=output>
 <span class=title># convert character matrix to numeric</span></span>
 <span class=prompt>&gt;</span> <span class=code>m=matrix(c(&quot;1&quot;,&quot;2&quot;,&quot;3&quot;,&quot;4&quot;),2)</span>
@@ -379,8 +392,8 @@ pre{max-width:76em;margin:6px auto;color:white;white-space:pre-wrap;word-wrap:br
 <span class=prompt>&gt;</span> <span class=code>exp(mean(log(v)))</span>
 <span class=output>[1] 2.605171</span>
 <span class=output>
-<span class=title># seq on log scale</span></span>
-<span class=prompt>&gt;</span> <span class=code>exp(seq(log(1e2),log(1e5),,5))</span>
+<span class=title># `seq` on a log scale</span></span>
+<span class=prompt>&gt;</span> <span class=code>exp(seq(log(100),log(1e5),,5))</span>
 <span class=output>100.0000 316.2278 1000.0000 3162.2777 10000.0000</span>
 <span class=output>
 <span class=title># get the point that is halfway between two points on a log scale</span></span>
@@ -628,11 +641,9 @@ pre{max-width:76em;margin:6px auto;color:white;white-space:pre-wrap;word-wrap:br
 <span class=output>
 <span class=title># get indexes of up to 2 first occurrences of each unique value in a vector</span></span>
 <span class=prompt>&gt;</span> <span class=code>v=c(1,1,1,1,2,2,2,3,3,3)</span>
-<span class=prompt>&gt;</span> <span class=code>unname(unlist(tapply(seq_along(v),v,head,2)))</span>
+<span class=prompt>&gt;</span> <span class=code>unname(unlist(tapply(1:length(v),v,head,2)))</span>
 <span class=output>[1] 1 2 5 6 8 9</span>
 <span class=prompt>&gt;</span> <span class=code>c(sapply(split(1:length(v),v),head,2))</span>
-<span class=output>[1] 1 2 5 6 8 9</span>
-<span class=prompt>&gt;</span> <span class=code>which(ave(v,v,FUN=seq)&lt;3)</span>
 <span class=output>[1] 1 2 5 6 8 9</span>
 <span class=prompt>&gt;</span> <span class=code>which(data.table::rowid(v)&lt;3)</span><span class=comment> # this was the fastest option in my benchmark</span>
 <span class=output>[1] 1 2 5 6 8 9</span>
@@ -644,9 +655,6 @@ pre{max-width:76em;margin:6px auto;color:white;white-space:pre-wrap;word-wrap:br
 <span class=prompt>&gt;</span> <span class=code>v=month.name[1:3];mapply(\(x,i)paste(x,i),v,1:length(v))</span>
 <span class=output>     January     February        March</span>
 <span class=output> &quot;January 1&quot; &quot;February 2&quot;    &quot;March 3&quot;</span>
-<span class=prompt>&gt;</span> <span class=code>v=month.name[1:3];unlist(Map(\(x,i)paste(i,x),v,1:length(v)))</span>
-<span class=output>     January     February        March</span>
-<span class=output> &quot;1 January&quot; &quot;2 February&quot;    &quot;3 March&quot;</span>
 <span class=output>
 <span class=title># repeat each row of a matrix 2 times</span></span>
 <span class=prompt>&gt;</span> <span class=code>m=matrix(1:4,2)</span>
@@ -687,4 +695,55 @@ pre{max-width:76em;margin:6px auto;color:white;white-space:pre-wrap;word-wrap:br
 <span class=output>[1] 123000</span>
 <span class=prompt>&gt;</span> <span class=code>round(x,3-ceiling(log10(abs(x))))</span><span class=comment> # this is identical to `signif` according to the help page of `signif`</span>
 <span class=output>[1] 123000</span>
+<span class=output>
+<span class=title># add one month to a date</span></span>
+<span class=prompt>&gt;</span> <span class=code>seq(as.Date(&quot;2023-12-25&quot;),,&quot;month&quot;,2)[-1]</span>
+<span class=output>[1] &quot;2024-01-25&quot;</span>
+<span class=prompt>&gt;</span> <span class=code>as.Date(&quot;2023-12-25&quot;)%m+%months(1)</span><span class=comment> # lubridate</span>
+<span class=output>[1] &quot;2024-01-25&quot;</span>
+<span class=prompt>&gt;</span> <span class=code>d=as.POSIXlt(&quot;2023-12-25&quot;);d$mon=d$mon+1;as.Date(d)</span>
+<span class=output>[1] &quot;2024-01-25&quot;</span>
+<span class=output>
+<span class=title># apply a series of functions to specified range of cells in place</span></span>
+<span class=prompt>&gt;</span> <span class=code>m=matrix(1:8,2)</span>
+<span class=prompt>&gt;</span> <span class=code>m[2,3:4]%&lt;&gt;%(\(x)x*2+1)</span>
+<span class=prompt>&gt;</span> <span class=code>m</span>
+<span class=output>     [,1] [,2] [,3] [,4]</span>
+<span class=output>[1,]    1    3    5    7</span>
+<span class=output>[2,]    2    4   13   17</span>
+<span class=output>
+<span class=title># get US state name from abbreviation</span></span>
+<span class=prompt>&gt;</span> <span class=code>state.name[match(&quot;CT&quot;,state.abb)]</span>
+<span class=comment># the `state.name` and `state.abb` vectors are included in the base `datasets` package</span>
+<span class=output>[1] &quot;Connecticut&quot;</span>
+<span class=output>
+<span class=title># calculate z-scores</span></span>
+<span class=prompt>&gt;</span> <span class=code>scale(mtcars[1:3,1:3])|&gt;as.data.frame()</span>
+<span class=comment># `scale` calculates z-scores for each column by subtracting the mean and dividing by the standard deviation</span>
+<span class=comment># `as.data.frame` removes attributes added by `scale` but not dimname attributes</span>
+<span class=output>                     mpg        cyl       disp</span>
+<span class=output>Mazda RX4     -0.5773503  0.5773503  0.5773503</span>
+<span class=output>Mazda RX4 Wag -0.5773503  0.5773503  0.5773503</span>
+<span class=output>Datsun 710     1.1547005 -1.1547005 -1.1547005</span>
+<span class=prompt>&gt;</span> <span class=code>d=mtcars[1:3,1:3];t((t(d)-colMeans(d))/apply(d,2,sd))</span>
+<span class=output>                     mpg        cyl       disp</span>
+<span class=output>Mazda RX4     -0.5773503  0.5773503  0.5773503</span>
+<span class=output>Mazda RX4 Wag -0.5773503  0.5773503  0.5773503</span>
+<span class=output>Datsun 710     1.1547005 -1.1547005 -1.1547005</span>
+<span class=output>
+<span class=title># divide items into clusters of similar items by doing hierarchical clustering of z-scores</span></span>
+<span class=prompt>&gt;</span> <span class=code>o=cutree(hclust(dist(scale(mtcars))),12)</span>
+<span class=prompt>&gt;</span> <span class=code>paste0(unique(o),&quot;: &quot;,tapply(names(o),o,paste,collapse=&quot;, &quot;))|&gt;writeLines()</span>
+<span class=output>1: Mazda RX4, Mazda RX4 Wag, Ferrari Dino</span>
+<span class=output>2: Datsun 710, Volvo 142E</span>
+<span class=output>3: Hornet 4 Drive, Valiant</span>
+<span class=output>4: Hornet Sportabout, Merc 450SE, Merc 450SL, Merc 450SLC, Dodge Challenger, AMC Javelin, Pontiac Firebird</span>
+<span class=output>5: Duster 360, Camaro Z28</span>
+<span class=output>6: Merc 240D, Merc 230, Toyota Corona</span>
+<span class=output>7: Merc 280, Merc 280C</span>
+<span class=output>8: Cadillac Fleetwood, Lincoln Continental, Chrysler Imperial</span>
+<span class=output>9: Fiat 128, Honda Civic, Toyota Corolla, Fiat X1-9</span>
+<span class=output>10: Porsche 914-2, Lotus Europa</span>
+<span class=output>11: Ford Pantera L</span>
+<span class=output>12: Maserati Bora</span>
 </pre>
