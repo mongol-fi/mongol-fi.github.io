@@ -104,6 +104,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Excess_seasonality_adjusted_ASMR_in_New_Zealand>Excess seasonality-adjusted ASMR in New Zealand</a></li>
 <li><a href=#Tweet_by_Kirsch_about_mortality_in_doses_3_and_4_combined_together>Tweet by Kirsch about mortality in doses 3 and 4 combined together</a></li>
 <li><a href=#Excess_ASMR_compared_to_reported_mortality_data_in_New_Zealand>Excess ASMR compared to reported mortality data in New Zealand</a></li>
+<li><a href=#Calculating_expected_number_of_deaths_based_on_reported_monthly_deaths>Calculating expected number of deaths based on reported monthly deaths</a></li>
 </ul></li>
 </ul>
 
@@ -2939,6 +2940,69 @@ pheatmap::pheatmap(
 system(&quot;convert -trim i1.png -gravity northwest -splice x14 -size `identify -format %w i1.png`x -pointsize 40 caption:&#39;Excess ASMR percent relative to reported ASMR among whole NZ population (bucket system)&#39; +swap -append -trim -bordercolor white -border 24 +repage 1..png&quot;)
 system(&quot;convert -trim i2.png -gravity northwest -splice x14 -size `identify -format %w i2.png`x -pointsize 40 caption:&#39;Population in person-years (bucket system)&#39; +swap -append -trim -bordercolor white -border 24 +repage 2..png&quot;)
 system(&quot;montage -geometry +0+0 -tile 1x [12]..png 1.png&quot;)</pre>
+<h3>
+<a href=#Calculating_expected_number_of_deaths_based_on_reported_monthly_deaths id=Calculating_expected_number_of_deaths_based_on_reported_monthly_deaths>Calculating expected number of deaths based on reported monthly deaths</a>
+</h3>
+<p>OpenVAET/canceledmouse used the monthly reported deaths in New Zealand in 5-year age groups to calculate what the expected number of deaths would've been for people in the pay-per-dose cohort: [<a href="https://openvaet.substack.com/p/the-new-zealand-whistleblower-data">https://openvaet.substack.com/p/the-new-zealand-whistleblower-data</a>]</p>
+<blockquote>
+<p>This is what the final modelled data looks like:</p>
+<blockquote>
+<p>The red bars represent the reported deaths by week in the NZ <span class="quote">&quot;whistleblower&quot;</span> data set.</p>
+<p>The grey bars represent the expected (modelled) deaths by week of the same size cohort with the same age distribution based on the available mortality data provided at NZstats.</p>
+</blockquote>
+<p><img src=i/moar-vaet-1.png class=width7></p>
+<blockquote>
+<p>The overall totals of death up to the 125th week (when the NZWB data deaths drop sharply due to reporting lag) amount to:</p>
+<p>NZWB reported data = 36,683 deaths<br> Modelled (expected) data = 43,616 deaths</p>
+</blockquote>
+<p>What you can see is that there are actually less deaths in the cohort than should be expected based on the background data - about 14% less.</p>
+</blockquote>
+<p>OpenVAET got 43,616 expected deaths up to week 125 since the beginning of data (which I believe is the week that ends on August 30th 2023, since the first death in the dataset is on May 9th 2021, and OpenVaet started his week numbers from 1 and not 0). However he said that there were 36,683 deaths in the pay-per-dose data up to the end of week 125, which seems to match the number of deaths on September 26th and not 30th:</p>
+<pre>&gt; t=as.data.frame(data.table::fread(&quot;nz-record-level-data-4M-records.csv&quot;,showProgress=F))
+&gt; for(i in grep(&quot;date&quot;,colnames(t)))t[,i]=as.Date(t[,i],&quot;%m-%d-%Y&quot;)
+&gt; min(t$date_of_death,na.rm=T)+(125*7-1) # get last day of week 125 if week 1 starts on 2021-05-09
+&quot;2023-09-30&quot;
+&gt; sum(!duplicated(t$mrn)&amp;!is.na(t$date_of_death)&amp;t$date_of_death&lt;=as.Date(&quot;2023-9-26&quot;))
+[1] 36683</pre>
+<p>But anyway, when I tried a similar approach of calculating the expected number of deaths based on the monthly reported number of deaths in 5-year age groups, and I only included data up to September 30th 2023, I got similar results as OpenVAET. I got a total of about 44,141 expected deaths, but the actual number of deaths was about 16% lower:</p>
+<pre>&gt; t=read.table(&quot;data-transparency/New Zealand/time-series summaries/month_dose_week_single_age.txt&quot;,header=T)
+&gt; t=t[t$dose&gt;=1&amp;t$month&lt;=&quot;2023-09&quot;,]
+&gt; death=read.csv(&quot;https://mongol-fi.github.io/f/nz_monthly_deaths_by_age.csv&quot;)|&gt;subset(ethnicity==&quot;Total&quot;)
+&gt; a=with(death,aggregate(count,list(year=year_reg,month=month_reg,age=as.numeric(substr(age_group,1,2))),sum))
+&gt; pop=read.csv(&quot;https://mongol-fi.github.io/f/nz_infoshare_population.csv&quot;,row.names=1,check.names=F)|&gt;tail(10)
+&gt; ages=unique(a$age)
+&gt; cut=cut(as.numeric(colnames(pop)),c(ages,Inf),,T,F)
+&gt; pop2=tapply(unlist(pop),list(row(pop),rep(cut,each=nrow(pop))),sum,na.rm=T)
+&gt; me=merge(expand.grid(list(age=ages,year=as.numeric(rownames(pop))))|&gt;cbind(pop=c(t(pop2)),month=7),a,all=T)
+&gt; me$pop=unlist(tapply(me$pop,me$age,zoo::na.spline))
+&gt; me$pop=me$pop*c(31,28,31,30,31,30,31,31,30,31,30,31)[me$month]
+&gt; t$age=ages[cut(t$age,c(ages,Inf),,T,F)]
+&gt; me$month=sprintf(&quot;%d-%02d&quot;,me$year,me$month)
+&gt; me=merge(me,t)
+&gt; expected=tapply(me$alive*me$x/me$pop,me$month,sum,na.rm=T)
+&gt; options(width=100)
+&gt; round(expected)
+2021-04 2021-05 2021-06 2021-07 2021-08 2021-09 2021-10 2021-11 2021-12 2022-01 2022-02 2022-03
+      0      11      54     117     326     537     550     631     739    1058    1187    1523
+2022-04 2022-05 2022-06 2022-07 2022-08 2022-09 2022-10 2022-11 2022-12 2023-01 2023-02 2023-03
+   1441    1619    1641    1908    2505    2166    2021    2109    2033    2177    1828    2074
+2023-04 2023-05 2023-06 2023-07 2023-08 2023-09
+   1933    2399    2377    2339    2434    2406
+&gt; sum(expected)
+[1] 44141.37
+&gt; sum(me$dead)
+[1] 36962
+&gt; sum(me$dead)/sum(expected)
+[1] 0.8373551</pre>
+<p>I got negative excess mortality for each month:</p>
+<pre>&gt; round((tapply(me$dead,me$month,sum)-expected)/expected*100)
+2021-04 2021-05 2021-06 2021-07 2021-08 2021-09 2021-10 2021-11 2021-12 2022-01 2022-02 2022-03
+   -100     -16     -31     -45     -57     -52     -35     -23     -26     -28     -26     -19
+2022-04 2022-05 2022-06 2022-07 2022-08 2022-09 2022-10 2022-11 2022-12 2023-01 2023-02 2023-03
+    -17     -18     -12     -14     -32     -25     -14     -18     -10     -15     -11     -14
+2023-04 2023-05 2023-06 2023-07 2023-08 2023-09
+     -3     -15     -11      -3      -8     -10</pre>
+<p>I got -32% excess mortality in August 2022 but only -14% excess mortality in July 2022, even though New Zealand had a sharp drop in excess mortality and COVID deaths from July to August 2022. However the dataset for the monthly number of deaths I used was by registration date and not date of occurrence, so some deaths that occurred in July 2022 may have only been registered in August 2022. [<a href="https://www.stats.govt.nz/information-releases/births-and-deaths-year-ended-september-2023/">https://www.stats.govt.nz/information-releases/births-and-deaths-year-ended-september-2023/</a>]</p>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
