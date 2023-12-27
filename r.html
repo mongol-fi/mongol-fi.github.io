@@ -57,9 +57,11 @@ pre{max-width:76em;margin:6px auto;color:white;white-space:pre-wrap;word-wrap:br
 <span class=prompt>&gt;</span> <span class=code>v=c(3,5,7,3,-1)</span>
 <span class=prompt>&gt;</span> <span class=code>o=outer(1:length(v),-1:1,&quot;+&quot;);rowMeans(matrix(v[ifelse(o&lt;1|o&gt;length(v),NA,o)],length(v)),na.rm=T)</span><span class=comment> # this is fast</span>
 <span class=output>[1] 4 5 5 3 1</span>
-<span class=prompt>&gt;</span> <span class=code>zoo::rollapplyr(v,3,mean,partial=T,align=&quot;center&quot;)</span><span class=comment> # this was about 50 times slower than the vectorized base R method</span>
+<span class=prompt>&gt;</span> <span class=code>l=length(v);sapply(1:l,\(i)mean(v[max(1,i-1):min(l,i+1)],na.rm=T))</span><span class=comment> # this was about 10 times slower than the first method</span>
 <span class=output>[1] 4 5 5 3 1</span>
-<span class=prompt>&gt;</span> <span class=code>slider::slide_dbl(v,mean,.before=1,.after=1)</span><span class=comment> # this was about 3 times slower than the vectorized base R method</span>
+<span class=prompt>&gt;</span> <span class=code>zoo::rollapplyr(v,3,mean,partial=T,align=&quot;center&quot;)</span><span class=comment> # this was about 50 times slower than the first method</span>
+<span class=output>[1] 4 5 5 3 1</span>
+<span class=prompt>&gt;</span> <span class=code>slider::slide_dbl(v,mean,.before=1,.after=1)</span><span class=comment> # this was about 3 times slower than the firs tmethod</span>
 <span class=output>[1] 4 5 5 3 1</span>
 <span class=output>
 <span class=title># ignore NA in cumulative sum</span></span>
@@ -763,4 +765,35 @@ pre{max-width:76em;margin:6px auto;color:white;white-space:pre-wrap;word-wrap:br
 <span class=output>10: Porsche 914-2, Lotus Europa</span>
 <span class=output>11: Ford Pantera L</span>
 <span class=output>12: Maserati Bora</span>
+<span class=output>
+<span class=title># convert quarterly data to monthly data</span></span>
+<span class=prompt>&gt;</span> <span class=code>quarterly=c(67190,66350,65510,65020)</span>
+<span class=prompt>&gt;</span> <span class=code>round(zoo::na.spline(c(rbind(NA,quarterly,NA))))</span>
+<span class=comment># this always uses the quarterly total as the value for the middle month of the quarter</span>
+<span class=comment># this doesn&apos;t account for different months having different lengths</span>
+<span class=output> [1] 67410 67190 66932 66647 66350 66053 65768 65510 65290 65123 65020 64995</span>
+<span class=output>
+<span class=title># split matrix into groups of columns</span></span>
+<span class=prompt>&gt;</span> <span class=code>m=matrix(1:10,2);split=c(1,1,1,2,2)</span>
+<span class=prompt>&gt;</span> <span class=code>t(m)|&gt;split.data.frame(split)</span><span class=comment> # `split.data.frame` splits a matrix by rows</span>
+<span class=output>$`1`</span>
+<span class=output>     [,1] [,2]</span>
+<span class=output>[1,]    1    2</span>
+<span class=output>[2,]    3    4</span>
+<span class=output>[3,]    5    6</span>
+<span class=output>$`2`</span>
+<span class=output>     [,1] [,2]</span>
+<span class=output>[1,]    7    8</span>
+<span class=output>[2,]    9   10</span>
+<span class=output>
+<span class=title># rowsums by groups of columns</span></span>
+<span class=prompt>&gt;</span> <span class=code>m=matrix(1:10,2);group=c(1,1,2,2,2)</span>
+<span class=prompt>&gt;</span> <span class=code>tapply(m,list(row(m),group[col(m)]),sum)</span>
+<span class=output>  1  2</span>
+<span class=output>1 4 21</span>
+<span class=output>2 6 24</span>
+<span class=prompt>&gt;</span> <span class=code>t(rowsum(t(m),group))</span><span class=comment> # there is no `colsum` function</span>
+<span class=output>     1  2</span>
+<span class=output>[1,] 4 21</span>
+<span class=output>[2,] 6 24</span>
 </pre>
