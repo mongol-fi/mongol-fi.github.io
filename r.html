@@ -751,26 +751,16 @@ pre{max-width:76em;margin:6px auto;color:white;white-space:pre-wrap;word-wrap:br
 <span class=output>Datsun 710     1.1547005 -1.1547005 -1.1547005</span>
 <span class=output>
 <span class=title># divide items into clusters of similar items by doing hierarchical clustering of z-scores</span></span>
-<span class=prompt>&gt;</span> <span class=code>o=cutree(hclust(dist(scale(mtcars))),12)</span><span class=comment> # `cutree` cuts the tree at the height where it has 12 subtrees</span>
-<span class=prompt>&gt;</span> <span class=code>paste0(unique(o),&quot;: &quot;,tapply(names(o),o,paste,collapse=&quot;, &quot;))|&gt;writeLines()</span>
-<span class=output>1: Mazda RX4, Mazda RX4 Wag, Ferrari Dino</span>
-<span class=output>2: Datsun 710, Volvo 142E</span>
-<span class=output>3: Hornet 4 Drive, Valiant</span>
-<span class=output>4: Hornet Sportabout, Merc 450SE, Merc 450SL, Merc 450SLC, Dodge Challenger, AMC Javelin, Pontiac Firebird</span>
-<span class=output>5: Duster 360, Camaro Z28</span>
-<span class=output>6: Merc 240D, Merc 230, Toyota Corona</span>
-<span class=output>7: Merc 280, Merc 280C</span>
-<span class=output>8: Cadillac Fleetwood, Lincoln Continental, Chrysler Imperial</span>
-<span class=output>9: Fiat 128, Honda Civic, Toyota Corolla, Fiat X1-9</span>
-<span class=output>10: Porsche 914-2, Lotus Europa</span>
-<span class=output>11: Ford Pantera L</span>
-<span class=output>12: Maserati Bora</span>
+<span class=prompt>&gt;</span> <span class=code>hclust(dist(scale(head(mtcars,8))))|&gt;cutree(3)</span><span class=comment> # `cutree(3)` cuts the tree at the height where it has 3 subtrees</span>
+<span class=output>        Mazda RX4     Mazda RX4 Wag        Datsun 710    Hornet 4 Drive</span>
+<span class=output>                1                 1                 1                 2</span>
+<span class=output>Hornet Sportabout           Valiant        Duster 360         Merc 240D</span>
+<span class=output>                3                 2                 3                 1</span>
 <span class=output>
 <span class=title># convert quarterly data to monthly data</span></span>
 <span class=prompt>&gt;</span> <span class=code>quarterly=c(67190,66350,65510,65020)</span>
 <span class=prompt>&gt;</span> <span class=code>round(zoo::na.spline(c(rbind(NA,quarterly,NA))))</span>
 <span class=comment># this always uses the quarterly total as the value for the middle month of the quarter</span>
-<span class=comment># this doesn&apos;t account for different months having different lengths</span>
 <span class=output>[1] 67410 67190 66932 66647 66350 66053 65768 65510 65290 65123 65020 64995</span>
 <span class=output>
 <span class=title># split matrix into groups of columns</span></span>
@@ -795,13 +785,50 @@ pre{max-width:76em;margin:6px auto;color:white;white-space:pre-wrap;word-wrap:br
 <span class=output>[2,]    6    8   10</span>
 <span class=output>
 <span class=title># rowsums by column group vector</span></span>
-<span class=prompt>&gt;</span> <span class=code>m=matrix(1:10,2);group=c(1,1,2,2,2)</span>
-<span class=prompt>&gt;</span> <span class=code>tapply(m,list(row(m),group[col(m)]),sum)</span>
+<span class=prompt>&gt;</span> <span class=code>m=matrix(1:10,2);v=c(1,1,2,2,2)</span>
+<span class=prompt>&gt;</span> <span class=code>tapply(m,list(row(m),v[col(m)]),sum)</span>
 <span class=output>  1  2</span>
 <span class=output>1 4 21</span>
 <span class=output>2 6 24</span>
-<span class=prompt>&gt;</span> <span class=code>t(rowsum(t(m),group))</span><span class=comment> # there is no `colsum` function</span>
+<span class=prompt>&gt;</span> <span class=code>t(rowsum(t(m),v))</span><span class=comment> # there is no `colsum` function</span>
 <span class=output>     1  2</span>
 <span class=output>[1,] 4 21</span>
 <span class=output>[2,] 6 24</span>
+<span class=output>
+<span class=title># calculate excess deaths using a linear baseline</span></span>
+<span class=prompt>&gt;</span> <span class=code>d=data.frame(year=2015:2022,deaths=c(31712,31336,33581,33140,34170,32739,34913,38554))</span>
+<span class=prompt>&gt;</span> <span class=code>d$trend=predict(lm(deaths~year,subset(d,year&lt;2020)),d)</span>
+<span class=prompt>&gt;</span> <span class=code>d$excess=d$deaths-d$trend</span>
+<span class=prompt>&gt;</span> <span class=code>round(d)</span>
+<span class=output>  year deaths trend excess</span>
+<span class=output>1 2015  31712 31444    268</span>
+<span class=output>2 2016  31336 32116   -780</span>
+<span class=output>3 2017  33581 32788    793</span>
+<span class=output>4 2018  33140 33460   -320</span>
+<span class=output>5 2019  34170 34132     38</span>
+<span class=output>6 2020  32739 34804  -2065</span>
+<span class=output>7 2021  34913 35476   -563</span>
+<span class=output>8 2022  38554 36148   2406</span>
+<span class=output>
+<span class=title># calculate excess age-standardized mortality rate using the 2013 European Standard Population</span></span>
+<span class=prompt>&gt;</span> <span class=code>nzpop=tail(read.csv(&quot;https://mongol-fi.github.io/f/nz_infoshare_population.csv&quot;,check.names=F),8)</span>
+<span class=prompt>&gt;</span> <span class=code>nzdeath=tail(read.csv(&quot;https://mongol-fi.github.io/f/nz_infoshare_deaths.csv&quot;,check.names=F),8)</span>
+<span class=prompt>&gt;</span> <span class=code>esp=c(1000,4000,5500,5500,5500,6000,6000,6500,7000,7000,7000,7000,6500,6000,5500,5000,4000,2500,1500,800,200)</span>
+<span class=prompt>&gt;</span> <span class=code>espage=c(0,1,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95)</span>
+<span class=prompt>&gt;</span> <span class=code>pop=split.data.frame(t(nzpop[,-1]),cut(as.numeric(colnames(nzpop)[-1]),c(espage,Inf),,T,F))|&gt;sapply(colSums)</span>
+<span class=prompt>&gt;</span> <span class=code>death=split.data.frame(t(nzdeath[,-1]),cut(as.numeric(colnames(nzdeath)[-1]),c(espage,Inf),,T,F))|&gt;sapply(colSums)</span>
+<span class=prompt>&gt;</span> <span class=code>d=data.frame(year=nzpop[,1],pop=rowSums(nzpop[,-1]),death=rowSums(nzdeath[,-1]))</span>
+<span class=prompt>&gt;</span> <span class=code>d$asmr=rowSums(t(t(death)*esp)/pop)</span>
+<span class=prompt>&gt;</span> <span class=code>d$trend=lm(asmr~year,subset(d,year&lt;2020))|&gt;predict(d)</span>
+<span class=prompt>&gt;</span> <span class=code>d$excesspct=(d$asmr-d$trend)/d$trend*100</span>
+<span class=prompt>&gt;</span> <span class=code>print.data.frame(round(d),row.names=F)</span>
+<span class=output> year     pop death asmr trend excesspct</span>
+<span class=output> 2015 4612910 31608  936   924         1</span>
+<span class=output> 2016 4716520 31176  893   918        -3</span>
+<span class=output> 2017 4815070 33333  928   912         2</span>
+<span class=output> 2018 4902090 33234  901   906         0</span>
+<span class=output> 2019 4985560 34257  901   900         0</span>
+<span class=output> 2020 5085970 32616  828   894        -7</span>
+<span class=output> 2021 5111110 34911  859   888        -3</span>
+<span class=output> 2022 5125220 38547  929   882         5</span>
 </pre>
