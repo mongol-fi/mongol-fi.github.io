@@ -212,6 +212,13 @@ Anyone doing serious work on the data should always use the date of birth to com
  15785  15744  14393  14328  13802  13661  12171  11858  11384  11250  10947
     48     47     30     38     37     31     32     33
  10782  10624  10494  10359  10178   9610   9323   9300</pre>
+<p>The difference between the age column and the age at vaccination is between 0 and 3 years, and the most common difference is 2 years:</p>
+<pre>&gt; t=as.data.frame(data.table::fread(&quot;nz-record-level-data-4M-records.csv&quot;,showProgress=F))
+&gt; for(i in grep(&quot;date&quot;,colnames(t)))t[,i]=as.Date(t[,i],&quot;%m-%d-%Y&quot;)
+&gt; library(lubridate);table(t$age-t$date_of_birth%--%t$date_time_of_service%/%years())
+
+      0       1       2       3
+ 256801 1042553 2571549  322535</pre>
 <h3>
 <a href=#Representation_of_age_groups_in_the_dataset id=Representation_of_age_groups_in_the_dataset>Representation of age groups in the dataset</a>
 </h3>
@@ -3143,12 +3150,26 @@ system(&quot;qlmanage -p 1.png &amp;&gt;/dev/null&quot;)</pre>
 <div class="width5">
 <img src="i/moar-epidemiologist-1.jpg">
 </div>
-<p>In the plots above the y-axis shows deaths per person-years. The plot that is labeled <span class="quote">&quot;trend&quot;</span> probably shows the 1-year moving average with a centered window, because the trend line is missing for the first half year in 2011 and the last half year in 2023. And if the 1-year moving average had a backwards window, the lowest point would be in 2020 Q4 and not 2020 Q2.</p>
-<p>The reason why the trend jumps up in early 2021 is because the window moves past the period in mid-2020 with the greatest negative excess mortality. And the reason why the trend jumps up in late 2021 is because the first COVID wave in 2022 passes inside the window:</p>
+<p>In the plots above the y-axis shows deaths per person-years. At first I thought that the plot that is labeled <span class="quote">&quot;trend&quot;</span> was a 1-year moving average with a centered window, because the trend line is missing for the first half year in 2011 and the last half year in 2023. And if the 1-year moving average had a backwards window, the lowest point would be in 2020 Q4 and not 2020 Q2.</p>
+<p>However Kirsch later published the R code that was used by the epidemiologist from a top university, and it turned out that the plot used the <code>stl</code> function with the <code>&quot;periodic&quot;</code> parameter: <a href="https://github.com/skirsch/R-projects/blob/main/NewZealand/main_share%2eR">https://github.com/skirsch/R-projects/blob/main/NewZealand/main_share%2eR</a>. The help page of the function says:</p>
+<pre>Decompose a time series into seasonal, trend and irregular
+components using loess, acronym STL.
+
+[...]
+
+The seasonal component is found by _loess_ smoothing the seasonal
+sub-series (the series of all January values, ...); if &#39;s.window =
+&quot;periodic&quot;&#39; smoothing is effectively replaced by taking the mean.
+The seasonal values are removed, and the remainder smoothed to
+find the trend. The overall level is removed from the seasonal
+component and added to the trend component. This process is
+iterated a few times.  The &#39;remainder&#39; component is the residuals
+from the seasonal plus trend fit.</pre>
+<p>However the results of the <code>stl</code> function are similar to a 1-year moving average with a centered window, except it's a bit smoother. So if you think of the trend as a centered moving average, then the reason why it jumps up in early 2021 is because the window moves past the period in mid-2020 with the greatest negative excess mortality. And the reason why the trend jumps up in late 2021 is because the first COVID wave in 2022 passes inside the window:</p>
 <div class="width8">
 <img src="i/moar-epidemiologist-2.png">
 </div>
-<p>However in 2021 Q2 and Q3 when the majority of the population of New Zealand got vaccinated, the seasonality-adjusted excess mortality remains negative in my plot above.</p>
+<p>However in my plot above if you look at the gray ribbon for excess mortality, you can see that it mostly remained negative in the second and third quarters of 2021, which is when the majority of the NZ population got vaccinated.</p>
 <h3>
 <a href=#Increase_in_mortality_rate_in_batches_10_13_and_34 id=Increase_in_mortality_rate_in_batches_10_13_and_34>Increase in mortality rate in batches 10, 13, and 34</a>
 </h3>
@@ -3173,7 +3194,7 @@ system(&quot;qlmanage -p 1.png &amp;&gt;/dev/null&quot;)</pre>
 <p>I didn't adjust my baseline for seasonal fluctuation in mortality, so you can see that there's two winters where the number of deaths for batch 10 remains far above the baseline, even though the deaths dip below the baseline in between. The average vaccination date for doses in batch 10 is in August 2021.</p>
 <p>The average age on the day of vaccination was about 49 for batch 10, 46 for batch 13, and 59 for batch 34. So the reason why batch 34 has the biggest increase in mortality rate might be because the healthy vaccinee effect seems to be stronger in older age groups. And batch 34 also has the steepest increase in the baseline because of the aging of the cohort.</p>
 <p>Uncle John Returns pointed out that Kirsch counted people who died after receiving two shots from batch 10 as two deaths, which ununusually resulted in Kirsch fixing his plots. [<a href="https://twitter.com/UncleJo46902375/status/1740345755519557942">https://twitter.com/UncleJo46902375/status/1740345755519557942</a>]</p>
-<p>I next tried using the method developed by OpenVAET/canceledmouse to calculate excess mortality by batch, where I calculated the baseline based on monthly reported excess mortality in 5-year age groups, so it's adjusted for both seasonality and increased mortality caused by COVID waves. Batch 34 got -74% excess mortality on weeks 0-4 after vaccination, and in general batches given to older people had greater negative excess mortality during the first weeks after vaccination. The correlation between excess mortality on weeks 0-4 and average age was about -0.40:</p>
+<p>I next tried using the method developed by OpenVAET/canceledmouse to calculate excess mortality by batch, where I calculated the baseline based on monthly reported excess mortality in 5-year age groups, so it's adjusted for both seasonality and increased mortality caused by COVID waves. I used the bucket system so that a person who got a vaccine from a new batch was no longer included under earlier batches. Batch 34 got -74% excess mortality on weeks 0-4 after vaccination, and in general batches given to older people had greater negative excess mortality during the first weeks after vaccination. The correlation between excess mortality on weeks 0-4 and average age was about -0.40:</p>
 <div class="width14">
 <img src="i/moar-batch-weeks-heat.png">
 </div>
