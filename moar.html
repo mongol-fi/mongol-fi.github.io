@@ -3150,8 +3150,8 @@ system(&quot;qlmanage -p 1.png &amp;&gt;/dev/null&quot;)</pre>
 <div class="width5">
 <img src="i/moar-epidemiologist-1.jpg">
 </div>
-<p>In the plots above the y-axis shows deaths per person-years. At first I thought that the plot that is labeled <span class="quote">&quot;trend&quot;</span> was a 1-year moving average with a centered window, because the trend line is missing for the first half year in 2011 and the last half year in 2023. And if the 1-year moving average had a backwards window, the lowest point would be in 2020 Q4 and not 2020 Q2.</p>
-<p>However Kirsch later published the R code that was used by the epidemiologist from a top university, and it turned out that the plot used the <code>stl</code> function with the <code>&quot;periodic&quot;</code> parameter: <a href="https://github.com/skirsch/R-projects/blob/main/NewZealand/main_share%2eR">https://github.com/skirsch/R-projects/blob/main/NewZealand/main_share%2eR</a>. The help page of the function says:</p>
+<p>In the plots above the y-axis shows deaths per person-years. At first I thought that the trend was a 1-year moving average with a centered window, because the trend line is missing for the first half year in 2011 and the last half year in 2023. And in a 1-year moving average with a backwards window, the lowest point in the trend would be in the fourth and not second quarter of 2020.</p>
+<p>However Kirsch later published the R code that was used to make the plot, and it turned out that it used the <code>stl</code> function with the <code>&quot;periodic&quot;</code> parameter: <a href="https://github.com/skirsch/R-projects/blob/main/NewZealand/main_share%2eR">https://github.com/skirsch/R-projects/blob/main/NewZealand/main_share%2eR</a>. The help page of the function says:</p>
 <pre>Decompose a time series into seasonal, trend and irregular
 components using loess, acronym STL.
 
@@ -3165,11 +3165,23 @@ find the trend. The overall level is removed from the seasonal
 component and added to the trend component. This process is
 iterated a few times.  The &#39;remainder&#39; component is the residuals
 from the seasonal plus trend fit.</pre>
-<p>However the results of the <code>stl</code> function are similar to a 1-year moving average with a centered window, except it's a bit smoother. So if you think of the trend as a centered moving average, then the reason why it jumps up in early 2021 is because the window moves past the period in mid-2020 with the greatest negative excess mortality. And the reason why the trend jumps up in late 2021 is because the first COVID wave in 2022 passes inside the window:</p>
-<div class="width8">
+<p>The results of the <code>stl</code> function are similar to a 1-year moving average with a centered window, except it's a bit smoother. So if you think of the trend as a centered moving average, then the reason why it jumps up in early 2021 is because the window moves past the period in mid-2020 with the greatest negative excess mortality, and the reason why the trend jumps up in late 2021 is because the spike in COVID deaths in 2022 passes inside the window:</p>
+<div class="width6">
 <img src="i/moar-epidemiologist-2.png">
 </div>
-<p>However in my plot above if you look at the gray ribbon for excess mortality, you can see that it mostly remained negative in the second and third quarters of 2021, which is when the majority of the NZ population got vaccinated.</p>
+<p>However my plot above shows that excess mortality mostly remained negative in the second and third quarters of 2021, which is when the majority of the NZ population got vaccinated.</p>
+<p>This compares the trend calculated with <code>stl</code> to a 52-week centered moving average:</p>
+<pre>&gt; t=read.csv(&quot;https://www.mortality.org/File/GetDocument/Public/STMF/Outputs/NZL_NPstmfout.csv&quot;)
+&gt; t=t[t$Sex==&quot;b&quot;,]
+&gt; isoweek=\(year,week,weekday=1){d=as.Date(paste0(year,&quot;-1-7&quot;));d-(as.integer(format(d,&quot;%w&quot;))+6)%%7-1+7*(week-1)+weekday}
+&gt; xy=data.frame(x=isoweek(t$Year,t$Week,4),y=t$Total.1*1e5)
+&gt; vma=\(x,y){o=outer(1:length(x),y,&quot;+&quot;);rowMeans(matrix(x[ifelse(o&gt;=1&amp;o&lt;=length(x),o,NA)],length(x)),na.rm=T)}
+&gt; xy$movingaverage=vma(xy$y,-26:25)
+&gt; xy$stl=stl(ts(xy$y,frequency=52,start=2010+51/52),&quot;periodic&quot;)$time.series[,2]
+&gt; head(xy,2)
+           x        y movingaverage      stl
+1 2010-12-30 644.0150      661.7664 697.5768
+2 2011-01-06 669.6959      663.6873 697.1584</pre>
 <h3>
 <a href=#Increase_in_mortality_rate_in_batches_10_13_and_34 id=Increase_in_mortality_rate_in_batches_10_13_and_34>Increase in mortality rate in batches 10, 13, and 34</a>
 </h3>
