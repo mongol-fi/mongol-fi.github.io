@@ -3466,19 +3466,32 @@ system(&quot;montage -geometry +0+0 -tile 2x [12]..png 1.png&quot;)</pre>
 <div class="width6">
 <img src="i/moar-connecticut-1.png">
 </div>
-<p>So the ratio between unvaccinated and vaccinated mortality appears to be higher during COVID waves like in the case of the data from the Maldives.</p>
-<p>Kirsch has been arguing that the Medicare data shows that vaccines are killing people because vaccinated people have an increasing trend in deaths, but actually the trend reverses in January 2022 after the Omicron spike has passed.</p>
-<p>Kirsch has also argued that it's somehow a positive sign that unvaccinated people have a decreasing trend in mortality in the Medicare data. But he doesn't seem to understand that if you use the mortality level in 2023 or late 2022 as the baseline, then a decreasing trend in mortality up to that point just means that there was elevated mortality earlier.</p>
-<pre>ct=read.csv(&quot;https://mongol-fi.github.io/f/kirsch_medicare_connecticut.csv&quot;)
+<p>As a workaround for getting a fixed cohort of unvaccinated people, you can select people who were unvaccinated at a certain point of time even though they may have later been vaccinated. In the plot below where I used the end of March 2021 as the cutoff point, I got still got higher mortality in unvaccinated people than vaccinated people. At first I thought that the people who had been vaccinated by March 2021 would be older than the people who hadn't, but in fact the average age was about 80.9 for people who had been vaccinated by March 2021 and about 81.2 for people who hadn't. It might be because the Connecticut data only includes people who died later.</p>
+<p>In the plot below the ratio between the maximum point in January 2022 and the minimum point in March 2022 is about 1.97 for unvaccinated people and about 1.60 for vaccinated people. Vaccinated people also have lower mortality from April to June 2021, but it might partially be because of the healthy vaccinee effect:</p>
+<div class="width6">
+<img src="i/moar-connecticut-2.png">
+</div>
+<p>If you use June 2021 instead of March as the cutoff, then in the first months after June there's no clear depression in mortality in vaccinated people, but it's probably because few people got their first vaccine in July-August 2021 (or at least few people who died later, who were mostly elderly):</p>
+<div class="width6">
+<img src="i/moar-connecticut-3.png">
+</div>
+<p>But anyway, the Connecticut data seems to show that the ratio between unvaccinated and vaccinated mortality was higher during COVID waves, like how in the data from the Maldives unvaccinated people had about 2.1 times higher mortality than vaccinated people in May 2021 which was the month when COVID deaths peaked, but during other months the ratio was close to zero.</p>
+<pre>library(tidyverse)
+
+ct=read.csv(&quot;https://mongol-fi.github.io/f/kirsch_medicare_connecticut.csv&quot;)
 ct[,3:10]=lapply(ct[,3:10],as.Date)
 
 vax=apply(ct[,4:10],1,min,na.rm=T)
 vaxlim=as.Date(&quot;2021-04-01&quot;)
+
 pick=!(!is.na(vax)&amp;vax&gt;vaxlim)
 xy=table(ct$death_dt[pick],!is.na(vax[pick]))
-xy=data.frame(x=as.Date(rownames(xy)),y=as.numeric(xy),z=rep(c(&quot;Unvaccinated&quot;,&quot;Vaccinated&quot;),each=nrow(xy)))
-xy$z=factor(xy$z,unique(xy$z))
+xy=data.frame(x=as.Date(rownames(xy)),y=as.numeric(xy),z=rep(c(&quot;Unvaccinated at death&quot;,&quot;Vaccinated by end of March 2021&quot;),each=nrow(xy)))
 
+# xy=table(ct$death_dt,!(or(is.na(vax),vax&gt;vaxlim)))
+# xy=data.frame(x=as.Date(rownames(xy)),y=as.numeric(xy),z=rep(c(&quot;Not vaccinated by end of March 2021&quot;,&quot;Vaccinated by end of March 2021&quot;),each=nrow(xy)))
+
+xy$z=factor(xy$z,unique(xy$z))
 vma=\(x,y){o=outer(1:length(x),y,&quot;+&quot;);rowMeans(matrix(x[ifelse(o&gt;=1&amp;o&lt;=length(x),o,NA)],length(x)),na.rm=T)}
 xy$y=unlist(tapply(xy$y,xy$z,vma,-3:3))
 xy$y=xy$y/(with(subset(xy,x&gt;=&quot;2022-07-01&quot;),tapply(y,z,mean)))[xy$z]*100
@@ -3499,14 +3512,18 @@ ybreak=seq(ystart,yend,ystep)
 label=data.frame(x=xstart+.97*(xend-xstart),y=seq((yend-ystart)*.93+ystart,,-(yend-ystart)/12,nlevels(xy$z)),label=levels(xy$z))
 color=hcl(c(210,0)+15,100,45)
 
-library(ggplot2)
-ggplot(xy,aes(x=x,y=y,color=z))+
+rings=xy|&gt;subset(grepl(&quot;2022-01&quot;,x))|&gt;arrange(-y)|&gt;slice_head(n=1,by=z)
+rings%&lt;&gt;%rbind(xy|&gt;subset(grepl(&quot;2022-03&quot;,x))|&gt;arrange(-y)|&gt;slice_tail(n=1,by=z))
+
+ggplot(xy,aes(x=x,y=y))+
 geom_vline(xintercept=seq(as.Date(&quot;2021-7-1&quot;),as.Date(&quot;2022-10-1&quot;),&quot;3 month&quot;),linewidth=.3,lineend=&quot;square&quot;,color=&quot;gray84&quot;)+
 geom_vline(xintercept=c(xstart,as.Date(&quot;2022-1-1&quot;),xend),linewidth=.3,lineend=&quot;square&quot;)+
 geom_hline(yintercept=c(ystart,100,0,yend),linewidth=.3,lineend=&quot;square&quot;)+
-geom_line(linewidth=.3)+
+geom_line(aes(color=z),linewidth=.3)+
+geom_point(data=rings,size=4,shape=1,stroke=.5)+
 geom_label(data=label,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.85),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.04,&quot;lines&quot;),label.size=0,size=2.9,hjust=1,color=color[1:nlevels(xy$z)])+
-labs(x=NULL,y=NULL,title=&quot;Medicare Connecticut data: 7-day moving average of daily deaths in unvaccinated people or people vaccinated before April 2021, as percentage of average number of deaths in July-December 2022.&quot;|&gt;stringr::str_wrap(80))+
+labs(x=NULL,y=NULL,title=&quot;Medicare Connecticut data: 7-day centered moving average of daily deaths by vaccination status, as percentage of average number of deaths in July to December 2022.&quot;|&gt;str_wrap(80))+
+\&quot;.&quot;|fw(100))+
 scale_x_date(limits=c(xstart,xend),breaks=xbreak,labels=xlab,expand=expansion(0))+
 scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,expand=expansion(0))+
 scale_color_manual(values=color)+
@@ -3523,8 +3540,8 @@ theme(
   panel.grid.major.y=element_line(linewidth=.3,color=&quot;gray84&quot;),
   panel.background=element_rect(fill=&quot;white&quot;),
   plot.margin=margin(.3,.7,.3,.3,&quot;lines&quot;),
-  plot.title=element_text(size=8,margin=margin(.4,0,.7,0,&quot;lines&quot;)),
-  plot.subtitle=element_blank()
+  plot.title=element_text(size=8,margin=margin(.4,0,.5,0,&quot;lines&quot;)),
+  plot.subtitle=element_text(size=7,margin=margin(0,0,.3,0,&quot;lines&quot;))
 )
 ggsave(&quot;1.png&quot;,width=4.5,height=3.2,dpi=400)
 system(&quot;mogrify -gravity center -trim -border 24 -bordercolor white +repage 1.png&quot;)
