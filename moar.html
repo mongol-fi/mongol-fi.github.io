@@ -3583,41 +3583,41 @@ system(&quot;qlmanage -p 1.png&amp;&gt;/dev/null&quot;)</pre>
 &gt; sum(a$dead)/expected
 [1] 1.642346</pre>
 <p>However with buckets.py, weeks 50-79 only include people who hadn't gotten a new vaccine dose in 50 weeks, so the unhealthy stragglers are probably overrepresented. And there are so few deaths on weeks 3-5 that many ages have zero deaths, and the sample size is too small to calculate the baseline for the mortality rate accurately for each age.</p>
-<p>However on each month except May 2021, the people in the pay-per dose data also had lower AMSR than the total New Zealand population:</p>
-<pre>&gt; death=read.csv(&quot;https://mongol-fi.github.io/f/nz_monthly_deaths_by_age.csv&quot;)|&gt;subset(ethnicity==&quot;Total&quot;)
+<p>However on each month except May and June 2021, the people in the pay-per dose data also had lower AMSR than the total New Zealand population:</p>
+<pre>&gt; death=read.csv(&quot;https://mongol-fi.github.io/f/nz_monthly_deaths_by_age.csv&quot;)|&gt;subset(ethnicity==&quot;Total&quot;&amp;year_reg&gt;=2021)
 &gt; a=with(death,aggregate(count,list(year=year_reg,month=month_reg,age=as.numeric(substr(age_group,1,2))),sum,drop=F))
 &gt; esp=c(1000,4000,5500,5500,5500,6000,6000,6500,7000,7000,7000,7000,6500,6000,5500,5000,4000,2500,1500,800,200)
 &gt; espage=c(0,1,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95)
-&gt; pop=read.csv(&quot;https://mongol-fi.github.io/f/nz_infoshare_population.csv&quot;,r=1,check=F)
+&gt; pop=read.csv(&quot;https://mongol-fi.github.io/f/nz_infoshare_population_quarterly.csv&quot;,check.names=F,row.names=1)|&gt;tail(11)
 &gt; cut=cut(as.numeric(colnames(pop)),c(espage,Inf),,T,F)
-&gt; pop2=tapply(unlist(pop),list(row(pop),rep(cut,each=nrow(pop))),sum,na.rm=T)
-&gt; me=merge(expand.grid(list(age=espage,year=as.numeric(rownames(pop))))|&gt;cbind(pop=c(t(pop2)),month=7),a,all=T)
-&gt; me$pop=unlist(tapply(me$pop,me$age,zoo::na.spline))
+&gt; pop=tapply(unlist(pop),list(row(pop),rep(cut,each=nrow(pop))),sum,na.rm=T)
+&gt; library(tempdisagg);pop=apply(pop,2,\(i)as.numeric(predict(td(ts(i,frequency=4)~1,&quot;mean&quot;,to=&quot;monthly&quot;))))
+&gt; me=merge(a,data.frame(year=rep(2021:2023,each=12)[1:33],month=rep(1:12,3)[1:33],age=rep(espage,each=33),pop=c(pop)))
+&gt; data.frame(year=rep(2021:2023,each=12)[1:33],month=rep(1:12,3)[1:33],age=rep(espage,each=33),pop=c(pop))
 &gt; me$pop=me$pop/365*c(31,28,31,30,31,30,31,31,30,31,30,31)[me$month]
 &gt; me$month=factor(me$month,1:12)
-&gt; ag=aggregate(me$x/me$pop*esp[match(me$age,espage)],me[,2:3],sum,na.rm=T)
+&gt; ag=aggregate(me$x/me$pop*esp[match(me$age,espage)],me[,1:2],sum,na.rm=T)
 &gt; buck=read.table(&quot;data-transparency/New Zealand/time-series summaries/month_dose_week_single_age.txt&quot;,header=T)
 &gt; buck=buck[buck$dose&gt;1&amp;buck$month&lt;=&quot;2023-09&quot;&amp;buck$month&gt;=&quot;2021-05&quot;,]
 &gt; buck2=aggregate(buck[,5:6],list(month=buck$month,age=cut(buck$age,c(espage,Inf),,T,F)),sum)
-&gt; asmr=tapply(buck2$dead/buck2$alive*esp[buck2$age],buck2$month,sum)*365
-&gt; baseline=ag$x[match(names(asmr),sprintf(&quot;%d-%02d&quot;,ag$year,ag$month))]
-&gt; excess=(asmr/base-1)*100
-&gt; yemo=list(substr(names(excess),1,4),substr(names(excess),6,7))
-&gt; round(tapply(excess,yemo,c)) # excess ASMR percent
-      01  02  03  04  05  06  07  08  09  10  11  12
-2021  NA  NA  NA  NA  28 -29 -32 -57 -52 -35 -24 -26
-2022 -28 -26 -19 -16 -18 -12 -14 -32 -25 -13 -18  -9
-2023 -16 -11 -15  -3 -15 -11  -4  -9 -11  NA  NA  NA
-&gt; round(tapply(asmr,yemo,c)) # pay-per dose ASMR
-      01  02  03  04   05  06  07  08  09  10  11  12
-2021  NA  NA  NA  NA 1094 647 631 400 446 513 666 607
-2022 596 611 745 750  808 899 874 775 726 741 746 758
-2023 757 746 736 785  803 855 882 879 879  NA  NA  NA
-&gt; round(tapply(baseline,yemo,c)) # reported ASMR in total NZ population
-      01  02  03  04  05   06   07   08  09  10  11  12
-2021  NA  NA  NA  NA 852  911  930  932 925 790 875 825
-2022 826 820 920 897 983 1027 1014 1131 962 850 909 836
-2023 901 836 861 811 950  965  918  960 990  NA  NA  NA</pre>
+&gt; asmr=tapply(buck2$dead/buck2$alive*esp[buck2$age],list(substr(buck2$month,1,4),as.numeric(substr(buck2$month,6,7))),sum)*365
+&gt; baseline=xtabs(x~year+month,ag)
+&gt; excess=(asmr/baseline-1)*100
+&gt; round(excess) # excess ASMR percent
+       1   2   3   4   5   6   7   8   9  10  11  12
+2021                   6  25 -35 -42 -54 -44 -33 -31
+2022 -33 -26 -20 -18 -18 -13 -15 -32 -25 -13 -18  -9
+2023 -16 -10 -14  -3 -15 -10  -3  -7  -9
+&gt; round(asmr) # AMSR in pay-per-dose data
+       1   2   3   4   5    6   7   8   9  10  11  12
+2021  NA  NA  NA  NA 899 1128 599 538 422 443 580 565
+2022 552 601 734 735 801  891 865 767 719 738 741 752
+2023 749 744 732 780 799  851 876 876 875  NA  NA  NA
+&gt; round(baseline) # reported ASMR in total NZ population
+        1    2    3    4    5    6    7    8    9   10   11   12
+2021  825  802  841  808  848  906  927  929  922  786  870  820
+2022  821  815  915  893  980 1024 1014 1131  961  847  904  831
+2023  893  828  850  800  935  948  900  938  966    0    0    0</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
