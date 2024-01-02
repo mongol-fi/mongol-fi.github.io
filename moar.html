@@ -112,6 +112,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Strong_signal_found_by_Kalev>Strong signal found by Kalev</a></li>
 <li><a href=#Comparison_of_vaccinated_and_unvaccinated_people_in_Connecticut_data>Comparison of vaccinated and unvaccinated people in Connecticut data</a></li>
 <li><a href=#Does_the_aging_of_a_fixed_cohort_cause_deaths_over_time_to_go_up_or_down>Does the aging of a fixed cohort cause deaths over time to go up or down?</a></li>
+<li><a href=#What_is_the_baseline_mortality_for_vaccinated_people>What is the baseline mortality for vaccinated people?</a></li>
 </ul></li>
 </ul>
 
@@ -3563,6 +3564,60 @@ system(&quot;qlmanage -p 1.png&amp;&gt;/dev/null&quot;)</pre>
 <img src="i/moar-cohort-aging-2.gif">
 </div>
 <p>The baselines in my plot above are not adjusted for seasonal fluctuation in mortality, but there's elevated mortality around weeks 40 and 90 because of winter.</p>
+<h3>
+<a href=#What_is_the_baseline_mortality_for_vaccinated_people id=What_is_the_baseline_mortality_for_vaccinated_people>What is the baseline mortality for vaccinated people?</a>
+</h3>
+<p>When I have shown Kirsch my plots where vaccinated people have had negative excess mortality on the first months after vaccination but close to 0% excess mortality a year later, Kirsch has argued that there is a selection bias where vaccinated people are healthier than the general population, so they have a lower baseline mortality than the age-matched general population, which causes vaccinated people to actually have positive and not zero excess mortality a year from vaccination.</p>
+<p>So if for example the excess mortality in vaccinated people is -60% on the first month from vaccination, -30% on the second month, -20% on the third month, and 0% a year later, then Kirsch might argue that the baseline of the vaccinated people was actually at the -30% level, so vaccinated people actually had -42% excess mortality the first month, 0% the second month, +14% the third month, and +43% a year later.</p>
+<p>But the vast majority of people are vaccinated, and the total excess mortality in New Zealand is now back to around zero, so how could everyone still be having +43% excess mortality? The excess mortality at 2 years after vaccination is similar to the excess mortality at 1 year after vaccination.</p>
+<p>When I looked at all doses aggregated together in the output of <code>buckets.py</code>, and I used the mortality rate on weeks 3-5 as the baseline for each age, I got about 64% excess mortality on weeks 50-79:</p>
+<pre>&gt; t=read.table(&quot;data-transparency/New Zealand/time-series summaries/month_dose_week_single_age.txt&quot;,header=T)|&gt;subset(dose&gt;0)
+&gt; base=with(subset(t,week%in%3:5),tapply(dead,age,sum)/tapply(alive,age,sum))
+&gt; t2=t[t$week%in%50:79,]
+&gt; a=aggregate(t2[,5:6],t2[,4,drop=F],sum)
+&gt; expected=sum(a$alive*base[a$age],na.rm=T) # expected deaths in a cohort with the same age composition
+&gt; expected
+[1] 3621.648
+&gt; sum(a$dead) # actual deaths on weeks 50-79
+[1] 5948
+&gt; sum(a$dead)/expected
+[1] 1.642346</pre>
+<p>However with buckets.py, weeks 50-79 only include people who hadn't gotten a new vaccine dose in 50 weeks, so the unhealthy stragglers are probably overrepresented. And there are so few deaths on weeks 3-5 that many ages have zero deaths, and the sample size is too small to calculate the baseline for the mortality rate accurately for each age.</p>
+<p>However on each month except May 2021, the people in the pay-per dose data also had lower AMSR than the total New Zealand population:</p>
+<pre>&gt; death=read.csv(&quot;https://mongol-fi.github.io/f/nz_monthly_deaths_by_age.csv&quot;)|&gt;subset(ethnicity==&quot;Total&quot;)
+&gt; a=with(death,aggregate(count,list(year=year_reg,month=month_reg,age=as.numeric(substr(age_group,1,2))),sum,drop=F))
+&gt; esp=c(1000,4000,5500,5500,5500,6000,6000,6500,7000,7000,7000,7000,6500,6000,5500,5000,4000,2500,1500,800,200)
+&gt; espage=c(0,1,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95)
+&gt; pop=read.csv(&quot;https://mongol-fi.github.io/f/nz_infoshare_population.csv&quot;,r=1,check=F)
+&gt; cut=cut(as.numeric(colnames(pop)),c(espage,Inf),,T,F)
+&gt; pop2=tapply(unlist(pop),list(row(pop),rep(cut,each=nrow(pop))),sum,na.rm=T)
+&gt; me=merge(expand.grid(list(age=espage,year=as.numeric(rownames(pop))))|&gt;cbind(pop=c(t(pop2)),month=7),a,all=T)
+&gt; me$pop=unlist(tapply(me$pop,me$age,zoo::na.spline))
+&gt; me$pop=me$pop/365*c(31,28,31,30,31,30,31,31,30,31,30,31)[me$month]
+&gt; me$month=factor(me$month,1:12)
+&gt; ag=aggregate(me$x/me$pop*esp[match(me$age,espage)],me[,2:3],sum,na.rm=T)
+&gt; buck=read.table(&quot;data-transparency/New Zealand/time-series summaries/month_dose_week_single_age.txt&quot;,header=T)
+&gt; buck=buck[buck$dose&gt;1&amp;buck$month&lt;=&quot;2023-09&quot;&amp;buck$month&gt;=&quot;2021-05&quot;,]
+&gt; buck2=aggregate(buck[,5:6],list(month=buck$month,age=cut(buck$age,c(espage,Inf),,T,F)),sum)
+&gt; asmr=tapply(buck2$dead/buck2$alive*esp[buck2$age],buck2$month,sum)*365
+&gt; baseline=ag$x[match(names(asmr),sprintf(&quot;%d-%02d&quot;,ag$year,ag$month))]
+&gt; excess=(asmr/base-1)*100
+&gt; yemo=list(substr(names(excess),1,4),substr(names(excess),6,7))
+&gt; round(tapply(excess,yemo,c)) # excess ASMR percent
+      01  02  03  04  05  06  07  08  09  10  11  12
+2021  NA  NA  NA  NA  28 -29 -32 -57 -52 -35 -24 -26
+2022 -28 -26 -19 -16 -18 -12 -14 -32 -25 -13 -18  -9
+2023 -16 -11 -15  -3 -15 -11  -4  -9 -11  NA  NA  NA
+&gt; round(tapply(asmr,yemo,c)) # pay-per dose ASMR
+      01  02  03  04   05  06  07  08  09  10  11  12
+2021  NA  NA  NA  NA 1094 647 631 400 446 513 666 607
+2022 596 611 745 750  808 899 874 775 726 741 746 758
+2023 757 746 736 785  803 855 882 879 879  NA  NA  NA
+&gt; round(tapply(baseline,yemo,c)) # reported ASMR in total NZ population
+      01  02  03  04  05   06   07   08  09  10  11  12
+2021  NA  NA  NA  NA 852  911  930  932 925 790 875 825
+2022 826 820 920 897 983 1027 1014 1131 962 850 909 836
+2023 901 836 861 811 950  965  918  960 990  NA  NA  NA</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
