@@ -3847,65 +3847,57 @@ system(&quot;montage -geometry +0+0 -tile 2x [12]..png 1.png&quot;)</pre>
 <div class="width6">
 <img src="i/moar-asmrweek-1.png">
 </div>
-<p>Kirsch claims that the mortality level around week 3 after vaccination is the baseline and later on vaccinated people have high excess mortality. But how is it possible when most of the NZ population is vaccinated and the total excess mortality in NZ is close to zero? In the plot above vaccinated people have around -31% excess mortality on week 3. But if the mortality level on week 3 was used as the baseline instead, then vaccinated people would a sustained level of about 25-40% excess mortality from week 13 onwards.</p>
-<pre>t=as.data.frame(data.table::fread(&quot;nz-record-level-data-4M-records.csv&quot;))
+<p>Kirsch claims that the mortality level around week 3 after vaccination is the baseline and later on vaccinated people have high excess mortality. But how is it possible when most of the NZ population is vaccinated and the total excess mortality in NZ is close to zero? In the plot above vaccinated people have around -31% excess mortality on week 3. But if the mortality level on week 3 was used as the baseline instead, then vaccinated people would a sustained level of about 30-50% excess mortality from week 13 onwards.</p>
+<pre>library(data.table);library(tempdisagg);library(ggplot2);library(stringr)
+
+t=as.data.frame(fread(&quot;nz-record-level-data-4M-records.csv&quot;,showProgress=F))
 for(i in grep(&quot;date&quot;,colnames(t)))t[,i]=as.Date(t[,i],&quot;%m-%d-%Y&quot;)
 
 t=t[order(t$date_time_of_service),];t=t[!duplicated(t$mrn),]
-
 maxdate=as.Date(&quot;2023-9-30&quot;)
-t=t[!(!is.na(t$date_of_death)&amp;t$date_of_death&gt;maxdate),]
-t=t[!t$date_time_of_service&gt;maxdate,]
-t=t[!(!is.na(t$date_of_death)&amp;t$date_of_death&lt;t$date_time_of_service),]
+t=t[pmax(t$date_of_death&lt;t$date_time_of_service,t$date_time_of_service&gt;maxdate,na.rm=T)==0,]
+t$date_of_death[t$date_of_death&gt;maxdate]=NA
 
 bin=7
-
-endbin=as.numeric(maxdate-t$date_time_of_service)%/%bin
+endbin=as.numeric(pmin(maxdate,t$date_of_death,na.rm=T)-t$date_time_of_service)%/%bin
 deadbin=as.numeric(t$date_of_death-t$date_time_of_service)%/%bin
 age=as.numeric(t$date_time_of_service-t$date_of_birth)/365.25
+bins=0:(max(endbin)+1)
 
 esp=c(1000,4000,5500,5500,5500,6000,6000,6500,7000,7000,7000,7000,6500,6000,5500,5000,4000,2500,1500,800,200)
-espage=c(0,1,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95)
-espcut=\(x)cut(x,c(espage,Inf),,T,F)
+espage=c(0,1,seq(5,95,5));espcut=\(x)cut(x,c(espage,Inf),,T,F)
 
-bins=0:max(endbin)
+dead=sapply(bins,\(i)table(espcut(age[i==deadbin]+i*bin/365)))
+alive=sapply(bins,\(i)table(espcut(age[i&lt;=endbin]+i*bin/365)))
+asmr=colSums(dead/alive*esp*365/bin,na.rm=T)
+o=outer(as.numeric(t$date_time_of_service),bins*bin+bin%/%2,&quot;+&quot;);o[col(o)&gt;endbin]=NA
 
-ded=sapply(bins,\(i)table(espcut(age[i==deadbin]+i*bin/365)))
-aliv=sapply(bins,\(i)table(espcut(age[i&lt;=endbin]+i*bin/365)))
-asmr=colSums(ded/aliv*esp*365/bin,na.rm=T)
+nzpop=read.csv(&quot;https://mongol-fi.github.io/f/nz_infoshare_population_quarterly.csv&quot;,check.names=F,row.names=1)|&gt;tail(11)
+nzpop=t(rowsum(t(nzpop),espcut(as.numeric(colnames(nzpop)))))
+nzdeath=read.csv(&quot;https://mongol-fi.github.io/f/nz_monthly_deaths_by_age.csv&quot;)|&gt;subset(ethnicity==&quot;Total&quot;)
+nzdeath=xtabs(count~as.Date(paste(year_reg,month_reg,1,sep=&quot;-&quot;))+age_group,nzdeath)|&gt;tail(33)
 
-o=outer(as.numeric(t$date_time_of_service),bins*bin,&quot;+&quot;)
-o[col(o)&gt;=endbin]=NA
-
-pop=read.csv(&quot;https://mongol-fi.github.io/f/nz_infoshare_population_quarterly.csv&quot;,check.names=F,row.names=1)|&gt;tail(11)
-pop=t(rowsum(t(pop),cut(as.numeric(colnames(pop)),c(espage,Inf),,T,F)))
-dead=read.csv(&quot;https://mongol-fi.github.io/f/nz_monthly_deaths_by_age.csv&quot;)|&gt;subset(ethnicity==&quot;Total&quot;)
-dead=xtabs(count~as.Date(paste(year_reg,month_reg,1,sep=&quot;-&quot;))+age_group,dead)|&gt;tail(33)
 qua=seq(as.Date(&quot;2021-1-1&quot;),as.Date(&quot;2023-9-1&quot;),&quot;3 month&quot;)
-library(tempdisagg)
-dailypop=apply(pop,2,\(i)predict(td(data.frame(qua,i)~1,&quot;mean&quot;,&quot;daily&quot;,&quot;fast&quot;))$value)
-dailydead=apply(dead,2,\(i)predict(td(data.frame(as.Date(rownames(dead)),i)~1,,&quot;daily&quot;,&quot;fast&quot;))$value)
+dailypop=apply(nzpop,2,\(i)predict(td(data.frame(qua,i)~1,&quot;mean&quot;,&quot;daily&quot;,&quot;fast&quot;))$value)
+dailydead=apply(nzdeath,2,\(i)predict(td(data.frame(as.Date(rownames(nzdeath)),i)~1,,&quot;daily&quot;,&quot;fast&quot;))$value)
 dailyasmr=colSums(t(dailydead/dailypop)*esp*365)
 binasmr=colMeans(matrix(dailyasmr[o-as.numeric(as.Date(&quot;2021-1-1&quot;))+1],nrow(o)),na.rm=T)
 
-xy=data.frame(x=bins,asmr,binasmr)
-xy$pop=colSums(aliv)
+xy=data.frame(x=bins,asmr,binasmr,pop=colSums(alive))
+xy$asmr[xy$pop&lt;5e3]=NA
 
-xstart=0;xend=130;xstep=10;xbreak=seq(xstart,xend,xstep)
-ystart=0;yend=2200;ystep=200;ybreak=seq(ystart,yend,ystep)
-yend2=25e5;ystep2=5e5;ybreak2=seq(0,yend2,ystep2)
+xstart=0;xend=130;ystart=0;yend=1400;yend2=25e5
+xbreak=seq(xstart,xend,10);ybreak=seq(ystart,yend,200);ybreak2=seq(0,yend2,5e5)
 secmult=yend/yend2
 
 legend1=data.frame(x=xstart+.025*(xend-xstart),y=seq((yend-ystart)*.94+ystart,,-(yend-ystart)/13,2))
 legend2=data.frame(x=xstart+.975*(xend-xstart),y=seq((yend-ystart)*.94+ystart,,-(yend-ystart)/13,1))
 legend1$label=c(&quot;ASMR among vaccinated people in pay-per-dose data&quot;,&quot;Reported ASMR in total NZ population&quot;)
 legend2$label=c(&quot;Population size&quot;)
-color1=c(&quot;black&quot;,&quot;#0000aa&quot;)
-color2=c(&quot;#00aa00&quot;)
+color1=c(&quot;black&quot;,&quot;#0000aa&quot;);color2=c(&quot;#00aa00&quot;)
 
 kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;x[]=ifelse(abs(x)&lt;1,x,paste0(round(x/1e3^(e2-1),ifelse(e%%3==0,1,0)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2]));x}
 
-library(ggplot2)
 ggplot(xy,aes(x=x,y=asmr))+
 geom_vline(xintercept=c(xstart,xend),linewidth=.3,lineend=&quot;square&quot;)+
 geom_hline(yintercept=ystart,linewidth=.3,lineend=&quot;square&quot;)+
@@ -3915,10 +3907,10 @@ geom_line(aes(y=pop*secmult),linewidth=.3,color=color2[1])+
 geom_label(data=legend1,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.85),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.05,&quot;lines&quot;),label.size=0,size=2.7,hjust=0,color=color1)+
 geom_label(data=legend2,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.85),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.05,&quot;lines&quot;),label.size=0,size=2.7,hjust=1,color=color2)+
 annotate(geom=&quot;label&quot;,x=xend/2,y=0,vjust=-.8,hjust=.5,label=&quot;Weeks from vaccination to death&quot;,fill=alpha(&quot;white&quot;,.8),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.05,&quot;lines&quot;),label.size=0,size=2.7)+
-labs(x=NULL,y=NULL,title=&quot;NZ pay-per-dose data: ASMR by weeks after vaccination compared to reported ASMR among total NZ population on the same week. Only the earliest vaccine dose is included for each person. Daily ASMR values were interpolated from monthly death data and quarterly population data.&quot;|&gt;stringr::str_wrap(73))+
+labs(x=NULL,y=NULL,title=&quot;NZ pay-per-dose data: ASMR by weeks after vaccination compared to reported ASMR among total NZ population on the same week, European Standard Population 2013. Only the earliest vaccine dose is included for each person. Daily ASMR values were interpolated from monthly death data and quarterly population data. Weeks with population size below 5,000 omitted.&quot;|&gt;str_wrap(75))+
 scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,expand=expansion(0))+
-scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,expand=expansion(0),sec.axis=sec_axis(trans=~./secmult,breaks=ybreak2,label=kimi))+
-coord_cartesian(clip=&quot;off&quot;)+
+scale_y_continuous(breaks=ybreak,expand=expansion(0),sec.axis=sec_axis(trans=~./secmult,breaks=ybreak2,label=kimi))+
+coord_cartesian(ylim=c(ystart,yend),clip=&quot;off&quot;)+
 theme(axis.text=element_text(size=6.8,color=&quot;black&quot;),
   axis.ticks=element_line(linewidth=.3),
   axis.ticks.length=unit(.2,&quot;lines&quot;),
@@ -3927,7 +3919,7 @@ theme(axis.text=element_text(size=6.8,color=&quot;black&quot;),
   panel.grid.major=element_blank(),
   panel.background=element_rect(fill=&quot;white&quot;),
   plot.margin=margin(.3,.7,.3,.3,&quot;lines&quot;),
-  plot.title=element_text(size=7.9,margin=margin(.4,0,.5,0,&quot;lines&quot;)),
+  plot.title=element_text(size=7.9,margin=margin(.1,0,.5,0,&quot;lines&quot;)),
   plot.subtitle=element_text(size=7,margin=margin(0,0,.3,0,&quot;lines&quot;)))
 ggsave(&quot;1.png&quot;,width=4.5,height=3.2,dpi=400)
 system(&quot;mogrify -gravity center -trim -border 30 -bordercolor white +repage 1.png&quot;)
