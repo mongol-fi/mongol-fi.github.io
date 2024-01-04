@@ -110,7 +110,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Increase_in_mortality_rate_in_batches_10_13_and_34>Increase in mortality rate in batches 10, 13, and 34</a></li>
 <li><a href=#Medicare_data_for_pneumonia_and_flu_vaccines>Medicare data for pneumonia and flu vaccines</a></li>
 <li><a href=#Strong_signal_found_by_Kalev>Strong signal found by Kalev</a></li>
-<li><a href=#Comparison_of_vaccinated_and_unvaccinated_people_in_Connecticut_data>Comparison of vaccinated and unvaccinated people in Connecticut data</a></li>
+<li><a href=#Connecticut_Medicare_data>Connecticut Medicare data</a></li>
 <li><a href=#Does_the_aging_of_a_fixed_cohort_cause_deaths_over_time_to_go_up_or_down>Does the aging of a fixed cohort cause deaths over time to go up or down?</a></li>
 <li><a href=#What_is_the_baseline_mortality_for_vaccinated_people>What is the baseline mortality for vaccinated people?</a></li>
 <li><a href=#Tweet_by_Thinking_Slow_about_OECD_mortality_statistics>Tweet by Thinking Slow about OECD mortality statistics</a></li>
@@ -3605,7 +3605,7 @@ system(&quot;montage -geometry +0+0 -tile 2x [12]..png 1.png&quot;)</pre>
 <img src="i/moar-kalev-2.png">
 </div>
 <h3>
-<a href=#Comparison_of_vaccinated_and_unvaccinated_people_in_Connecticut_data id=Comparison_of_vaccinated_and_unvaccinated_people_in_Connecticut_data>Comparison of vaccinated and unvaccinated people in Connecticut data</a>
+<a href=#Connecticut_Medicare_data id=Connecticut_Medicare_data>Connecticut Medicare data</a>
 </h3>
 <p>Kirsch's S3 server has three different sets of COVID vaccination data from Medicare, but only the dataset from Connecticut also includes unvaccinated people. However the dataset only includes people who died, so the total population size of vaccinated and unvaccinated people is unknown. Therefore in order to compare mortality rate by vaccination status, I used the daily average number of deaths in the second half of 2022 as the baseline for each vaccination status group in the Connecticut data.</p>
 <p>If you select people who had been vaccinated by March 2021, then from April onwards you get a fixed cohort where the size of the cohort only decreases after people die or run out of follow-up time. But it's not possible to get a similar fixed cohort for unvaccinated people, because new people get vaccinated over time which results in the number of deaths in unvaccinated people gradually decreasing over time.</p>
@@ -3700,6 +3700,60 @@ system(&quot;qlmanage -p 1.png&amp;&gt;/dev/null&quot;)</pre>
 <div class="width6">
 <img src="i/moar-connecticut-4.png">
 </div>
+<p>In ages 75+ in Connecticut, less than 5% of the population was listed as unvaccinated from December 2021 onwards: [<a href="https://data.ct.gov/Health-and-Human-Services/COVID-19-Vaccinations-by-Age-Group-ARCHIVED/vjim-iz5e/about_data">https://data.ct.gov/Health-and-Human-Services/COVID-19-Vaccinations-by-Age-Group-ARCHIVED/vjim-iz5e/about_data</a>]</p>
+<pre>&gt; vax=read.csv(&quot;https://data.ct.gov/resource/vjim-iz5e.csv&quot;)
+&gt; vax2=vax[vax$age_group_years==&quot;75+&quot;,]
+&gt; vaxpct=tapply(100-vax2$initiated_vaccination_percent,substr(vax2$date,1,7),mean)
+&gt; round(vaxpct,1)
+2021-05 2021-06 2021-07 2021-08 2021-09 2021-10 2021-11 2021-12 2022-01 2022-02
+   14.3    12.8    12.1    11.5    10.2     8.1     5.2     3.3     2.3     2.1
+2022-03 2022-04 2022-05 2022-06 2022-07 2022-08 2022-09 2022-10 2022-11 2022-12
+    1.9     1.6     1.2     3.8     3.9     3.9     3.9     4.0     4.2     4.5
+2023-01 2023-02
+    4.7     4.7</pre>
+<p>However in the Connecticut dataset published by Kirsch, if you only include deaths at age 75 and above, then about 30-40% of deaths were in unvaccinated people:</p>
+<pre>&gt; ct=read.csv(&quot;https://mongol-fi.github.io/f/kirsch_medicare_connecticut.csv&quot;)
+&gt; ct2=ct[ct$age_at_death&gt;=75,]
+&gt; deathpct=tapply(ct2$vaxxdate_1==&quot;&quot;,substr(ct2$death_dt,1,7),mean)*100
+&gt; round(deathpct,1)
+2020-12 2021-01 2021-02 2021-03 2021-04 2021-05 2021-06 2021-07 2021-08 2021-09
+   99.1    88.8    75.8    67.6    60.3    54.5    51.7    50.4    45.9    48.0
+2021-10 2021-11 2021-12 2022-01 2022-02 2022-03 2022-04 2022-05 2022-06 2022-07
+   43.9    41.7    41.0    42.0    37.1    32.5    33.7    32.3    30.4    29.5
+2022-08 2022-09 2022-10 2022-11 2022-12 2023-01
+   29.7    27.8    30.2    27.2    28.1    32.8</pre>
+<p>So in ages 75 and above, there is one month when unvaccinated people have about 40 times higher mortality rate than vaccinated people, and the lowest ratio is about 6.5:</p>
+<pre>&gt; p2=vaxpct[names(deathpct)]
+&gt; round((deathpct/p2)/((100-deathpct)/(100-p2)),1)
+2020-12 2021-01 2021-02 2021-03 2021-04 2021-05 2021-06 2021-07 2021-08 2021-09
+     NA      NA      NA      NA      NA     7.2     7.3     7.4     6.5     8.1
+2021-10 2021-11 2021-12 2022-01 2022-02 2022-03 2022-04 2022-05 2022-06 2022-07
+    8.9    13.0    20.2    30.7    27.1    24.9    31.3    40.2    11.1    10.4
+2022-08 2022-09 2022-10 2022-11 2022-12 2023-01
+   10.4     9.5    10.2     8.6     8.4    10.0</pre>
+<p>The ratio does seem to be elevated during the Omicron wave in January and to a lesser extent during the minor delta wave in September:</p>
+<div class="width7">
+<img src="i/moar-connecticut-5.png">
+</div>
+<p>The ratio between the unvaccinated and vaccinated mortality rate seems way too high, so it could be that there is something wrong with the data published by Kirsch, or that the percentage of unvaccinated people is too low in the dataset I used.</p>
+<p>In the dataset for COVID vaccination by age group in Connecticut I used, the percentage of unvaccinated people was listed as about 1.6% in April 2022 and 1.2% in May 2022, but then it suddenly increased to about 3.8% in June 2022. So maybe there was some change to the methodology that was used to calculate the percentage.</p>
+<p>In a dataset published by the CDC which includes vaccination statistics for each state, the percentage of people in Connecticut who had received the first dose reached 95.00% on April 11th 2022, but after that it remained capped at 95.00% for the rest of the dataset. However when I tried to calculate the percentage manually by dividing the number of people who had received the first dose with the population of Connecticut, the percentage reached above 100% in November 2022: [<a href="https://data.cdc.gov/Vaccinations/COVID-19-Vaccination-Trends-in-the-United-States-N/rh2h-3yt2">https://data.cdc.gov/Vaccinations/COVID-19-Vaccination-Trends-in-the-United-States-N/rh2h-3yt2</a>]</p>
+<pre>&gt; download.file(&quot;https://data.cdc.gov/api/views/rh2h-3yt2/rows.csv?accessType=DOWNLOAD&quot;,&quot;statesvax.csv&quot;)
+&gt; t=read.csv(&quot;statesvax.csv&quot;)|&gt;subset(Location==&quot;CT&quot;&amp;date_type==&quot;Report&quot;)
+&gt; d=data.frame(time=as.Date(t$Date,&quot;%m/%d/%Y&quot;),vax=t$Admin_Dose_1_Cumulative)
+&gt; library(tempdisagg)
+&gt; pop=c(3577586,3603691,3608706,3617176)
+&gt; d=merge(d,predict(td(data.frame(as.Date(paste0(2020:2023,&quot;-7-1&quot;)),pop)~1,&quot;mean&quot;,&quot;daily&quot;,&quot;fast&quot;)),all=T,by=1)
+&gt; colnames(d)[3]=&quot;pop&quot;
+&gt; d$vaxpct=100*d$vax/d$pop
+&gt; print.data.frame(tail(na.omit(d)),row.names=F)
+       time     vax     pop   vaxpct
+ 2023-04-05 3665065 3609618 101.5361
+ 2023-04-12 3665855 3609802 101.5528
+ 2023-04-19 3666615 3609994 101.5685
+ 2023-04-26 3667574 3610193 101.5894
+ 2023-05-03 3668858 3610400 101.6192
+ 2023-05-10 3670090 3610614 101.6472</pre>
 <h3>
 <a href=#Does_the_aging_of_a_fixed_cohort_cause_deaths_over_time_to_go_up_or_down id=Does_the_aging_of_a_fixed_cohort_cause_deaths_over_time_to_go_up_or_down>Does the aging of a fixed cohort cause deaths over time to go up or down?</a>
 </h3>
