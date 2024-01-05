@@ -3982,7 +3982,7 @@ system(&quot;qlmanage -p 1.png&amp;&gt;/dev/null&quot;)</pre>
 <img src="i/moar-vaet2-2.png">
 </div>
 <p>The highest number of people received the first dose in August. Doses 2 to 5 also seem to have a similar <span class="quote">&quot;late vaccinee effect&quot;</span> where people who received the dose during the later part of the rollout peak later had higher excess mortality than people who received the dose during the earlier part of the rollout peak. But on the other hand there's even higher excess mortality among the immunocompromised and vulnerable people who received the dose before the main part of the rollout started.</p>
-<p>So there seems to be a distribution where first a small number of the earliest vaccinees have high mortality, second a large number of early vaccinees have low mortality, and third a large number of late vaccinees have high mortality. And the proportion of doses that are missing from the NZ data gets lower over time, so even though the earliest vaccinees in the first group are overrepresented, the late vaccinees in the third group are overrepresented:</p>
+<p>So there seems to be a distribution where first a small number of the earliest vaccinees have high mortality, second a large number of early vaccinees have low mortality, and third a large number of late vaccinees have high mortality. And the proportion of doses that are missing from the NZ data gets lower over time, so even though the earliest vaccinees in the first group are overrepresented, early vaccinees in the second group are also underrepresented in June and July, the late vaccinees in the third group are overrepresented from September onwards:</p>
 <div class="width7">
 <img src="i/moar-vaet2-3.png">
 </div>
@@ -3993,10 +3993,12 @@ vax=subset(vax,Label1==&quot;First dose administered&quot;)
 xy=data.frame(x=as.Date(vax$Period),nz=vma(vax$Value,-3:3))
 
 ppd=as.data.frame(data.table::fread(&quot;nz-record-level-data-4M-records.csv&quot;,showProgress=F))
-ppd1=subset(ppd,dose_number==1&amp;age&gt;=50)
-ppd2=subset(ppd,dose_number==1)
-xy$ppd=table(as.Date(ppd1$date_time_of_service,&quot;%m-%d-%Y&quot;))[as.character(xy$x)]
-xy$ppd2=table(as.Date(ppd2$date_time_of_service,&quot;%m-%d-%Y&quot;))[as.character(xy$x)]
+for(i in grep(&quot;date&quot;,colnames(ppd)))ppd[,i]=as.Date(ppd[,i],&quot;%m-%d-%Y&quot;)
+age=as.numeric(ppd$date_time_of_service-ppd$date_of_birth)%/%365.25
+ppd1=ppd[ppd$dose_number==1&amp;age&gt;=50,]
+ppd2=ppd[ppd$dose_number==1,]
+xy$ppd=table(ppd1$date_time_of_service)[as.character(xy$x)]
+xy$ppd2=table(ppd2$date_time_of_service)[as.character(xy$x)]
 
 xstart=as.Date(&quot;2021-1-1&quot;);xend=as.Date(&quot;2022-7-1&quot;)
 xseq=seq(xstart,xend,&quot;1 month&quot;);xbreak=sort(c(xseq,xseq[-1]-15))
