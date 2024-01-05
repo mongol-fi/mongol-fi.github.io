@@ -3986,6 +3986,66 @@ system(&quot;qlmanage -p 1.png&amp;&gt;/dev/null&quot;)</pre>
 <div class="width7">
 <img src="i/moar-vaet2-3.png">
 </div>
+<pre>vma=\(x,y){o=outer(1:length(x),y,&quot;+&quot;);rowMeans(matrix(x[ifelse(o&gt;=1&amp;o&lt;=length(x),o,NA)],length(x)),na.rm=T)}
+
+vax=read.csv(&quot;https://raw.githubusercontent.com/OpenVaet/nz_data/main/raw_data/covid_19_data_portal%20-%20doses%20-%20data.csv&quot;)
+vax=subset(vax,Label1==&quot;First dose administered&quot;)
+xy=data.frame(x=as.Date(vax$Period),nz=vma(vax$Value,-3:3))
+
+ppd=as.data.frame(data.table::fread(&quot;nz-record-level-data-4M-records.csv&quot;,showProgress=F))
+ppd1=subset(ppd,dose_number==1&amp;age&gt;=50)
+ppd2=subset(ppd,dose_number==1)
+xy$ppd=table(as.Date(ppd1$date_time_of_service,&quot;%m-%d-%Y&quot;))[as.character(xy$x)]
+xy$ppd2=table(as.Date(ppd2$date_time_of_service,&quot;%m-%d-%Y&quot;))[as.character(xy$x)]
+
+xstart=as.Date(&quot;2021-1-1&quot;);xend=as.Date(&quot;2022-7-1&quot;)
+xseq=seq(xstart,xend,&quot;1 month&quot;);xbreak=sort(c(xseq,xseq[-1]-15))
+xlab=c(c(rbind(&quot;&quot;,format(head(xseq,-1),c(&quot;%b\n%Y&quot;,&quot;%b&quot;)[c(1,rep(2,11))]))),&quot;&quot;)
+
+cand=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
+ystep=cand[which.min(abs(cand-(max(xy$ppd2,na.rm=T))/6))]
+yend=ystep*ceiling(max(xy$ppd2,na.rm=T)/ystep);ybreak=seq(0,yend,ystep)
+secmult=Reduce(&quot;/&quot;,colSums(xy[,c(4,2)],na.rm=T))
+ymax2=max(xy$ppd2,na.rm=T)/secmult
+ystep2=cand[which.min(abs(cand-ymax2/6))]
+yend2=ystep2*ceiling(ymax2/ystep2);ybreak2=seq(0,yend2,ystep)
+
+leg1=data.frame(x=xstart+.025*(xend-xstart),y=seq(.92*yend,,-yend/10,2),label=c(&quot;Pay-per-dose data&quot;,&quot;Pay-per-dose data (ages 50 and above)&quot;))
+leg2=data.frame(x=xstart+.975*(xend-xstart),y=seq(.92*yend,,-yend/10,1),label=&quot;Total NZ population (7-day centered moving average)&quot;)
+color1=c(hcl(245,100,25),hcl(210,60,70));color2=&quot;#bb1111&quot;
+
+kim=\(x)ifelse(x&gt;=1e3,ifelse(x&gt;=1e6,paste0(x/1e6,&quot;M&quot;),paste0(x/1e3,&quot;k&quot;)),x)
+
+library(ggplot2)
+ggplot(xy,aes(x,ppd))+
+geom_vline(xintercept=seq(as.Date(&quot;2020-1-1&quot;),as.Date(&quot;2024-1-1&quot;),&quot;3 month&quot;),linewidth=.35,lineend=&quot;square&quot;,color=&quot;gray80&quot;)+
+geom_vline(xintercept=c(xstart,xend,seq(as.Date(&quot;2020-1-1&quot;),as.Date(&quot;2024-1-1&quot;),&quot;year&quot;)),linewidth=.35,lineend=&quot;square&quot;)+
+geom_hline(yintercept=c(0,yend),linewidth=.35,lineend=&quot;square&quot;)+
+geom_line(color=color1[2])+
+geom_line(aes(y=ppd2),color=color1[1])+
+geom_line(aes(y=nz*secmult),color=color2)+
+geom_label(data=leg1,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.85),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.05,&quot;lines&quot;),label.size=0,size=2.7,hjust=0,color=color1)+
+geom_label(data=leg2,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.85),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.05,&quot;lines&quot;),label.size=0,size=2.7,hjust=1,color=color2)+
+scale_x_date(limits=c(xstart,xend),breaks=xbreak,labels=xlab,expand=expansion(0))+
+scale_y_continuous(limits=c(0,yend),breaks=ybreak,expand=expansion(0),labels=kim,sec.axis=sec_axis(trans=~./secmult,breaks=seq(0,yend2,ystep2),labels=kim))+
+coord_cartesian(clip=&quot;off&quot;)+
+labs(x=NULL,y=NULL,title=&quot;First doses given by day in New Zealand&quot;,subtitle=&quot;The scale of the right axis was selected so that if the red line is plotted on the left axis then its sum is equal to the sum of the dark blue line. The pay-per-dose was obfuscated so that dates were shifted by a random number of days with a 7-day standard deviation, so the pay-per dose data looks like a moving average which doesn&#39;t have considerable variation between weekdays and weekends.&quot;|&gt;stringr::str_wrap(96))+
+theme(
+  ## axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
+  axis.text=element_text(size=6.7,color=&quot;black&quot;),
+  axis.title=element_text(size=8,color=color1[1]),
+  axis.title.y.right=element_text(color=color2,margin=margin(0,0,0,5)),
+  axis.ticks=element_line(linewidth=.3),
+  axis.ticks.x=element_line(color=alpha(&quot;black&quot;,c(1,0))),
+  axis.ticks.length=unit(.2,&quot;lines&quot;),
+  legend.position=&quot;none&quot;,
+  panel.grid.major=element_blank(),
+  panel.background=element_rect(fill=&quot;white&quot;),
+  plot.margin=margin(.3,.3,.3,.3,&quot;lines&quot;),
+  plot.title=element_text(size=9,margin=margin(.2,0,.5,0,&quot;lines&quot;)),
+  plot.subtitle=element_text(size=7.2,margin=margin(0,0,.4,0,&quot;lines&quot;))
+)
+ggsave(&quot;1.png&quot;,width=5,height=3,dpi=400)</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
