@@ -46,26 +46,41 @@ pre{max-width:76em;margin:6px auto;color:white;white-space:pre-wrap;word-wrap:br
 <span class=output>7   male  Feb 2023   85</span>
 <span class=output>8 female  Feb 2023   94</span>
 <span class=output>
+<span class=title># prevent custom function definitions in `.Rprofile` from being overridden by a variable assignment</span></span>
+<span class=prompt>&gt;</span> <span class=code>writeLines(&quot;j=paste0&quot;,&quot;myfuns.R&quot;)</span>
+<span class=prompt>&gt;</span> <span class=code>source(&quot;myfuns.R&quot;,attach(NULL,name=&quot;myfuns&quot;))</span><span class=comment> # add this to `.Rprofile`</span>
+<span class=prompt>&gt;</span> <span class=code>j=9</span>
+<span class=prompt>&gt;</span> <span class=code>j(1,2)</span><span class=comment> # not overridden by variable assignment</span>
+<span class=output>[1] &quot;12&quot;</span>
+<span class=prompt>&gt;</span> <span class=code>j</span>
+<span class=output>9</span>
+<span class=prompt>&gt;</span> <span class=code>detach(&quot;myfuns&quot;)</span><span class=comment> # disable custom functions</span>
+<span class=prompt>&gt;</span> <span class=code>j(1,9)</span>
+<span class=output>Error in j(1, 9) : could not find function &quot;j&quot;</span>
+<span class=output>
 <span class=title># get the fraction of a normal distribution which is 3 standard deviations or more above the mean</span></span>
 <span class=prompt>&gt;</span> <span class=code>integrate(\(x)exp(-x^2/2)/sqrt(2*pi),3,Inf)$value</span>
 <span class=output>[1] 0.001349899</span>
 <span class=output>
 <span class=title># divide ages into age groups</span></span>
 <span class=prompt>&gt;</span> <span class=code>groups=c(0,18,50,80)</span>
-<span class=prompt>&gt;</span> <span class=code>ages=c(53,2,22,105,0)</span>
+<span class=prompt>&gt;</span> <span class=code>ages=c(53,2,22,105,0,91)</span>
 <span class=prompt>&gt;</span> <span class=code>cut(ages,c(groups,Inf),include.lowest=T,right=F)</span>
-<span class=output>[1] [50,80)  [0,18)   [18,50)  [80,Inf] [0,18)</span>
+<span class=output>[1] [50,80)  [0,18)   [18,50)  [80,Inf] [0,18)   [80,Inf]</span>
 <span class=output>Levels: [0,18) [18,50) [50,80) [80,Inf]</span>
 <span class=output>
 <span class=title># calculate a centered moving average which uses a narrower window at vector ends instead of returning NA values</span></span>
 <span class=prompt>&gt;</span> <span class=code>v=c(3,5,7,3,-1)</span>
-<span class=prompt>&gt;</span> <span class=code>o=outer(1:length(v),-1:1,&quot;+&quot;);rowMeans(matrix(v[ifelse(o&lt;1|o&gt;length(v),NA,o)],length(v)),na.rm=T)</span><span class=comment> # this is fast</span>
+<span class=prompt>&gt;</span> <span class=code>rowMeans(embed(c(NA,v,NA),3),na.rm=T)</span><span class=comment> # this was the fastest method in my benchmark</span>
 <span class=output>[1] 4 5 5 3 1</span>
-<span class=prompt>&gt;</span> <span class=code>l=length(v);sapply(1:l,\(i)mean(v[max(1,i-1):min(l,i+1)],na.rm=T))</span><span class=comment> # this was about 10 times slower than the first method</span>
+<span class=prompt>&gt;</span> <span class=code>o=outer(1:length(v),-1:1,&quot;+&quot;);rowMeans(matrix(v[ifelse(o&lt;1,NA,o)],length(v)),na.rm=T)</span>
+<span class=comment># this was 2 times slower than the first method</span>
 <span class=output>[1] 4 5 5 3 1</span>
-<span class=prompt>&gt;</span> <span class=code>zoo::rollapplyr(v,3,mean,partial=T,align=&quot;center&quot;)</span><span class=comment> # this was about 50 times slower than the first method</span>
+<span class=prompt>&gt;</span> <span class=code>l=length(v);sapply(1:l,\(i)mean(v[max(1,i-1):min(l,i+1)],na.rm=T))</span><span class=comment> # this was about 100 times slower than the first method</span>
 <span class=output>[1] 4 5 5 3 1</span>
-<span class=prompt>&gt;</span> <span class=code>slider::slide_dbl(v,mean,.before=1,.after=1)</span><span class=comment> # this was about 3 times slower than the firs tmethod</span>
+<span class=prompt>&gt;</span> <span class=code>zoo::rollapplyr(v,3,mean,partial=T,align=&quot;center&quot;)</span><span class=comment> # this was about 170 times slower than the first method</span>
+<span class=output>[1] 4 5 5 3 1</span>
+<span class=prompt>&gt;</span> <span class=code>slider::slide_dbl(v,mean,.before=1,.after=1)</span><span class=comment> # this was about 70 times slower than the first method</span>
 <span class=output>[1] 4 5 5 3 1</span>
 <span class=output>
 <span class=title># ignore NA in cumulative sum</span></span>
@@ -195,29 +210,34 @@ pre{max-width:76em;margin:6px auto;color:white;white-space:pre-wrap;word-wrap:br
 <span class=prompt>&gt;</span> <span class=code>tabulate(data)</span><span class=comment> # vector of frequencies starting from 1</span>
 <span class=output>[1] 2 0 1 3</span>
 <span class=output>
-<span class=title># get difference between dates in years</span></span>
-<span class=prompt>&gt;</span> <span class=code>d1=as.Date(&quot;2020-02-01&quot;);d2=as.Date(&quot;2022-02-01&quot;)</span>
-<span class=prompt>&gt;</span> <span class=code>lubridate::interval(d1,d2)/lubridate::years()</span><span class=comment> # this is slower but it treats leap years correctly</span>
-<span class=output>[1] 2</span>
-<span class=prompt>&gt;</span> <span class=code>d1%--%d2/years()</span><span class=comment> # another lubridate option which was about as fast as the previous option in my benchmark</span>
-<span class=output>[1] 2</span>
-<span class=prompt>&gt;</span> <span class=code>lubridate::time_length(difftime(d2,d1),&quot;years&quot;)</span>
-<span class=comment># this was about 40 times faster but it uses 365.25 days as the length of each year</span>
-<span class=output>[1] 2.001369</span>
-<span class=prompt>&gt;</span> <span class=code>as.numeric(d2-d1)/365.25</span><span class=comment> # this is similar to the previous option but it was about twice faster</span>
-<span class=output>[1] 2.001369</span>
+<span class=title># get the difference between dates in floored years</span></span>
+<span class=prompt>&gt;</span> <span class=code>d1=as.Date(&quot;2021-01-23&quot;);d2=as.Date(&quot;2022-01-23&quot;)</span>
+<span class=prompt>&gt;</span> <span class=code>x=as.POSIXlt(d1);y=as.POSIXlt(d2);y$year-x$year-as.numeric(y$mon&lt;x$mon|(y$mon==x$mon&amp;y$mday&lt;x$mday))</span>
+<span class=comment># this was the fastest option which treated leap years correctly in my benchmark</span>
+<span class=output>[1] 1</span>
 <span class=prompt>&gt;</span> <span class=code>as.numeric(format(d2,&quot;%Y&quot;))-as.numeric(format(d1,&quot;%Y&quot;))-as.numeric(format(d2,&quot;%m-%d&quot;)&lt;format(d1,&quot;%m-%d&quot;))</span>
-<span class=comment># floored years (this was about as slow as the first two lubridate options in my benchmark)</span>
-<span class=output>[1] 2</span>
+<span class=comment># this was about 5 times slower than the first option</span>
+<span class=output>[1] 1</span>
 <span class=prompt>&gt;</span> <span class=code>as.numeric(substr(x,1,4))-as.numeric(substr(y,1,4))-as.numeric(substr(x,5,10)&lt;substr(y,5,10))</span>
-<span class=comment># floored years (this was over twice as slow as the previous option)</span>
-<span class=output>[1] 2</span>
+<span class=comment># this was about 12 times slower than the first option</span>
+<span class=output>[1] 1</span>
+<span class=prompt>&gt;</span> <span class=code>lubridate::interval(d1,d2)%/%lubridate::years()</span><span class=comment> # this was about 4 times slower than the first option</span>
+<span class=output>[1] 1</span>
+<span class=prompt>&gt;</span> <span class=code>d1%--%d2%/%years()</span><span class=comment> # this is another lubridate option that was also about 4 times slower</span>
+<span class=output>[1] 1</span>
+<span class=prompt>&gt;</span> <span class=code>floor(lubridate::time_length(difftime(d2,d1),&quot;years&quot;))</span><span class=comment> # this is fast but it uses 365.25 days as the length of each year</span>
+<span class=comment># this produces the incorrect result on dates that are 365, 730, or 1095 days apart and that don&apos;t have a leap day in between</span>
+<span class=output>[1] 0</span>
+<span class=prompt>&gt;</span> <span class=code>floor(as.numeric(lubridate::interval(d1,d2),&quot;years&quot;))</span><span class=comment> # this is fast and similar to the previous option</span>
+<span class=output>[1] 0</span>
+<span class=prompt>&gt;</span> <span class=code>floor(as.numeric(d2-d1)/365.25)</span><span class=comment> # this is similar to the previous two options but it was slightly faster</span>
+<span class=output>[1] 0</span>
 <span class=output>
 <span class=title># difference between maximum an minimum value in vector</span></span>
 <span class=prompt>&gt;</span> <span class=code>diff(range(c(2,-3,5,9)))</span>
 <span class=output>12</span>
 <span class=output>
-<span class=title># get RGB codes for 6 shades of gray</span></span>
+<span class=title># get RGB codes for shades of gray</span></span>
 <span class=prompt>&gt;</span> <span class=code>sapply(seq(0,255,,6)/255,\(i)rgb(i,i,i))</span>
 <span class=output>[1] &quot;#FFFFFF&quot; &quot;#CCCCCC&quot; &quot;#999999&quot; &quot;#666666&quot; &quot;#333333&quot; &quot;#000000&quot;</span>
 <span class=output>
@@ -385,13 +405,6 @@ pre{max-width:76em;margin:6px auto;color:white;white-space:pre-wrap;word-wrap:br
 <span class=prompt>&gt;</span> <span class=code>exp((log(100)+log(10000))/2)</span>
 <span class=output>1000</span>
 <span class=output>
-<span class=title># generate a 3-by-3 identity matrix</span></span>
-<span class=prompt>&gt;</span> <span class=code>diag(3)</span>
-<span class=output>     [,1] [,2] [,3]</span>
-<span class=output>[1,]    1    0    0</span>
-<span class=output>[2,]    0    1    0</span>
-<span class=output>[3,]    0    0    1</span>
-<span class=output>
 <span class=title># list definitions of base functions</span></span>
 <span class=prompt>&gt;</span> <span class=code>Filter(is.function,mget(ls(&quot;package:base&quot;),inherits=T))[6:8]</span>
 <span class=output>$`:::`</span>
@@ -449,12 +462,13 @@ pre{max-width:76em;margin:6px auto;color:white;white-space:pre-wrap;word-wrap:br
 <span class=output>2            5           3            1           0  setosa</span>
 <span class=output>
 <span class=title># remove rows with the same value in two or more different columns</span></span>
-<span class=prompt>&gt;</span> <span class=code>m=matrix(c(1,1,2,3,4,5,6,7,8),3,byrow=T)</span>
+<span class=prompt>&gt;</span> <span class=code>m=matrix(c(1,1,2,3,4,5,6,7,8,9,9,9),,3,byrow=T)</span>
 <span class=prompt>&gt;</span> <span class=code>m</span>
 <span class=output>     [,1] [,2] [,3]</span>
 <span class=output>[1,]    1    1    2</span>
 <span class=output>[2,]    3    4    5</span>
 <span class=output>[3,]    6    7    8</span>
+<span class=output>[4,]    9    9    9</span>
 <span class=prompt>&gt;</span> <span class=code>m[colSums(apply(m,1,duplicated))==0,]</span>
 <span class=output>     [,1] [,2] [,3]</span>
 <span class=output>[1,]    3    4    5</span>
@@ -627,7 +641,7 @@ pre{max-width:76em;margin:6px auto;color:white;white-space:pre-wrap;word-wrap:br
 <span class=output>     [,1] [,2]</span>
 <span class=output>[1,]    2    3</span>
 <span class=output>
-<span class=title># make a matrix with 3 rows where each row contains vector v</span></span>
+<span class=title># make a matrix with 3 rows where each row contains vector `v`</span></span>
 <span class=prompt>&gt;</span> <span class=code>v=1:4;rep(1,3)%o%v</span><span class=comment> # `x%o%y` is same as `outer(x,y)`</span>
 <span class=output>     [,1] [,2] [,3] [,4]</span>
 <span class=output>[1,]    1    2    3    4</span>
@@ -736,11 +750,17 @@ pre{max-width:76em;margin:6px auto;color:white;white-space:pre-wrap;word-wrap:br
 <span class=prompt>&gt;</span> <span class=code>quarterly=c(67190,66350,65510,65020)</span>
 <span class=prompt>&gt;</span> <span class=code>round(zoo::na.spline(c(rbind(NA,quarterly,NA))))</span>
 <span class=comment># this always uses the quarterly total as the value for the middle month of the quarter</span>
-<span class=comment># this rounds values to integers and there is no option to disable it as far as I know</span>
 <span class=output>[1] 67410 67190 66932 66647 66350 66053 65768 65510 65290 65123 65020 64995</span>
-<span class=prompt>&gt;</span> <span class=code>library(tempdisagg);as.numeric(predict(td(ts(quarterly,frequency=4)~1,to=&quot;monthly&quot;)))</span><span class=comment> # this preserves quarterly sums</span>
-<span class=output>[1] 22422.98 22416.18 22350.84 22225.70 22113.19 22011.12 21917.49 21833.87</span>
-<span class=output>[9] 21758.64 21690.31 21660.64 21669.04</span>
+<span class=prompt>&gt;</span> <span class=code>library(tempdisagg);as.numeric(predict(td(ts(quarterly,frequency=4)~1,&quot;mean&quot;,to=&quot;monthly&quot;)))</span><span class=comment> # this preserves quarterly means</span>
+<span class=output> [1] 67268.94 67248.53 67052.53 66677.09 66339.56 66033.35 65752.47 65501.62 65275.91 65070.94</span>
+<span class=output>[11] 64981.93 65007.13</span>
+<span class=output>
+<span class=title># convert quarterly data to daily</span></span>
+<span class=prompt>&gt;</span> <span class=code>d=data.frame(as.Date(c(&quot;2023-1-1&quot;,&quot;2023-4-1&quot;)),c(12345,23456))</span><span class=comment> # the dates have to be the starting days of quarters</span>
+<span class=prompt>&gt;</span> <span class=code>library(tempdisagg);predict(td(d~1,&quot;mean&quot;,&quot;daily&quot;,&quot;fast&quot;))|&gt;head(2)</span><span class=comment> # this preserves quarterly means</span>
+<span class=output>        time    value</span>
+<span class=output>1 2023-01-01 9584.940</span>
+<span class=output>2 2023-01-02 9586.904</span>
 <span class=output>
 <span class=title># split matrix into groups of columns</span></span>
 <span class=prompt>&gt;</span> <span class=code>m=matrix(1:10,2);group=c(1,1,2,2,2)</span>
@@ -818,7 +838,7 @@ pre{max-width:76em;margin:6px auto;color:white;white-space:pre-wrap;word-wrap:br
 <span class=prompt>&gt;</span> <span class=code>lubridate::decimal_date(d)</span>
 <span class=output>[1] 2020.997</span>
 <span class=output>
-<span class=title># select first row for each unique value of column</span></span>
+<span class=title># select the first row for each unique value of a column</span></span>
 <span class=prompt>&gt;</span> <span class=code>mtcars[!duplicated(mtcars$cyl),]</span>
 <span class=output>                   mpg cyl disp  hp drat   wt  qsec vs am gear carb</span>
 <span class=output>Mazda RX4         21.0   6  160 110 3.90 2.62 16.46  0  1    4    4</span>
@@ -842,15 +862,50 @@ pre{max-width:76em;margin:6px auto;color:white;white-space:pre-wrap;word-wrap:br
 <span class=output>8 18.7   8  360 175 3.15 3.44 17.02  0  0    3    2</span>
 <span class=output>
 <span class=title># make an empty matrix by specifying dimension names</span></span>
-<span class=prompt>&gt;</span> <span class=code>l=list(letters[1:2],month.abb[1:3]);array(,lengths(l),l)</span>
-<span class=output>  Jan Feb Mar</span>
-<span class=output>a  NA  NA  NA</span>
-<span class=output>b  NA  NA  NA</span>
+<span class=prompt>&gt;</span> <span class=code>man=\(...){l=list(...);array(,lengths(l),l)}</span><span class=comment> # `list(...)` converts the ellipsis to a list</span>
+<span class=prompt>&gt;</span> <span class=code>man(state.name[1:2],month.abb[1:3])</span>
+<span class=output>        Jan Feb Mar</span>
+<span class=output>Alabama  NA  NA  NA</span>
+<span class=output>Alaska   NA  NA  NA</span>
 <span class=output>
 <span class=title># get year of date</span></span>
 <span class=prompt>&gt;</span> <span class=code>d=as.Date(&quot;2023-12-31&quot;)</span>
 <span class=prompt>&gt;</span> <span class=code>as.POSIXlt(d)$year+1900</span><span class=comment> # this is the definition of `lubridate::year` and `data.table::year`</span>
 <span class=output>[1] 2023</span>
-<span class=prompt>&gt;</span> <span class=code>as.numeric(format(d,&quot;%Y&quot;))</span><span class=comment> # this was about 10 times slower in my benchmark</span>
+<span class=prompt>&gt;</span> <span class=code>as.numeric(format(d,&quot;%Y&quot;))</span><span class=comment> # this was about 10 times slower in my benchmark with a long vector</span>
 <span class=output>[1] 2023</span>
+<span class=output>
+<span class=title># apply multiple functions</span></span>
+<span class=prompt>&gt;</span> <span class=code>ma=\(x,...)sapply(c(...),mapply,x)</span>
+<span class=prompt>&gt;</span> <span class=code>trees|&gt;ma(min,max,mean)</span>
+<span class=output>       [,1] [,2]     [,3]</span>
+<span class=output>Girth   8.3 20.6 13.24839</span>
+<span class=output>Height 63.0 87.0 76.00000</span>
+<span class=output>Volume 10.2 77.0 30.17097</span>
+<span class=output>
+<span class=title># count dates and return 0 for missing dates in between</span></span>
+<span class=prompt>&gt;</span> <span class=code>d=as.Date(c(&quot;2024-1-2&quot;,&quot;2024-1-2&quot;,&quot;2024-1-5&quot;))</span>
+<span class=prompt>&gt;</span> <span class=code>table(factor(d,as.character(Reduce(\(...)seq(...,by=1),range(d)))))</span>
+<span class=output>2024-01-02 2024-01-03 2024-01-04 2024-01-05</span>
+<span class=output>         2          0          0          1</span>
+<span class=prompt>&gt;</span> <span class=code>num=as.numeric(d);ran=Reduce(seq,range(num,na.rm=T));setNames(table(factor(num,ran)),as.Date(ran,&quot;1970-1-1&quot;))</span>
+<span class=comment># this was about 7 times faster than the first option in my benchmark</span>
+<span class=output>2024-01-02 2024-01-03 2024-01-04 2024-01-05</span>
+<span class=output>         2          0          0          1</span>
+<span class=prompt>&gt;</span> <span class=code>setNames(tabulate(as.numeric(d-min(d)+1)),seq(min(d),max(d),1))</span>
+<span class=comment># this was about 25 times faster than the first option in my benchmark</span>
+<span class=output>2024-01-02 2024-01-03 2024-01-04 2024-01-05</span>
+<span class=output>         2          0          0          1</span>
+<span class=output>
+<span class=title># run a benchmark and display the median time of a hundred runs relative to the fastest option</span></span>
+<span class=prompt>&gt;</span> <span class=code>bench=\(times,...){arg=match.call(expand.dots=F)$...;l=length(arg);out=double(times*l);rand=sample(rep(1:l,times))</span>
+<span class=prompt>+</span> <span class=code>n=1;for(x in arg[rand]){t1=Sys.time();eval.parent(x);out[n]=Sys.time()-t1;n=n+1}</span>
+<span class=prompt>+</span> <span class=code>setNames(out,sapply(arg[rand],\(x)gsub(&quot;  +&quot;,&quot; &quot;,paste(deparse(x),collapse=&quot; &quot;))))}</span>
+<span class=prompt>&gt;</span> <span class=code>b=bench(100,1:1e6,seq(1e6),sequence(1e6),seq_len(1e6))</span>
+<span class=prompt>&gt;</span> <span class=code>o=sort(tapply(b,names(b),median));writeLines(sprintf(&quot;%.2f %s&quot;,o/min(o),names(o)))</span>
+<span class=output>1.00 1:1e+06</span>
+<span class=output>1.00 seq_len(1e+06)</span>
+<span class=output>1.00 seq.int(1e+06)</span>
+<span class=output>2.24 seq(1e+06)</span>
+<span class=output>345.06 sequence(1e+06)</span>
 </pre>
