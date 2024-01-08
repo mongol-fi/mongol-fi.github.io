@@ -917,4 +917,77 @@ pre{max-width:76em;margin:6px auto;color:white;white-space:pre-wrap;word-wrap:br
 <span class=output>1.00 seq.int(1e+06)</span>
 <span class=output>2.24 seq(1e+06)</span>
 <span class=output>345.06 sequence(1e+06)</span>
+<span class=output>
+<span class=title># select columns</span></span>
+<span class=prompt>&gt;</span> <span class=code>k=\(x,...)x[,sapply(match.call(expand.dots=F)$...,\(i)&quot;if&quot;(is.name(i),match(as.character(i),colnames(x)),i))]</span>
+<span class=prompt>&gt;</span> <span class=code>mtcars[1:2,]|&gt;k(cyl,5)</span><span class=comment> # this supports mixing column names and column numbers like `dplyr::select`</span>
+<span class=output>              cyl drat</span>
+<span class=output>Mazda RX4       6  3.9</span>
+<span class=output>Mazda RX4 Wag   6  3.9</span>
+<span class=output>
+<span class=title># merge dataframes by rownames</span></span>
+<span class=prompt>&gt;</span> <span class=code>merge(mtcars[1:3,1:2],mtcars[2:4,6:7],by=0)</span><span class=comment> # `by=0` merges by rownames</span>
+<span class=output>      Row.names  mpg cyl    wt  qsec</span>
+<span class=output>1    Datsun 710 22.8   4 2.320 18.61</span>
+<span class=output>2 Mazda RX4 Wag 21.0   6 2.875 17.02</span>
+<span class=output>
+<span class=title># weighted mean by group</span></span>
+<span class=prompt>&gt;</span> <span class=code>t=data.frame(age=c(80,80,70,70),pop=c(2850,1820,3053,5190),deaths=c(312,287,201,220))</span>
+<span class=prompt>&gt;</span> <span class=code>with(t,tapply(deaths*pop,age,sum)/tapply(pop,age,sum))</span>
+<span class=output>      70       80</span>
+<span class=output>212.9629 302.2570</span>
+<span class=prompt>&gt;</span> <span class=code>sapply(split(t,t$age),\(i)weighted.mean(i$deaths,i$pop))</span>
+<span class=output>      70       80</span>
+<span class=output>212.9629 302.2570</span>
+<span class=output>
+<span class=title># calculate frequency table using specified factors</span></span>
+<span class=prompt>&gt;</span> <span class=code>fat=\(x,y){o=table(mapply(factor,x,y,SIMPLIFY=F));names(dimnames(o))=NULL;o}</span>
+<span class=prompt>&gt;</span> <span class=code>dim=list(letters[1:3],month.abb[1:3],state.abb[1:2])</span>
+<span class=prompt>&gt;</span> <span class=code>fat(list(c(&quot;c&quot;,&quot;c&quot;,&quot;b&quot;),c(&quot;Jan&quot;,&quot;Jan&quot;,&quot;Mar&quot;),c(&quot;AL&quot;,&quot;AL&quot;,&quot;AK&quot;)),dim)</span>
+<span class=output>, , AL</span>
+<span class=output>  Jan Feb Mar</span>
+<span class=output>a   0   0   0</span>
+<span class=output>b   0   0   0</span>
+<span class=output>c   2   0   0</span>
+<span class=output>, , AK</span>
+<span class=output>  Jan Feb Mar</span>
+<span class=output>a   0   0   0</span>
+<span class=output>b   0   0   1</span>
+<span class=output>c   0   0   0</span>
+<span class=output>
+<span class=title># replace NA values with previous non-NA value</span></span>
+<span class=prompt>&gt;</span> <span class=code>v=c(NA,5,NA,NA,3,NA,4)</span>
+<span class=prompt>&gt;</span> <span class=code>data.table::nafill(v,type=&quot;locf&quot;)</span><span class=comment> # LOCF means last observation carried forward</span>
+<span class=output>[1] NA  5  5  5  3  3  4</span>
+<span class=prompt>&gt;</span> <span class=code>zoo::na.locf(v,na.rm=F)</span><span class=comment> # `na.rm=F` disables removing the NA value from the start</span>
+<span class=output>[1] NA  5  5  5  3  3  4</span>
+<span class=output>
+<span class=title># convert date to year and month</span></span>
+<span class=prompt>&gt;</span> <span class=code>d=as.Date(&quot;2024-1-8&quot;)</span>
+<span class=prompt>&gt;</span> <span class=code>with(as.POSIXlt(d),sprintf(&quot;%d-%02d&quot;,year+1900,mon+1))</span>
+<span class=output>[1] &quot;2024-01&quot;</span>
+<span class=prompt>&gt;</span> <span class=code>format(d,&quot;%Y-%m&quot;)</span><span class=comment> # this was about 1.1 times slower than the first option in my benchmark</span>
+<span class=output>[1] &quot;2024-01&quot;</span>
+<span class=prompt>&gt;</span> <span class=code>substr(as.character(d),1,7)</span><span class=comment> # this was about 2.5 times slower than the first option in my benchmark</span>
+<span class=output>[1] &quot;2024-01&quot;</span>
+<span class=output>
+<span class=title># convert long vector of dates to character faster</span></span>
+<span class=prompt>&gt;</span> <span class=code>v=as.Date(sample(18000:19000,1e6,T))</span>
+<span class=prompt>&gt;</span> <span class=code>u=unique(v);as.character(u)[match(v,u)]</span><span class=comment> # this was the fastest option in my benchmark</span>
+<span class=output> chr [1:1000000] &quot;2021-04-20&quot; &quot;2019-04-24&quot; &quot;2021-03-21&quot; &quot;2021-01-01&quot; ...</span>
+<span class=prompt>&gt;</span> <span class=code>as.character(seq(min(v),max(v),1))[as.numeric(v-min(v)+1)]|&gt;str()</span><span class=comment> # this was about 5% slower</span>
+<span class=output> chr [1:1000000] &quot;2021-04-20&quot; &quot;2019-04-24&quot; &quot;2021-03-21&quot; &quot;2021-01-01&quot; ...</span>
+<span class=prompt>&gt;</span> <span class=code>data.table(x=v)[,y:=as.character(x),by=x]$y|&gt;str()</span><span class=comment> # this was about 3 times slower</span>
+<span class=output> chr [1:1000000] &quot;2021-04-20&quot; &quot;2019-04-24&quot; &quot;2021-03-21&quot; &quot;2021-01-01&quot; ...</span>
+<span class=prompt>&gt;</span> <span class=code>str(as.character(v))</span><span class=comment> # this was about 23 times slower</span>
+<span class=output> chr [1:1000000] &quot;2021-04-20&quot; &quot;2019-04-24&quot; &quot;2021-03-21&quot; &quot;2021-01-01&quot; ...</span>
+<span class=output>
+<span class=title># convert char to date faster</span></span>
+<span class=prompt>&gt;</span> <span class=code>d=as.character(as.Date(sample(15000:16000,1e6,T)))</span>
+<span class=prompt>&gt;</span> <span class=code>system.time(fasttime::fastDate(d))</span>
+<span class=output>   user  system elapsed</span>
+<span class=output>  0.021   0.000   0.020</span>
+<span class=prompt>&gt;</span> <span class=code>system.time(as.Date(d))</span>
+<span class=output>   user  system elapsed</span>
+<span class=output>  3.715   0.016   3.743</span>
 </pre>
