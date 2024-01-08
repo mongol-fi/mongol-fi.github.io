@@ -70,6 +70,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Make_a_heatmap_of_monthly_PCR_positivity_rate_by_US_state>Make a heatmap of monthly PCR positivity rate by US state</a></li>
 <li><a href=#UK_Office_for_National_Statistics>UK Office for National Statistics</a>
 <ul>
+<li><a href=#Plot_monthly_ASMR_by_vaccination_status>Plot monthly ASMR by vaccination status</a></li>
 <li><a href=#Make_a_heatmap_of_weekly_excess_mortality_percentage_by_age_group>Make a heatmap of weekly excess mortality percentage by age group</a></li>
 <li><a href=#Make_a_heatmap_of_factor_by_which_age_groups_are_overrepresented_in_ASMR_figures_relative_to_ESP2013>Make a heatmap of factor by which age groups are overrepresented in ASMR figures relative to ESP2013</a></li>
 <li><a href=#Calculate_excess_ASMR_percentage_as_average_of_excess_ASMR_in_each_age_group_weighted_by_person_years>Calculate excess ASMR percentage as average of excess ASMR in each age group weighted by person-years</a></li>
@@ -1117,6 +1118,60 @@ system(&quot;mogrify -gravity center -trim -border 16 -bordercolor white 1.png&q
 <h2>
 <a href=#UK_Office_for_National_Statistics id=UK_Office_for_National_Statistics>UK Office for National Statistics</a>
 </h2>
+<h3>
+<a href=#Plot_monthly_ASMR_by_vaccination_status id=Plot_monthly_ASMR_by_vaccination_status>Plot monthly ASMR by vaccination status</a>
+</h3>
+<pre>t=read.table(sep=&quot;\t&quot;,&quot;https://mongol-fi.github.io/onstable1.tsv&quot;,na.strings=c(&quot;x&quot;,&quot;&lt;3&quot;),header=T)
+t=t[t$Cause==&quot;All causes&quot;,]
+
+xy=data.frame(x=as.Date(paste0(t$Year,&quot;-&quot;,match(t$Month,month.name),&quot;-1&quot;)),y=t$Age,pop=t$Person.years)
+xy$z=factor(t$Vac,unique(t$Vac))
+
+xy$frac=xy$pop/with(subset(xy,xy$z!=&quot;Ever vaccinated&quot;),tapply(pop,x,sum))[as.character(xy$x)]
+xy$frac[xy$z==&quot;Ever vaccinated&quot;]=0
+
+ystart=0;yend=7000;xstart=min(xy$x);xend=max(xy$x)
+
+pal=c(hcl(c(210,110,110,60,60,60,0,0,310,310)+15,c(90,90,70,90,70,60,90,70,90,70),c(70,70,50,70,50,30,70,50,70,50)),&quot;black&quot;)
+
+library(ggplot2);ggplot(xy,aes(x=x,y=y,color=z))+
+geom_area(aes(y=frac*yend*.9999,fill=z),linewidth=.1,show.legend=F,alpha=.3)+
+geom_hline(yintercept=c(ystart,yend),linewidth=.3,lineend=&quot;square&quot;)+
+geom_vline(xintercept=c(xstart,xend),linewidth=.3,lineend=&quot;square&quot;)+
+geom_line(linewidth=.3)+
+geom_point(size=.7)+
+# geom_text(label=round(xy$y),size=2,vjust=-.7,show.legend=F)+
+scale_x_date(breaks=unique(xy$x),expand=expansion(0),date_labels=&quot;%b\n%y&quot;)+
+scale_y_continuous(limits=c(ystart,yend),breaks=seq(0,yend,1000),expand=expansion(0),labels=\(i)ifelse(i&lt;1000,i,paste0(round(i/1e3),&quot;k&quot;)),sec.axis=sec_axis(trans=~./yend*100,name=&quot;Percentage of group&quot;))+
+coord_cartesian(clip=&quot;off&quot;)+
+labs(x=NULL,y=&quot;Age-standardized mortality rate per 100,000 person-years&quot;)+
+ggtitle(&quot;All-cause age-standardized mortality rate in England from January 2021 to May 2023&quot;,subtitle=&quot;Data from ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/datasets/deathsbyvaccinationstatusengland&quot;)+
+scale_color_manual(values=pal)+
+scale_fill_manual(values=pal)+
+guides(color=guide_legend(ncol=3))+
+theme(axis.text=element_text(size=6,color=&quot;black&quot;),
+  axis.ticks=element_line(linewidth=.3),
+  axis.ticks.length=unit(.2,&quot;lines&quot;),
+  axis.title=element_text(size=7.5),
+  legend.background=element_blank(),
+  legend.box.just=&quot;center&quot;,
+  legend.direction=&quot;vertical&quot;,
+  legend.key=element_rect(fill=&quot;white&quot;),
+  legend.spacing.x=unit(.15,&quot;lines&quot;),
+  legend.key.size=unit(.8,&quot;lines&quot;),
+  legend.justification=&quot;center&quot;,
+  legend.margin=margin(-.9,0,-.2,0,&quot;lines&quot;),
+  legend.position=&quot;bottom&quot;,
+  legend.text=element_text(size=5.85,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_rect(fill=&quot;white&quot;),
+  panel.grid=element_blank(),
+  plot.subtitle=element_text(size=6,margin=margin(0,0,.6,0,&quot;lines&quot;)),
+  plot.title=element_text(size=9,margin=margin(.1,0,.4,0,&quot;lines&quot;)))
+ggsave(&quot;1.png&quot;,width=5.6,height=4,dpi=400)</pre>
+<div class="width7">
+<img src="i/stat-ons.png">
+</div>
 <h3>
 <a href=#Make_a_heatmap_of_weekly_excess_mortality_percentage_by_age_group id=Make_a_heatmap_of_weekly_excess_mortality_percentage_by_age_group>Make a heatmap of weekly excess mortality percentage by age group</a>
 </h3>
