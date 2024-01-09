@@ -4259,55 +4259,48 @@ d=d[d$pop&gt;0,]</pre>
 ua=\(x,y,...){u=unique(x);y(u,...)[match(x,u)]}
 for(i in grep(&quot;date&quot;,colnames(t)))t[,i]=ua(t[,i],as.Date,&quot;%m-%d-%Y&quot;)
 t=t[t$date_time_of_service&lt;=as.Date(&quot;2023-1-1&quot;)&amp;t$dose&lt;=6,]
+
 enddate=pmin(t$date_of_death,as.Date(&quot;2023-9-30&quot;),na.rm=T)
-d=data.frame(pop=enddate-t$date_time_of_service+1,dead=!is.na(t$date_of_death))
-d$dose=t$dose_number
+d=data.frame(pop=enddate-t$date_time_of_service+1,dead=!is.na(t$date_of_death),dose=paste0(&quot;Dose &quot;,t$dose_number))
 d$decade=paste0((as.POSIXlt(t$date_of_birth)$year+1900)%/%10*10,&quot;s&quot;)
 
-d$dose=paste0(&quot;Dose &quot;,d$dose)
-d=rbind(d,aggregate(d[,1:2,drop=F],d[,3,drop=F],sum)|&gt;cbind(decade=&quot;Total&quot;))
-d=rbind(d,aggregate(d[,1:2,drop=F],d[,4,drop=F],sum)|&gt;cbind(dose=&quot;Total&quot;))
+d=rbind(d,aggregate(d[,1:2],d[,3,drop=F],sum)|&gt;cbind(decade=&quot;Total&quot;))
+d=rbind(d,aggregate(d[,1:2],d[,4,drop=F],sum)|&gt;cbind(dose=&quot;Total&quot;))
 
 dead=tapply(d$dead,d[,3:4],sum)
-pop=tapply(d$pop,d[,3:4],sum)
+pop=xtabs(pop~dose+decade,d)/365
 
 kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;p=!is.na(x)&amp;!x==0;x[p]=paste0(sprintf(paste0(&quot;%.&quot;,ifelse(e[p]%%3==0,1,0),&quot;f&quot;),x[p]/1e3^(e2[p]-1)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2[p]]);x}
 
-m=dead/pop*365*1e5
-mpop=pop/365
+m=dead/pop*1e5
 disp=kimi(m)
-# hide=!is.na(mpop)&amp;mpop&lt;10;m[hide]=disp[hide]=NA
-exp=.7
-maxcolor=max(m,na.rm=T)^exp
-m=m^exp
+# hide=!is.na(mpop)&amp;pop&lt;10;m[hide]=disp[hide]=NA
+m=m^.7
+maxcolor=max(m,na.rm=T)
 
 library(colorspace)
 pheatmap::pheatmap(
   m,filename=&quot;i1.png&quot;,display_numbers=disp,
   cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,
-  border_color=NA,na_col=&quot;white&quot;,
-  number_color=ifelse((abs(m)&gt;.8*maxcolor)&amp;!is.na(m),&quot;white&quot;,&quot;black&quot;),
+  border_color=NA,na_col=&quot;white&quot;,number_color=ifelse((abs(m)&gt;.8*maxcolor)&amp;!is.na(m),&quot;white&quot;,&quot;black&quot;),
   breaks=seq(0,maxcolor,,256),
   colorRampPalette(hex(HSV(c(210,210,210,160,110,60,40,20,0,0,0,0,0,0),c(0,.25,rep(.5,12)),c(rep(1,9),.8,.6,.4,.2,0))))(256)
 )
 
-disp2=kimi(mpop)
-exp2=.6
-mpop=mpop^exp2
-mpop[is.na(mpop)]=0;disp2[is.na(disp2)]=0
+disp2=kimi(pop)
+mpop=pop^.6
 maxcolor2=max(mpop[-nrow(m),-ncol(m)])
 
 pheatmap::pheatmap(
   mpop,filename=&quot;i2.png&quot;,display_numbers=disp2,
   cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,
-  border_color=NA,na_col=&quot;white&quot;,
-  number_color=ifelse(mpop&gt;maxcolor2*.45,&quot;white&quot;,&quot;black&quot;),
+  border_color=NA,na_col=&quot;white&quot;,number_color=ifelse(mpop&gt;maxcolor2*.5,&quot;white&quot;,&quot;black&quot;),
   breaks=seq(0,maxcolor2,,256),
   sapply(seq(1,0,,256),\(i)rgb(i,i,i))
 )
 
-system(&quot;mogrify -trim i1.png;convert i1.png -gravity northwest -splice x14 -size `identify -format %w i1.png`x -pointsize 40 caption:&#39;Mortality rate per 100k person-years&#39; +swap -append -trim -bordercolor white -border 24 +repage 1..png&quot;)
-system(&quot;mogrify -trim i2.png;convert i2.png -gravity northwest -splice x14 -size `identify -format %w i2.png`x -pointsize 40 caption:&#39;Person-years up to end of September 2023&#39; +swap -append -trim -bordercolor white -border 24 +repage 2..png&quot;)
+system(&quot;mogrify -trim i1.png;convert i1.png -gravity northwest -splice x14 -size `identify -format %w i1.png`x -pointsize 44 caption:&#39;Mortality rate per 100k person-years&#39; +swap -append -trim -bordercolor white -border 24 +repage 1..png&quot;)
+system(&quot;mogrify -trim i2.png;convert i2.png -gravity northwest -splice x14 -size `identify -format %w i2.png`x -pointsize 44 caption:&#39;Person-years up to end of September 2023&#39; +swap -append -trim -bordercolor white -border 24 +repage 2..png&quot;)
 system(&quot;montage -geometry +0+0 -tile 1x [12]..png 1.png&quot;)</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
