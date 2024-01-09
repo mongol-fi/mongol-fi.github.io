@@ -120,6 +120,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Wastewater_prevalence_compared_to_all_cause_mortality>Wastewater prevalence compared to all-cause mortality</a></li>
 <li><a href=#Demonstation_of_the_effect_of_using_the_bucket_system>Demonstation of the effect of using the bucket system</a></li>
 <li><a href=#Reimplementing_buckets_py_in_R>Reimplementing buckets.py in R</a></li>
+<li><a href=#Mortality_rate_by_decade_of_birth>Mortality rate by decade of birth</a></li>
 </ul></li>
 </ul>
 
@@ -4175,6 +4176,22 @@ ggsave(&quot;1.png&quot;,width=5.5,height=3.5,dpi=400)</pre>
 &gt; library(lubridate)
 &gt; mean((t$date_of_birth%--%t$date_time_of_service)%/%years())
 [1] 49.29255</pre>
+<p>This is a quick fix which makes the original <code>buckets.py</code> account for the aging of the population:</p>
+<pre>(echo import math;tr -d \\r buckets.py|sed &#39;s:tmp_age = (death_date - birth_date).days // 365:tmp_age = (vax_date - birth_date).days / 365.25:;s:key = (date_key, dose, batch, week, age):key = (date_key, dose, batch, week, math.floor(age + week / 365 * 7)):&#39;)&gt;buckfix.py</pre>
+<p>It determines the age of the person on the first day of the week, so if someone has a birthday on the third day of the week then their age will be wrong on 5 days.</p>
+<p><code>floor((currentday-birthday)/365.25)</code> also gets the age wrong on the birthday on non-leap years, so it's wrong on 3 out of 365*4+1 years.</p>
+<p>Here's a test which shows that the difference in ages between the fixed version and the original version is much bigger on week 0 than week 100:</p>
+<pre>$ head -n10000 nz-record-level-data-4M-records.csv&gt;nz
+$ rm *.pickle;python buckfix.py nz buckfix;python buckets.py nz buck
+[...]
+$ awk &#39;$3==0&amp;&amp;$2&gt;0{x+=$4*$5;y+=$5}END{print x/y}&#39; buckfix_month_dose_week_age.txt
+58.2548
+$ awk &#39;$3==0&amp;&amp;$2&gt;0{x+=$4*$5;y+=$5}END{print x/y}&#39; buck_month_dose_week_age.txt
+60.6404
+$ awk &#39;$3==100&amp;&amp;$2&gt;0{x+=$4*$5;y+=$5}END{print x/y}&#39; buckfix_month_dose_week_age.txt
+59.5927
+$ awk &#39;$3==100&amp;&amp;$2&gt;0{x+=$4*$5;y+=$5}END{print x/y}&#39; buck_month_dose_week_age.txt
+60.1689</pre>
 <h3>
 <a href=#Reimplementing_buckets_py_in_R id=Reimplementing_buckets_py_in_R>Reimplementing buckets.py in R</a>
 </h3>
@@ -4182,8 +4199,11 @@ ggsave(&quot;1.png&quot;,width=5.5,height=3.5,dpi=400)</pre>
 <p>The version below gets the number of person-days and deaths for each combination of calendar day, month of vaccination, age, and dose. However it keeps people included under earlier doses after a new dose:</p>
 <pre>ua=\(x,y,...){u=unique(x);y(u,...)[match(x,u)]} # unique apply (faster for long vectors with many repeated values)
 AC=\(x){u=unique(x);as.character(u)[match(x,u)]} # fast conversion of date to character
-fat=\(x,y)table(mapply(factor,x,y,SIMPLIFY=F)) # frequency table with dimension factors specified as a list
-age=\(x,y){d1=as.numeric(x);d2=as.numeric(y);l1=(d1-789-ifelse(d1&lt;0,1,0))%/%1461+1;l2=(d2-789-ifelse(d1&lt;0,1,0))%/%1461+1;(d1-d2-(l1-l2))%/%365} # this is a fast way to get the floored difference between dates in years in the Julian calendar, but it incorrectly treats 1900 and 2100 as leap years in the Gregorian calendar
+fat=\(x,y)table(mapply(factor,x,y,SIMPLIFY=F)) # make a frequency table with dimension factors specified as a list
+
+# this is a fast way to get the floored difference in years between dates
+# this incorrectly treats 1900 and 2100 as leap years
+age=\(x,y){d1=as.numeric(x);d2=as.numeric(y);l1=(d1-789)%/%1461+1;l2=(d2-789)%/%1461+1;(d2-d1-(l2-l1))%/%365}
 
 t=as.data.frame(data.table::fread(&quot;nz-record-level-data-4M-records.csv&quot;,showProgress=F))
 for(i in grep(&quot;date&quot;,colnames(t)))t[,i]=ua(t[,i],as.Date,&quot;%m-%d-%Y&quot;)
@@ -4191,7 +4211,7 @@ for(i in grep(&quot;date&quot;,colnames(t)))t[,i]=ua(t[,i],as.Date,&quot;%m-%d-%
 maxdate=as.Date(&quot;2023-9-30&quot;);t$date_of_death[t$date_of_death&gt;maxdate]=NA
 t=t[pmax(t$date_of_death&lt;t$date_time_of_service,t$date_time_of_service&gt;maxdate,na.rm=T)==0,]
 
-vaxage=age(t$date_time_of_service,t$date_of_birth)
+vaxage=age(t$date_of_birth,t$date_time_of_service)
 week=as.numeric(t$date_of_death-t$date_time_of_service)%/%7
 month=ua(t$date_time_of_service,format,&quot;%Y-%m&quot;)
 
@@ -4200,11 +4220,11 @@ months=format(seq(as.Date(&quot;2021-4-1&quot;),as.Date(&quot;2023-9-1&quot;),&q
 
 dim=list(date=dates,vaxmonth=months,age=1:120,dose=1:6)
 pop=fat(list(AC(t$date_time_of_service),month,vaxage,t$dose),dim)
-dob=as.POSIXlt(t$date_of_birth) # used to change the year of a date faster
+dob=as.POSIXlt(t$date_of_birth)
 
 for(i in 2021:2023){
   bday=dob;bday$year=rep(i-1900,length(bday));bday2=as.Date(bday)
-  newage=age(bday,dob)
+  newage=age(dob,bday)
   pick=bday2&gt;t$date_time_of_service&amp;bday&lt;=maxdate
   ta=fat(list(AC(bday2[pick]),month[pick],newage[pick],t$dose[pick]),dim)
   pop=pop+ta
@@ -4212,7 +4232,7 @@ for(i in 2021:2023){
 }
 
 pick=!is.na(t$date_of_death)
-deadage=age(t$date_of_death[pick],t$date_of_birth[pick])
+deadage=age(t$date_of_birth[pick],t$date_of_death[pick])
 death=fat(list(AC(t$date_of_death[pick]),month[pick],deadage,t$dose[pick]),dim)
 pop=pop-death
 
@@ -4227,6 +4247,68 @@ d=d[d$pop&gt;0,]</pre>
  2023-02-22  2023-02   1    1   1     0
 &gt; nrow(d)
 [1] 4160219</pre>
+<h3>
+<a href=#Mortality_rate_by_decade_of_birth id=Mortality_rate_by_decade_of_birth>Mortality rate by decade of birth</a>
+</h3>
+<p>The heatmap below shows crude mortality rate by decade of birth and dose. The person-years are calculated as days from vaccination to September 30th 2023 divided by 365. It doesn't use the bucket system so that people are kept under earlier doses after a new dose.</p>
+<p>who were given the 6th dose and who were born in the 1970s had an extremely high mortality rate, but it might be because immunocompromised and vulnerable people were priorized for the 6th dose.</p>
+<div class="width9">
+<img src="i/moar-decade.png">
+</div>
+<pre>t=as.data.frame(data.table::fread(&quot;nz-record-level-data-4M-records.csv&quot;,showProgress=F))
+ua=\(x,y,...){u=unique(x);y(u,...)[match(x,u)]}
+for(i in grep(&quot;date&quot;,colnames(t)))t[,i]=ua(t[,i],as.Date,&quot;%m-%d-%Y&quot;)
+t=t[t$date_time_of_service&lt;=as.Date(&quot;2023-1-1&quot;)&amp;t$dose&lt;=6,]
+enddate=pmin(t$date_of_death,as.Date(&quot;2023-9-30&quot;),na.rm=T)
+d=data.frame(pop=enddate-t$date_time_of_service+1,dead=!is.na(t$date_of_death))
+d$dose=t$dose_number
+d$decade=paste0((as.POSIXlt(t$date_of_birth)$year+1900)%/%10*10,&quot;s&quot;)
+
+d$dose=paste0(&quot;Dose &quot;,d$dose)
+d=rbind(d,aggregate(d[,1:2,drop=F],d[,3,drop=F],sum)|&gt;cbind(decade=&quot;Total&quot;))
+d=rbind(d,aggregate(d[,1:2,drop=F],d[,4,drop=F],sum)|&gt;cbind(dose=&quot;Total&quot;))
+
+dead=tapply(d$dead,d[,3:4],sum)
+pop=tapply(d$pop,d[,3:4],sum)
+
+kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;p=!is.na(x)&amp;!x==0;x[p]=paste0(sprintf(paste0(&quot;%.&quot;,ifelse(e[p]%%3==0,1,0),&quot;f&quot;),x[p]/1e3^(e2[p]-1)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2[p]]);x}
+
+m=dead/pop*365*1e5
+mpop=pop/365
+disp=kimi(m)
+# hide=!is.na(mpop)&amp;mpop&lt;10;m[hide]=disp[hide]=NA
+exp=.7
+maxcolor=max(m,na.rm=T)^exp
+m=m^exp
+
+library(colorspace)
+pheatmap::pheatmap(
+  m,filename=&quot;i1.png&quot;,display_numbers=disp,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;white&quot;,
+  number_color=ifelse((abs(m)&gt;.8*maxcolor)&amp;!is.na(m),&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(0,maxcolor,,256),
+  colorRampPalette(hex(HSV(c(210,210,210,160,110,60,40,20,0,0,0,0,0,0),c(0,.25,rep(.5,12)),c(rep(1,9),.8,.6,.4,.2,0))))(256)
+)
+
+disp2=kimi(mpop)
+exp2=.6
+mpop=mpop^exp2
+mpop[is.na(mpop)]=0;disp2[is.na(disp2)]=0
+maxcolor2=max(mpop[-nrow(m),-ncol(m)])
+
+pheatmap::pheatmap(
+  mpop,filename=&quot;i2.png&quot;,display_numbers=disp2,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;white&quot;,
+  number_color=ifelse(mpop&gt;maxcolor2*.45,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(0,maxcolor2,,256),
+  sapply(seq(1,0,,256),\(i)rgb(i,i,i))
+)
+
+system(&quot;mogrify -trim i1.png;convert i1.png -gravity northwest -splice x14 -size `identify -format %w i1.png`x -pointsize 40 caption:&#39;Mortality rate per 100k person-years&#39; +swap -append -trim -bordercolor white -border 24 +repage 1..png&quot;)
+system(&quot;mogrify -trim i2.png;convert i2.png -gravity northwest -splice x14 -size `identify -format %w i2.png`x -pointsize 40 caption:&#39;Person-years up to end of September 2023&#39; +swap -append -trim -bordercolor white -border 24 +repage 2..png&quot;)
+system(&quot;montage -geometry +0+0 -tile 1x [12]..png 1.png&quot;)</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
