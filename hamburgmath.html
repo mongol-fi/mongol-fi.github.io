@@ -78,7 +78,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#References_to_the_paper_by_the_mathematician_from_Hamburg>References to the paper by the mathematician from Hamburg</a>
 <ul>
 <li><a href=#Tom_Cowans_claim_that_Wu_et_al_s_contig_was_manually_modified_to_support_the_lab_leak_narrative>Tom Cowan's claim that Wu et al.'s contig was manually modified to support the lab leak narrative</a></li>
-<li><a href=#Video_about_Mark_Baileys_article_by_Spacebusters>Video about Mark Bailey's article by Spacebusters</a></li>
+<li><a href=#Video_by_Spacebusters_about_Mark_Baileys_article>Video by Spacebusters about Mark Bailey's article</a></li>
 </ul></li>
 <li><a href=#USMortalitys_Substack_posts>USMortality's Substack posts</a>
 <ul>
@@ -1115,6 +1115,431 @@ $ for x in A3778G A8388G T8987A;do awk &#39;{$1=$1}1&#39; FS=&#39;\n *&#39; RS= 
 A3778G 4
 A8388G 2
 T8987A 4</pre>
+<p>The paper by Ren et al. said: <span class="quote">&quot;Quality control processes included removal of low-complexity reads by bbduk (entropy = 0.7, entropy-window = 50, entropy k = 5; version: January 25, 2018),[11] adapter trimming, low-quality reads removal, short reads removal by Trimmomatic (adapter: TruSeq3-SE.fa:2:30:6, LEADING: 3, TRAILING: 3, SLIDING WINDOW: 4:10, MINLEN: 70, version: 0.36),[12] host removal by bmtagger (using human genome GRCh38 and yh-specific sequences as reference),[13] and ribosomal reads removal by SortMeRNA (version: 2.1b).[14]&quot;</span> Wu et al. didn't describe removing low-complexity reads, host reads, or ribosomal reads, but they just masked human reads with N bases in the reads they uploaded to the SRA.</p>
+<h3>
+<a href=#Direct_RNA_nanopore_sequencing id=Direct_RNA_nanopore_sequencing>Direct RNA nanopore sequencing</a>
+</h3>
+<p>If you search the NCBI's sequence read archive for something like <code>sars nanopore</code>, almost all results employ a PCR-based sequencing protocol where RNA is converted to cDNA and then segments of cDNA are amplified with PCR. The amplicon length is around 400 bases in the ARCTIC protocol and around 1,200 bases in the MIDNIGHT protocol.</p>
+<p>However in a variant of nanopore sequencing called direct RNA nanopore sequencing, the conversion to cDNA is not needed, and the read lengths can exceed 10,000 bases. A paper from 2019 described using direct RNA nanopore sequencing to sequence almost the entire length of a coronavirus in a single piece. [<a href="https://genome.cshlp.org/content/29/9/1545.full">https://genome.cshlp.org/content/29/9/1545.full</a>]</p>
+<p>When I searched the SRA for <code>direct rna nanopore sars</code>, there were only 130 results. [<a href="https://www.ncbi.nlm.nih.gov/sra/?term=direct+rna+nanopore+sars">https://www.ncbi.nlm.nih.gov/sra/?term=direct+rna+nanopore+sars</a>] In many runs, the maximum read length was only a few thousand bases, but I found one run where the longest SARS2 read was over 10,000 bases long. [<a href="https://www.ncbi.nlm.nih.gov/sra/?term=SRR11300652">https://www.ncbi.nlm.nih.gov/sra/?term=SRR11300652</a>] The longest read in the entire run was about 52,000 bases, but the longest read that aligned against SARS2 was 13,831 bases long and it had about 93% identity with Wuhan-Hu-1:</p>
+<pre>$ curl -s &#39;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&amp;rettype=fasta&amp;id=MN908947.3&#39;&gt;sars2.fa
+$ wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR113/052/SRR11300652/SRR11300652_1.fastq.gz
+[...]
+$ brew install blast seqkit
+[...]
+$ makeblastdb -in sars2.fa -dbtype nucl
+[...]
+$ seqkit fq2fa SRR11300652_1.fastq.gz|seqkit sort -lr|seqkit head -n20|blastn -db sars2.fa -outfmt &#39;6 qseqid pident length qlen qstart qend sstart send&#39;|tr \\t &#39; &#39;
+SRR11300652.328671 92.657 14191 13831 1 13753 16008 29873</pre>
+<h2>
+<a href=#Comments_about_a_paper_by_a_mathematician_from_Hamburg id=Comments_about_a_paper_by_a_mathematician_from_Hamburg>Comments about a paper by a mathematician from Hamburg</a>
+</h2>
+<h3>
+<a href=#Distribution_of_read_lengths_and_error_rates_in_BBMap_alignment id=Distribution_of_read_lengths_and_error_rates_in_BBMap_alignment>Distribution of read lengths and error rates in BBMap alignment</a>
+</h3>
+<p>In 2022, someone who called themselves <span class="quote">&quot;a mathematician from Hamburg, who would like to remain unknown&quot;</span> published a paper titled <span class="quote">&quot;Structural analysis of sequence data in virology: An elementary approach using SARS-CoV-2 as an example&quot;</span>. [<a href="https://impfen-nein-danke.de/u/structural_analysis_of_sequence_data_in_virology.pdf">https://impfen-nein-danke.de/u/structural_analysis_of_sequence_data_in_virology.pdf</a>, <a href="https://impfen-nein-danke.de/u/structural_analysis_of_sequence_data_in_virology_tables_and_figures.pdf">https://impfen-nein-danke.de/u/structural_analysis_of_sequence_data_in_virology_tables_and_figures.pdf</a>]</p>
+<p>When the mathematician from Hamburg aligned Wu et al.'s reads with BBMap against reference genomes of HIV-1, hepatitis delta, and measles, he was able to get a large number of aligned reads, but that's because he ran BBMap with the <code>minratio=0.1</code> parameter which caused it to tolerate a very high number of mismatches, so the most common length of his aligned reads was about 35-40 bases, and the average error rate among the reads was about 40%. And when he filtered his reads with <code>reformat.sh</code>, he also used a low required minimum length (37) and an extremely low required identity percent (60%). His paper says that he ran BBMap with <span class="quote">&quot;relatively unspecific settings&quot;</span>, but actually he ran it with extremely liberal alignment criteria:</p>
+<blockquote>
+<p>Basically, we mapped the paired-end reads (2x151 bp) with BBMap [23] to the reference sequences we considered (Tables and Figures: Table 3) using relatively unspecific settings. We then varied the minimum length (M1) and minimum (nucleotide) identity (M2) with reformat.sh to obtain corresponding subsets of the previously mapped sequences with appropriate quality. Increasing minimum length M1 or minimum nucleotide identity M2 thereby increases the significance of the respective mapping. Subsequently, we formed consensus sequences with the respective subsets of selected quality with respect to the selected reference. We set all bases with a quality lower than 20 to <span class="quote">&quot;N&quot;</span> (unknown). A quality of 20 means an error rate of 1% per nucleotide, which can be considered sufficient in the context of our analyses. Finally, the assessment of the agreement between reference and consensus sequences was performed using BWA [24], Samtools [25], and Tablet [26]. The ordered pair (M1; M2) = (37; 0.6) was just chosen to give error rates F1 and F2, respectively, of less than 10% for reference LC312715.1. The results of all calculations performed are shown in Tables and Figures: Table 4. The calculations show the highest significance for the choice of the ordered pair (37; 0.6), which can be seen from the highest error rates in each case. Comparable significance is provided by the ordered pairs (47; 0.50) and (25; 0.62). While the genome sequences associated with coronaviruses show error rates approximately above 10% for all ordered pairs considered (M1; M2), the error rates of the two sequences LC312715.1 (HIV) and NC_001653.2 (Hepatitis delta) are below 10% and decrease further for the ordered pairs (32; 0.60) and (30; 0.60).</p>
+</blockquote>
+<p>From the figure below, you can see that the mode length was around 150 bases for the reads which aligned against Wuhan-Hu-1 (MN908947.3), but the mode length was around 35-40 bases for the reads which aligned against HIV-1, hepatitis delta, measles, and randomly generated sequences:</p>
+<div class="width6">
+<img src="i/hamburgmath1.png">
+</div>
+<p>I don't understand why the figure above shows that there's some reads shorter than 37 bases even though the caption indicates that reads shorter than 37 bases were filtered out with <code>reformat.sh</code>.</p>
+<p>And I also don't understand why the figure above shows that there were reads longer than 151 bases which aligned against Wuhan-Hu-1, because Wu et al.'s raw reads don't include any reads longer than 151 bases. Maybe the mathematician from Hamburg counted gaps in the middle of the aligned reads as part of the reads, or maybe he calculated read lengths based on the CIGAR strings so that he added together all numbers in the CIGAR string without skipping deletions relative to the reference. His paper indicated that he ran BBMap with the <code>maxindel=0</code> parameter which doesn't allow indels, but it might be that he forgot to include the parameter in the run where he used Wuhan-Hu-1 as the reference, since there doesn't seem to be reads longer than 151 bases in the plots for other reference sequences above.</p>
+<p>In the plot for SARS-CoV-2 above, there's two peaks for the length of the aligned reads, where the first peak around length 37 looks almost as high as the second peak around length 150, but it's misleading that the y-axis is cut off so you can't see the full height of the second peak. I tried aligning Wu et al.'s raw reads against Wuhan-Hu-1 so that I ran <code>mapPacBio.sh</code> and <code>reformat.sh</code> with the same parameters as the mathematician from Hamburg, but I got about 11 times as many aligned reads of length 151 as reads of length 37:</p>
+<div class="width5">
+<img src="i/hamburgmath2.png">
+</div>
+<p>So you can compare my plot above to the plot by the mathematician by Hamburg to see how misleading it was that he cut off the y-axis, especially since it's the long reads with length around 151 that actually matched the virus reference sequences, and the short reads with length around 30-50 bases consisted of spurious matches that would have remained unaligned if BBMap was ran with regular parameters.</p>
+<p>Next I tried aligning Wu et al.'s reads against other reference genomes, where I again ran BBMap and <code>reformat.sh</code> with the same parameters as the mathematician from Hamburg:</p>
+<pre>brew install --cask miniconda;conda init ${SHELL##*/}
+conda install -c bioconda bbmap
+brew install fastp
+curl -s &#39;https://www.ebi.ac.uk/ena/portal/api/filereport?accession=SRR10971381&amp;result=read_run&amp;fields=fastq_ftp&amp;format=tsv&amp;download=true&amp;limit=0&#39;|sed 1d|cut -f2|tr \; \\n|sed s,^,ftp:,,|xargs wget -q
+fastp -i SRR10971381_1.fastq.gz -I SRR10971381_2.fastq.gz -o SRR10971381_1.trim.fq.gz -O SRR10971381_2.trim.fq.gz # trim adapter sequences, trim low-quality ends of reads, discard reads shorter than 15 bases, discard reads with 5 or more `N` letters
+printf %s\\n MN908947.3\ sars2 LC312715.1\ hiv NC_001653.2\ hepatitis AF266291.1\ measles&gt;refs
+cat refs|while read l m;do curl &quot;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&amp;rettype=fasta&amp;id=$l&quot;&gt;ref.$m.fa;done
+gshuf -rn30000&lt;&lt;&lt;$&#39;A\nC\nG\nT&#39;|tr -d \\n|awk &#39;BEGIN{print&quot;&gt;random&quot;}1&#39;&gt;ref.random.fa
+for x in $(cut -d\  -f2 refs) random;do mapPacBio.sh ref=ref.$x.fa in=SRR10971381_1.trim.fq.gz in2=SRR10971381_2.trim.fq.gz outm=$x.mapped.sam vslow k=8 maxindel=0 minratio=0.1;done
+for x in $(cut -d\  -f2 refs) random;do reformat.sh in=$x.mapped.sam out=$x.filtered.sam minlength=37 idfilter=60 ow=t;done
+for x in $(cut -d\  -f2 refs) random;do awk -F\\t &#39;/NM:i:/{l=length($10);sub(/.*NM:i:/,&quot;&quot;);sub(&quot;\t.*&quot;,&quot;&quot;);a[l]+=$0;n[l]++}END{for(i in a)print i,n[i],100*a[i]/n[i]/i}&#39; OFMT=%.1f $x.filtered.sam|sed s/^/$x\ /;done&gt;lengthcounts</pre>
+<p>The plot below shows the result of my BBMap alignment. If you compare SARS2 to HIV-1, hepatitis delta, or the random sequence, they all have a similar mismatch rate and similar number of aligned reads at the lowest read lengths, but after around length 55, the mismatch rate of SARS2 starts to drop until it reaches about 2% at length 151. However the mismatch rate of the other sequences remains at around 40% even for longer reads:</p>
+<div class="width6">
+<img src="i/hamburgmath3.png">
+</div>
+<p>Hepatitis delta has an extremely short genome of only about 1,700 bases, so in the plot above, hepatitis delta gets less aligned reads at lengths 37 to 60 than the longer genomes. I don't know why the difference between hepatitis delta and the longer genomes is not bigger though, even though SARS2 and the random 30-kb genome are almost 20 times longer than hepatitis delta, but it might be because the longer sequences are more likely to include multimapped reads which I omitted from this analysis. Or it might be because I ran BBMap with such loose alignment criteria that even for a short reference genome, random short reads are likely to get aligned against some part of the genome.</p>
+<p>(The number of mismatches is indicated by the <code>NM</code> tag in the SAM file format. For some reason BBMap doesn't include the <code>NM</code> tag for multimapped reads, which are reads that can map to two or more spots in the reference genome and which are indicated by a zero in the fifth column of the SAM file. Therefore I omitted multimapped reads from the plot above in order to calculate the average number of mismatches correctly.)</p>
+<p>Here's R code for generating the plot above:</p>
+<pre>library(ggplot2)
+
+t=read.table(&quot;lengthcounts&quot;)
+t2=rbind(t,expand.grid(V1=unique(t$V1),V2=unique(t$V2),V3=0,V4=NA))
+t=t2[!duplicated(t2[,1:2]),]
+
+group=factor(t$V1,levels=unique(t$V1))
+
+color=c(&quot;black&quot;,hcl(c(0,210,120)+15,60,55),&quot;gray60&quot;)
+
+ybreak=1e4
+ybreak2=8
+xstart=xbreak*floor(min(t$V2)/xbreak)
+xend=xbreak*ceiling(max(t$V2)/xbreak)
+yend2=48
+
+zeroshift=1
+log=log10(t$V3)+zeroshift
+log[log==-Inf]=0
+yend=ceiling(max(log))
+ylabel=c(0,1,10,100,paste0(&quot;1e&quot;,3:ceiling(max(log-zeroshift))))
+
+mismatch=t$V4*yend/yend2
+
+label=c(&quot;SARS2 (MN908947.3) (30kb)&quot;,&quot;HIV-1 (LC312715.1) (9kb)&quot;,&quot;Hepatitis delta (NC_001653.2) (2kb)&quot;,&quot;Measles (AF266291.1) (16kb)&quot;,&quot;Random sequence (30kb)&quot;)
+ystep=yend/15
+labels=data.frame(x=.25*(xend-xstart),y=seq(.3*yend,by=-ystep,length.out=length(label)),label)
+
+ggplot(t,aes(x=V2,y=log,color=group))+
+geom_line(linewidth=.3)+
+geom_point(aes(y=mismatch),size=.2)+
+geom_label(data=labels,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.7),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.04,&quot;lines&quot;),label.size=0,color=color,size=2.2,hjust=0)+
+scale_x_continuous(limits=c(xstart,xend),breaks=seq(0,xend,xbreak),expand=c(0,0))+
+scale_y_continuous(limits=c(0,yend),breaks=c(0,zeroshift+seq(0,5,1)),labels=ylabel,expand=expansion(mult=c(.02,0)),sec.axis=sec_axis(trans=~.*yend2/yend,breaks=seq(0,yend2,ybreak2),name=&quot;Percentage of mismatches (dots)&quot;))+
+labs(x=&quot;Length of read&quot;,y=&quot;Number of aligned reads (lines)&quot;)+
+scale_color_manual(values=color)+
+theme(
+  axis.text=element_text(size=6,color=&quot;black&quot;),
+  axis.ticks=element_blank(),
+  axis.ticks.length=unit(0,&quot;in&quot;),
+  axis.title=element_text(size=8),
+  legend.position=&quot;none&quot;,
+  panel.background=element_rect(fill=&quot;white&quot;),
+  panel.border=element_rect(color=&quot;gray85&quot;,fill=NA,linewidth=.4),
+  panel.grid.major=element_line(color=&quot;gray85&quot;,linewidth=.2),
+  panel.grid.minor=element_blank(),
+  plot.background=element_rect(fill=&quot;white&quot;),
+  plot.margin=margin(.05,.15,.05,.1,&quot;in&quot;)
+)
+
+ggsave(&quot;1.png&quot;,width=4,height=2.5)</pre>
+<p>The code below selects reads that aligned against SARS2, that were at least 37 bases long so they survived the filtering by <code>reformat.sh</code>, and that are not multimapped reads so they are not missing the <code>NM</code> tag. The average number of mismatches per read was 37.5% for reads of length 37 and 2.0% for reads of length 151, and there were a total of 4,856 aligned reads for length 37 and 62,766 aligned reads for length 151:</p>
+<pre>$ awk -F\\t &#39;/NM:i:/{l=length($10);sub(/.*NM:i:/,&quot;&quot;);sub(&quot;\t.*&quot;,&quot;&quot;);a[l]+=$0;n[l]++}END{for(i in a)print i,n[i],100*a[i]/n[i]/i}&#39; OFMT=%.1f sars2.filtered.sam|(gsed -u 4q;echo ...;tail -n4)
+37 4856 37.5
+38 5010 38.0
+39 3896 37.8
+40 4363 38.2
+...
+148 2316 2.3
+149 6084 2.0
+150 32431 2.2
+151 62766 2.0</pre>
+<p>However in the case of the reads that got aligned against the HIV-1 reference genome, there were only 14 aligned reads of length 151 and even those reads had an average mismatch rate of about 41%:</p>
+<pre>$ awk -F\\t &#39;/NM:i:/{l=length($10);sub(/.*NM:i:/,&quot;&quot;);sub(&quot;\t.*&quot;,&quot;&quot;);a[l]+=$0;n[l]++}END{for(i in a)print i,n[i],100*a[i]/n[i]/i}&#39; OFMT=%.1f hiv.filtered.sam|(gsed -u 4q;echo ...;tail -n4)
+37 4460 37.2
+38 4471 37.5
+39 3584 37.4
+40 3843 37.8
+...
+148 2 41.2
+149 3 40.7
+150 16 41.1
+151 14 40.6</pre>
+<p>The page below from the paper by the mathematician from Hamburg is a bit confusing, because in the table at the top he uses the term <span class="quote">&quot;short reads&quot;</span> to refer to sequencing reads with a short length, but at the end of the paragraph I highlighted he uses the term <span class="quote">&quot;short reads&quot;</span> to refer to sequencing reads in general, even though the set of about 120,000 reads he referred to mostly consisted of long reads with length above 100 bases. So in the last paragraph below, what he meant is that the reads which actually matched SARS2 were mostly long reads:</p>
+<div class="width5">
+<img src="i/hamburgmath-shortreads.png">
+</div>
+<p>The mathematician from Hamburg wrote that among the reads with a maximum length of 100 bases, the average mismatch rate was about 30%, but that's because he ran BBMap with the <code>minratio=0.1</code> parameter which tolerated an extremely high number of mismatches. However there's also some reads with a short length which genuinely match SARS2, and he would've been able to differentiate them from the spurious matches if he ran BBMap with the default parameters, or if he used <code>reformat.sh</code> to filter out reads with a high mismatch rate, or if he simply looked at which reads got aligned when he ran Bowtie2 with the default settings:</p>
+<pre>$ curl &#39;https://www.ebi.ac.uk/ena/portal/api/filereport?accession=SRR10971381&amp;result=read_run&amp;fields=fastq_ftp&#39;|sed 1d|cut -f2|tr \; \\n|sed s,^,ftp://,|xargs wget
+[...]
+$ fastp -i SRR10971381_1.fastq.gz -I SRR10971381_2.fastq.gz -o SRR10971381_1.fq.gz -O SRR10971381_2.fq.gz
+[...]
+$ curl -s &#39;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&amp;rettype=fasta&amp;id=MN908947.3&#39;&gt;sars2.fa
+$ bow()([[ -e $1.1.bt2 ]]||bowtie2-build --threads 3 &quot;$1&quot; &quot;$1&quot;;bowtie2 --no-unal -p3 -x &quot;$@&quot;)
+$ bow sars2.fa -1 SRR10971381_1.fq.gz -2 SRR10971381_2.fq.gz|samtools sort -@3 -&gt;wu.bam
+[...]
+$ samtools view wu.bam|ruby -ane&#39;puts [$F[0],$F[3],$F[5],$F[9],$F.grep(/NM:i/)[0][/\d+/]]*&quot; &quot;&#39;|awk &#39;length($4)&lt;=100&#39;|head -n3|column -t
+SRR10971381.21679314  10   68M1I6M  TGTTACCTTCCCAGGTAACAAACCAACCAACTTTCGATCTCTTGTAGATCTGTTCTCTAAACGAACTTATGCACT                6
+SRR10971381.21679314  10   68M1I6M  GGGTACCTTCCCAGGTAACAAACCAACCAACTTTCGATCTCTTGTAGATCTGTTCTCTAAACGAACTTATGCACT                7
+SRR10971381.11034571  175  89M      TGAATCTTCTGCAGGCTGCTTACGGTTTCGTCCGTGTTGCAGCCGATCATCAGCACATCTAGGTTTCGTCCGGGTGTGACCGAAAGGTG  3</pre>
+<p>The last column above shows the number of mismatches in each read. When I ran Bowtie2 with the default settings and I filtered out reads longer than 100 bases, the average mismatch rate was only about 9%:</p>
+<pre>$ samtools view wu.bam|ruby -ane&#39;puts [$F[0],$F[3],$F[5],$F[9],$F.grep(/NM:i/)[0][/\d+/]]*&quot; &quot;&#39;|awk &#39;length($4)&lt;=100{x+=$5}END{print 100*x/NR}&#39;
+9.0812</pre>
+<h3>
+<a href=#Comparison_of_Bowtie2_and_BBMap id=Comparison_of_Bowtie2_and_BBMap>Comparison of Bowtie2 and BBMap</a>
+</h3>
+<p>When I tried aligning Wu et al.'s reads with Bowtie2, I got zero reads that aligned against HIV-1, hepatitis delta, measles, or the random sequence. I got 121,779 reads which aligned against SARS2, which was identical to the figure reported by the mathematician from Hamburg, because both of us did trimming with <code>fastp</code> using the default parameters.</p>
+<p>With Bowtie2, the shortest reads that aligned against SARS2 were 31 bases long. There were less than a hundred reads at each length below 89, and their error rate was much lower than in the case of BBMap. However after around length 100-120, the results of Bowtie2 start to converge with BBMap:</p>
+<div class="width6">
+<img src="i/hamburgmath5.png">
+</div>
+<p>I ran BBMap with the same parameters as the mathematician from Hamburg (<code>vslow k=8 maxindel=0 minratio=0.1</code>), but if I would've ran it with the default parameters instead, the results would've been similar to Bowtie2.</p>
+<p>I ran Bowtie2 with the default parameters:</p>
+<pre>bowtie2-build sars2.fa{,}
+bowtie2 -p3 -x sars2.fa -1 SRR10971381_1.trim.fq.gz -2 SRR10971381_2.trim.fq.gz --no-unal|samtools sort -@2 -&gt;sorted30.bam</pre>
+<h3>
+<a href=#Aligning_random_reads_with_BBMap id=Aligning_random_reads_with_BBMap>Aligning random reads with BBMap</a>
+</h3>
+<p>I created a random 30,000-base reference sequence and a thousand random reads for each length between 30 and 150. When I ran BBMap with the same parameters as the mathematician from Hamburg, 372 out of 1000 reads of length 30 got aligned, but I got zero aligned reads for each length above 70. The proportion of mismatches was around 40% for most read lengths but 59% for length 70. This time I didn't get any multimapped reads so I didn't have to exclude them:</p>
+<pre>$ gshuf -e A -e C -e G -e T -rn30000|printf %s\\n \&gt;ref $(paste -sd\\0 -)&gt;ref.fa
+$ n=1000;for i in {30..150};do gshuf -e A -e C -e G -e T -rn$[i*n]|awk &#39;{ORS=NR%i==0?RS:&quot;&quot;}1&#39; i=$i|paste &lt;(seq $n|sed s/^/$i./) -;done|seqkit tab2fx&gt;reads.fa
+$ bbmap.sh ref=ref.fa in=reads.fa outm=reads.mapped.sam vslow k=8 maxindel=0 minratio=0.1
+[...]
+$ awk -F\\t &#39;/^[^@]/{l=length($10);sub(/.*NM:i:/,&quot;&quot;);sub(/\t.*/,&quot;&quot;);a[l]+=$0;n[l]++}END{for(i in a)print i,n[i],100*a[i]/n[i]/i}&#39; OFMT=%.1f reads.mapped.sam
+30 372 40.6
+31 312 40.8
+32 230 42.1
+33 196 41.0
+34 180 41.5
+35 137 41.6
+36 104 41.3
+37 89 41.2
+38 73 41.5
+39 53 41.5
+40 41 39.9
+41 29 43.5
+42 24 40.3
+43 24 41.4
+44 15 43.2
+45 14 40.8
+46 13 41.3
+47 10 41.7
+48 6 41.7
+49 7 42.6
+50 3 40
+51 3 43.8
+52 5 43.8
+53 3 40.9
+54 5 41.5
+55 2 42.7
+56 3 42.3
+57 1 40.4
+70 1 58.6</pre>
+<p>When I filtered out reads with indentity percent below 70, I was left with only 39 reads:</p>
+<pre>$ reformat.sh in=reads.mapped.sam out=reads.filtered.sam idfilter=70 ow=t
+[...]
+$ awk -F\\t &#39;/^[^@]/{l=length($10);sub(/.*NM:i:/,&quot;&quot;);sub(/\t.*/,&quot;&quot;);a[l]+=$0;n[l]++}END{for(i in a)print i,n[i],100*a[i]/n[i]/i}&#39; OFMT=%.1f reads.filtered.sam
+30 17 28.6
+31 11 28.4
+32 2 23.4
+33 2 27.3
+34 5 28.2
+35 1 28.6
+38 1 28.9</pre>
+<p>When I ran BBMap with the default parameters instead of the parameters used by the mathematician from Hamburg, zero of the random reads mapped to the random reference genome (which is in fact what should happen when you're running an aligner with sensible parameters).</p>
+<h3>
+<a href=#Parameters_used_with_BBMap id=Parameters_used_with_BBMap>Parameters used with BBMap</a>
+</h3>
+<p>When I googled for <code>&quot;minratio=0.1&quot; &quot;bbmap&quot;</code>, I found that the BBTools user guide included the command <code>mapPacBio.sh in=reads.fq out=mapped.sam vslow k=8 maxindel=200 minratio=0.1</code>, with the comment that the command can be used to <span class="quote">&quot;map with super-high sensitivity (useful for very-low-quality data, or remote homologies)&quot;</span>. [<a href="https://jgi.doe.gov/data-and-tools/software-tools/bbtools/bb-tools-user-guide/bbmap-guide/">https://jgi.doe.gov/data-and-tools/software-tools/bbtools/bb-tools-user-guide/bbmap-guide/</a>]</p>
+<p>A list of shell commands used by the mathematician from Hamburg featured this BBMap command: <code>mapPacBio.sh in=SRR10971381_1.fastq in2=SRR10971381_2.fastq outm=mapped.sam vslow k=8 maxindel=0 minratio=0.1</code>. So maybe he copied the command from the BBTools user guide, because he even used the same output file name <code>mapped.sam</code>, he listed the parameters in the same order, and he used <code>mapPacBio.sh</code> instead of <code>bbmap.sh</code>.</p>
+<p>The value for the K-mer length can range from 8 to 15, where the default value is <code>k=13</code> and lower values are more sensitive. So the mathematician from Hamburg used the most sensitive possible value for the K-mer length.</p>
+<p>The <code>minratio</code> parameter is no longer listed in the help message of BBMap, but I think it's because it has the same effect as the <code>minid</code> parameter but it uses a different scale, so it's basically redundant and the developer of BBMap recommended using <code>minid</code> instead. The default value for <code>minid</code> is 0.76 which is approximately equal to <code>minratio=0.56</code>. The developer of BBMap wrote the following: [<a href="https://www.biostars.org/p/376782/">https://www.biostars.org/p/376782/</a>]</p>
+<blockquote>
+<p>Sorry for the confusion; they set the same thing, just with different units. <span class="quote">&quot;minratio&quot;</span> is the internal number using the internal scoring system; if you use the <span class="quote">&quot;minid&quot;</span> flag it converts it to the equivalent minratio. So if you set <span class="quote">&quot;minid=0.76 &quot;</span> then it will be converted to approximately <span class="quote">&quot;minratio=0.56&quot;</span> and then the minratio variable will be set to 0.56. So there is no reason to set both of them. If you do set both of them, the last value will be used. I recommend minid over minratio because it is easier to read, but they accomplish the same thing.</p>
+<p><span class="quote">&quot;minid&quot;</span> is approximate since it adjusts minratio, or the ratio of the maximum possible internal score, but the internal score is not directly related to percent identity because of different penalties for substitutions, deletions, and insertions, which vary by length. If you need an exact %identity cutoff, use <span class="quote">&quot;idfilter=0.76&quot;</span> which will eliminate all alignments below 76% identity, as a postfilter. <span class="quote">&quot;minratio/minid&quot;</span> actually affect mapping, and prevent the creation of any alignments with an internal score below <span class="quote">&quot;minratio&quot;</span>. As such, a high value of minid will make the program faster and a low value will make it slower. Whereas <span class="quote">&quot;idfilter&quot;</span> does not affect speed.</p>
+<p>That said, I don't recommend using <span class="quote">&quot;idfilter&quot;</span> unless you have a good reason (like, a paper with a graph showing %identity cutoffs, for clarity; not for something like variant calling). <span class="quote">&quot;minid/minratio&quot;</span> are proportional to the internal score which should better model actual mutations or evolution, by trying to minimize the number of independant events rather than the edit distance; <span class="quote">&quot;idfilter=0.5&quot;</span>, for example, will disallow a 100bp read from mapping with a 400bp deletion in the middle, since that would be only 20% identity. <span class="quote">&quot;minid=0.5&quot;</span> would allow this mapping because the internal score would actually still be quite high (maybe 0.9 of the maximum possible ratio).</p>
+</blockquote>
+<h3>
+<a href=#Modification_date_at_GenBank_confused_with_publication_date id=Modification_date_at_GenBank_confused_with_publication_date>Modification date at GenBank confused with publication date</a>
+</h3>
+<p>The mathematician from Hamburg wrote:</p>
+<blockquote>
+<p>Alignment with the nucleotide database on 05/12/2021 showed a high match (98.85%) with <span class="quote">&quot;Homo sapiens RNA, 45S pre-ribosomal N4 (RNA45SN4), ribosomal RNA&quot;</span> (GenBank: NR_146117.1, dated 04/07/2020). This observation contradicts the claim in [1] that ribosomal RNA depletion was performed and human sequence reads were filtered using the human reference genome (human release 32, GRCh38.p13). Of particular note here is the fact that the sequence NR_146117.1 was not published until after the publication of the SRR10971381 sequence library considered here.</p>
+</blockquote>
+<p>But actually the date that is shown in the top right corner at the NCBI's website is the date when the entry was modified, and the original publication date of NR_146117 is in 2017. You can see the original publication date if you click the small <span class="quote">&quot;GenBank&quot;</span> menu in the top left corner and select <span class="quote">&quot;Revision History&quot;</span>. [<a href="https://www.ncbi.nlm.nih.gov/nuccore/NR_146117.1?report=girevhist">https://www.ncbi.nlm.nih.gov/nuccore/NR_146117.1?report=girevhist</a>]</p>
+<h2>
+<a href=#References_to_the_paper_by_the_mathematician_from_Hamburg id=References_to_the_paper_by_the_mathematician_from_Hamburg>References to the paper by the mathematician from Hamburg</a>
+</h2>
+<h3>
+<a href=#Tom_Cowans_claim_that_Wu_et_al_s_contig_was_manually_modified_to_support_the_lab_leak_narrative id=Tom_Cowans_claim_that_Wu_et_al_s_contig_was_manually_modified_to_support_the_lab_leak_narrative>Tom Cowan's claim that Wu et al.'s contig was manually modified to support the lab leak narrative</a>
+</h3>
+<p>In October 2023, Tom Cowan published a video where he claimed that because the longest contig generated by the mathematician from Hamburg was not identical to the longest contig reported by Wu et al., it meant that Wu et al. manually manipulated their contig so they added in features which made the genome seem like it had been tinkered in a lab, and therefore they managed to trick people into believing in the lab leak narrative. [<a href="https://www.bitchute.com/video/Jt7uiAp9LfWs/">https://www.bitchute.com/video/Jt7uiAp9LfWs/</a>] So Cowan said that therefore the paper by Wu et al. laid the foundation for the lab leak narrative.</p>
+<p>Cowan said: <span class="quote">&quot;The Fan Wu people made this whole 30,000-string nucleotide up and specifically put in parts that would guarantee there would be this lab leak story, then that is the origin of the story. [...] With those 56 million plus pieces, can you actually assemble this 30,000 base pair genome, or did they simply make it up from scratch - not from scratch, they took what they got and then manually - in other words, these Fan Wu group put on the dodo bird part deliberately and specifically, and it was not actually in the original reads.&quot;</span> [time 32:50] And a bit later Cowan said: <span class="quote">&quot;So us - meaning Stefan and our group that helped fund this - hired a mathematician who could do the sequencing, and said, <span class="quote">'Here, take these 56 million reads and see if you can get this 30,000 base pair genome.'</span> And surprise surprise, he can't. That genome doesn't exist out of that raw data, which can only mean, and I mean <em>only mean</em>, that the Fan Wu group made that genome up based on - they took some 26, 28 thousand, 25 thousand - we don't know - and then actually added on manually pieces and specifically made them look like flesh-eating dodo bird beaks. In other words, they put, quote, <span class="quote">'scary spike protein'</span> and <span class="quote">'cleavage site'</span> sequences from other published sequences like HIV, and put those not into a particle, not into a virus that can be released, but into the computer database. That is the only place that genome exists, not in the real world.&quot;</span> [time 40:00] (I didn't even know that the mathematician from Hamburg was hired by Lanka's group. Maybe he should've disclosed it as a conflict of interest.)</p>
+<p>I tried running <code>fastp</code> and MEGAHIT with the same parameters that were listed in the paper by the mathematician from Hamburg:</p>
+<pre>curl &quot;https://www.ebi.ac.uk/ena/portal/api/filereport?accession=SRR10971381&amp;result=read_run&amp;fields=fastq_ftp&quot;|sed 1d|cut -f2|tr \; \\n|sed s,^,ftp://,|xargs wget -q
+fastp -i SRR10971381_1.fastq.gz -I SRR10971381_2.fastq.gz -o SRR10971381_1.fastq -O SRR10971381_2.fastq
+megahit -1 SRR10971381_1.fastq -2 SRR10971381_2.fastq -o megahit_result</pre>
+<p>My longest contig was 29,802 bases long like in the case of the mathematician from Hamburg, so it's probably identical to his contig. When I compared my contig to the first 30,474-base version of Wuhan-Hu-1 at GenBank, there was one nucleotide change in the nucleocapsid gene at position 29,293 of the alignment, but all other differences were in the untranslated regions at the beginning and end of the genome (so there were no differences in the regions of the spike protein which contain the HIV-like inserts or the furin cleavage site):</p>
+<pre>$ curl -s &#39;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&amp;rettype=fasta&amp;id=MN908947.1&#39;&gt;wu1.fa
+$ seqkit sort -lr megahit_result/final.contigs.fa|seqkit head -n1|seqkit seq -rp|cat - wu1.fa|mafft --thread 4 -&gt;temp.aln
+[...]
+$ aldi2()(cat &quot;$@&quot;&gt;/tmp/aldi;Rscript --no-init-file -e &#39;m=t(as.matrix(Biostrings::readDNAStringSet(&quot;/tmp/aldi&quot;)));diff=which(rowSums(m!=m[,1])&gt;0);split(diff,cumsum(diff(c(-Inf,diff))!=1))|&gt;sapply(\(x)c(if(length(x)==1)x else paste0(x[1],&quot;-&quot;,tail(x,1)),apply(m[x,,drop=F],2,paste,collapse=&quot;&quot;)))|&gt;t()|&gt;write.table(quote=F,sep=&quot;;&quot;,row.names=F)&#39;)
+$ R -e &#39;if(!require(&quot;BiocManager&quot;))install.packages(&quot;BiocManager&quot;);BiocManager::install(&quot;Biostrings&quot;)&#39;
+[...]
+$ aldi2 temp.aln
+;k141_7732 flag=1 multi=445.0000 len=29802;MN908947.1 Wuhan seafood market pneumonia virus isolate Wuhan-Hu-1, complete genome
+1-11;----------G;CGGTGACGCAT
+13-14;TT;CA
+18-19;GG;CA
+22-27;-----T;CCCACC
+29293;G;C
+29818-30473;--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------;CCTAATGTGTAAAATTAATTTTAGTAGTGCTATCCCCATGTGATTTTAATAGCTTCTTCCTGGGATCTTGATTTCAACAGCCTCTTCCTCATACTATTCTCAACACTACTGTCAGTGAACTTCTAAAAATGGATTCTGTGTTTGACCGTAGGAAACATTTCAGTATTCCTTATCTTTAGAAACCTCTGCAACTCAAGTGTCTCTGCCAAAGAGTCTTCAAGGTAATGTCAAATACCATAACATATTTTTTAAGTTTTTGTATACTTCCTAGGAATATATGTCATAGTATGTAAAGAAGATCTGATTCATGTGATCTGTACTGTTAAGAAACACTTCAAAGGAAAACAACCTCTCATAGATCTTCAAATCCTGTTGTTCTTGAGTTGGAATGTACAATATTCAGGTAGAGATGCTGGTACAAAAAAAGACTGAATCATCAGGCTATTAGAAAGATAAACTAGGCCTCTAACATAGTAACTTTAACAGTTTGTACTTATACATATTTTCACATTGAAATATAGTTTTATTCATGACTTTTTTTGTTTTAGCTTCTCTGTCTTCCATTATTTCAAGCTGCTAAAAATTAAAAATATCCTATAGCAAAGGGCTATGGCATCTTTTTGTAAAAATAAGGAAAGCAAGGTTTTTTGATAATC</pre>
+<p>The output above shows all segments of the alignment where my longest contig differs from the first version of Wuhan-Hu-1, where the first column shows the position of the segment, the second column shows the segment in my longest contig, and the third column shows the segment in the first version of Wuhan-Hu-1. From the last line of the output above, you can see that the first version of Wuhan-Hu-1 ends with a long piece of the human genome but my longest contig only has gaps at the corresponding region of the alignment. You can try copying the nucleotide sequence from the last line above, and then paste it to the big text box here and press BLAST: <a href="https://blast.ncbi.nlm.nih.gov/Blast.cgi?PROGRAM=blastn">https://blast.ncbi.nlm.nih.gov/Blast.cgi?PROGRAM=blastn</a>. It shows that the sequence has 99.7% match to a human genome with about 93% query coverage (where there's not 100% coverage because BLAST skipped the first 38 bases of the segment because they came from the genome of SARS2 but they were missing from my contig).</p>
+<h3>
+<a href=#Video_by_Spacebusters_about_Mark_Baileys_article id=Video_by_Spacebusters_about_Mark_Baileys_article>Video by Spacebusters about Mark Bailey's article</a>
+</h3>
+<p>Mark Bailey's article titled <span class="quote">&quot;Farewell to Virology&quot;</span> is divided into three parts, where the second part is about genetic sequencing and PCR. In a video about the second part that was done by Steve Falconer from Spacebusters, he asked: <span class="quote">&quot;If the virus came from a bat first and later jumped to humans, then how is its genomic sequence made out of common human sequences, if the virus isn't human and didn't even come from humans? Obviously because Fan Wu's team assembled a fake virus genome out of chopped up bits including the human lung sputum sample. It's a smoking gun.&quot;</span> [<a href="https://www.bitchute.com/video/p1bkp55x78aK/">https://www.bitchute.com/video/p1bkp55x78aK/</a>, time 1:48:20] Then he showed a part of the paper by the mathematician from Hamburg which said: <span class="quote">&quot;At this point, the contig with the identification k141_27232, with which 1,407,705 sequences are associated, and thus about 5% of the remaining 26,108,482 sequences, should be discussed in detail. Alignment with the nucleotide database on 05/12/2021 showed a high match (98.85%) with <span class="quote">'Homo sapiens RNA, 45S pre-ribosomal N4 (RNA45SN4), ribosomal RNA'</span> (GenBank: NR_146117.1, dated 04/07/2020). This observation contradicts the claim in [1] that ribosomal RNA depletion was performed and human sequence reads were filtered using the human reference genome (human release 32, GRCh38.p13).&quot;</span> And then Falconer asked: <span class="quote">&quot;If you filter out the human reads, then why are they still in your virus genome?&quot;</span></p>
+<p>However the part of the paper he quoted wasn't talking about the contig for SARS2, but about another contig assembled by MEGAHIT which consisted of a part of the human genome or human ribosomal RNA. In the supplementary PDF published by the mathematician from Hamburg, you can see the best BLAST hits for the contig if you search for <span class="quote">&quot;k141_27232&quot;</span>. [<a href="https://impfen-nein-danke.de/u/structural_analysis_of_sequence_data_in_virology_tables_and_figures.pdf">https://impfen-nein-danke.de/u/structural_analysis_of_sequence_data_in_virology_tables_and_figures.pdf</a>]</p>
+<p>When the mathematician from Hamburg wrote that <span class="quote">&quot;human sequence reads were filtered using the human reference genome&quot;</span>, he referred to a part of the paper by Wu et al. which said: <span class="quote">&quot;To identify possible aetiological agents present in the sequencing data, the abundance of the assembled contigs was first evaluated as the expected counts using the RSEM program34 implemented in Trinity. Non-human reads (23,712,657 reads), generated by filtering host reads using the human genome (human release 32, GRCh38.p13, downloaded from Gencode) by Bowtie[235], were used for the RSEM abundance assessment.&quot;</span> However that paragraph came after a part of the paper where they decribed running MEGAHIT on the original unfiltered reads, so Wu et al. probably filtered out human reads before they did the RSEM abundance assessment but not before they ran MEGAHIT. In the set of reads that Wu et al. uploaded to the NCBI's sequence read archive, they included all 56,565,928 reads but most human reads were masked so that they consisted of only N bases. But some human reads were missed by the masking procedure, which explains why the mathematician from Hamburg got some human contigs when he ran MEGAHIT on the reads from the SRA.</p>
+<p>At time 1:49:55 in the video, Falconer said: <span class="quote">&quot;In their independent study, virologist Dr. Stefan Lanka and his mathematician took the original published genomic sequence data for the original work on coronavirus SARS-CoV-2 from Fan Wu's team - remember, based on the lung sputum fluid from a single patient in Wuhan, said to have only an 89.1% match to a group of SARS-like beta coronaviruses alleged to have been previously found in bats in China - and started running this one patient's sequences in GenBank against other available reference sequences - for not only things like bat SARS-CoV, but also other alleged virus genomes that have nothing to do with SARS, like HIV, hepatitis delta virus, measles virus, Zika virus, Ebola, and Marburg virus. And lo and behold, they were able to get anywhere from 82 percent to predominantly 96 to a 100 percent matches to all of these other viruses from the same one patient's sample sequences, much more than Fan Wu's 89% match to an alleged bat coronavirus.&quot;</span></p>
+<p>However he mixed up two different parts of the paper, because the table with the 96-100% matches showed the BLAST hits for the 50 longest MEGAHIT contigs that were assembled by the mathematician from Hamburg. Almost all of the other contigs matched parts of the human genome or bacterial genomes, apart from one contig which matched SARS2, a few contigs with no matches, and one contig where the best match was titled <span class="quote">&quot;Reagent-associated CRESS-like virus 1 isolate 7 replicase-like gene, partial sequence&quot;</span>. But the table didn't include HIV or hepatitis delta which were discussed in a different part of the paper. The reason why the table includes matches for SARS2, ZC45, and SARS1 is because it didn't just include the best match for the SARS2 contig but also matches to ZC45 and SARS1 for comparison, but from the table below you can see that the viruses on the first 5 lines all match the same contig: [<a href="https://impfen-nein-danke.de/u/structural_analysis_of_sequence_data_in_virology_tables_and_figures.pdf">https://impfen-nein-danke.de/u/structural_analysis_of_sequence_data_in_virology_tables_and_figures.pdf</a>]</p>
+<div class="width11">
+<img src="i/hamburgmath-contig-table.png">
+</div>
+<h2>
+<a href=#USMortalitys_Substack_posts id=USMortalitys_Substack_posts>USMortality's Substack posts</a>
+</h2>
+<h3>
+<a href=#Part_6_Simulated_short_reads_assembled_with_MEGAHIT id=Part_6_Simulated_short_reads_assembled_with_MEGAHIT>Part 6: Simulated short reads assembled with MEGAHIT</a>
+</h3>
+<p>USMortality took the reference genomes of different viruses, and he generated random short reads for each virus with the <code>wgsim</code> utility which comes with SAMtools and with his own TypeScript script. [<a href="https://usmortality.substack.com/p/how-reliable-is-megahit">https://usmortality.substack.com/p/how-reliable-is-megahit</a>] When he tried to assemble the short reads with MEGAHIT, he failed to get a complete contig for some viruses like HKU1, porcine adenovirus, HIV-1, and HIV-2:</p>
+<div class="width5">
+<img src="i/hamburgmath-usmortality-1.jpg">
+</div>
+<p>From the table of percentages above, you can see that when USMortality used <code>wgsim</code> to simulate short reads for the reference genome of HKU1, his longest contig was only about 89% of the length of the reference genome. I tried replicating his experiment so that I used <code>wgsim</code> to generate 100,000 70-base reads for the reference genome of HKU1. When I ran MEGAHIT to assemble the reads, I got two different contigs, and the longer contig was only 26,533 bases long even though the reference genome of HKU1 is 29,926 bases long:</p>
+<pre>$ brew install megahit -s
+[...]
+$ brew install seqkit samtools
+[...]
+$ curl -s &#39;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&amp;rettype=fasta&amp;id=NC_006577&#39;&gt;hku1.fa
+$ wgsim -N100000 hku1.fa hku1_{1,2}.fq
+[...]
+$ megahit -1 hku1_1.fq -2 hku1_2.fq -o megahku
+[...]
+$ seqkit stat hku1.fa megahku/final.contigs.fa|column -t
+file                      format  type  num_seqs  sum_len  min_len  avg_len  max_len
+hku1.fa                   FASTA   DNA   1         29,926   29,926   29,926   29,926
+megahku/final.contigs.fa  FASTA   DNA   2         29,634   3,101    14,817   26,533</pre>
+<p>When I aligned the contigs with Bowtie2, I noticed that my two contigs covered positions 7-3108 and 3394-29927, so there was a gap of 285 bases between the contigs. But then I noticed that the gap fell within a region where the same 30-base segment was repeated 9 times, where there's also a few additional repeats which did not fall within the gap between the contigs:</p>
+<pre>$ bowtie2-build hku1.fa{,}
+[...]
+$ bowtie2 -p4 -x hku1.fa -fU megahku/final.contigs.fa|samtools sort -&gt;hku1.bam
+[...]
+$ samtools view hku1.bam|awk -F\\t &#39;{l=length($10);print$4,$6,l,$4+l}&#39;|column -t
+7     647M1I2453M  3101   3108
+3394  26533M       26533  29927
+$ seqkit subseq -r 3109:3393 hku1.fa
+&gt;NC_006577.2 Human coronavirus HKU1, complete genome
+AGATGTTGTTACTGGTGACAATGACGATGAAGATGTTGTTACTGGTGACAATGACGATGA
+AGATGTTGTTACTGGTGACAATGACGATGAAGATGTTGTTACTGGTGACAATGACGATGA
+AGATGTTGTTACTGGTGACAATGACGATGAAGATGTTGTTACTGGTGACAATGACGATGA
+AGATGTTGTTACTGGTGACAATGACGATGAAGATGTTGTTACTGGTGACAATGACGATGA
+AGATGTTGTTACTGGTGACAATGACGATGAAGATGTTGTTACTGG</pre>
+<p>A paper about HKU1 said: <span class="quote">&quot;Genome analysis also revealed various numbers of tandem copies of a perfect 30-base acidic tandem repeat (ATR) which encodes NDDEDVVTGD and various numbers and sequences of imperfect repeats in the N terminus of nsp3 inside the acidic domain upstream of papain-like protease 1 among the 22 genomes.&quot;</span> [<a href="https://pubmed.ncbi.nlm.nih.gov/16809319/">https://pubmed.ncbi.nlm.nih.gov/16809319/</a>] But <code>NDDEDVVTGD</code> is the translation of the 30-base repeated segment: <code>seqkit translate&lt;&lt;&lt;$'&gt;a\nAATGACGATGAAGATGTTGTTACTGGTGAC'</code>.</p>
+<p>Above I ran <code>wgsim</code> using the default read length which is 70 bases, and I used paired reads instead of unpaired reads. But if MEGAHIT would've had to assemble the contigs from unpaired reads that each were 70 bases long, how could it know how many times the 30-base segment was repeated if it can only see one a single 70-base window of the genome at a time? Actually one of the main reasons why the paired read layout is used is that it helps to assemble regions with repeats because the read pair covers a region that is longer than an individual read. [<a href="https://emea.illumina.com/science/technology/next-generation-sequencing/plan-experiments/paired-end-vs-single-read.html">https://emea.illumina.com/science/technology/next-generation-sequencing/plan-experiments/paired-end-vs-single-read.html</a>] But even though <code>wgsim</code> generated paired reads, I guess the region with repeats was so long and the read length was so short that the paired layout didn't help MEGAHIT to assemble the region correctly. However I also tried using a longer read length with <code>wgsim</code>, and I tried using a higher K-value with MEGAHIT, but neither helped with getting a complete contig for HKU1.</p>
+<p>USMortality also failed to assemble a complete contig for the genome of a porcine adenovirus, but that's because the genome contains a tandem repeat where the same 724-base segment is repeated twice in a row near the 3' end of the genome:</p>
+<pre>$ curl &#39;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&amp;rettype=fasta&amp;id=NC_044935&#39;&gt;adeno.fa
+$ seqkit seq -s adeno.fa|awk &#39;{for(i=1;;i++){delete a;for(j=1;j&lt;=length-i+1;j++)a[substr($0,j,i)][j];found=0;for(x in a){if(length(a[x])&gt;1){found=1;for(y in a[x])print i,y,y+length(x)-1,x}}if(!found)exit}}&#39;|sort -srnk1,1|awk &#39;NR&gt;1&amp;&amp;$1!=x{exit}{x=$1}1&#39;
+725 29481 30205 CGAAGGACAACTCACCGTCCCCGCCACGGCCCCTTTAGTCTCAGGGAGCGCAGGCATCTCTTTCAACTACTCCAGCAATGACTTCGTCTTAGACAATGACAGTCTCAGTTTGAGGCCAAAGGCCATCTCTGTCACCCCTCCGCTGCAGTCCACAGAGGACACAATCTCCCTGAATTATTCTAACGACTTTTCTGTGGACAATGGCGCCCTCACCTTGGCTCCAACTTTCAAACCCTACACGCTGTGGACTGGCGCCTCACCCACAGCAAATGTCATTCTAACAAACACCACCACTCCCAACGGCACCTTTTTCCTATGCCTGACACGTGTGGGTGGGTTAGTTTTGGGTTCCTTTGCCCTGAAATCATCCATCGACCTTACTAGTATGACCAAAAAGGTCAATTTTATTTTTGATGGGGCAGGTCGGCTTCAGTCAGACTCCACTTATAAAGGGAGATTTGGATTTAGATCCAACGACAGCGTAATTGAACCCACAGCCGCAGGACTCAGTCCAGCCTGGTTAATGCCAAGCACCTTTATTTATCCACGCAACACCTCCGGTTCTTCCCTAACATCATTTGTATACATTAATCAGACATATGTGCATGTGGACATCAAGGTAAACACACTCTCTACAAACGGATATAGCCTAGAATTTAACTTTCAAAACATGAGCTTCTCCGCCCCCTTCTCCACCTCCTACGGGACCTTCTGCTACGTGCCCC
+725 30205 30929 CGAAGGACAACTCACCGTCCCCGCCACGGCCCCTTTAGTCTCAGGGAGCGCAGGCATCTCTTTCAACTACTCCAGCAATGACTTCGTCTTAGACAATGACAGTCTCAGTTTGAGGCCAAAGGCCATCTCTGTCACCCCTCCGCTGCAGTCCACAGAGGACACAATCTCCCTGAATTATTCTAACGACTTTTCTGTGGACAATGGCGCCCTCACCTTGGCTCCAACTTTCAAACCCTACACGCTGTGGACTGGCGCCTCACCCACAGCAAATGTCATTCTAACAAACACCACCACTCCCAACGGCACCTTTTTCCTATGCCTGACACGTGTGGGTGGGTTAGTTTTGGGTTCCTTTGCCCTGAAATCATCCATCGACCTTACTAGTATGACCAAAAAGGTCAATTTTATTTTTGATGGGGCAGGTCGGCTTCAGTCAGACTCCACTTATAAAGGGAGATTTGGATTTAGATCCAACGACAGCGTAATTGAACCCACAGCCGCAGGACTCAGTCCAGCCTGGTTAATGCCAAGCACCTTTATTTATCCACGCAACACCTCCGGTTCTTCCCTAACATCATTTGTATACATTAATCAGACATATGTGCATGTGGACATCAAGGTAAACACACTCTCTACAAACGGATATAGCCTAGAATTTAACTTTCAAAACATGAGCTTCTCCGCCCCCTTCTCCACCTCCTACGGGACCTTCTGCTACGTGCCCC</pre>
+<p>USMortality also failed to get complete contigs for HIV-1 and HIV-2, but that's because HIV has a long terminal repeat where a long segment at the 5' UTR is repeated at the 3' UTR: [<a href="https://en.wikipedia.org/wiki/Long_terminal_repeat">https://en.wikipedia.org/wiki/Long_terminal_repeat</a>]</p>
+<blockquote>
+<p>The HIV-1 LTR is 634 bp[5] in length and, like other retroviral LTRs, is segmented into the U3, R, and U5 regions. U3 and U5 has been further subdivided according to transcription factor sites and their impact on LTR activity and viral gene expression. The multi-step process of reverse transcription results in the placement of two identical LTRs, each consisting of a U3, R, and U5 region, at either end of the proviral DNA. The ends of the LTRs subsequently participate in integration of the provirus into the host genome. Once the provirus has been integrated, the LTR on the 5′ end serves as the promoter for the entire retroviral genome, while the LTR at the 3′ end provides for nascent viral RNA polyadenylation and, in HIV-1, HIV-2, and SIV, encodes the accessory protein, Nef.[6]</p>
+</blockquote>
+<p>The long terminal repeat is 855 bases long in the reference genome of HIV-2:</p>
+<pre>$ curl -s &#39;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&amp;rettype=fasta&amp;id=NC_001722&#39;&gt;hiv2.fa
+$ seqkit subseq -r 1:855 hiv2.fa|seqkit locate -f- hiv2.fa|cut -f1,4-6|column -t
+seqID        strand  start  end
+NC_001722.1  +       1      855
+NC_001722.1  +       9505   10359</pre>
+<p>In order to assemble regions with repeats in MEGAHIT, it sometimes helps to use a higher k-value, but it won't be very useful with these huge terminal repeats in HIV since the maximum k-mer value supported by MEGAHIT is only 255. The paper about MEGAHIT says: <span class="quote">&quot;While a small k-mer size is favourable for filtering erroneous edges and filling gaps in low-coverage regions, a large k-mer size is useful for resolving repeats.&quot;</span> [<a href="https://academic.oup.com/bioinformatics/article/31/10/1674/177884">https://academic.oup.com/bioinformatics/article/31/10/1674/177884</a>] And the paper about SPAdes says: <span class="quote">&quot;The choice of <em>k</em> affects the construction of the de Bruijn graph. Smaller values of k collapse more repeats together, making the graph more <em>tangled</em>. Larger values of k may fail to detect overlaps between reads, particularly in low coverage regions, making the graph more <em>fragmented</em>. Since low coverage regions are typical for SCS data, the choice of k greatly affects the quality of single-cell assembly. Ideally, one should use smaller values of k in low-coverage regions (to reduce fragmentation) and larger values of k in high-coverage regions (to reduce repeat collapsing).&quot;</span> [<a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3342519/">https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3342519/</a>]</p>
+<h3>
+<a href=#Part_6_Assembling_simulated_reads_of_multiple_viruses_mixed_together id=Part_6_Assembling_simulated_reads_of_multiple_viruses_mixed_together>Part 6: Assembling simulated reads of multiple viruses mixed together</a>
+</h3>
+<p>USMortality wrote that when he mixed together simulated reads from multiple different viruses into a single FASTA file and he assembled the reads with MEGAHIT, his longest contigs for both SARS2 and SARS1 only covered about 51% of the reference genome: [<a href="https://usmortality.substack.com/p/how-reliable-is-megahit">https://usmortality.substack.com/p/how-reliable-is-megahit</a>]</p>
+<div class="width8">
+<img src="i/hamburgmath-usmortality-2.jpg">
+</div>
+<p>When I used <code>wgsim</code> to simulate reads for SARS2 and SARS1 and I ran MEGAHIT on the concatenated reads, I got three contigs for both SARS1 and SARS2. I got one contig for SARS1 which covered positions 1-15046 and another contig which covered positions 14992-29707, so for some reason the contigs were not merged even though they had 47 overlapping bases, and I got similar overlapping contigs for SARS2 which were split around position 15,100:</p>
+<pre>$ curl -s &#39;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&amp;rettype=fasta&amp;id=NC_004718.3&#39;&gt;sars1.fa
+$ curl -s &#39;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&amp;rettype=fasta&amp;id=MN908947.3&#39;&gt;sars2.fa
+$ for i in 1 2;do wgsim -N100000 sars$i.fa sars$i\_{1,2}.fq;done;for i in 1 2;do cat sars[12]_$i.fq&gt;sars3_$i.fq;done
+[...]
+$ megahit -1 sars3_1.fq -2 sars3_2.fq -o megasars3
+[...]
+$ cat sars[12].fa&gt;sars12.fa
+$ bowtie2-build sars12.fa{,};bowtie2 -x sars12.fa -fU megasars3/final.contigs.fa|samtools sort -&gt;sars3.bam
+[...]
+$ samtools view sars3.bam|awk -F\\t &#39;{print$1,$3,$4,$6,length($10)}&#39;|column -t
+k79_7  NC_004718.3  1      15045M                   15045
+k79_6  NC_004718.3  14992  14714M                   14714
+k79_3  NC_004718.3  25165  247M                     247
+k79_5  MN908947.3   10     8109M1D6598M1D397M       15104
+k79_0  MN908947.3   15062  2787M                    2787
+k79_2  MN908947.3   17779  64M1I11321M2D552M3D128M  12066</pre>
+<p>Then when I tried comparing parts of the SARS1 and SARS2 genomes around the region where the contigs were split, I noticed that SARS2 and SARS1 had an identical 74-base segment at that region:</p>
+<pre>$ (seqkit subseq -r 14950:15100 sars1.fa;seqkit subseq -r 15000:15200 sars2.fa)|mafft --clustalout -
+[...]
+NC_004718.3     --------------------ttttcgcgtatactaagcgtaatgtcatccctactataac
+MN908947.3      ttatgaggatcaagatgcacttttcgcatatacaaaacgtaatgtcatccctactataac
+                                    *******.***** **.***********************
+
+NC_004718.3     tcaaatgaatcttaagtatgccattagtgcaaagaatagagctcgcaccgtagctggtgt
+MN908947.3      tcaaatgaatcttaagtatgccattagtgcaaagaatagagctcgcaccgtagctggtgt
+                ************************************************************
+
+NC_004718.3     ctctatctgtagtactatgacaaatagacagtttcatcagaaattattgaa---------
+MN908947.3      ctctatctgtagtactatgaccaatagacagtttcatcaaaaattattgaaatcaatagc
+                ********************* *****************.***********
+
+NC_004718.3     ---------------------
+MN908947.3      cgccactagaggagctactgt</pre>
+<p>The default read length used by wgsim is 70 bases, which is a few bases shorter than the length of the shared segment, but I failed to get single contigs for SARS1 and SARS2 even after I tried increasing the read length to 150 or 300. However when I increased the maximum K-value of MEGAHIT from 141 to 161, I was able to get single contigs for both SARS1 and SARS2 even with the default read length of 70:</p>
+<pre>$ megahit -1 sars3_1.fq -2 sars3_2.fq -o megasars4 --k-list 21,29,39,59,79,99,119,141,161
+[...]
+2023-10-27 15:43:10 - 2 contigs, total 59634 bp, min 29751 bp, max 29883 bp, avg 29817 bp, N50 29883 bp
+2023-10-27 15:43:10 - ALL DONE. Time elapsed: 47.084499 seconds</pre>
+<h3>
+<a href=#Part_7_Displaying_aligned_nanopore_reads_in_IGV id=Part_7_Displaying_aligned_nanopore_reads_in_IGV>Part 7: Displaying aligned nanopore reads in IGV</a>
+</h3>
+<p>USMortality downloaded the raw reads from a paper from 2020 where the genome of SARS2 was sequenced with direct RNA nanopore sequencing. [<a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7179501/">https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7179501/</a>] He then aligned the reads against the reference genome of SARS2, and he posted the screenshots from IGV below with the description: <span class="quote">&quot;As you can see, the quality of these long Nanopore reads is really terrible - so many errors and inserts! I could not find a single read that perfectly aligns to either the head or the tail! Note, that the highlighted letters are errors, and the purple/black areas are inserts/deletions. Judge for yourself, but in my opinion, the amount of errors, does not increase confidence in the genome.&quot;</span> [<a href="https://usmortality.substack.com/p/why-do-wu-et-al-2020-refuse-to-answer">https://usmortality.substack.com/p/why-do-wu-et-al-2020-refuse-to-answer</a>]</p>
+<div class="width13">
+<img src="i/hamburgmath-usmortality-3.jpg">
+</div>
+<p>The reason why the reads in his screenshots are full of N bases and they have no T bases is that USMortality forgot to convert U bases to T bases. And the reason why most reads appear to be full of errors is that they are actually soft-clipped parts of reads which were shown by IGV because he had enabled the <span class="quote">&quot;Show soft-clipped bases&quot;</span> option from the <span class="quote">&quot;Alignments&quot;</span> tab of the preferences. By default IGV doesn't display all letters within reads but only letters for bases which have a mismatch from the reference, but IGV displays all letters within soft-clipped parts of reads which makes them look like mismatches (and the UI of IGV is a bit confusing because there is no visual indication of which parts of reads are soft-clipped).</p>
+<p>In order to accurately gauge the number of mismatches in IGV, you also have to uncheck <span class="quote">&quot;Quick consensus mode&quot;</span> from the context menu of the alignment view, because otherwise IGV will display mismatches as blanks unless the percentage of mismatches at the reference position is above a given threshold. [<a href="https://www.pacb.com/blog/igv-3-improves-support-pacbio-long-reads/">https://www.pacb.com/blog/igv-3-improves-support-pacbio-long-reads/</a>] In order to save memory, IGV only displays up to about 100 reads for each position of the reference genome by default, but you can show all reads by unchecking <span class="quote">&quot;Preferences &gt; Alignments &gt; &quot;Downsample reads&quot;</span>. [<a href="https://software.broadinstitute.org/software/igv/book/export/html/37">https://software.broadinstitute.org/software/igv/book/export/html/37</a>]</p>
+<p>I downloaded the same nanopore reads that USMortality aligned in his post. [<a href="https://osf.io/8f6n9">https://osf.io/8f6n9</a>, file <code>NanoporeDRS/Vero-Infected/20200222_0650_MN26136_FAN04901_ada1e2bf/VeroInf24h.all.fastq.zst</code>] I then aligned the reads with minimap2:</p>
+<pre>curl -s &#39;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&amp;rettype=fasta&amp;id=MN908947.3&#39;&gt;sars2.fa
+minimap2 -a --sam-hit-only -x map-ont sars2.fa &lt;(seqkit seq --rna2dna Downloads/VeroInf24h.all.fastq.zst)&gt;nano7.sam;samtools sort nano7.sam&gt;nano7.bam;samtools index nano7.bam</pre>
+<p>When I opened the aligned reads in IGV, I disabled the option to show soft-clipped parts of reads, I disabled the downsampling option, and I disabled the quick consensus mode, I got 9 reads with starting position 1, and all except one of the reads had zero mismatches from Wuhan-Hu-1 within the first 10 bases (even though all reads had over a thousand hard-clipped bases at the start which are not shown below by IGV):</p>
+<div class="width7">
+<img src="i/hamburgmath-usmortality-5.jpg">
+</div>
+<h3>
+<a href=#Part_7_Getting_rid_of_two_extra_G_bases_at_the_start_of_MEGAHIT_contigs id=Part_7_Getting_rid_of_two_extra_G_bases_at_the_start_of_MEGAHIT_contigs>Part 7: Getting rid of two extra G bases at the start of MEGAHIT contigs</a>
+</h3>
+<p>USMortality wrote: <span class="quote">&quot;Even when trimming off the leading three or four nucleotides from the reads, Megahit still assembles de-novo the head with two extra G bases at the head!&quot;</span> [<a href="https://usmortality.substack.com/p/why-do-wu-et-al-2020-refuse-to-answer">https://usmortality.substack.com/p/why-do-wu-et-al-2020-refuse-to-answer</a>]</p>
+<p>However I was able to get rid of the two extra G bases when I trimmed the reads with <code>fastp -f 5 -t 5</code>, which removes the first 5 and last 5 bases from both forward and reverse reads. Then my longest MEGAHIT contig was 29,870 bases long, and it was otherwise identical to Wuhan-Hu-1 except it was missing the entire 33-base poly(A) tail.</p>
+<p>There's 25 forward reads which match the first 20 bases of Wuhan-Hu-1 but which have two extra G bases added to the start:</p>
+<pre>$ seqkit locate -p GGATTAAAGGTTTATACCTTCC SRR10971381_1.fastq|cut -f1,4-|column -t
+seqID                 strand  start  end  matched
+SRR10971381.718581    -       119    140  GGATTAAAGGTTTATACCTTCC
+SRR10971381.758993    -       86     107  GGATTAAAGGTTTATACCTTCC
+SRR10971381.1921582   -       105    126  GGATTAAAGGTTTATACCTTCC
+SRR10971381.2004837   -       105    126  GGATTAAAGGTTTATACCTTCC
+SRR10971381.2090745   -       105    126  GGATTAAAGGTTTATACCTTCC
+SRR10971381.2211935   -       105    126  GGATTAAAGGTTTATACCTTCC
+SRR10971381.2727470   -       105    126  GGATTAAAGGTTTATACCTTCC
+SRR10971381.4673132   -       103    124  GGATTAAAGGTTTATACCTTCC
+SRR10971381.6216519   -       104    125  GGATTAAAGGTTTATACCTTCC
+SRR10971381.6675729   -       117    138  GGATTAAAGGTTTATACCTTCC
+SRR10971381.7692719   -       105    126  GGATTAAAGGTTTATACCTTCC
+SRR10971381.8056736   +       3      24   GGATTAAAGGTTTATACCTTCC
+SRR10971381.10755198  -       105    126  GGATTAAAGGTTTATACCTTCC
+SRR10971381.11089222  -       105    126  GGATTAAAGGTTTATACCTTCC
+SRR10971381.12331153  -       105    126  GGATTAAAGGTTTATACCTTCC
+SRR10971381.17552714  -       105    126  GGATTAAAGGTTTATACCTTCC
+SRR10971381.19351707  -       120    141  GGATTAAAGGTTTATACCTTCC
+SRR10971381.19590294  -       104    125  GGATTAAAGGTTTATACCTTCC
+SRR10971381.19788065  -       104    125  GGATTAAAGGTTTATACCTTCC
+SRR10971381.22231571  -       117    138  GGATTAAAGGTTTATACCTTCC
+SRR10971381.23063694  -       105    126  GGATTAAAGGTTTATACCTTCC
+SRR10971381.23201569  -       105    126  GGATTAAAGGTTTATACCTTCC
+SRR10971381.24938341  -       119    140  GGATTAAAGGTTTATACCTTCC
+SRR10971381.27644056  -       119    140  GGATTAAAGGTTTATACCTTCC
+SRR10971381.28160997  -       86     107  GGATTAAAGGTTTATACCTTCC</pre>
+<p>In all of the reads shown above except a single read, the match is on the minus strand so the two extra G bases at the start of the read are actually two extra C bases at the end of the read. So that's why you have to trim the 3' ends of the reads in order to get rid of the extra G bases at the start of the contig.</p>
+<p>The reverse reads are sense relative to DNA and therefore antisense relative to RNA, so they're what people might intuitively expect to be the forward reads. The manual of the Takara RNA-Seq kit used by Wu et al. says: <span class="quote">&quot;For sequencing libraries produced with this kit, Read 1 generates sequences antisense to the original RNA. This contrasts with libraries produced by the original SMARTer Stranded Total RNA-Seq Kit - Pico Input Mammalian, for which Read 1 generates sequences sense to the original RNA.&quot;</span> [<a href="https://www.takarabio.com/documents/User+Manual/SMARTer+Stranded+Total+RNA/SMARTer+Stranded+Total+RNA-Seq+Kit+v2+-+Pico+Input+Mammalian+User+Manual_050619.pdf">https://www.takarabio.com/documents/User+Manual/SMARTer+Stranded+Total+RNA/SMARTer+Stranded+Total+RNA-Seq+Kit+v2+-+Pico+Input+Mammalian+User+Manual_050619.pdf</a>] An answer at BioStars said that the reads in the Read 1 file are called forward reads regardless of whether they are sense or antisense relative to the sequenced genome: <span class="quote">&quot;For example, with Illumina paired-end sequencing, you get two reads: commonly called <span class="quote">'forward'</span> and <span class="quote">'reverse'</span> reads, or even just <span class="quote">'Read 1'</span> and <span class="quote">'Read 2'</span>. In this case, the terms <span class="quote">'forward'</span> and <span class="quote">'reverse'</span> refer only to the relative orientation of each read to the other, and do not in themselves imply anything about their orientation relative to, say, the coding strand of the original RNA molecule in an RNA-seq experiment. When you do a strand-specific protocol, depending on the protocol, these reads will now have an assigned strandedness relative to the original RNA molecule. For example, a particular protocol might be designed that the reverse read just happens to represent the actual sequence of the RNA, while the forward read represents the reverse-complement sequence.&quot;</span> [<a href="https://www.biostars.org/p/46769/#46975">https://www.biostars.org/p/46769/#46975</a>]</p>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
