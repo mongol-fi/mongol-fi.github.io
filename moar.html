@@ -132,7 +132,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Excess_mortality_by_weeks_after_vaccination_and_age_group>Excess mortality by weeks after vaccination and age group</a></li>
 <li><a href=#Deaths_by_cumulative_doses_calculated_by_Scoops_McGoo>Deaths by cumulative doses calculated by Scoops McGoo</a></li>
 <li><a href=#Spreadsheet_by_Kirsch_for_modeling_the_expected_number_of_deaths_over_time_in_a_fixed_cohort>Spreadsheet by Kirsch for modeling the expected number of deaths over time in a fixed cohort</a></li>
-<li><a href=#Incorrect_baseline_for_excess_mortality_in_Scoops_McGoos_spreadsheet>Incorrect baseline for excess mortality in Scoops McGoo's spreadsheet</a></li>
+<li><a href=#Further_errors_in_Scoops_McGoos_spreadsheet>Further errors in Scoops McGoo's spreadsheet</a></li>
 </ul></li>
 </ul>
 
@@ -3773,7 +3773,7 @@ system(&quot;qlmanage -p 1.png&amp;&gt;/dev/null&quot;)</pre>
 <img src="i/moar-connecticut-maldives.png">
 </div>
 <p>In my plots for the Medicare data, the people who were vaccinated before the cutoff date were about as old as the people who weren't vaccinated, but in the Maldives data the unvaccinated people were much younger. So in my plot for the Maldives data, there's a bias where the expected number of deaths over time goes up faster in vaccinated people because they're older.</p>
-<p>In January 2023 Kirsch published another spreadsheet for Medicare data which includes the number of deaths by days after vaccination up to December 2022. [<a href="https://kirschsubstack.com/p/new-medicare-data-makes-it-clear">https://kirschsubstack.com/p/new-medicare-data-makes-it-clear</a>] It also shows that the delta bump in August to September 2023 is missing in vaccinated people:</p>
+<p>In January 2023 Kirsch published another spreadsheet for Medicare data which includes the number of deaths by days after vaccination up to December 2022. [<a href="https://kirschsubstack.com/i/104943824/the-medicare-data-that-i-received">https://kirschsubstack.com/i/104943824/the-medicare-data-that-i-received</a>] It also shows that the delta bump in August to September 2023 is missing in vaccinated people:</p>
 <div class="width6">
 <img src="i/moar-medicare-new.png">
 </div>
@@ -4623,7 +4623,7 @@ dead=read.csv(&quot;http://sars2.net/f/nz_monthly_deaths_by_age.csv&quot;)|&gt;s
 dead=xtabs(count~as.Date(paste(year_reg,month_reg,1,sep=&quot;-&quot;))+age_group,dead)|&gt;tail(33)
 pop=apply(pop,2,\(i)predict(td(data.frame(seq(as.Date(&quot;2021-1-1&quot;),as.Date(&quot;2023-9-1&quot;),&quot;3 month&quot;),i)~1,&quot;mean&quot;,&quot;daily&quot;,&quot;fast&quot;))$value)
 dead=apply(dead,2,\(i)predict(td(data.frame(as.Date(rownames(dead)),i)~1,,&quot;daily&quot;,&quot;fast&quot;))$value)
-cmr=dead/pop*365*1e5
+dailycmr=dead/pop*365*1e5
 
 base=dailycmr[cbind(as.numeric(t$date)-as.numeric(as.Date(&quot;2021-01-01&quot;))+1,t$age)]
 wmg=\(x,y,z)tapply(x*y,z,sum,na.rm=T)/tapply(y,z,sum,na.rm=T) # weighted mean by group
@@ -5245,7 +5245,7 @@ round(tapply(r$dead,r$year,mean))</pre>
    43    44    45    46    47    48    49    50
     0     0     0     0     0     0     0     0</pre>
 <h3>
-<a href=#Incorrect_baseline_for_excess_mortality_in_Scoops_McGoos_spreadsheet id=Incorrect_baseline_for_excess_mortality_in_Scoops_McGoos_spreadsheet>Incorrect baseline for excess mortality in Scoops McGoo's spreadsheet</a>
+<a href=#Further_errors_in_Scoops_McGoos_spreadsheet id=Further_errors_in_Scoops_McGoos_spreadsheet>Further errors in Scoops McGoo's spreadsheet</a>
 </h3>
 <p>Scoops McGoo posted this spreadsheet where he got about 53% excess mortality among people in the pay-per-dose dataset in 2023: [<a href="https://docs.google.com/spreadsheets/d/1URjV9ESRIISo1sEMUyHOjcxSfpbvbBys3aBLNHmGq3s">https://docs.google.com/spreadsheets/d/1URjV9ESRIISo1sEMUyHOjcxSfpbvbBys3aBLNHmGq3s</a>, <a href="https://twitter.com/sco0psmcgoo/status/1750036765476299148">https://twitter.com/sco0psmcgoo/status/1750036765476299148</a>]</p>
 <div class="width8">
@@ -5280,7 +5280,7 @@ round(tapply(r$dead,r$year,mean))</pre>
 &gt; daynum=as.numeric(format(as.Date(&quot;2022-9-1&quot;),&quot;%j&quot;))
 &gt; weighted.mean(cmr[buck$age+1],buck$alive)*(1+mean(daymu[daynum,cut]))
 [1] 952.0649</pre>
-<p>Scoops later fixed his plot after I pointed out his error, but he still got positive excess mortality because he calculated his baseline from the average mortality rate in 2016-2020: [<a href="https://twitter.com/sco0psmcgoo/status/1750395022199890208">https://twitter.com/sco0psmcgoo/status/1750395022199890208</a>]</p>
+<p>Scoops later fixed his plot after I pointed out his error, but he still got positive excess mortality because he used the average mortality rate in 2016-2020 to calculate his baseline: [<a href="https://twitter.com/sco0psmcgoo/status/1750395022199890208">https://twitter.com/sco0psmcgoo/status/1750395022199890208</a>]</p>
 <blockquote>
 <p>New Zealand smoking gun, Part III</p>
 <p>Bad: ~17% excess deaths during 2022 booster bonanza as compared to JAN-DEC 2016-2020 adjusted average</p>
@@ -5291,10 +5291,28 @@ round(tapply(r$dead,r$year,mean))</pre>
 <img src=i/moar-scoops-spreadsheet-5.jpg width=500><img src=i/moar-scoops-spreadsheet-3.jpg width=500>
 </div>
 </blockquote>
-<p>However his baseline is too low because New Zealand has an increasing trend in mortality rate, and it would be better to use a linear regression for the mortality rate in 2015-2019 as the baseline instead (or the 2021-2022 average or the 2021-2023 average, or the actual monthly reported mortality rate in 2021-2023):</p>
+<p>However his baseline is too low because New Zealand has an increasing trend in mortality rate, and it would be better to calculate the baseline by using a linear regression for the mortality rate in 2015-2019 (or the 2021-2022 average or the 2021-2023 average, or the actual monthly reported mortality rate in 2021-2023):</p>
 <div class="width6">
 <img src="i/moar-scoops-spreadsheet-4.png">
 </div>
+<p>In the plot below I took monthly data for deaths in 5-year age groups and quarterly population data in New Zealand, and I interpolated them to daily data. [<a href="https://www.stats.govt.nz/information-releases/births-and-deaths-year-ended-september-2023/">https://www.stats.govt.nz/information-releases/births-and-deaths-year-ended-september-2023/</a>, <a href="https://infoshare.stats.govt.nz/">https://infoshare.stats.govt.nz/</a>] Then for each day I calculated what the mortality rate in the total NZ population was for a cohort with the same age composition as people in the pay-per dose data. My plot shows that people in the pay-per-dose data seem to have had reduced mortality particularly during the COVID wave around July to August 2022. But my data for deaths was by registration date and not date of occurrence, so some deaths which occurred in July were probably shifted to August because of a registration delay.</p>
+<div class="width6">
+<img src="i/moar-scoops-spreadsheet-5.png">
+</div>
+<p>When I told Scoops that the excess deaths were caused by COVID, he said that the official number of COVID deaths was only about 3,748 so it's not enough to account for all of the excess deaths in New Zealand:</p>
+<div class="width4">
+<img src="i/moar-scoops-spreadsheet-6.jpg">
+</div>
+<p>But when I did a linear projection of the number of deaths in New Zealand in 2015-2019 in STMF, I got a total of only 1,035 excess deaths from January 2020 up to December 2023. [<a href="https://twitter.com/mongol_fi/status/1750560085342859515">https://twitter.com/mongol_fi/status/1750560085342859515</a>] And at Mortality Watch the total number of excess deaths from January 2020 to November 2023 is 2,877. [<a href="https://www.mortality.watch/explorer/?c=NZL&t=deaths_excess&ct=monthly&df=2020+Jan&ce=1&v=2">https://www.mortality.watch/explorer/?c=NZL&amp;t=deaths_excess&amp;ct=monthly&amp;df=2020+Jan&amp;ce=1&amp;v=2</a>] So in both cases the excess deaths are actually lower than the reported number of COVID deaths.</p>
+<p>In version 4 of his spreadsheet, Scoops tried to calculate mortality using single-year ages instead of adjusting for the average age of the cohort. He got a total of about 40% excess mortality in the pay-per-dose cohort: [<a href="https://twitter.com/sco0psmcgoo/status/1750819758834848249">https://twitter.com/sco0psmcgoo/status/1750819758834848249</a>]</p>
+<div class="width5">
+<img src="i/moar-scoops-spreadsheet-7.jpg">
+</div>
+<p>However he used an incorrect formula to calculate the expected mortality within his cohort. Here for example on April 8th 2021 which is the first day included in the pay-per-dose data, one 70-year-old got added to the cohort, so Scoops added about 1.0129 persons to his <span class="quote">&quot;mortality-adjusted control population&quot;</span>. But on April 10th 2021 when one 53-year-old got added to the cohort, Scoops added about 1.0031 persons to the control population:</p>
+<div class="width8">
+<img src="i/moar-scoops-spreadsheet-8.jpg">
+</div>
+<p>Why would there be such a small difference in the expected mortality for a 70-year-old and a 53-year old? Scoops incorrectly added 1 to all the mortality rates, so his mortality rate for age 70 is only about 1.01 times higher than the mortality rate for age 53, even though it should've been about 4.1 times higher if wouldn't have added 1 to all mortality rates.</p>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
