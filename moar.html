@@ -132,7 +132,8 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Excess_mortality_by_weeks_after_vaccination_and_age_group>Excess mortality by weeks after vaccination and age group</a></li>
 <li><a href=#Deaths_by_cumulative_doses_calculated_by_Scoops_McGoo>Deaths by cumulative doses calculated by Scoops McGoo</a></li>
 <li><a href=#Spreadsheet_by_Kirsch_for_modeling_the_expected_number_of_deaths_over_time_in_a_fixed_cohort>Spreadsheet by Kirsch for modeling the expected number of deaths over time in a fixed cohort</a></li>
-<li><a href=#Errors_in_versions_2_to_4_of_Scoops_McGoos_spreadsheet>Errors in versions 2 to 4 of Scoops McGoo's spreadsheet</a></li>
+<li><a href=#Further_errors_in_Scoops_McGoos_spreadsheet>Further errors in Scoops McGoo's spreadsheet</a></li>
+<li><a href=#Is_it_impossible_to_identify_any_person_in_the_dataset_because_of_the_obfuscation_procedure>Is it impossible to identify any person in the dataset because of the obfuscation procedure?</a></li>
 </ul></li>
 </ul>
 
@@ -5245,7 +5246,7 @@ round(tapply(r$dead,r$year,mean))</pre>
    43    44    45    46    47    48    49    50
     0     0     0     0     0     0     0     0</pre>
 <h3>
-<a href=#Errors_in_versions_2_to_4_of_Scoops_McGoos_spreadsheet id=Errors_in_versions_2_to_4_of_Scoops_McGoos_spreadsheet>Errors in versions 2 to 4 of Scoops McGoo's spreadsheet</a>
+<a href=#Further_errors_in_Scoops_McGoos_spreadsheet id=Further_errors_in_Scoops_McGoos_spreadsheet>Further errors in Scoops McGoo's spreadsheet</a>
 </h3>
 <p>Scoops McGoo posted this spreadsheet where he got about 53% excess mortality among people in the pay-per-dose dataset in 2023: [<a href="https://docs.google.com/spreadsheets/d/1URjV9ESRIISo1sEMUyHOjcxSfpbvbBys3aBLNHmGq3s">https://docs.google.com/spreadsheets/d/1URjV9ESRIISo1sEMUyHOjcxSfpbvbBys3aBLNHmGq3s</a>, <a href="https://twitter.com/sco0psmcgoo/status/1750036765476299148">https://twitter.com/sco0psmcgoo/status/1750036765476299148</a>]</p>
 <div class="width8">
@@ -5314,6 +5315,61 @@ round(tapply(r$dead,r$year,mean))</pre>
 </div>
 <p>Why would there be such a small difference in the expected mortality for a 70-year-old and a 53-year old? Scoops incorrectly added 1 to all the mortality rates, so his mortality rate for age 70 is only about 1.01 times higher than the mortality rate for age 53, even though it should've been about 4.1 times higher if wouldn't have added 1 to all mortality rates.</p>
 <p>(And actually the first person who got added to the cohort on April 8th was 72 and not 70 years old, so I don't know where Scoops got age 70 from. However the age is calculated correctly in column B which shows the cumulative average age.)</p>
+<p>Scoops posted this reply to me: [<a href="https://twitter.com/sco0psmcgoo/status/1751050425317437591">https://twitter.com/sco0psmcgoo/status/1751050425317437591</a>]</p>
+<blockquote>
+<p>After a lot of thinking, it's ~simple.</p>
+<p>Before the vax in N.Z., for every 1000 persons age 41 years, 1 died. And for every 1000 persons age 94 years, 228 died.</p>
+<p>Therefore: for every 1000 persons of 41 years introduced by the real data, we must pad the control by +1 person (1001 total), to make up for that natural loss. Similarly, for every 1000 of age 94, we add +228 to make 1228.</p>
+<p>This method achieves a 1:1 leak-to-control size by virtually <span class="quote">'resurrecting'</span> the people that would have died by pre-vaccine causes, then running them through the monthly-mortality filter. The portion of this larger initial group that <span class="quote">'die'</span> by normal seasonal rates are compared against what we see in Young's Te Whatu Ora data (for the very same age composition).</p>
+<p>We see this in how the green control curve grows peak to peak, yet is still significantly outpaced by the real world data, implying unprecedented excess death.</p>
+</blockquote>
+<p>However his calculation is still wrong. If Scoops would use mortality rates per 10,000 people and not per 1,000 people, then should he add 1.129 and not 1.0129 to the mortality-adjusted control population on April 8th 2021? I believe none of the formulas in his spreadsheet account for the fact that the mortality rates are per 1,000 people.</p>
+<p>Scoops got much higher excess mortality in 2023 than 2021 because the average age is lower in 2021 and he's giving very little weight to age in calculating his baseline.</p>
+<p>When I tried to remove all people aged 70 and above from his spreadsheet by deleting columns DA to DZ, it had little effect on the baseline:</p>
+<div class="width5">
+<img src="i/moar-scoops-spreadsheet-9.gif">
+</div>
+<p>Based on the distribution of ages at first vaccination and average mortality rates for single-year ages in New Zealand 2021-2022, I got about 1122 as the expected mortality rate in the pay-per-dose data (as deaths per 100k person-years). But when I removed all people aged 70 and above, the expected mortality rate fell to about 274:</p>
+<pre>&gt; t=as.data.frame(fread(&quot;nz-record-level-data-4M-records.csv&quot;,showProgress=F))
+&gt; for(i in grep(&quot;date&quot;,colnames(t)))t[,i]=ua(t[,i],as.Date,&quot;%m-%d-%Y&quot;)
+&gt; t=t[order(t$date_time_of_service),];t=t[!duplicated(t$mrn),]
+&gt; age=\(x,y){x=as.numeric(x);y=as.numeric(y);(y-x-(y-789)%/%1461+(x-789)%/%1461)%/%365}
+&gt; ages=age(t$date_of_birth,t$date_time_of_service)
+&gt; nzpop=tail(read.csv(&quot;https://sars2.net/f/nz_infoshare_population.csv&quot;),2)[,2:96]
+&gt; nzdeath=tail(read.csv(&quot;https://sars2.net/f/nz_infoshare_deaths.csv&quot;),2)[,2:96]
+&gt; cmr=data.frame(x=0:94,y=colMeans(nzdeath)/colMeans(nzpop)*1e5)
+&gt; cmr=c(cmr$y,predict(lm(y~poly(x),tail(cmr,10)),list(x=95:120)))
+&gt; mean(cmr[ages+1])
+[1] 1122.155
+&gt; mean(cmr[ages[ages&lt;70]+1])
+[1] 274.0338</pre>
+<h3>
+<a href=#Is_it_impossible_to_identify_any_person_in_the_dataset_because_of_the_obfuscation_procedure id=Is_it_impossible_to_identify_any_person_in_the_dataset_because_of_the_obfuscation_procedure>Is it impossible to identify any person in the dataset because of the obfuscation procedure?</a>
+</h3>
+<p>Kirsch wrote: <span class="quote">&quot;All the records were obfuscated using a ONE WAY randomization algorithm so that the data for a given person cannot be identified. Therefore it is IMPOSSIBLE for any person to identify someone else's record. [...] They need to provide proof to the ERA that there is at least one of the 4M records published on my S3 site that could reveal PHI.&quot;</span> [<a href="https://kirschsubstack.com/p/health-new-zealand-is-at-it-again">https://kirschsubstack.com/p/health-new-zealand-is-at-it-again</a>]</p>
+<p>However as a counterexample, the dataset has only one person who received a vaccine dose at age 110. But the person has a date of death 8 days after the vaccination, which would probably make them easy to identify if you knew someone who got vaccinated at age 110 and died 8 days later (and the date of death, date of vaccination, and date of birth of that person would be within a few days from the obfuscated dates that were used in the CSV file):</p>
+<pre>&gt; t=as.data.frame(data.table::fread(&quot;nz-record-level-data-4M-records.csv&quot;,showProgress=F))
+&gt; ua=\(x,y,...){u=unique(x);y(u,...)[match(x,u)]}
+&gt; for(i in grep(&quot;date&quot;,colnames(t)))t[,i]=ua(t[,i],as.Date,&quot;%m-%d-%Y&quot;)
+&gt; age=\(x,y){x=as.numeric(x);y=as.numeric(y);(y-x-(y-789)%/%1461+(x-789)%/%1461)%/%365}
+&gt; ages=age(t$date_of_birth,t$date_time_of_service)
+&gt; table(ages)
+ages
+    0     1     2     3     4     5     6     7     8     9    10    11    12    13    14    15    16    17    18
+   12    13    18    28    37 21962 16850 18222 19653 21801 22821 24232 49797 36371 35847 34786 41910 41337 49944
+   19    20    21    22    23    24    25    26    27    28    29    30    31    32    33    34    35    36    37
+46099 46892 47473 46021 45449 46067 46912 48065 48958 50593 51558 55640 55611 55062 54684 53250 51751 51588 50755
+   38    39    40    41    42    43    44    45    46    47    48    49    50    51    52    53    54    55    56
+49533 49379 49558 49370 49454 47995 48814 48967 50178 52710 54321 56774 63392 62087 61962 62284 62303 60416 61049
+   57    58    59    60    61    62    63    64    65    66    67    68    69    70    71    72    73    74    75
+63852 66237 68595 67255 66141 66437 65396 65025 68082 66861 66393 65970 65630 64989 64857 63823 63904 65082 61473
+   76    77    78    79    80    81    82    83    84    85    86    87    88    89    90    91    92    93    94
+55922 49874 45084 42812 42284 40856 35908 31290 27794 24577 21113 18431 16285 14130 11942  9958  8213  6480  4759
+   95    96    97    98    99   100   101   102   103   104   105   106   107   108   110   112
+ 3589  2646  1849  1165   775   481   290   152    72    39    28    11     6     3     1     2
+&gt; t[ages==110,]
+          mrn batch_id dose_number date_time_of_service date_of_death             vaccine_name date_of_birth age
+886441 472746       66           3           2022-08-07    2022-08-15 Pfizer BioNTech COVID-19    1912-03-26 110</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
