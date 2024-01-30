@@ -50,6 +50,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <ul>
 <li><a href=#Correlation_between_first_vaccine_doses_and_COVID_deaths_in_August_2021>Correlation between first vaccine doses and COVID deaths in August 2021</a></li>
 <li><a href=#Excess_deaths_in_Georgia_in_2020_and_2021>Excess deaths in Georgia in 2020 and 2021</a></li>
+<li><a href=#Correlation_between_daily_COVID_deaths_with_daily_PCR_positivity_and_daily_vaccine_doses>Correlation between daily COVID deaths with daily PCR positivity and daily vaccine doses</a></li>
 </ul></li>
 </ul>
 
@@ -124,10 +125,6 @@ MI,2020-12-16,2022-11-08,71</pre>
 <p>Demand for the shots has nearly quadrupled in recent weeks in Louisiana, a promising glimmer that the deadly reality of the virus might be breaking through a logjam of misunderstanding and misinformation.</p>
 <p>The new push for vaccinations has been driven by an explosion in coronavirus cases.</p>
 </blockquote>
-<p>When I tried comparing the daily number of COVID deaths in 2021 to daily new vaccine doses given, I got a negative correlation for all states, but most states got a positive correlation between COVID deaths and PCR positivity rate. But when I tried delaying all deaths by 14 days, the correlation with PCR positivity got even higher so that it was now positive in all states, but the correlation with daily vaccine doses got even lower:</p>
-<div class="width14">
-<img src="i/debunk-kirsch-aug2021-6.png">
-</div>
 <h3>
 <a href=#Excess_deaths_in_Georgia_in_2020_and_2021 id=Excess_deaths_in_Georgia_in_2020_and_2021>Excess deaths in Georgia in 2020 and 2021</a>
 </h3>
@@ -140,6 +137,89 @@ MI,2020-12-16,2022-11-08,71</pre>
 <div class="width6">
 <img src="i/debunk-georgia.png">
 </div>
+<h3>
+<a href=#Correlation_between_daily_COVID_deaths_with_daily_PCR_positivity_and_daily_vaccine_doses id=Correlation_between_daily_COVID_deaths_with_daily_PCR_positivity_and_daily_vaccine_doses>Correlation between daily COVID deaths with daily PCR positivity and daily vaccine doses</a>
+</h3>
+<p>When I tried comparing the daily number of COVID deaths in 2021 to daily new vaccine doses given, I got a negative correlation for all states, but most states got a positive correlation between COVID deaths and PCR positivity rate. But when I tried delaying all deaths by 14 days, the correlation with PCR positivity got even higher so that it was now positive in all states, but the correlation with daily vaccine doses got even lower:</p>
+<div class="width14">
+<img src="i/debunk-kirsch-aug2021-6.png">
+</div>
+<pre>library(ggplot2)
+
+download.file(&quot;https://data.cdc.gov/api/views/rh2h-3yt2/rows.csv?accessType=DOWNLOAD&quot;,&quot;statesvax.csv&quot;)
+download.file(&quot;https://healthdata.gov/api/views/j8mb-icvb/rows.csv&quot;,&quot;statespcr.csv&quot;)
+download.file(&quot;https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties-2021.csv&quot;,&quot;us-counties-2021.csv&quot;)
+
+vax=read.csv(&quot;statesvax.csv&quot;)|&gt;subset(date_type==&quot;Report&quot;)
+vax[,1]=as.Date(vax[,1],&quot;%m/%d/%Y&quot;)
+vax=vax[,c(&quot;Date&quot;,&quot;Location&quot;,&quot;Admin_Dose_1_Daily&quot;)]
+colnames(vax)=c(&quot;date&quot;,&quot;state&quot;,&quot;vax&quot;)
+
+pcr=read.csv(&quot;statespcr.csv&quot;)
+pos=pcr[pcr$overall_outcome==&quot;Positive&quot;,c(6,1,7)]
+neg=pcr[pcr$overall_outcome==&quot;Negative&quot;,c(6,1,7)]
+pcr=merge(pos,neg,by=c(1,2))
+pcr=data.frame(as.Date(pcr[,1],&quot;%Y/%m/%d&quot;),pcr[,2],pcr=pcr[,3]/(pcr[,3]+pcr[,4])*100)
+
+cov=data.table::fread(&quot;us-counties-2021.csv&quot;)[,.(dead=sum(deaths)),by=.(as.Date(date),state.abb[match(state,state.name)])]
+
+# cov[,1]=cov[,1]+14 # shift all deaths by 14 days
+
+me=merge(vax,pcr,by=1:2)|&gt;merge(cov,by=1:2)
+
+ma=\(x,b=1,f=b)rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T)
+xy=t(split(me,me$state)|&gt;sapply(\(x)c(cor(ma(x$vax,3),ma(x$dead,3),use=&quot;complete.obs&quot;),cor(ma(x$pcr,3),ma(x$dead,3),use=&quot;complete.obs&quot;))))
+xy=as.data.frame(xy)|&gt;&quot;colnames&lt;-&quot;(c(&quot;x&quot;,&quot;y&quot;))
+
+region=read.csv(header=F,text=&quot;Northeast,CT,MA,ME,NH,RI,VT,NJ,NY,PA
+Midwest,IN,IL,MI,OH,WI,IA,KS,MN,MO,ND,NE,SD
+South,DC,DE,FL,GA,MD,NC,SC,VA,WV,KY,MS,TN,AL,AR,LA,OK,TX
+West,AZ,CO,MT,NM,NV,UT,WY,ID,AK,CA,HI,OR,WA&quot;)
+xy$region=setNames(rep(region[,1],ncol(region)-1),unlist(region[,-1]))[rownames(xy)]
+xy$region=factor(xy$region,region[,1])
+
+color=c(&quot;red&quot;,&quot;#2050cc&quot;,&quot;black&quot;,&quot;#dd6600&quot;)
+
+ystart=-.5;yend=1;xstart=-.5;xend=0;xstep=ystep=.25
+
+xtit=paste0(&quot;Correlation between daily COVID deaths and daily vaccine doses&quot;)
+ytit=paste0(&quot;Correlation between daily COVID deaths and daily PCR positivity rate&quot;)
+
+ggplot(xy,aes(x=x,y=y,color=region))+
+geom_hline(yintercept=c(-1,1,0),linewidth=.25)+
+geom_vline(xintercept=c(-1,1,0),linewidth=.25)+
+geom_point(size=.5)+
+ggrepel::geom_text_repel(label=state.name[match(rownames(xy),state.abb)],size=2.3,max.overlaps=Inf,segment.size=.1,min.segment.length=.2,box.padding=.07,show.legend=F)+
+scale_x_continuous(limits=c(xstart,xend),breaks=seq(xstart,xend,xstep))+
+scale_y_continuous(limits=c(ystart,yend),breaks=seq(ystart,yend,ystep))+
+labs(x=xtit,y=ytit,title=&quot;2021: daily COVID deaths compared to daily new vaccine doses and daily PCR positivity\nrate&quot;,subtitle=&quot;Sources: github.com/nytimes/covid-19-data/blob/master/us-counties-2021.csv and CDC datasets titled \&quot;COVID-19 Diagnostic Laboratory Testing (PCR Testing) Time Series
+\&quot; and \&quot;COVID-19 Vaccination Trends in the United States, National and Jurisdictional\&quot;. All timeseries were converted to 7-day centered moving averages before calculating the correlation.&quot;|&gt;stringr::str_wrap(100))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+scale_fill_manual(values=color)+
+scale_color_manual(values=color)+
+theme(axis.text=element_text(size=6,color=&quot;black&quot;),
+  axis.ticks=element_blank(),
+  axis.ticks.length=unit(0,&quot;lines&quot;),
+  axis.title=element_text(size=8),
+  legend.background=element_blank(),
+  legend.box.just=&quot;center&quot;,
+  legend.box.margin=margin(0,.4,.3,.1,unit=&quot;lines&quot;),
+  legend.box.background=element_rect(color=&quot;black&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.justification=c(0,0),
+  legend.key=element_rect(fill=alpha(&quot;white&quot;,0)),
+  legend.key.size=unit(.8,&quot;lines&quot;),
+  legend.position=c(0,0),
+  legend.text=element_text(size=8,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_rect(fill=&quot;white&quot;),
+  panel.border=element_rect(color=&quot;black&quot;,fill=NA,linewidth=.3),
+  panel.grid.major=element_line(color=&quot;gray80&quot;,linewidth=.2),
+  plot.margin=margin(.4,.65,.4,.4,&quot;lines&quot;),
+  plot.title=element_text(size=9),
+  plot.subtitle=element_text(size=7.5),
+  plot.background=element_rect(fill=&quot;white&quot;))
+ggsave(&quot;1.png&quot;,width=5.6,height=4.4)</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
