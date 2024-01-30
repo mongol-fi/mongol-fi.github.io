@@ -140,11 +140,11 @@ MI,2020-12-16,2022-11-08,71</pre>
 <h3>
 <a href=#Correlation_of_daily_COVID_deaths_with_daily_vaccine_doses_and_daily_PCR_positivity id=Correlation_of_daily_COVID_deaths_with_daily_vaccine_doses_and_daily_PCR_positivity>Correlation of daily COVID deaths with daily vaccine doses and daily PCR positivity</a>
 </h3>
-<p>When I tried comparing the daily number of COVID deaths in 2021 to daily new vaccine doses given, I got a negative correlation for all states, but most states got a positive correlation between COVID deaths and PCR positivity rate. But when I tried delaying all deaths by 14 days, the correlation with PCR positivity got even higher so that it was now positive in all states, but the correlation with daily vaccine doses got even lower:</p>
+<p>When I tried comparing the daily number of COVID deaths in 2021 to daily new vaccine doses given, I got negative correlation for most states, but most states got a positive correlation between daily COVID deaths and daily PCR positivity rate. But when I tried shifting all deaths forwards by 14 days, the correlation with PCR positivity got even higher so that it was now positive in all states, and the correlation with daily vaccine doses was negative for all states except one state. So if Spieker is right and the vaccines were causing a massive number of COVID deaths with a delay of 1-2 weeks in August 2021, why wasn't it also happening during other months of 2021?</p>
 <div class="width14">
 <img src="i/debunk-kirsch-aug2021-6.png">
 </div>
-<pre>library(ggplot2)
+<pre>r1library(ggplot2)
 
 download.file(&quot;https://data.cdc.gov/api/views/rh2h-3yt2/rows.csv?accessType=DOWNLOAD&quot;,&quot;statesvax.csv&quot;)
 download.file(&quot;https://healthdata.gov/api/views/j8mb-icvb/rows.csv&quot;,&quot;statespcr.csv&quot;)
@@ -152,7 +152,7 @@ download.file(&quot;https://raw.githubusercontent.com/nytimes/covid-19-data/mast
 
 vax=read.csv(&quot;statesvax.csv&quot;)|&gt;subset(date_type==&quot;Report&quot;)
 vax[,1]=as.Date(vax[,1],&quot;%m/%d/%Y&quot;)
-vax=vax[,c(&quot;Date&quot;,&quot;Location&quot;,&quot;Admin_Dose_1_Daily&quot;)]
+vax=vax[,c(&quot;Date&quot;,&quot;Location&quot;,&quot;Administered_Daily&quot;)]
 colnames(vax)=c(&quot;date&quot;,&quot;state&quot;,&quot;vax&quot;)
 
 pcr=read.csv(&quot;statespcr.csv&quot;)
@@ -163,7 +163,7 @@ pcr=data.frame(as.Date(pcr[,1],&quot;%Y/%m/%d&quot;),pcr[,2],pcr=pcr[,3]/(pcr[,3
 
 cov=data.table::fread(&quot;us-counties-2021.csv&quot;)[,.(dead=sum(deaths)),by=.(as.Date(date),state.abb[match(state,state.name)])]
 
-# cov[,1]=cov[,1]+14 # shift all deaths by 14 days
+cov[,1]=cov[,1]+14
 
 me=merge(vax,pcr,by=1:2)|&gt;merge(cov,by=1:2)
 
@@ -180,7 +180,7 @@ xy$region=factor(xy$region,region[,1])
 
 color=c(&quot;red&quot;,&quot;#2050cc&quot;,&quot;black&quot;,&quot;#dd6600&quot;)
 
-ystart=-.5;yend=1;xstart=-.5;xend=0;xstep=ystep=.25
+xstart=-.5;xend=.1;ystart=-.5;yend=.9;xstep=ystep=.1
 
 xtit=paste0(&quot;Correlation between daily COVID deaths and daily vaccine doses&quot;)
 ytit=paste0(&quot;Correlation between daily COVID deaths and daily PCR positivity rate&quot;)
@@ -192,14 +192,14 @@ geom_point(size=.5)+
 ggrepel::geom_text_repel(label=state.name[match(rownames(xy),state.abb)],size=2.3,max.overlaps=Inf,segment.size=.1,min.segment.length=.2,box.padding=.07,show.legend=F)+
 scale_x_continuous(limits=c(xstart,xend),breaks=seq(xstart,xend,xstep))+
 scale_y_continuous(limits=c(ystart,yend),breaks=seq(ystart,yend,ystep))+
-labs(x=xtit,y=ytit,title=&quot;2021: daily COVID deaths compared to daily new vaccine doses and daily PCR positivity\nrate&quot;,subtitle=&quot;Sources: github.com/nytimes/covid-19-data/blob/master/us-counties-2021.csv and CDC datasets titled \&quot;COVID-19 Diagnostic Laboratory Testing (PCR Testing) Time Series
+labs(x=xtit,y=ytit,title=&quot;2021: daily COVID deaths compared to daily new vaccine doses and daily PCR positivity\nrate, dates of death shifted 14 days forwards&quot;,subtitle=&quot;Sources: github.com/nytimes/covid-19-data/blob/master/us-counties-2021.csv and CDC datasets titled \&quot;COVID-19 Diagnostic Laboratory Testing (PCR Testing) Time Series
 \&quot; and \&quot;COVID-19 Vaccination Trends in the United States, National and Jurisdictional\&quot;. All timeseries were converted to 7-day centered moving averages before calculating the correlation.&quot;|&gt;stringr::str_wrap(100))+
 coord_cartesian(clip=&quot;off&quot;,expand=F)+
 scale_fill_manual(values=color)+
 scale_color_manual(values=color)+
 theme(axis.text=element_text(size=6,color=&quot;black&quot;),
   axis.ticks=element_blank(),
-  axis.ticks.length=unit(0,&quot;lines&quot;),
+  axis.ticks.length=unit(.05,&quot;lines&quot;),
   axis.title=element_text(size=8),
   legend.background=element_blank(),
   legend.box.just=&quot;center&quot;,
