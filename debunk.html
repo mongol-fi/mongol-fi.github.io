@@ -49,6 +49,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Fabian_Spiekers_US_summer_of_deaths_in_2021>Fabian Spieker's US summer of deaths in 2021</a>
 <ul>
 <li><a href=#Correlation_between_first_vaccine_doses_and_COVID_deaths_in_August_2021>Correlation between first vaccine doses and COVID deaths in August 2021</a></li>
+<li><a href=#Comparison_to_Guam>Comparison to Guam</a></li>
 <li><a href=#Correlation_of_daily_deaths_with_daily_vaccine_doses_and_daily_PCR_positivity>Correlation of daily deaths with daily vaccine doses and daily PCR positivity</a></li>
 <li><a href=#Comparison_to_Maldives_data_published_by_Kirsch>Comparison to Maldives data published by Kirsch</a></li>
 <li><a href=#Proportion_of_COVID_deaths_in_young_age_groups_out_of_all_age_groups>Proportion of COVID deaths in young age groups out of all age groups</a></li>
@@ -112,6 +113,44 @@ MI,2020-12-16,2022-11-08,71</pre>
 24 15 20 23 18 22 29 12 18 21 20 19 19 21 30 25 25 26 21 27 22 15 15 14  4
 &gt; mean(weekly[3:70])
 [1] 24.47059</pre>
+<p>In the Medicare <span class="quote">&quot;all states subset&quot;</span> sheet, if you look at the five southeastern states which had the highest number of COVID deaths per capita in August 2021, there's a low number of deaths in recently vaccinated people in July and August 2021. There's only 6 deaths in August among people who were vaccinated in August, even though the average date of vaccination was on August 16th so August consists of roughly half a month, and the average number of deaths on subsequent months was about 17.5 but 6 is less than half of 17.5:</p>
+<div class="width6">
+<img src="i/debunk-kirsch-aug2021-8.png">
+</div>
+<pre>med=read.csv(&quot;https://sars2.net/f/kirsch_medicare_all_states_subset.csv&quot;)
+med[,2]=as.Date(med[,2])
+med[,3]=as.Date(med[,3])
+med=med[med[,2]&gt;=&quot;2021-01-01&quot;&amp;med[,2]&lt;=&quot;2022-11-30&quot;,]
+med=med[med[,3]&gt;=&quot;2021-01-01&quot;&amp;med[,3]&lt;=&quot;2022-11-30&quot;,]
+med=med[med[,1]%in%c(&quot;AL&quot;,&quot;AR&quot;,&quot;FL&quot;,&quot;LA&quot;,&quot;MS&quot;),]
+
+m=table(sub(&quot;...$&quot;,&quot;&quot;,med$date_of_vaccination),substr(med$date_of_death,1,7))
+disp=m
+
+m=m/apply(m,1,max)
+
+pheatmap::pheatmap(
+  m,
+  filename=&quot;0.png&quot;,
+  cluster_rows=F,
+  cluster_cols=F,
+  legend=F,
+  cellwidth=20,
+  cellheight=20,
+  fontsize=9,
+  border_color=NA,
+  display_numbers=disp,
+  fontsize_number=8,
+  na_col=&quot;white&quot;,
+  number_color=ifelse(m&gt;.85,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(0,1,,256),
+  colorRampPalette(colorspace::hex(colorspace::HSV(c(210,210,210,160,110,60,30,0,0,0),c(0,.25,rep(.5,8)),c(rep(1,8),.5,0))))(256)
+)
+
+system(&quot;convert 0.png -trim -bordercolor white -gravity northwest -splice x16 -size `identify -format %w 0.png`x -pointsize 45 caption:&#39;US Medicare data, Alabama, Arkansas, Florida, Louisiana, and Mississippi: Number of deaths by month of vaccination (y-axis) and by month of death (x-axis). Source: kirschsubstack.com/p/game-over-medicare-data-shows-the, sheet \&quot;Medicare all states subset\&quot;.&#39; +swap -append -trim -border 24 +repage 1.png&quot;)</pre>
+<h3>
+<a href=#Comparison_to_Guam id=Comparison_to_Guam>Comparison to Guam</a>
+</h3>
 <p>In Guam there was also a spike in COVID deaths and PCR positivity rate in September 2021:</p>
 <div class="width6">
 <img src="i/nopandemic-guam-1.png">
@@ -246,7 +285,7 @@ ggsave(&quot;1.png&quot;,width=5.4,height=4.4,dpi=450)</pre>
 </div>
 <pre># install.packages(&quot;BiocManager&quot;)
 # BiocManager::install(&quot;ComplexHeatmap&quot;)
-# install.packages(&quot;circlize&quot;
+# install.packages(&quot;circlize&quot;)
 
 library(data.table);library(ComplexHeatmap)
 
