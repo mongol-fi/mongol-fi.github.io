@@ -49,6 +49,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Fabian_Spiekers_US_summer_of_deaths_in_2021>Fabian Spieker's US summer of deaths in 2021</a>
 <ul>
 <li><a href=#Correlation_between_first_vaccine_doses_and_COVID_deaths_in_August_2021>Correlation between first vaccine doses and COVID deaths in August 2021</a></li>
+<li><a href=#Comparison_to_Medicare_data>Comparison to Medicare data</a></li>
 <li><a href=#Comparison_to_Guam>Comparison to Guam</a></li>
 <li><a href=#Correlation_of_daily_deaths_with_daily_vaccine_doses_and_daily_PCR_positivity>Correlation of daily deaths with daily vaccine doses and daily PCR positivity</a></li>
 <li><a href=#Comparison_to_Maldives_data_published_by_Kirsch>Comparison to Maldives data published by Kirsch</a></li>
@@ -81,6 +82,9 @@ th{background:#eee;text-align:left;font-weight:bold}
 <div class="width6">
 <img src="i/debunk-kirsch-aug2021-5.png">
 </div>
+<h3>
+<a href=#Comparison_to_Medicare_data id=Comparison_to_Medicare_data>Comparison to Medicare data</a>
+</h3>
 <p>In February 2023 Kirsch published a spreadsheet of data from Medicare, which includes the dates of vaccination and dates of death of about 110,000 vaccinated people who died between December 2020 and January 2023: [<a href="https://kirschsubstack.com/i/104943824/the-medicare-data-that-i-received">https://kirschsubstack.com/i/104943824/the-medicare-data-that-i-received</a>, <a href=moar.html#Connecticut_Medicare_data_published_by_Kirsch>moar.html#Connecticut_Medicare_data_published_by_Kirsch</a>]</p>
 <pre>$ curl -Ls sars2.net/f/kirsch_medicare_all_states_subset.csv|head
 state,date_of_vaccination,date_of_death,age_at_death
@@ -101,19 +105,35 @@ MI,2020-12-16,2022-11-08,71</pre>
 <div class="width6">
 <img src="i/debunk-subset1544.png">
 </div>
-<p>In the Medicare data there's also a reduced number of deaths in the first weeks following a vaccination. For example in people who were vaccinated in August 2021, there's only 9 deaths during the first week from vaccination and 11 deaths the next week, but during later weeks the average number of deaths is about 24:</p>
+<p>In the Medicare data there's also a reduced number of deaths in the first weeks following a vaccination. For example in people who were vaccinated in August 2021, there's only 9 deaths during the first week from vaccination and 11 deaths the next week, but during later weeks the average number of deaths is about 25:</p>
 <pre>&gt; med=read.csv(&quot;https://sars2.net/f/kirsch_medicare_all_states_subset.csv&quot;)
-&gt; med=med[grepl(&quot;2021-08&quot;,med$date_of_vaccination),]
-&gt; weekly=table(as.numeric(as.Date(med$date_of_death)-as.Date(med$date_of_vaccination))%/%7)
-&gt; weekly
+&gt; med[,2]=as.Date(med[,2]);med[,3]=as.Date(med[,3])
+&gt; weeks=with(subset(med,grepl(&quot;2021-08&quot;,date_of_vaccination)),as.numeric(date_of_death-date_of_vaccination)%/%7)
+&gt; weeks=table(factor(weeks,min(weeks):max(weeks)))
+&gt; weeks
  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25
  9 11 31 36 19 26 24 26 29 24 39 23 22 24 27 28 28 35 28 28 39 32 22 18 32 30
 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51
 32 27 30 25 23 24 18 24 14 20 21 31 26 28 24 24 21 21 20 17 26 23 23 21 27 17
 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76
 24 15 20 23 18 22 29 12 18 21 20 19 19 21 30 25 25 26 21 27 22 15 15 14  4
-&gt; mean(weekly[3:70])
-[1] 24.47059</pre>
+&gt; mean(weeks[3:54])
+[1] 25.30769</pre>
+<p>And if you only look at the 5 southeastern states that had the highest number of COVID deaths per capita in August 2021, among people who were vaccinated in July to September 2021, there were only 3 deaths on the first week after vaccination and 5 deaths on the second week, even though the average number of deaths per week was later about 11:</p>
+<pre>&gt; sub=subset(med,date_of_vaccination&gt;=&quot;2021-07-01&quot;&amp;date_of_vaccination&lt;=&quot;2021-09-30&quot;&amp;state%in%c(&quot;AL&quot;,&quot;AR&quot;,&quot;FL&quot;,&quot;LA&quot;,&quot;MS&quot;))
+&gt; weeks=as.numeric(sub$date_of_death-sub$date_of_vaccination)%/%7
+&gt; weeks=table(factor(weeks,min(weeks):max(weeks)))
+&gt; weeks
+ 0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25
+ 3  5 12 17 11  8 10  6  9  8  9  9  9 12 15 14 14 13 16  8 13 11 13 18  9 12
+26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51
+11 14 10 19 12 12 15  8 10  9 12  8 11  7 10  4 13 11 12  8  9  8 12  9 13 11
+52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77
+ 7 10 10  8 11  9 12  9 10  9  5  9  8 11 20  9  8 10  9  8 10  5  4  3  3  3
+78 79
+ 2  2
+&gt; mean(weeks[3:54])
+[1] 10.98077</pre>
 <p>In the Medicare <span class="quote">&quot;all states subset&quot;</span> sheet, if you look at the five southeastern states which had the highest number of COVID deaths per capita in August 2021, there's a low number of all-cause deaths in recently vaccinated people in July and August 2021. Among people who were vaccinated in August, there's only 6 deaths in August even though the average date of vaccination was on August 16th so August consists of roughly half a month, and the average number of deaths on subsequent months was about 17.5 which is almost 3 times higher than 6:</p>
 <div class="width6">
 <img src="i/debunk-kirsch-aug2021-8.png">
