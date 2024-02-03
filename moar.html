@@ -134,6 +134,9 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Further_errors_in_Scoops_McGoos_spreadsheet>Further errors in Scoops McGoo's spreadsheet</a></li>
 <li><a href=#Plot_for_vaccine_doses_by_date_by_Barry_Young>Plot for vaccine doses by date by Barry Young</a></li>
 <li><a href=#Excess_mortality_in_5_year_age_groups>Excess mortality in 5-year age groups</a></li>
+<li><a href=#Is_excess_mortality_in_2023_highly_elevated>Is excess mortality in 2023 highly elevated?</a></li>
+<li><a href=#Excess_mortality_calculated_by_John_Gibson>Excess mortality calculated by John Gibson</a></li>
+<li><a href=#Plot_by_an_epidemiologist_for_mortality_rates_in_5_year_age_groups>Plot by an epidemiologist for mortality rates in 5-year age groups</a></li>
 </ul></li>
 </ul>
 
@@ -5369,6 +5372,33 @@ year   cmr linear_15_19 average_16_20 excess_linear excess_average
 2020 641.3        686.9         671.9          -6.6           -4.6
 2021 683.0        689.0         671.9          -0.9            1.7
 2022 752.1        691.1         671.9           8.8           11.9</pre>
+<p>Scoops wrote: <span class="quote">&quot;Re age of cohort, I just tested: even if I artificially add +3 years to the daily average age of cohort (instead of +1 year as here), the total excess death for the entire chart drops from 8,659 to 7,179.... Meaning, age is not the game changer.&quot;</span> [<a href="https://scoopsmcgoo.substack.com/p/leaked-pay-per-dose-data-shows-so/comment/48645811">https://scoopsmcgoo.substack.com/p/leaked-pay-per-dose-data-shows-so/comment/48645811</a>] However actually age is a game changer, but Scoops is using an incorrect method to calculate his baseline which doesn't give sufficient weight to age. In the code below I calculated an average CMR in 2021-2022 for each age among the total NZ population. Then I calculated excess mortality by taking a weighted average of the CMR values where the weight was the number of person-days for each age in the pay-per-dose cohort. At first I got about -4% excess mortality, but when I incremented the ages of all people by 3 years, I got about -31% excess mortality:</p>
+<pre>&gt; download.file(&quot;https://sars2.net/f/buckets.gz&quot;,&quot;buckets.gz&quot;)
+&gt; t=data.table::fread(&quot;buckets.gz&quot;)
+&gt; t=t[,.(alive=sum(alive),dead=sum(dead)),by=age]
+&gt; pop=tail(read.csv(&quot;https://sars2.net/f/nz_infoshare_population.csv&quot;),2)[,2:96]|&gt;colMeans()
+&gt; dead=tail(read.csv(&quot;https://sars2.net/f/nz_infoshare_deaths.csv&quot;),2)[,2:96]|&gt;colMeans()
+&gt; cmr=data.frame(x=0:94,y=dead/pop*1e5)
+&gt; cmr=c(cmr$y,predict(lm(y~poly(x),tail(cmr,10)),list(x=95:120)))
+&gt; t$expected=cmr[t$age+1]*t$alive/1e5/365
+&gt; (sum(t$dead)/sum(t$expected)-1)*100
+[1] -4.228223
+&gt; t$expected2=cmr[t$age+1+3]*t$alive/1e5/365
+&gt; (sum(t$dead)/sum(t$expected2)-1)*100
+[1] -31.0554</pre>
+<p>Even in version 5 of his spreadsheet, Scoops still got 28% total excess mortality in the pay-per-dose dataset. When he refused to believe that his calculation was wrong, I told him to calculate total ASMR in the pay-per-dose cohort and compare it to historical ASMR in New Zealand. When I used the 2013 European Standard Population, I got about 850 deaths per 100k person-years as the total ASMR:</p>
+<pre>&gt; download.file(&quot;https://sars2.net/f/buckets.gz&quot;,&quot;buckets.gz&quot;)
+&gt; t=data.table::fread(&quot;buckets.gz&quot;)
+&gt; esp=c(10,40,55,55,55,60,60,65,70,70,70,70,65,60,55,50,40,25,15,8,2)*100
+&gt; espage=c(0,1,seq(5,95,5))
+&gt; t=t[,.(alive=sum(alive),dead=sum(dead)),by=.(age=cut(age,c(espage,Inf),espage,T,F))]
+&gt; sum(t$dead/t$alive*esp[match(t$age,espage)]*365)
+[1] 850.2453</pre>
+<p>However if you pick ESP2013 as the standard population at Mortality Watch, the ASMR for New Zealand is about 870 in 2018, 873 in 2019, 811 in 2020, 841 in 2021, and 904 in 2022. [<a href="https://next.mortality.watch/explorer/?c=NZL&ct=yearly&v=2">https://next.mortality.watch/explorer/?c=NZL&amp;ct=yearly&amp;v=2</a>] So the excess ASMR is nowhere close to 28%.</p>
+<p>This image demonstrates how you can do the ASMR calculation in a spreadsheet application:</p>
+<div class="width8">
+<img src="i/moar-asmr-spreadsheet.png">
+</div>
 <h3>
 <a href=#Plot_for_vaccine_doses_by_date_by_Barry_Young id=Plot_for_vaccine_doses_by_date_by_Barry_Young>Plot for vaccine doses by date by Barry Young</a>
 </h3>
@@ -5428,6 +5458,124 @@ year   cmr linear_15_19 average_16_20 excess_linear excess_average
  105    12143   22       15        51
  110      717    1        1        -9</pre>
 <p>I calculated the baseline using average mortality rates in 2017-2019. The mortality rates within single-year ages are fairly stable, so in this case it is not necessary to use a prepandemic trend rather than a prepandemic average as the baseline.</p>
+<h3>
+<a href=#Is_excess_mortality_in_2023_highly_elevated id=Is_excess_mortality_in_2023_highly_elevated>Is excess mortality in 2023 highly elevated?</a>
+</h3>
+<p>Scoops McGoo said: <span class="quote">&quot;I am told the NHI total as of 6 Oct 2023 was 29225, implying the Dec 31 will be 38k range, meaning the level has not returned to normal, remains <em>highly</em> elevated.&quot;</span> [<a href="https://scoopsmcgoo.substack.com/p/leaked-pay-per-dose-data-shows-so/comment/48658733">https://scoopsmcgoo.substack.com/p/leaked-pay-per-dose-data-shows-so/comment/48658733</a>]</p>
+<p>I downloaded a spreadsheet for weekly all-cause deaths in New Zealand from here: <a href="https://www.stats.govt.nz/experimental/covid-19-data-portal?tab=Health&category=Weekly+deaths">https://www.stats.govt.nz/experimental/covid-19-data-portal?tab=Health&amp;category=Weekly+deaths</a>. I then interpolated the weekly data to daily data and I calculated a sum of deaths for each year. When I used the linear trend in 2015-2019 as the baseline, I got only about about 2% excess deaths in 2023:</p>
+<pre>&gt; t=read.csv(&quot;http://sars2.net/f/nz_deaths_weekly.csv&quot;)|&gt;subset(age==&quot;Total&quot;)
+&gt; daily=tempdisagg::td(t[,-2]~1,,&quot;daily&quot;,&quot;fast&quot;)$values
+&gt; d=data.frame(year=2011:2023)
+&gt; d$deaths=tapply(daily$value,substring(daily$time,1,4),sum)|&gt;head(-1)
+&gt; d$trend=predict(lm(deaths~year,subset(d,year%in%2015:2019)),d)
+&gt; d$excess=d$deaths-d$trend
+&gt; d$excesspct=d$excess/d$trend*100
+&gt; print.data.frame(round(d),row.names=F)
+ year deaths trend excess excesspct
+ 2011  30165 28706   1459         5
+ 2012  30157 29387    770         3
+ 2013  29439 30068   -628        -2
+ 2014  30995 30748    247         1
+ 2015  31709 31429    280         1
+ 2016  31314 32110   -796        -2
+ 2017  33566 32791    775         2
+ 2018  33190 33472   -281        -1
+ 2019  34175 34152     22         0
+ 2020  32666 34833  -2167        -6
+ 2021  34937 35514   -577        -2
+ 2022  38484 36195   2289         6
+ 2023  37745 36875    869         2</pre>
+<h3>
+<a href=#Excess_mortality_calculated_by_John_Gibson id=Excess_mortality_calculated_by_John_Gibson>Excess mortality calculated by John Gibson</a>
+</h3>
+<p>John Gibson wrote a paper about excess deaths in New Zealand, where he said that the excess number of deaths during COVID is underestimated because there was reduced immigration during the lockdown: <a href="https://repec.its.waikato.ac.nz/wai/econwp/2302.pdf">https://repec.its.waikato.ac.nz/wai/econwp/2302.pdf</a>.</p>
+<p>Gibson used a simplistic method to add extra people to his model that he estimated were missing because of reduced immigration, where he used the average mortality rate of the total NZ population as the mortality rate of the extra people. He wrote: <span class="quote">&quot;By the end of 2022 the K&amp;K approach assumes an extrapolated population that is over 0.17 million above New Zealand's actual population then. Using the average death rate in 2022, this exaggerated population yields 1290 more <span class="quote">'expected'</span> deaths that year than the actual population would warrant.&quot;</span></p>
+<p>However migrants are much younger than the total NZ population: <a href="https://figure.nz/chart/MnjhHdNUDNzsCcin-q0tTkArydlAa8oLC">https://figure.nz/chart/MnjhHdNUDNzsCcin-q0tTkArydlAa8oLC</a>. In 2022 there was only a small number of immigrants in ages 75 and above, even though ages 75 and above have accounted for about 63-66% of deaths in New Zealand in recent years.</p>
+<p>When I calculated an expected number of deaths among a cohort with the same age distribution as the migrant arrivals to New Zealand in 2022, I got only about 302 expected deaths per year:</p>
+<pre>&gt; migrantpop=c(7621,7196,6051,5733,10511,17296,16363,11646,8039,5207,4126,3867,4042,3319,1930,1096,562,307)
+&gt; migrantage=seq(0,85,5)
+&gt; nzdead=unlist(tail(read.csv(&quot;https://sars2.net/f/nz_infoshare_deaths.csv&quot;),1)[-1])
+&gt; nzpop=unlist(tail(read.csv(&quot;https://sars2.net/f/nz_infoshare_population.csv&quot;),1)[-1])
+&gt; cutl=\(x,y)cut(x,c(y,Inf),y,T,F)
+&gt; nzdead=tapply(nzdeath,cutl(0:100,migrantage),sum)
+&gt; nzpop=tapply(nzpop,cutl(0:95,migrantage),sum)
+&gt; sum(nzdead/nzpop*migrantpop)
+[1] 302.7612</pre>
+<p>The reported number of migrant arrivals was about 120,000 in 2022, about 60,000 in 2021, about 90,000 in 2020, about 170,000 in 2019, and about 140,000 in 2018 and earlier: <a href="https://www.stats.govt.nz/information-releases/international-migration-july-2023/#annual">https://www.stats.govt.nz/information-releases/international-migration-july-2023/#annual</a>. For some reason the number of migrant arrivals was much bigger in 2019 than in previous prepandemic years, but if you subtract the number of new arrivals in 2022 from the number of new arrivals in 2018 and earlier, the difference is something like 20,000 people (even though the number of migrant departures was also reduced during the lockdown).</p>
+<p>If excess mortality is calculated using CMR or ASMR and not excess deaths, then the addition of migrants would be expected to reduce the mortality rate since it makes the population younger. It's also possible to derive excess deaths by multiplying excess CMR by population size, which would also result in excess mortality being overestimated because of reduced immigration.</p>
+<p>Gibson also wrote: <span class="quote">&quot;For example, New Zealand recorded 3640 more deaths in 2022 than in 2021 [...] The attribution of the extra deaths in 2022 to COVID-19 also cannot not be the full story given that fewer than 2700 deaths have been attributed to COVID-19 over the entire three-year COVID-era. Thus, in 2022 approximately 1000 extra deaths are likely to be from causes other than COVID-19 but there seems to be little questioning about these non-COVID deaths.&quot;</span> However he failed to account that there was negative excess mortality in 2021 and that NZ has an increasing trend in the number of deaths per year. You cannot derive the number of excess deaths in 2022 by simply subtracting the number of deaths in 2021. I got only about 2289 excess deaths in 2022 when I used the linear trend in 2015-2019 as the baseline.</p>
+<h3>
+<a href=#Plot_by_an_epidemiologist_for_mortality_rates_in_5_year_age_groups id=Plot_by_an_epidemiologist_for_mortality_rates_in_5_year_age_groups>Plot by an epidemiologist for mortality rates in 5-year age groups</a>
+</h3>
+<p>Kirsch posted this tweet: [<a href="https://twitter.com/stkirsch/status/1753603985947451401">https://twitter.com/stkirsch/status/1753603985947451401</a>]</p>
+<div class="width5">
+<img src="i/moar-epidemiologistfive-1.jpg">
+</div>
+<p>I posted this reply to Kirsch:</p>
+<blockquote>
+<p>Did you use the bucket system so you removed people under dose 1 after they got dose 2? The excess mortality of dose 1 shot up after dose 2 was rolled out because the <span class="quote">'unhealthy stragglers'</span> remained under dose 1, so people under dose 1 are not representative of vaccinated people.</p>
+<p><img src=i/moar-asmrbase-2.png class=width6></p>
+</blockquote>
+<p>But he replied: <span class="quote">&quot;No. This was a query for anyone who got shot one and I looked at their mortality over the next 12 months and then over the 12 months after that.&quot;</span> [<a href="https://twitter.com/stkirsch/status/1753603985947451401">https://twitter.com/stkirsch/status/1753603985947451401</a>]</p>
+<p>And I also posted this reply:</p>
+<blockquote>
+<p>Is it CMR or deaths? Is the baseline for 2022 the total NZ mortality in 2022 or historical prepandemic mortality? When I used monthly mortality in NZ as the baseline, I got negative excess mortality for most 5-year age groups in the pay-per-dose data:</p>
+<p><img src=i/moar-age-1.png class=width7></p>
+</blockquote>
+<p>But Kirsch replied: [<a href="https://twitter.com/stkirsch/status/1753602827203871230">https://twitter.com/stkirsch/status/1753602827203871230</a>]</p>
+<blockquote>
+<p>2021 baseline since everyone was vaccinated in .</p>
+<p>That number is in line with other mortality rates.</p>
+<p>The mortality rate for the vaccine are people who got the vaccine, and who died within 12 months of the shot .</p>
+</blockquote>
+<p>The first sentence of his reply seems incomplete and he didn't specify when everyone was vaccinated in.</p>
+<p>But anyway, the heatmap below shows that for some reason there seems to be high excess mortality in people who got dose 1 in age groups around 65-69. But regardless of whether I kept people included under earlier doses after a new dose or not, the total excess mortality of all doses aggregated together is still close to zero.</p>
+<div class="width13">
+<img src="i/moar-epidemiologistfive-2.png">
+</div>
+<p>I used the mortality rates in 2021 as the baseline like Kirsch's epidemiologist, but the excess mortality would be much lower if the baseline was the average CMR in 2021-2023 and not the CMR in 2021, because there was much lower mortality in 2021 than 2022 or 2023. Only about 9% of the person-days in the pay-per-dose data are in 2021, but about 48% are in 2022 and about 43% are in 2023.</p>
+<pre>nzpop=unlist(read.csv(&quot;https://sars2.net/f/nz_infoshare_population.csv&quot;)|&gt;subset(year==2021))[2:96]
+nzdead=unlist(read.csv(&quot;https://sars2.net/f/nz_infoshare_deaths.csv&quot;)|&gt;subset(year==2021))[2:96]
+cmr=data.frame(x=0:94,y=nzdead/nzpop)
+cmr=c(cmr$y,predict(lm(y~poly(x),tail(cmr,10)),list(x=95:120)))
+
+download.file(&quot;https://sars2.net/f/buckets.gz&quot;,&quot;buckets.gz&quot;)
+t=data.table::fread(&quot;buckets.gz&quot;,showProgress=F)
+t=t[,.(dead=sum(dead),pop=sum(alive)),by=.(age,dose=paste0(&quot;Dose &quot;,ifelse(dose&gt;=5,&quot;5+&quot;,dose)))]
+t$baseline=t$pop*cmr[t$age+1]/365
+t=t[,.(dead=sum(dead),pop=sum(pop),baseline=sum(baseline)),by=.(age=factor(pmin(age,95)%/%5*5),dose)]
+
+t=rbind(t,t[,.(dead=sum(dead),pop=sum(pop),baseline=sum(baseline)),by=.(dose)]|&gt;cbind(age=&quot;Total&quot;))
+t=rbind(t,t[,.(dead=sum(dead),pop=sum(pop),baseline=sum(baseline)),by=.(age)]|&gt;cbind(dose=&quot;Total&quot;))
+
+m=xtabs((dead/baseline-1)*100~dose+age,t)
+m2=xtabs(pop/365~dose+age,t)
+colnames(m)=colnames(m2)=paste0(colnames(m),c(paste0(&quot;-&quot;,seq(4,94,5)),&quot;+&quot;,&quot;&quot;))
+disp=round(m)
+
+pal=colorspace::HSV(c(210,210,210,210,0,0,0,0,0),c(.9,.75,.6,.3,0,.3,.6,.75,.9),c(.4,.65,1,1,1,1,1,.65,.4))
+maxcolor=200
+
+pheatmap::pheatmap(m,filename=&quot;mort0.png&quot;,display_numbers=disp,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=21,cellheight=21,fontsize=9,fontsize_number=8,border_color=NA,
+  number_color=ifelse(abs(m)&gt;.8*maxcolor,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(-maxcolor,maxcolor,,256),
+  colorRampPalette(colorspace::hex(pal))(256))
+
+kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;p=!is.na(x);x[p]=paste0(sprintf(paste0(&quot;%.&quot;,ifelse(e[p]%%3==0,1,0),&quot;f&quot;),x[p]/1e3^(e2[p]-1)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2[p]]);x}
+disp2=ifelse(m2&lt;10,round(m2),kimi(m2))
+maxcolor2=max(m2[1:(nrow(m2)-1),1:(ncol(m2)-1)])
+
+pheatmap::pheatmap(m2,filename=&quot;pop0.png&quot;,display_numbers=disp2,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=21,cellheight=21,fontsize=9,fontsize_number=8,border_color=NA,
+  number_color=ifelse(abs(m2)&gt;.5*maxcolor2,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(0,maxcolor2,,256),
+  sapply(seq(1,0,,256),\(i)rgb(i,i,i)))
+
+system(&quot;mogrify -trim mort0.png;convert mort0.png -bordercolor white -gravity northwest -splice x14 -size `identify -format %w mort0.png`x -pointsize 42 caption:&#39;Excess mortality rate in NZ pay-per-dose data relative to mortality rate in total NZ population in 2021. People are kept under earlier doses after a new dose.&#39; +swap -append -trim -border 24 +repage mort1.png&quot;)
+system(&quot;mogrify -trim pop0.png;convert pop0.png -bordercolor white -gravity northwest -splice x14 -size `identify -format %w 0.png`x -pointsize 42 caption:&#39;Population size in person-years. Person-days are counted from day of vaccination up to the end of September 2023.&#39; +swap -append -trim -border 24 +repage pop1.png&quot;)
+system(&quot;montage -tile 1x -geometry +0+0 {mort,pop}1.png 1.png&quot;)
+system(&quot;qlmanage -p 1.png&amp;&gt;/dev/null&quot;)</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
