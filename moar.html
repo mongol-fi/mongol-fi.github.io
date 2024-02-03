@@ -5541,6 +5541,8 @@ cmr=c(cmr$y,predict(lm(y~poly(x),tail(cmr,10)),list(x=95:120)))
 
 download.file(&quot;https://sars2.net/f/buckets.gz&quot;,&quot;buckets.gz&quot;)
 t=data.table::fread(&quot;buckets.gz&quot;,showProgress=F)
+# download.file(&quot;https://sars2.net/f/bucketskeep.gz&quot;,&quot;bucketskeep.gz&quot;)
+# t=data.table::fread(&quot;bucketskeep.gz&quot;,showProgress=F) # keep people included under earlier doses after a new dose
 t=t[,.(dead=sum(dead),pop=sum(alive)),by=.(age,dose=paste0(&quot;Dose &quot;,ifelse(dose&gt;=5,&quot;5+&quot;,dose)))]
 t$baseline=t$pop*cmr[t$age+1]/365
 t=t[,.(dead=sum(dead),pop=sum(pop),baseline=sum(baseline)),by=.(age=factor(pmin(age,95)%/%5*5),dose)]
@@ -5574,6 +5576,57 @@ pheatmap::pheatmap(m2,filename=&quot;pop0.png&quot;,display_numbers=disp2,
 
 system(&quot;mogrify -trim mort0.png;convert mort0.png -bordercolor white -gravity northwest -splice x14 -size `identify -format %w mort0.png`x -pointsize 42 caption:&#39;Excess mortality rate in NZ pay-per-dose data relative to mortality rate in total NZ population in 2021. People are kept under earlier doses after a new dose.&#39; +swap -append -trim -border 24 +repage mort1.png&quot;)
 system(&quot;mogrify -trim pop0.png;convert pop0.png -bordercolor white -gravity northwest -splice x14 -size `identify -format %w 0.png`x -pointsize 42 caption:&#39;Population size in person-years. Person-days are counted from day of vaccination up to the end of September 2023.&#39; +swap -append -trim -border 24 +repage pop1.png&quot;)
+system(&quot;montage -tile 1x -geometry +0+0 {mort,pop}1.png 1.png&quot;)
+system(&quot;qlmanage -p 1.png&amp;&gt;/dev/null&quot;)</pre>
+<p>Next I tried taking quarterly population data and monthly data for deaths and I interpolated them to daily data, so I got daily mortality rates for each age group in New Zealand in 2021-2023. And then when I calculated excess mortality by using the daily mortality rates as the baseline, I got only about 3% excess mortality for dose 1:</p>
+<div class="width7">
+<img src="i/moar-epidemiologistfive-3.png">
+</div>
+<pre>library(tempdisagg);library(colorspace)
+
+pop=read.csv(&quot;http://sars2.net/f/nz_infoshare_population_quarterly.csv&quot;,check.names=F,row.names=1)|&gt;tail(11)
+pop=t(rowsum(t(pop),seq(0,95)%/%5*5))
+dead=read.csv(&quot;http://sars2.net/f/nz_monthly_deaths_by_age.csv&quot;)|&gt;subset(ethnicity==&quot;Total&quot;)
+dead$age_group[dead$age_group==&quot;01_04&quot;]=&quot;00_00&quot;
+dead=xtabs(count~as.Date(paste(year_reg,month_reg,1,sep=&quot;-&quot;))+age_group,dead)|&gt;tail(33)
+pop=apply(pop,2,\(i)predict(td(data.frame(seq(as.Date(&quot;2021-1-1&quot;),as.Date(&quot;2023-9-1&quot;),&quot;3 month&quot;),i)~1,&quot;mean&quot;,&quot;daily&quot;,&quot;fast&quot;))$value)
+dead=apply(dead,2,\(i)predict(td(data.frame(as.Date(rownames(dead)),i)~1,,&quot;daily&quot;,&quot;fast&quot;))$value)
+dailycmr=dead/pop*365*1e5
+
+download.file(&quot;https://sars2.net/f/bucketskeep.gz&quot;,&quot;bucketskeep.gz&quot;)
+t=data.table::fread(&quot;bucketskeep.gz&quot;,showProgress=F)
+t=t[,.(dead=sum(dead),pop=sum(alive)),by=.(age=factor(pmin(age,95)%/%5*5),dose=paste0(&quot;Dose &quot;,ifelse(dose&gt;=5,&quot;5+&quot;,dose)),date)]
+levels(t$age)=c(paste0(seq(0,90,5),&quot;-&quot;,seq(4,89,5)),&quot;95+&quot;)
+t$base=t$pop/365/1e5*dailycmr[cbind(as.integer(t$date)-as.integer(as.Date(&quot;2021-1-2&quot;)),as.integer(t$age))]
+
+t=rbind(t,t[,.(dead=sum(dead),pop=sum(pop),base=sum(base),dose=&quot;Total&quot;),by=.(age,date)])
+t=rbind(t,t[,.(dead=sum(dead),pop=sum(pop),base=sum(base),age=&quot;Total&quot;),by=.(dose,date)])
+t=t[,.(dead=sum(dead),pop=sum(pop),base=sum(base)),by=.(dose,age)]
+
+m=xtabs((dead/base-1)*100~dose+age,t)
+m2=xtabs(pop/365~dose+age,t)
+disp=ifelse(m&gt;1e4,sprintf(&quot;%.1fk&quot;,m/1e3),round(m))
+maxcolor=200
+
+pheatmap::pheatmap(m,filename=&quot;mort0.png&quot;,display_numbers=disp,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=21,cellheight=21,fontsize=9,fontsize_number=8,border_color=NA,
+  number_color=ifelse(abs(m)&gt;.7*maxcolor,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(-maxcolor,maxcolor,,256),
+  colorRampPalette(hex(HSV(c(210,210,210,210,0,0,0,0,0),c(.9,.75,.6,.3,0,.3,.6,.75,.9),c(.4,.65,1,1,1,1,1,.65,.4))))(256))
+
+kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;p=!is.na(x);x[p]=paste0(sprintf(paste0(&quot;%.&quot;,ifelse(e[p]%%3==0,1,0),&quot;f&quot;),x[p]/1e3^(e2[p]-1)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2[p]]);x}
+
+disp2=ifelse(m2&lt;10,round(m2),kimi(m2))
+maxcolor2=max(m2[1:(nrow(m2)-1),1:(ncol(m2)-1)])
+
+pheatmap::pheatmap(m2,filename=&quot;pop0.png&quot;,display_numbers=disp2,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=21,cellheight=21,fontsize=9,fontsize_number=8,border_color=NA,
+  number_color=ifelse(abs(m2)&gt;.5*maxcolor2,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(0,maxcolor2,,256),
+  sapply(seq(1,0,,256),\(i)rgb(i,i,i)))
+
+system(&quot;w=`identify -format %w mort0.png`;convert mort0.png -gravity northwest \\( -splice x20 -size $[$w-20]x -pointsize 40 caption:&#39;Excess mortality percent in NZ pay-per-dose data relative to monthly reported mortality rate in total NZ population. People are kept under earlier doses after a new dose. People with multiple doses are counted multiple times on the total row.&#39; -extent $[w-40]x -gravity center \\) +swap -append +repage mort1.png&quot;)
+system(&quot;w=`identify -format %w pop0.png`;convert pop0.png -gravity northwest \\( -splice x20 -size $[$w-20]x -pointsize 40 caption:&#39;Population size in person-years. Person-days are counted from day of vaccination up to the end of September 2023.&#39; -extent $[w-40]x -gravity center \\) +swap -append +repage pop1.png&quot;)
 system(&quot;montage -tile 1x -geometry +0+0 {mort,pop}1.png 1.png&quot;)
 system(&quot;qlmanage -p 1.png&amp;&gt;/dev/null&quot;)</pre>
 <script>
