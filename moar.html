@@ -5631,6 +5631,59 @@ system(&quot;w=`identify -format %w mort0.png`;convert mort0.png -gravity northw
 system(&quot;w=`identify -format %w pop0.png`;convert pop0.png -gravity northwest \\( -splice x20 -size $[$w-20]x -pointsize 40 caption:&#39;Population size in person-years. Person-days are counted from day of vaccination up to the end of September 2023.&#39; -extent $[w-40]x -gravity center \\) +swap -append +repage pop1.png&quot;)
 system(&quot;montage -tile 1x -geometry +0+0 {mort,pop}1.png 1.png&quot;)
 system(&quot;qlmanage -p 1.png&amp;&gt;/dev/null&quot;)</pre>
+<p>The NZ data has a <span class="quote">&quot;late vaccinee effect&quot;</span> where people who got vaccinated during the later part of the rollout peak subsequently had higher excess mortality than people who got vaccinated during the earlier part of the rollout peak. I have found the effect in each dose from dose 1 to dose 5.</p>
+<p>The pay-per-dose data only includes a small part of all vaccine doses given in New Zealand in early 2021, but the proportion of missing doses gets lower over time so that it is lower in late 2021, even lower in 2022, and lowest in 2023.</p>
+<p>Therefore the NZ data is missing a disproportionate number of first doses that were given during the early part of the rollout peak, which might explain why there's high total excess mortality for the first dose, since the late vaccinees are overrepresented and the early vaccinees are underrepresented.</p>
+<p>In the heatmap below, I calculated an expected mortality rate based on the age composition of the cohort, so that I first calculated average mortality rates for each age in New Zealand in 2021 and 2022, and then I took a weighted average of the mortality rates where the weight was the number of person-days for each age in the pay-per-dose cohort. And then when I selected people who had a first dose listed in the PPD data, and I calculated their excess mortality up to the end of September 2023, I got about -2% to 0% excess mortality for people who got the first dose in June to August 2021, but the excess mortality increased to about 31% for people who got the first dose in September 2021, 67% for October 2021, and 102% in November 2021. However vaccine doses given in June to August 2021 are underrepresented in the pay-per-dose data relative to vaccine doses given later in 2021, which might partially explain why the total excess mortality for dose 1 is so high:</p>
+<div class="width13">
+<img src="i/moar-epidemiologistfive-4.png">
+</div>
+<p>In the PPD data there's about 7.4 times as many first doses given in October 2021 as in June 2021, but among the total NZ population there's only about 1.5 times as many first doses given in October as in June:</p>
+<pre>&gt; months=substr(seq(as.Date(&quot;2021-1-1&quot;),as.Date(&quot;2023-10-1&quot;),&quot;month&quot;),1,7)
+&gt; t=data.table::fread(&quot;nz-record-level-data-4M-records.csv&quot;)
+&gt; d=data.frame(t[dose_number==1,sub(&quot;(..).*(....)$&quot;,&quot;\\2-\\1&quot;,date_time_of_service)]|&gt;factor(months)|&gt;table(),row.names=1)
+&gt; colnames(d)=&quot;ppd&quot;
+&gt; download.file(&quot;https://covid.ourworldindata.org/data/owid-covid-data.csv&quot;,&quot;owid-covid-data.csv&quot;)
+&gt; owid=data.table::fread(&quot;owid-covid-data.csv&quot;)[location==&quot;New Zealand&quot;]
+&gt; d$owid=tapply(owid$new_people_vaccinated_smoothed_per_hundred,factor(substr(owid$date,1,7),months),sum,na.rm=T)
+&gt; d[]=apply(d,2,\(x)x/sum(x)*100)
+&gt; d$ratio=d$owid/d$ppd
+&gt; round(d,2) # percentage of people who received first dose each month
+          ppd  owid ratio
+2021-01  0.00  0.00   NaN
+2021-02  0.00  0.08   Inf
+2021-03  0.00  1.02   Inf
+2021-04  0.05  3.12 64.66
+2021-05  1.02  5.08  4.99
+2021-06  1.79  6.73  3.76
+2021-07  4.53  9.36  2.07
+2021-08 31.50 24.24  0.77
+2021-09 26.58 26.07  0.98
+2021-10 13.31  9.80  0.74
+2021-11  7.04  4.52  0.64
+2021-12  3.08  2.25  0.73
+2022-01  5.62  4.07  0.72
+2022-02  3.34  2.54  0.76
+2022-03  0.92  0.68  0.75
+2022-04  0.14  0.09  0.70
+2022-05  0.11  0.06  0.54
+2022-06  0.15  0.05  0.34
+2022-07  0.17  0.06  0.34
+2022-08  0.10  0.04  0.37
+2022-09  0.07  0.03  0.40
+2022-10  0.06  0.02  0.37
+2022-11  0.06  0.03  0.50
+2022-12  0.07  0.03  0.44
+2023-01  0.06  0.03  0.40
+2023-02  0.03  0.00  0.00
+2023-03  0.03  0.00  0.00
+2023-04  0.06  0.00  0.00
+2023-05  0.05  0.00  0.00
+2023-06  0.03  0.00  0.00
+2023-07  0.01  0.00  0.00
+2023-08  0.01  0.00  0.00
+2023-09  0.01  0.00  0.00
+2023-10  0.00  0.00  0.00</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
