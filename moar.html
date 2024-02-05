@@ -5399,6 +5399,100 @@ year   cmr linear_15_19 average_16_20 excess_linear excess_average
 <div class="width8">
 <img src="i/moar-asmr-spreadsheet.png">
 </div>
+<p>When Scoops asked me why he cannot derive the expected mortality rate from the average age of the cohort without accounting for the distribution of different age groups, I told him that the expected mortality rate depends on the percentage of elderly people and not just the average age. For example the average age is about 55.7 in April 2021 and about 55.6 in December 2021, but the percentage of people in ages 70 and above is more than twice as high in April:</p>
+<div class="width9">
+<img src="i/moar-scoops-age-pct.png">
+</div>
+<pre>nzpop=unlist(read.csv(&quot;https://sars2.net/f/nz_infoshare_population.csv&quot;)|&gt;subset(year==2021))[2:96]
+nzdead=unlist(read.csv(&quot;https://sars2.net/f/nz_infoshare_deaths.csv&quot;)|&gt;subset(year==2021))[2:96]
+cmr=data.frame(x=0:94,y=nzdead/nzpop)
+cmr=c(cmr$y,predict(lm(y~poly(x),tail(cmr,10)),list(x=95:120)))
+
+yemo=\(x){u=unique(x);p=as.POSIXlt(u);sprintf(&quot;%d-%02d&quot;,p$year+1900,p$mon+1)[match(x,u)]}
+
+t=data.table::fread(&quot;buckets.gz&quot;,showProgress=F)
+ages=tapply(t$alive,list(age=factor(t$age,0:120),month=yemo(t$date)),sum,na.rm=T)
+
+ages=t[,.(pop=sum(alive)),by=.(age,month=yemo(t$date))]
+expected=tapply(cmr[ages$age+1]*ages$pop,ages$month,sum)/tapply(ages$pop,ages$month,sum)*1e5
+
+mean=tapply(t$age,yemo(t$date),mean)
+t=t[,.(pop=sum(alive)),by=.(age=factor(pmin(age,90)%/%10*10),month=yemo(date))]
+
+m=xtabs(pop~age+month,t)/365
+m=t(t(m)/colSums(m))*100
+disp=round(m)
+maxcolor=max(m)
+elderly=colSums(m[8:10,])/colSums(m)*100
+rownames(m)=c(paste0(seq(0,80,10),&quot;-&quot;,seq(9,89,10)),&quot;90+&quot;)
+m=rbind(m,&quot;Average age&quot;=rep(0,ncol(m)))
+m=rbind(m,&quot;Percentage of people in ages 70+&quot;=rep(0,ncol(m)))
+m=rbind(m,&quot;Expected mortality rate&quot;=rep(0,ncol(m)))
+disp=rbind(disp,sprintf(&quot;%.1f&quot;,mean),round(elderly),round(expected))
+
+pheatmap::pheatmap(m,filename=&quot;0.png&quot;,display_numbers=disp,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=21,cellheight=21,fontsize=9,fontsize_number=8,border_color=NA,
+  breaks=seq(0,maxcolor,,256),
+  colorRampPalette(hex(HSV(c(210,210,120,60,40,20,0),c(0,.5,.5,.5,.5,.5,.5),1)))(256))
+
+system(&quot;w=`identify -format %w 0.png`;convert 0.png -gravity northwest \\( -splice x20 -size $[$w-20]x -pointsize 40 caption:&#39;NZ pay-per-dose data: Monthly percentage of person-days for each 10-year age group&#39; -extent $[w-40]x -gravity center \\) +swap -append +repage 1.png&quot;)
+qp()</pre>
+<p>Scoops told me that it was not possible that 2021 had negative excess mortality even though 2021 had a higher number of deaths than any previous year in New Zealand. But I pointed out to him that 2014 was also below the 2015-2019 linear trend even though it had a higher number of deaths than any previous year:</p>
+<div class="width5">
+<img src="i/moar-scoops-polydemo.png">
+</div>
+<pre>library(ggplot2)
+
+t=read.csv(&quot;http://sars2.net/f/nz_deaths_weekly.csv&quot;)
+t=t[t$age==&quot;Total&quot;,]
+daily=tempdisagg::td(t[,-2]~1,,&quot;daily&quot;,&quot;fast&quot;)$values
+d=data.frame(year=2011:2023)
+d$dead=head(tapply(daily$value,substring(daily$time,1,4),sum),-1)
+
+d$&quot;Linear trend (2015-2019)&quot;=predict(lm(dead~year,subset(d,year%in%2011:2019)),d)
+d$&quot;Second-degree polynomial trend (2011-2019)&quot;=predict(lm(dead~poly(year,2),subset(d,year&lt;2020)),d)
+
+colnames(d)[2]=&quot;Actual deaths&quot;
+xy=data.frame(x=d$year,y=unlist(d[-1]),z=rep(colnames(d)[-1],each=nrow(d)))
+
+xstart=2011;xend=2024
+cand=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
+ybreak=cand[which.min(abs(cand-max(xy$y,na.rm=T)/8))]
+ybreak=2000
+ystart=ybreak*floor(min(xy$y,na.rm=T)/ybreak)
+yend=ybreak*ceiling(max(xy$y,na.rm=T)/ybreak)
+
+xy$z=factor(xy$z,unique(xy$z))
+
+color=c(&quot;black&quot;,hcl(c(210,120,0)+15,105,45))
+
+ystep=(yend-ystart)/13
+leg=data.frame(x=xstart+(xend-xstart)*.03,y=seq(yend-ystep,,-ystep,nlevels(xy$z)),label=levels(xy$z))
+
+ggplot(xy,aes(x=x+.5,y=y,color=z))+
+geom_hline(yintercept=c(ystart,0,yend),color=&quot;gray65&quot;,linewidth=.3)+
+geom_vline(xintercept=c(xstart,xend,2015,2020),color=&quot;gray65&quot;,linewidth=.3)+
+geom_line(linewidth=.3)+
+geom_point(size=.6)+
+geom_label(data=leg,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.85),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.04,&quot;lines&quot;),label.size=0,color=color[1:nrow(leg)],size=2.6,hjust=0)+
+labs(title=&quot;Yearly number of deaths in New Zealand&quot;,x=NULL,y=NULL)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+scale_x_continuous(limits=c(xstart,xend),breaks=seq(xstart,xend,.5),labels=c(rbind(&quot;&quot;,seq(2011,2023)),&quot;&quot;))+
+scale_y_continuous(limits=c(ystart,yend),breaks=seq(ystart,yend,ybreak),labels=kimi)+
+scale_color_manual(values=color)+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.ticks=element_line(linewidth=.3,color=&quot;gray65&quot;),
+  axis.ticks.length=unit(.2,&quot;lines&quot;),
+  axis.ticks.x=element_line(color=c(&quot;gray65&quot;,NA)),
+  axis.title=element_text(size=8),
+  legend.position=&quot;none&quot;,
+  panel.background=element_rect(fill=&quot;white&quot;),
+  panel.grid=element_blank(),
+  plot.background=element_rect(fill=&quot;white&quot;),
+  plot.margin=margin(.4,.6,.4,.5,&quot;lines&quot;),
+  plot.subtitle=element_text(size=7),
+  plot.title=element_text(size=8.5))
+ggsave(&quot;1.png&quot;,width=4,height=2.8)</pre>
 <h3>
 <a href=#Plot_for_vaccine_doses_by_date_by_Barry_Young id=Plot_for_vaccine_doses_by_date_by_Barry_Young>Plot for vaccine doses by date by Barry Young</a>
 </h3>
