@@ -2187,7 +2187,8 @@ ggsave(&quot;1.png&quot;,width=4.5,height=3)</pre>
 <div class="width11">
 <img src="i/moar-maldives-2.jpg">
 </div>
-<p>I uploaded a CSV file for the data here: <a href=f/kirsch_maldives.csv>f/kirsch_maldives.csv</a>. I changed the date format, and I deleted some redundant columns which it was possible to calculate based on the other columns (like whether the person had received a first dose or not, and the number of days from the most recent dose to death). There are some people who are listed as having received a dose but who don't have a date listed for the dose, which in my file is indicated by the value <span class="quote">&quot;unknown&quot;</span> in place of a vaccination date.</p>
+<p>I uploaded the original spreadsheet here: <a href=f/Maldives_Days_from_Dose_till_death_plots.xlsx>f/Maldives_Days_from_Dose_till_death_plots.xlsx</a>.</p>
+<p>I uploaded a CSV version of the spreadsheet here: <a href=f/kirsch_maldives.csv>f/kirsch_maldives.csv</a>. I changed the date format, and I deleted some redundant columns which it was possible to calculate based on the other columns (like whether the person had received a first dose or not, and the number of days from the most recent dose to death). There are some people who are listed as having received a dose but who don't have a date listed for the dose, which in my file is indicated by the value <span class="quote">&quot;unknown&quot;</span> in place of a vaccination date.</p>
 <pre>$ wget -q https://sars2.net/f/kirsch_maldives.csv
 $ sed -u 3q kirsch_maldives.csv
 name,age,gender,address,island,date_of_death,dose_1,dose_2,booster_1,booster_2,vaccine_types,sudden_death_if_known,remarks_1,remarks_2
@@ -2678,34 +2679,31 @@ pheatmap::pheatmap(
 system(&quot;mogrify -trim i1.png;convert i1.png -gravity northwest -splice x14 -size `identify -format %w i1.png`x -pointsize 48 caption:&#39;Excess mortality percent by dose and month of vaccination (from day of vaccination up to September 2023)&#39; +swap -append -trim -bordercolor white -border 24 +repage i1..png&quot;)
 system(&quot;mogrify -trim i2.png;convert i2.png -gravity northwest -splice x14 -size `identify -format %w i2.png`x -pointsize 48 caption:&#39;Population size by dose and month of vaccination (in person-years up to September 2023)&#39; +swap -append -trim -bordercolor white -border 24 +repage i2..png&quot;)
 system(&quot;montage -geometry +0+0 -tile 1x i[12]..png 1.png&quot;)</pre>
-<p>In the image below where I used the bucket system and I calculated excess mortality by dose and by weeks after vaccination, doses 2-5 got negative excess mortality for the first 20 weeks after vaccination, but dose 1 behaved in a completely different way, because its the excess mortality went from about -50% during weeks 0-3 to about 36% during weeks 4-7 and about 162% during weeks 8-11:</p>
-<div class="width8">
+<p>In the heatmap below where I used the bucket system and I calculated excess mortality by dose and by weeks after vaccination, doses 2-5 got negative excess mortality for the first 20 weeks after vaccination, but dose 1 followed a completely different pattern where its excess mortality increased from about -38% during weeks 0-3 to about 64% during weeks 4-7 and about 205% during weeks 8-11, which is probably because many people had already gotten the second dose 3 or 4 weeks after the first dose.</p>
+<div class="width10">
 <img src="i/moar-excess-heat-4.png">
 </div>
-<p>The reason why dose 1 behaves in a different way than doses 2-5 could be that some people who have dose 1 as their terminal dose might have otherwise gotten more doses but they happened to die before their second dose. Or people who got an adverse reaction to their first jab may have decided to not get further jabs, and then either their adverse reaction may have later contributed to their death, or their adverse reaction may have been caused by their poor health which contributed to their death. Or it could also be that some people transitioned from being healthy vaccinees to unhealthy vaccinees after the first dose, so they were no longer given subsequent doses. However people got the next dose after the first dose sooner than after subsequent doses, because many people had already gotten the second dose 3 weeks after the first dose.</p>
-<pre>t=read.table(&quot;https://sars2.net/f/month_dose_week_single_age.txt&quot;,header=T)
-t=t[t$dose&gt;=1&amp;t$dose&lt;=7,]
-t$week=t$week%/%4*4
+<pre>download.file(&quot;https://sars2.net/f/buckets.gz&quot;,&quot;buckets.gz&quot;)
+t=data.table::fread(&quot;buckets.gz&quot;,showProgress=F)
+t=t[,.(alive=sum(alive),dead=sum(dead)),by=.(week=week%/%4*4,dose=paste0(&quot;Dose &quot;,ifelse(dose&gt;=5,&quot;5+&quot;,dose)),age)]
 
-tmp=paste0(&quot;Dose &quot;,t$dose);t$dose=factor(tmp,unique(tmp))
+nzpop=tail(read.csv(&quot;https://sars2.net/f/nz_infoshare_population.csv&quot;),2)[,2:96]
+nzdeath=tail(read.csv(&quot;https://sars2.net/f/nz_infoshare_deaths.csv&quot;),2)[,2:96]
+cmr=data.frame(x=0:94,y=colMeans(nzdeath)/colMeans(nzpop)*1e5)
+cmr=c(cmr$y,predict(lm(y~poly(x),tail(cmr,10)),list(x=95:120)))
+
+t$expected=t$alive*cmr[t$age+1]/365/1e5
+
 tmp=paste0(t$week,&quot;-&quot;,t$week+3);t$week=factor(tmp,unique(tmp))
-t=rbind(t,cbind(aggregate(t[,5:6],t[,c(1,3,4)],sum),dose=&quot;Total&quot;)[,colnames(t)])
-t=rbind(t,cbind(aggregate(t[,5:6],t[,c(1,2,4)],sum),week=&quot;Total&quot;)[,colnames(t)])
 
-nzpop=tail(read.csv(&quot;https://sars2.net/f/nz_infoshare_population.csv&quot;),2)[,3:96]
-nzdeath=tail(read.csv(&quot;https://sars2.net/f/nz_infoshare_deaths.csv&quot;),2)[,3:96]
-cmr=data.frame(x=1:94,y=colMeans(nzdeath)/colMeans(nzpop)*1e5)
-cmr=c(cmr$y,predict(loess(y~x,cmr,control=loess.control(surface=&quot;direct&quot;)),95:120))
+t=rbind(t,t[,.(dead=sum(dead),alive=sum(alive),expected=sum(expected)),by=.(age,dose)]|&gt;cbind(week=&quot;Total&quot;))
+t=rbind(t,t[,.(dead=sum(dead),alive=sum(alive),expected=sum(expected)),by=.(age,week)]|&gt;cbind(dose=&quot;Total&quot;))
 
-ag=aggregate(t[,5:6],t[,2:3],sum)
-baseline=(tapply(cmr[t$age]*t$alive,t[,2:3],sum)/tapply(ag$alive,ag[,1:2],sum))[matrix(unlist(ag[,1:2]),nrow(ag))]
-crude=ag$dead/ag$alive*1e5*365
-excess=100*(crude-baseline)/baseline
-ratio=(crude-baseline)/ifelse(crude&gt;=baseline,baseline,crude)*100
+ag=aggregate(t[,4:6],t[,2:1],sum,na.rm=T)
 
-mpop=tapply(ag$alive,ag[,1:2],sum)/365
-m=tapply(ratio,ag[,1:2],sum)
-disp=round(tapply(excess,ag[,1:2],sum))
+m=with(ag,tapply((dead-expected)/ifelse(dead&gt;expected,expected,dead)*100,ag[,1:2],c))
+disp=round(tapply((ag$dead/ag$expected-1)*100,ag[,1:2],c))
+mpop=tapply(ag$alive,ag[,1:2],c)/365
 hide=!is.na(mpop)&amp;mpop&lt;10;m[hide]=disp[hide]=NA
 exp=.86
 m=abs(m)^exp*sign(m)
@@ -2736,13 +2734,9 @@ pheatmap::pheatmap(
   sapply(seq(1,0,,256),\(i)rgb(i,i,i))
 )
 
-system(&quot;convert -trim i1.png -gravity northwest -splice x14 -size `identify -format %w i1.png`x -pointsize 46 caption:&#39;Excess mortality percent by dose and weeks after vaccination (people are removed under previous doses after a new dose)&#39; +swap -append -trim -bordercolor white -border 24 +repage 1..png&quot;)
-system(&quot;convert -trim i2.png -gravity northwest -splice x14 -size `identify -format %w i2.png`x -pointsize 46 caption:&#39;Person-years by dose and weeks after vaccination (people are removed under previous doses after a new dose)&#39; +swap -append -trim -bordercolor white -border 24 +repage 2..png&quot;)
+system(&quot;mogrify -trim i1.png;convert i1.png -gravity northwest -splice x14 -size `identify -format %w i1.png`x -pointsize 42 caption:&#39;Excess mortality percent by dose and weeks after vaccination. People are removed under previous doses after a new dose. The baseline is derived from the average CMR for each age in New Zealand in 2021-2022, where the CMR for each age was weighted by the number of person-days for the age.&#39; +swap -append -trim -bordercolor white -border 24 +repage 1..png&quot;)
+system(&quot;mogrify -trim i2.png;convert i2.png -gravity northwest -splice x14 -size `identify -format %w i2.png`x -pointsize 42 caption:&#39;Person-years by dose and weeks after vaccination.&#39; +swap -append -trim -bordercolor white -border 24 +repage 2..png&quot;)
 system(&quot;montage -geometry +0+0 -tile 1x [12]..png 1.png&quot;)</pre>
-<p>For the first four doses in the heatmap below, there is always negative excess mortality during the month when the person-years of the dose peak, but the excess mortality becomes positive after a new dose is introduced and the stragglers remain under dose n-1. For example the excess mortality of dose 2 goes from about -17% in January 2022 to about 55% in March 2022 when the third dose is rolled out. And in the case of the first five doses, there's always one month during the rollout peak where excess mortality is below -50%. The total mortality of aggregated doses remains negative during all months except a few months in winters 2022 and 2023, but it's because I didn't adjust the excess mortality for seasonality:</p>
-<div class="width8">
-<img src="i/moar-excess-heat-5.png">
-</div>
 <h3>
 <a href=#Plot_by_John_Sullivan_for_mortality_rate_by_date_in_ages_80_89 id=Plot_by_John_Sullivan_for_mortality_rate_by_date_in_ages_80_89>Plot by John Sullivan for mortality rate by date in ages 80-89</a>
 </h3>
@@ -5503,6 +5497,7 @@ nzdead=unlist(read.csv(&quot;https://sars2.net/f/nz_infoshare_deaths.csv&quot;)|
 cmr=data.frame(x=0:94,y=nzdead/nzpop)
 cmr=c(cmr$y,predict(lm(y~poly(x),tail(cmr,10)),list(x=95:130)))
 
+download.file(&quot;https://sars2.net/f/buckets.gz&quot;,&quot;buckets.gz&quot;)
 t=data.table::fread(&quot;buckets.gz&quot;,showProgress=F)[,.(alive=sum(alive)),by=age]
 
 # the total expected deaths in the pay-per-dose cohort are 40056 when using 2022 CMR for each age
