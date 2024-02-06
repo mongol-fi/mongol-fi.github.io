@@ -5493,10 +5493,29 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   plot.subtitle=element_text(size=7),
   plot.title=element_text(size=8.5))
 ggsave(&quot;1.png&quot;,width=4,height=2.8)</pre>
-<p>I also told Scoops to do a sumproduct of the person-days for each age by the mortality rate for each age among the total NZ population. It gave me about -4.2% total excess deaths when I used 2021-2022 average mortality rates: [<a href="http://sars2.net/f/nzexcess.xlsx">http://sars2.net/f/nzexcess.xlsx</a>]</p>
+<p>I also told Scoops to do a sumproduct of the person-days for each age by the mortality rate for each age among the total NZ population. It gave me about -4.2% total excess deaths when I used 2021-2022 average mortality rates: <a href=f/nzexcess.xlsx>[f/nzexcess.xlsx</a>]</p>
 <div class="width6">
 <img src="i/moar-scoops-sumproduct.png">
 </div>
+<p>Scoops uses an incorrect method to adjust for changes to the age of the cohort, where first he calculates the baseline using the mortality rate for age 40, and then if the average age of the cohort is 46, he multiplies the baseline by the ratio between the mortality rates for age 46 and age 40 among the total New Zealand population. However the ratio between the expected mortality rate of cohorts with average ages of 46 and 40 is not the same as the ratio between the expected mortality rate of a 46-year-old person and a 40-year-old person. In the following example where I incremented the ages of all people by 10 years, it increased the expected number of deaths by about 2.90 fold, even though the average age of the cohort was about 46.5 years and the ratio between the mortality rates for ages 56 and 46 is only about 2.73:</p>
+<pre>nzpop=unlist(read.csv(&quot;https://sars2.net/f/nz_infoshare_population.csv&quot;)|&gt;subset(year==2022))[2:96]
+nzdead=unlist(read.csv(&quot;https://sars2.net/f/nz_infoshare_deaths.csv&quot;)|&gt;subset(year==2022))[2:96]
+cmr=data.frame(x=0:94,y=nzdead/nzpop)
+cmr=c(cmr$y,predict(lm(y~poly(x),tail(cmr,10)),list(x=95:130)))
+
+t=data.table::fread(&quot;buckets.gz&quot;,showProgress=F)[,.(alive=sum(alive)),by=age]
+
+# the total expected deaths in the pay-per-dose cohort are 40056 when using 2022 CMR for each age
+sum(cmr[t$age+1]*t$alive/365)
+
+# expected deaths increase about 2.90-fold to 116136 when ages are incremented by 10 years
+sum(cmr[t$age+1+10]*t$alive/365)
+
+# the average age is about 46.5 years when using floored years and excluding October 2023
+weighted.mean(t$age,t$alive)
+
+# in 2022 the CMR for age 56 was about 2.73 times higher than the CMR for age 46
+cmr[56+1]/cmr[46+1]</pre>
 <h3>
 <a href=#Plot_for_vaccine_doses_by_date_by_Barry_Young id=Plot_for_vaccine_doses_by_date_by_Barry_Young>Plot for vaccine doses by date by Barry Young</a>
 </h3>
