@@ -139,6 +139,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Plot_by_an_epidemiologist_for_mortality_rates_in_5_year_age_groups>Plot by an epidemiologist for mortality rates in 5-year age groups</a></li>
 <li><a href=#The_distribution_of_vaccine_doses_in_all_people_is_different_from_the_distribution_of_vaccine_doses_in_dead_people>The distribution of vaccine doses in all people is different from the distribution of vaccine doses in dead people</a></li>
 <li><a href=#Barrys_mortality_rate_by_dose>Barry's mortality rate by dose</a></li>
+<li><a href=#Spreadsheet_for_mortality_in_5_year_age_groups_on_Kirschs_S3_server>Spreadsheet for mortality in 5-year age groups on Kirsch's S3 server</a></li>
 </ul></li>
 </ul>
 
@@ -5517,6 +5518,10 @@ cmr[56+1]/cmr[46+1]</pre>
 <div class="width10">
 <img src="i/moar-googledocs.jpg">
 </div>
+<p>And I made another spreadsheet which shows how you can calculated excess mortality based on the number of person-days for each age, which gave me about total -4% excess mortality: [<a href="https://docs.google.com/spreadsheets/d/1rwKDt0UWgDpVlssQFICrjjIDvGCzm9n9O_OFsWDouM0">https://docs.google.com/spreadsheets/d/1rwKDt0UWgDpVlssQFICrjjIDvGCzm9n9O_OFsWDouM0</a>]</p>
+<div class="width8">
+<img src="i/moar-googledocs-2.jpg">
+</div>
 <h3>
 <a href=#Plot_for_vaccine_doses_by_date_by_Barry_Young id=Plot_for_vaccine_doses_by_date_by_Barry_Young>Plot for vaccine doses by date by Barry Young</a>
 </h3>
@@ -5829,7 +5834,7 @@ system(&quot;qlmanage -p 1.png&amp;&gt;/dev/null&quot;)</pre>
 <img src="i/moar-barry-dose.jpg">
 </div>
 <p>I don't understand how a number that is 7 times bigger than another number is <span class="quote">&quot;orders of magnitude&quot;</span> bigger.</p>
-<p>But anyway, people who got dose 4 were obviously older than people who got dose 1. If you use the bucket system where people are removed under previous doses after a new dose, then people under dose 4 have an average age of about 66 but people under dose 1 have an average age of about 29. People under dose 4 also get a lower ASMR than people under dose 1:</p>
+<p>But anyway, people who got dose 4 were obviously older than people who got dose 1. If you use the bucket system where people are removed under previous doses after a new dose, then people under dose 4 have an average age of about 66 but people under dose 1 have an average age of about 29. People under dose 4 also get a lower ASMR than people under dose 1 (at least if you use ESP2013):</p>
 <pre>&gt; download.file(&quot;http://sars2.net/f/buckets.gz&quot;,&quot;buckets.gz&quot;)
 &gt; espage=c(0,1,seq(5,95,5))
 &gt; esp=c(10,40,55,55,55,60,60,65,70,70,70,70,65,60,55,50,40,25,15,8,2)*100
@@ -5859,6 +5864,86 @@ Dose 2  719631360 13571  688  891  41
 Dose 3  616049238 21663 1284 1051  53
 Dose 4  256550906 15279 2174  801  67
 Dose 5+  57026988  3631 2324  752  71</pre>
+<p>Uncle John Returns also made this table for the age distribution of doses:</p>
+<div class="width5">
+<img src="i/moar-barry-dose-2.jpg">
+</div>
+<h3>
+<a href=#Spreadsheet_for_mortality_in_5_year_age_groups_on_Kirschs_S3_server id=Spreadsheet_for_mortality_in_5_year_age_groups_on_Kirschs_S3_server>Spreadsheet for mortality in 5-year age groups on Kirsch's S3 server</a>
+</h3>
+<p>Kirsch added this spreadsheet to his S3 server where he calculated ASMR and mortality rates using 5-year age groups:</p>
+<div class="width12">
+<img src="i/moar-kirschasmr-3.jpg">
+</div>
+<p>The <span class="quote">&quot;Vaxxed MR&quot;</span> row shown above matches the mortality rate in sheet 6 during the first 12 months from vaccination for people who got first shot in September 2022 or earlier, so that the denominator is the number of people and not person-years so that dead people are not removed from the population. In sheet 7 there's a comment that <span class="quote">&quot;The last row to include in your analysis for 1 year deaths post shot should be Sep 2022&quot;</span>.</p>
+<p>Kirsch calculated the mortality rates so that he didn't account for the aging of the cohort over time.</p>
+<p>In the code below I calculated the mortality rates using the correct ages, I also used person-years instead of people as the denominator, and I calculated the ASMR up to September 2023 and not for the first 360 days from vaccination, and I didn't exclude people who were vaccinated after September 2022. I got lower ASMR than Kirsch for most age groups except for the two oldest age groups:</p>
+<pre>&gt; download.file(&quot;https://sars2.net/f/bucketskeep.gz&quot;,&quot;bucketskeep.gz&quot;)
+&gt; t=data.table::fread(&quot;bucketskeep.gz&quot;)
+&gt; a=t[dose==1][,.(dead=sum(dead),alive=sum(alive)),by=.(age=pmin(age,90)%/%5*5)][order(age)]
+&gt; a$cmr=a$dead/a$alive*365e5
+&gt; a$kirschcmr=c(105,6,15,48,59,46,65,81,139,196,310,487,795,1337,1989,3571,5600,9562,16762)
+&gt; print.data.frame(round(a),row.names=F)
+ age dead    alive   cmr kirschcmr
+   0    0     7652     0       105
+   5    5 26955703     7         6
+  10   15 51841477    11        15
+  15   60 62156960    35        48
+  20   87 60261880    53        59
+  25   83 60719165    50        46
+  30   91 62285422    53        65
+  35  109 55364375    72        81
+  40  166 50543743   120       139
+  45  237 49941827   173       196
+  50  412 50796559   296       310
+  55  593 44796034   483       487
+  60  823 38976834   771       795
+  65  965 28081004  1254      1337
+  70 1223 22919646  1948      1989
+  75 1524 16763787  3318      3571
+  80 1688 11244527  5479      5600
+  85 1634  6000160  9940      9562
+  90 1822  3221817 20641     16762</pre>
+<p>When I calculated ASMR normalized against the 2022 NZ population like Kirsch, my total ASMR for the PPD dataset was about 685 deaths per 100,000 person-years, which was about 2% lower than the NZ ASMR in 2021 normalized against the 2022 population:</p>
+<pre>&gt; t=data.table::fread(&quot;buckets.gz&quot;)
+&gt; t=t[,.(dead=sum(dead),alive=sum(alive)),by=.(age=pmin(age,90)%/%5*5)][order(age)]
+&gt; nzpop=read.csv(&quot;http://sars2.net/f/nz_infoshare_population.csv&quot;)[,-1]|&gt;tail(2)
+&gt; nzdead=read.csv(&quot;http://sars2.net/f/nz_infoshare_deaths.csv&quot;)[,-1]|&gt;tail(2)
+&gt; nzpop=rowsum(t(nzpop),pmin(90,0:95)%/%5*5)
+&gt; nzdead=rowsum(t(nzdead),pmin(90,0:100)%/%5*5)
+&gt; sum(t$dead/t$alive*365*nzpop[,2])/sum(nzpop[,2])*1e5 # PPD ASMR in 2021-2023 normalized to 2022 NZ population
+[1] 685.0982
+&gt; sum(nzdead[,1]/nzpop[,1]*nzpop[,2])/sum(nzpop[,2])*1e5 # NZ ASMR in 2021 normalized to 2022 NZ population
+[1] 697.3777
+&gt; sum(nzdead[,2])/sum(nzpop[,2])*1e5 # NZ ASMR in 2022 normalized to 2022 NZ population
+[1] 752.1043</pre>
+<p>However dose 1 got a total ASMR of about 752 normalized against the 2022 population, which is about 8% higher than the 2021 NZ ASMR normalized against the 2022 NZ population:</p>
+<pre>&gt; download.file(&quot;https://sars2.net/f/bucketskeep.gz&quot;,&quot;bucketskeep.gz&quot;)
+&gt; t=data.table::fread(&quot;bucketskeep.gz&quot;)[dose&lt;=6]
+&gt; t=t[,.(dead=sum(dead),alive=sum(alive)),by=.(age=pmin(age,90)%/%5*5,dose)][order(age)]
+&gt; nzpop=read.csv(&quot;http://sars2.net/f/nz_infoshare_population.csv&quot;)|&gt;subset(year==2022)
+&gt; nzpop=c(tapply(unlist(nzpop[-1]),pmin(90,0:95%/%5*5),sum))
+&gt; round(colSums(tapply(t$dead,t[,1:2],c)/tapply(t$alive,t[,1:2],c)*365*nzpop,na.rm=T)/sum(nzpop)*1e5)
+   1    2    3    4    5    6
+ 752  720  908  657  612 1199</pre>
+<p>Only about 9% of the total person-years in the PPD data are in 2021 if the person years-are counted up to the end of September 2023. And New Zealand had much lower ASMR in 2021 than in 2022 or 2023, so in order to see if people in the PPD data had higher ASMR than the total NZ population, it would make more sense to use the 2022 ASMR as the baseline and not the 2021 ASMR.</p>
+<p>The reason why dose 1 has such high excess mortality in the PPD data could partially be because people who got dose 1 during the later part of the rollout peak subsequently had higher excess mortality than people who got dose 1 during the earlier part of the rollout peak, and the PPD data is missing more doses in early 2021 than in late 2021, so people who got dose 1 during the earlier part of the rollout peak are underrepresented in the PPD data.</p>
+<p>Sheet 3 of Kirsch's spreadsheet shows the mortality rate during the first 360 days from vaccination among people who got the first shot in August or September 2021. Kirsch said that the number of deaths was monotonically increasing, even though actually there's months when the number of deaths was lower than the previous month:</p>
+<div class="width10">
+<img src="i/moar-kirschasmr-1.jpg">
+</div>
+<p>But anyway, when I calculated ASMR by weeks after vaccination in people who got the first shot in July or August 2021, it was much lower than the reported ASMR in the total NZ population during the same period of time (R code: <a href=#ASMR_by_weeks_after_vaccination_compared_to_reported_ASMR_in_New_Zealand>#ASMR_by_weeks_after_vaccination_compared_to_reported_ASMR_in_New_Zealand</a>):</p>
+<div class="width6">
+<img src="i/moar-kirschasmr-2.png">
+</div>
+<p>However because of the <span class="quote">&quot;late vaccinee effect&quot;</span>, people who got dose 1 after August 2021 have much higher excess mortality than people who got dose 1 in July or August 2021.</p>
+<p>In sheet 6 of Kirsch's spreadsheet, there's 27,730 people in the age group 15-19 who were vaccinated in September 2021. I got 27,871 people instead, but I don't know what explains the difference:</p>
+<pre>&gt; t=as.data.frame(fread(&quot;nz-record-level-data-4M-records.csv&quot;,showProgress=F))
+&gt; ua=\(x,y,...){u=unique(x);y(u,...)[match(x,u)]}
+&gt; for(i in grep(&quot;date&quot;,colnames(t)))t[,i]=ua(t[,i],as.Date,&quot;%m-%d-%Y&quot;)
+&gt; age=\(x,y){x=as.numeric(x);y=as.numeric(y);(y-x-(y-789)%/%1461+(x-789)%/%1461)%/%365}
+&gt; sum(t$dose_number==1&amp;ua(t$date_t,substr,1,7)==&quot;2021-09&quot;&amp;age(t$date_of_birth,t$date_t)%in%15:19)
+[1] 27871</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
