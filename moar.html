@@ -141,6 +141,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Barrys_mortality_rate_by_dose>Barry's mortality rate by dose</a></li>
 <li><a href=#Spreadsheet_for_mortality_in_5_year_age_groups_on_Kirschs_S3_server>Spreadsheet for mortality in 5-year age groups on Kirsch's S3 server</a></li>
 <li><a href=#Bots_retweeted_by_Liz_Gunn>Bots retweeted by Liz Gunn</a></li>
+<li><a href=#Excess_mortality_by_dose_calculated_by_Scoops_McGoo>Excess mortality by dose calculated by Scoops McGoo</a></li>
 </ul></li>
 </ul>
 
@@ -5950,7 +5951,7 @@ Dose 5+  57026988  3631 2324  752  71</pre>
 </h3>
 <p>Most of Liz Gunn's most recent tweets are retweets. I noticed that she is retweeting a similar set of accounts that are retweeted by a network of bot accounts which promote content from the controlled alternative media.</p>
 <p>Some of the accounts she has retweeted are overtly presented as bots, like iluminatibot, thehealthb0t, and redpillb0t, which are all part of the IlluminatiCoin botnet. [<a href="https://linktr.ee/illuminaticoin">https://linktr.ee/illuminaticoin</a>]</p>
-<p>However there's other accounts which follow a similar formula as the IlluminatiCoin bots but which seem to be hybrids between bots and human-ran accounts, like Thekeksociety (who does Twitter spaces and who once did an interview with some lady on Rumble). So Liz Gunn's account might be a similar human-bot hybrid, where she writes some of her tweets herself but some of her retweets are done by a bot.</p>
+<p>However there's other accounts which follow a similar formula as the IlluminatiCoin bots but which seem to be hybrids between bots and human-ran accounts, like Thekeksociety, who does Twitter spaces and who once did an interview with some lady on Rumble. So Liz Gunn's account might be a similar human-bot hybrid, where she writes some of her tweets herself but some of her retweets are done by a bot.</p>
 <p>Liz Gunn has recently retweeted 4 different IlluminatiCoin bots but also Thekeksociety:</p>
 <div class="width9">
 <img src="i/bot-gunnilluminati.jpg">
@@ -6000,6 +6001,96 @@ Dose 5+  57026988  3631 2324  752  71</pre>
 <div class="width4">
 <img src="i/bot-chinabarry.jpg">
 </div>
+<h3>
+<a href=#Excess_mortality_by_dose_calculated_by_Scoops_McGoo id=Excess_mortality_by_dose_calculated_by_Scoops_McGoo>Excess mortality by dose calculated by Scoops McGoo</a>
+</h3>
+<p>Scoops McGoo attempted to calculate excess mortality by dose, but he got extended periods of time when people under some dose had over 1000% excess mortality: [<a href="https://docs.google.com/spreadsheets/d/1BwtabtrYjvSfAKlI3o_OTUlgPN_NrzCXTsPM_QT6gKI">https://docs.google.com/spreadsheets/d/1BwtabtrYjvSfAKlI3o_OTUlgPN_NrzCXTsPM_QT6gKI</a>, <a href="https://twitter.com/sco0psmcgoo/status/1755642499979186343">https://twitter.com/sco0psmcgoo/status/1755642499979186343</a>]</p>
+<div class="width5">
+<img src="i/moar-scoops-bydose.jpg">
+</div>
+<p>Scoops even got over 10000% excess mortality for the first dose at the start of the data. However that's because he is still calculating his baseline wrong. There's even days in his plot where people who got 5 or more doses have below -100% excess mortality, even though it shouldn't be possible to get below -100% excess mortality.</p>
+<p>I took monthly data for deaths by age group in New Zealand from here: <a href="https://www.stats.govt.nz/information-releases/births-and-deaths-year-ended-september-2023/">https://www.stats.govt.nz/information-releases/births-and-deaths-year-ended-september-2023/</a>. And I took quarterly population data from here: <a href="https://infoshare.stats.govt.nz/">https://infoshare.stats.govt.nz/</a>. Then I calculated monthly mortality rates for each 5-year age group among the total NZ population, and for each dose number in the PPD data, I took a weighted average of the monhtly mortality rates where the weight was the number of people in each age group who were included under the dose, and I used the resulting number as the baseline for the dose.</p>
+<p>The highest excess mortality I got was only 192% for dose 4 in May 2022, and my total excess mortality for doses 1-5 aggregated together was -6%:</p>
+<div class="width7">
+<img src="i/moar-scoops-bydose-2.png">
+</div>
+<pre>library(tidyverse);library(tempdisagg)
+
+ua=\(x,y,...){u=unique(x);y(u,...)[match(x,u)]} # unique apply (faster for long vector with many repeated values)
+t=data.table::fread(&quot;buckets.gz&quot;,showProgress=F)[dose&lt;=5][,date:=ua(date,format,&quot;%Y-%m&quot;)]
+t=t[,.(alive=sum(alive),dead=sum(dead)),by=.(date,dose=paste0(&quot;Dose &quot;,dose),age)]
+t=rbind(t,t[,.(alive=sum(alive),dead=sum(dead),dose=&quot;Doses 1-5&quot;),by=.(date,age)])
+
+death=read.csv(&quot;https://sars2.net/f/nz_monthly_deaths_by_age.csv&quot;)|&gt;subset(ethnicity==&quot;Total&quot;)
+a=with(death,aggregate(count,list(year=year_reg,month=month_reg,age=as.numeric(substr(age_group,1,2))),sum))
+ages=unique(a$age)
+
+pop=read.csv(&quot;https://sars2.net/f/nz_infoshare_population_quarterly.csv&quot;,check.names=F,row.names=1)|&gt;tail(11)
+pop=t(rowsum(t(pop),cut(as.numeric(colnames(pop)),c(ages,Inf),,T,F)))
+pop=apply(pop,2,\(i)as.numeric(predict(td(ts(i,frequency=4)~1,&quot;mean&quot;,to=&quot;monthly&quot;))))
+me=merge(a,data.frame(year=rep(2021:2023,each=12)[1:33],month=rep(1:12,3)[1:33],age=ages[col(pop)],pop=c(pop)))
+me$pop=me$pop/365*c(31,28,31,30,31,30,31,31,30,31,30,31)[me$month]
+
+t$age=ages[cut(t$age,c(ages,Inf),,T,F)]
+me$date=sprintf(&quot;%d-%02d&quot;,me$year,me$month)
+me=merge(me[,-(1:2)],t)
+
+actual=tapply(me$dead,me[,c(2,5)],sum)/tapply(me$alive,me[,c(2,5)],sum)*365*1e5
+xy=expand.grid(dimnames(actual))|&gt;cbind(actual=c(actual))
+wmg=\(x,y,z)tapply(x*y,z,sum,na.rm=T)/tapply(y,z,sum,na.rm=T) # weighted mean by group
+xy$expected=c(wmg(me$x/me$pop,me$alive,me[,c(2,5)]))*1e5
+xy$pop=c(tapply(me$alive,me[,c(2,5)],sum,na.rm=T))
+
+xy$actual[xy$pop&lt;1e4]=NA
+xy$excess=(xy$actual/xy$expected-1)*100
+
+xy$dose=factor(xy$dose,unique(xy$dose))
+xy$date=as.Date(paste0(xy$date,&quot;-1&quot;))
+
+xstart=as.Date(&quot;2021-4-1&quot;);xend=as.Date(&quot;2023-9-1&quot;)
+cand=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
+ymin=min(xy$excess,na.rm=T);ymax=max(xy$excess,na.rm=T)
+ystep=cand[which.min(abs(cand-ymax/5))]
+yend=ystep*ceiling(ymax/ystep)
+ystart=ystep*floor(ymin/ystep)
+
+color=c(hcl(c(210,120,60,0,300)+15,90,50),&quot;black&quot;,&quot;gray50&quot;)
+fill=c(hcl(c(210,120,60,0,300)+15,80,70),&quot;black&quot;,&quot;gray50&quot;)
+
+pct=(tapply(me$dead,me$dose,sum)/tapply(me$x/me$pop*me$alive/365,me$dose,sum,na.rm=T)-1)*100
+lab=paste0(levels(xy$dose),&quot; (&quot;,round(pct),&quot;%)&quot;)
+label=data.frame(x=xstart+.02*(xend-xstart),y=seq(yend,,-(yend-ystart)/15,nlevels(xy$dose))-(yend-ystart)/15,label=lab)
+
+kim=\(x)ifelse(x&gt;=1e3,ifelse(x&gt;=1e6,paste0(x/1e6,&quot;M&quot;),paste0(x/1e3,&quot;k&quot;)),x)
+
+ggplot(xy,aes(x=date,y=excess))+
+geom_hline(yintercept=c(ystart,0,yend),color=&quot;gray75&quot;,linewidth=.3,lineend=&quot;square&quot;)+
+geom_vline(xintercept=c(xstart,xend),color=&quot;gray75&quot;,linewidth=.3,lineend=&quot;square&quot;)+
+geom_line(aes(color=dose),linewidth=.4)+
+geom_point(aes(color=dose),size=.4)+
+geom_label(data=label,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.7),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.1,&quot;lines&quot;),label.size=0,color=color[1:nrow(label)],size=2.7,hjust=0)+
+coord_cartesian(clip=&quot;off&quot;)+
+scale_x_date(limits=c(xstart,xend),breaks=seq(xstart,xend,&quot;3 month&quot;),expand=expansion(mult=0),date_labels=&quot;%b %y&quot;)+
+scale_y_continuous(limits=c(ystart,yend),labels=\(x)paste0(x,&quot;%&quot;),breaks=seq(ystart,yend,ystep),expand=expansion(mult=c(0,0)))+
+labs(title=str_wrap(&quot;NZ pay-per-dose data: Excess mortality percent relative to monthly reported mortality in total NZ population. The baseline is derived from monthly mortality rates for 5-year age groups in the total NZ population, where the mortality rate of each age group was weighted by the number of person-days for the group in the pay-per-dose data. A total excess mortality percentage is shown after the dose number.&quot;,88),x=NULL,y=NULL)+
+scale_color_manual(values=color)+
+scale_fill_manual(values=fill)+
+scale_linetype_manual(values=c(rep(1,6),2))+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.ticks=element_line(linewidth=.3,color=&quot;gray75&quot;),
+  axis.ticks.length=unit(.2,&quot;lines&quot;),
+  axis.title=element_text(size=8),
+  axis.title.y.left=element_text(margin=margin(0,2,0,0)),
+  axis.title.y.right=element_text(margin=margin(0,0,0,3)),
+  legend.position=&quot;none&quot;,
+  panel.background=element_rect(fill=&quot;white&quot;),
+  panel.grid=element_blank(),
+  plot.background=element_rect(fill=&quot;white&quot;),
+  plot.margin=margin(.4,.6,.4,.6,&quot;lines&quot;),
+  plot.subtitle=element_text(size=7),
+  plot.title=element_text(size=8))
+ggsave(&quot;1.png&quot;,width=5,height=3.3,dpi=400)
+system(&quot;qlmanage -p 1.png&amp;&gt;/dev/null&quot;)</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
