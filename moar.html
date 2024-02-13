@@ -3061,7 +3061,7 @@ system(&quot;convert -trim 0.png -gravity northwest -splice x14 -size `identify 
 <img src="i/moar-asmrbase-1.png">
 </div>
 <p>I took the monthly number of deaths by age from this spreadsheet: <a href="https://www.stats.govt.nz/information-releases/births-and-deaths-year-ended-september-2023/">https://www.stats.govt.nz/information-releases/births-and-deaths-year-ended-september-2023/</a>. I took yearly population figures by single-year age from here: <a href="https://infoshare.stats.govt.nz/">https://infoshare.stats.govt.nz/</a> (<span class="quote">&quot;Population &gt; Population Estimates - DPE &gt; Estimated Resident Population by Age and Sex (1991+) (Annual-Dec)&quot;</span>). Then I interpolated the yearly population figures to monthly figures and I calculated ASMR values using the 2013 European Standard Population, and I compared it to ASMR values in the pay-per-dose data.</p>
-<p>In my heatmap above, dose 3 has about 332% excess ASMR in October 2022, but it's because the age group 5-9 had one death but only 647 person-days, and the age group 5-9 accounts for 5.5% of ESP2013, so the single death added about 3,100 deaths per 100k person-years to the total ASMR figure (from 1/647<em>365</em>5500). All age groups had a total of 25448920 person-days under dose 3 in October 2022, so the age group 5-9 accounted for only 647/25448920 or about 0.003% of total person-days, so it was overrepresented in the ASMR figure by a factor of about 2,200 (from 0.055/(647/25448920)).</p>
+<p>In my heatmap above, dose 3 has about 332% excess ASMR in October 2022, but it's because the age group 5-9 had one death but only 647 person-days, and the age group 5-9 accounts for 5.5% of ESP2013, so the single death added about 3,100 deaths per 100k person-years to the total ASMR figure (from <code>1/647*365*5500</code>). All age groups had a total of 25448920 person-days under dose 3 in October 2022, so the age group 5-9 accounted for only <code>647/25448920</code> or about 0.003% of total person-days, so it was overrepresented in the ASMR figure by a factor of about 2,200 (from <code>0.055/(647/25448920)</code>).</p>
 <p>In the UK ONS data, people with three doses have had high ASMR since December 2022, but it's partially because in the age groups 80-89 and 90+ there's about 16 times as many people with four doses as three doses, but the age groups 80 and over account for 5% of ESP2013 so they're always given 5% weight in the total ASMR figure, which causes people aged 80 and over to be overrepresented by a factor of about 4 or 5 in the ASMR figure for 3 doses. <a href=stat.html#Make_a_heatmap_of_factor_by_which_age_groups_are_overrepresented_in_ASMR_figures_relative_to_ESP2013>[stat.html#Make_a_heatmap_of_factor_by_which_age_groups_are_overrepresented_in_ASMR_figures_relative_to_ESP2013</a>] So therefore the <span class="quote">&quot;unhealthy straggler effect&quot;</span> gets amplified, where a small percentage of elderly people who didn't get the fourth dose are given disproportionate weight in the total ASMR figure for the third dose.</p>
 <p>Here's also a line plot of the same ASMR data. In order to avoid the high ASMR for dose in October 2022 that was caused by a single death, I omitted age and dose categories which had nonzero deaths and less than 1,000 person-days during a month:</p>
 <div class="width7">
@@ -5284,6 +5284,7 @@ round(tapply(r$dead,r$year,mean))</pre>
 &gt; daynum=as.numeric(format(as.Date(&quot;2022-9-1&quot;),&quot;%j&quot;))
 &gt; weighted.mean(cmr[buck$age+1],buck$alive)*(1+mean(daymu[daynum,cut]))
 [1] 952.0649</pre>
+<p>In the code above I'm interpolating monthly data for deaths in 5-year age groups in 2015-2019 to daily data, and I do linear regression to fit a linear trend to the data. And then for each 366 days of the year, I calculate the average excess percentage of deaths relative to the trend in 2015-2019. Then I make a matrix of seasonal excess mortality percentages where there's one row for each day of the year and one column for each age group, and I multiply the regular baseline with the excess percentages added to 100%.</p>
 <p>Scoops later fixed his plot after I pointed out his error, but he still got positive excess mortality because he used the average mortality rate in 2016-2020 to calculate his baseline: [<a href="https://twitter.com/sco0psmcgoo/status/1750395022199890208">https://twitter.com/sco0psmcgoo/status/1750395022199890208</a>]</p>
 <blockquote>
 <p>New Zealand smoking gun, Part III</p>
@@ -5413,8 +5414,8 @@ cmr=c(cmr$y,predict(lm(y~poly(x),tail(cmr,10)),list(x=95:120)))
 
 yemo=\(x){u=unique(x);p=as.POSIXlt(u);sprintf(&quot;%d-%02d&quot;,p$year+1900,p$mon+1)[match(x,u)]}
 
+download.file(&quot;https://sars2.net/f/buckets.gz&quot;,&quot;buckets.gz&quot;)
 t=data.table::fread(&quot;buckets.gz&quot;,showProgress=F)
-ages=tapply(t$alive,list(age=factor(t$age,0:120),month=yemo(t$date)),sum,na.rm=T)
 
 ages=t[,.(pop=sum(alive)),by=.(age,month=yemo(t$date))]
 expected=tapply(cmr[ages$age+1]*ages$pop,ages$month,sum)/tapply(ages$pop,ages$month,sum)*1e5
