@@ -147,6 +147,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Excess_mortality_relative_to_weekly_deaths_in_4_broad_age_groups>Excess mortality relative to weekly deaths in 4 broad age groups</a></li>
 <li><a href=#FOIA_response_which_said_that_vaccinated_people_are_likely_to_have_a_high_all_cause_mortality_risk>FOIA response which said that vaccinated people are likely to have a high all-cause mortality risk</a></li>
 <li><a href=#Barrys_plot_for_age_distribution_at_time_of_last_dose>Barry's plot for age distribution at time of last dose</a></li>
+<li><a href=#Even_more_errors_by_Scoops_McGoo>Even more errors by Scoops McGoo</a></li>
 </ul></li>
 </ul>
 
@@ -6365,6 +6366,59 @@ round(data.frame(a,row.names=1))</pre>
 <div class="width5">
 <img src="i/moar-barry-vaxage.jpg">
 </div>
+<h3>
+<a href=#Even_more_errors_by_Scoops_McGoo id=Even_more_errors_by_Scoops_McGoo>Even more errors by Scoops McGoo</a>
+</h3>
+<p>Scoops McGoo posted a spreadsheet where he got about 2854% total excess mortality for people with 1 dose in July 2021, but he got about -98% excess mortality in unvaccinated people: [<a href="https://twitter.com/sco0psmcgoo/status/1757815767158993063">https://twitter.com/sco0psmcgoo/status/1757815767158993063</a>, <a href="https://docs.google.com/spreadsheets/d/1Vqj6LhT9NRowUxpmYdDj1CvsaN4Be_m9cq8Be2Yqswc">https://docs.google.com/spreadsheets/d/1Vqj6LhT9NRowUxpmYdDj1CvsaN4Be_m9cq8Be2Yqswc</a>]</p>
+<div class="width5">
+<img src="i/moar-scoopsv3-1.jpg">
+</div>
+<p>However when I used the reported mortality rate in 5-year age groups in July 2021 in the total NZ population as the baseline, I got about -24% excess mortality for people with 1 dose in the pay-per-dose data in July 2021 (when I kept people included under dose 1 after subsequent doses):</p>
+<pre>download.file(&quot;http://sars2.net/f/bucketskeep.gz&quot;,&quot;bucketskeep.gz&quot;)
+t=data.table::fread(&quot;bucketskeep&quot;,showProgress=F)
+t=t[,month:=substr(date,1,7),by=date][month==&quot;2021-07&quot;]
+
+cutl=\(x,y)cut(x,c(y,Inf),y,T,F)
+ages=c(0,1,seq(5,95,5))
+by=list(age=cutl(t$age,ages))
+a=aggregate(list(ppdpop=t$alive/31,ppddead=t$dead),by,sum,drop=F)
+
+pop=read.csv(&quot;https://sars2.net/f/nz_infoshare_population_quarterly.csv&quot;)
+dead=read.csv(&quot;https://sars2.net/f/nz_monthly_deaths_by_age.csv&quot;)
+dead$age_group=factor(dead$age_group)
+dead=subset(dead,year_reg==2021&amp;month_reg==6&amp;ethnicity==&quot;Total&quot;)
+a$nzpop=tapply(unlist(pop[pop[,1]==&quot;2021Q3&quot;,-1]),cutl(0:95,ages),sum)
+a$nzdead=tapply(dead$count,dead$age_group,sum)
+
+a[is.na(a)]=0
+a$expecteddead=a$nzdead/a$nzpop*a$ppdpop
+
+(sum(a$ppddead)/sum(a$expecteddead)-1)*100
+# [1] -24.17807
+
+print.data.frame(dplyr::mutate_if(a,is.double,round,1),row.names=F)
+#  age ppdpop ppddead  nzpop nzdead expecteddead
+#    0     0.0       0  61460     36          0.0
+#    1     0.0       0 243270      6          0.0
+#    5     0.0       0 324920      0          0.0
+#   10     0.2       0 338320      6          0.0
+#   15   795.7       0 313840      3          0.0
+#   20  1143.1       0 329020      9          0.0
+#   25  1632.5       0 365750     18          0.1
+#   30  1871.4       0 384990     18          0.1
+#   35  1999.5       2 342010     24          0.1
+#   40  2112.2       0 313590     36          0.2
+#   45  2797.9       0 320900     54          0.5
+#   50  3777.2       1 331990     78          0.9
+#   55  4938.4       3 322600    120          1.8
+#   60  6771.8       4 299110    153          3.5
+#   65 11211.6       7 254180    231         10.2
+#   70 11956.2       1 219510    300         16.3
+#   75  8514.6      13 152910    351         19.5
+#   80  5708.6      19 105290    468         25.4
+#   85  2689.7      15  56800    504         23.9
+#   90  1138.7      17  26290    405         17.5
+#   95   297.1      15   8200    216          7.8</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
