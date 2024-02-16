@@ -146,6 +146,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#FOIA_response_which_said_that_vaccinated_people_are_likely_to_have_a_high_all_cause_mortality_risk>FOIA response which said that vaccinated people are likely to have a high all-cause mortality risk</a></li>
 <li><a href=#Barrys_plot_for_age_distribution_at_the_time_of_the_last_dose>Barry's plot for age distribution at the time of the last dose</a></li>
 <li><a href=#Even_more_errors_by_Scoops_McGoo>Even more errors by Scoops McGoo</a></li>
+<li><a href=#Calculating_excess_mortality_per_batch_relative_to_reported_mortality_rate_in_5_year_age_groups>Calculating excess mortality per batch relative to reported mortality rate in 5-year age groups</a></li>
 </ul></li>
 </ul>
 
@@ -3348,47 +3349,6 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   plot.title=element_text(size=8))
 ggsave(&quot;1.png&quot;,width=5,height=3.3,dpi=400)
 system(&quot;qlmanage -p 1.png&amp;&gt;/dev/null&quot;)</pre>
-<p>I also tried using OpenVAET's method to calculate excess mortality for each batch relative to the monthly number of reported deaths in 5-year age groups. I got positive excess mortality for 40 batches but negative excess mortality for 75 batches (including 7 out of 10 batches in Barry Young's table of the 10 deadliest batches):</p>
-<pre>&gt; t=as.data.frame(data.table::fread(&quot;data-transparency/New Zealand/time-series summaries/all_all_buckets_with_batch id.txt&quot;))
-&gt; t=t[t$dose&gt;0&amp;t$batch&gt;0&amp;t$month&lt;=&quot;2023-09&quot;,]
-&gt; t=aggregate(t[,6:7],t[,c(1,3,5)],sum)
-&gt; death=read.csv(&quot;https://sars2.net/f/nz_monthly_deaths_by_age.csv&quot;)|&gt;subset(ethnicity==&quot;Total&quot;)
-&gt; a=with(death,aggregate(count,list(year=year_reg,month=month_reg,age=as.numeric(substr(age_group,1,2))),sum))
-&gt; pop=read.csv(&quot;https://sars2.net/f/nz_infoshare_population.csv&quot;,row.names=1,check.names=F)|&gt;tail(10)
-&gt; ages=unique(a$age)
-&gt; cut=cut(as.numeric(colnames(pop)),c(ages,Inf),,T,F)
-&gt; pop2=tapply(unlist(pop),list(row(pop),rep(cut,each=nrow(pop))),sum,na.rm=T)
-&gt; me=merge(expand.grid(list(age=ages,year=as.numeric(rownames(pop))))|&gt;cbind(pop=c(t(pop2)),month=7),a,all=T)
-&gt; me$pop=unlist(tapply(me$pop,me$age,zoo::na.spline))
-&gt; me$pop=me$pop*c(31,28,31,30,31,30,31,31,30,31,30,31)[me$month]
-&gt; t$age=ages[cut(t$age,c(ages,Inf),,T,F)]
-&gt; me$month=sprintf(&quot;%d-%02d&quot;,me$year,me$month)
-&gt; me=merge(me,t)
-&gt; fa=factor(me$batch,sort(unique(me$batch)))
-&gt; actual=tapply(me$dead,fa,sum)
-&gt; expected=tapply(me$alive*me$x/me$pop,fa,sum,na.rm=T)
-&gt; excess=(actual-expected)/expected*100
-&gt; options(width=80)
-&gt; round(excess)
-   1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16
-  60  -14  -21   -7 -100  -25  -59  -37  -35  -29  -27 -100  -33  -28  -13  -25
-  17   18   19   20   21   22   23   25   26   31   32   33   34   35   36   37
- -16  -23    4    4   29   36   26   49    3   52   13    0  -40  -27  -19  -11
-  38   39   40   41   42   43   44   45   46   47   48   49   50   51   52   53
-  -4   -7    2    3   10   19   17   43   43   37   -5    0    5    6   29   70
-  54   55   56   58   59   60   61   62   63   64   65   66   67   68   69   70
-  85   46    2   78   19  -41  -46  -38  -36  -31  -30  -25  -15  -11  -12    2
-  71   72   73   74   75   76   77   78   79   80   81   82   83   84   85   86
-  19   39    9   -5   11    2  -11    2   16    3   -2   -7    0  -23  -32  -25
-  87   88   89   90   91   92   93   94   95   96   97   98   99  100  101  102
--100  -59  -12   -1  -34  -26   -9   50    0  -59  -42  -27  -44  -47  -49  -39
- 103  104  105  106  107  108  109  110  111  112  113  114  115  116  117  118
- -30  -20  -14  -21  -13  -11  -26   -4  -17  -24   54  -12  -33   58  -25  -10
- 119  120  121  122  123  124  125
- -67  -64    9  -15  -77  -45 -100
-&gt; round(excess[as.character(c(1,8,3,4,6,2,7,72,62,71))]) # 10 deadliest batches
-  1   8   3   4   6   2   7  72  62  71
- 60 -37 -21  -7 -25 -14 -59  39 -38  19</pre>
 <h3>
 <a href=#Plot_by_an_epidemiologist_from_a_top_university id=Plot_by_an_epidemiologist_from_a_top_university>Plot by an epidemiologist from a top university</a>
 </h3>
@@ -6340,6 +6300,79 @@ subset(dead,year_reg==2021&amp;month_reg==7&amp;ethnicity==&quot;Total&quot;)$co
 pop=read.csv(&quot;https://sars2.net/f/nz_infoshare_population_quarterly.csv&quot;)
 sum(pop[pop[,1]==&quot;2021Q3&quot;,-1])
 # 5114950 (estimated resident population in the third quarter of 2021)</pre>
+<h3>
+<a href=#Calculating_excess_mortality_per_batch_relative_to_reported_mortality_rate_in_5_year_age_groups id=Calculating_excess_mortality_per_batch_relative_to_reported_mortality_rate_in_5_year_age_groups>Calculating excess mortality per batch relative to reported mortality rate in 5-year age groups</a>
+</h3>
+<p>This script counts the number of person-days and deaths for each batch so that people are removed under earlier batches after they receive a dose from a new batch:</p>
+<pre>library(data.table)
+
+ua=\(x,fun,...){u=unique(x);fun(u,...)[match(x,u)]}
+age=\(x,y){x=as.numeric(x);y=as.numeric(y);(y-x-(y-789)%/%1461+(x-789)%/%1461)%/%365}
+
+t=fread(&quot;nz-record-level-data-4M-records.csv&quot;,showProgress=F)
+k=grep(&quot;date&quot;,colnames(t));t[,(k):=lapply(.SD,ua,as.Date,&quot;%m-%d-%Y&quot;),.SDcols=k]
+mindate=min(t$date_time_of_service);maxdate=as.Date(&quot;2023-9-30&quot;)
+t$date_of_death[t$date_of_death&gt;maxdate]=NA
+t=t[pmax(t$date_of_death&lt;t$date_time_of_service,t$date_time_of_service&gt;maxdate,na.rm=T)==0]
+t=t[order(-date_time_of_service)]
+
+buck=data.table()
+for(day in as.list(seq(min(t$date_time_of_service),maxdate,1))){
+  cat(as.character(day),&quot;\n&quot;)
+  sub=t[day&gt;=date_time_of_service&amp;(is.na(date_of_death)|day&lt;=date_of_death)]|&gt;unique(by=&quot;mrn&quot;)
+  d=data.table(month=substr(day,1,7),batch=sub$batch_id)
+  d$age=age(sub$date_of_birth,day)
+  d$alive=1
+  d$dead=nafill(as.numeric(sub$date_of_death==day),,0)
+  buck=rbind(buck,d)
+  if(as.numeric(day-mindate)%%10==0||day==maxdate)buck=buck[,.(alive=sum(alive),dead=sum(dead)),by=.(month,age,batch)]
+}
+
+fwrite(buck,&quot;bucketsbatch&quot;,sep=&quot; &quot;)</pre>
+<p>Then this calculates excess mortality by batch so that the baseline is derived from monthly mortality rates in 5-year age groups in the total NZ population:</p>
+<pre>download.file(&quot;http://sars2.net/f/bucketsbatch&quot;,&quot;bucketsbatch&quot;)
+t=read.table(&quot;bucketsbatch&quot;,header=T)
+
+cutl=\(x,y)cut(x,c(y,Inf),y,T,F)
+t$age=cutl(t$age,ages)
+t=aggregate(t[,4:5],t[,1:3],sum,drop=F)
+
+dead=read.csv(&quot;https://sars2.net/f/nz_monthly_deaths_by_age.csv&quot;)|&gt;subset(ethnicity==&quot;Total&quot;)
+ages=c(0,1,seq(5,95,5))
+a=aggregate(dead$count,list(month=sprintf(&quot;%d-%02d&quot;,dead$year_reg,dead$month_reg),age=factor(as.numeric(substr(dead$age_group,1,2)),ages)),sum,drop=F)
+
+pop=read.csv(&quot;https://sars2.net/f/nz_infoshare_population_quarterly.csv&quot;,check.names=F,row.names=1)|&gt;tail(11)
+pop=t(rowsum(t(pop),cutl(0:95,ages)))
+pop=apply(pop,2,\(x)tempdisagg::td(ts(x,frequency=4)~1,&quot;mean&quot;,to=&quot;monthly&quot;)$values)
+pop2=data.frame(month=format(seq(as.Date(&quot;2021-1-1&quot;),as.Date(&quot;2023-9-1&quot;),&quot;month&quot;),&quot;%Y-%m&quot;),pop=c(pop),age=rep(ages,each=nrow(pop)))
+me=merge(a,pop2)|&gt;merge(t)
+me$daysinmonth=c(31,28,31,30,31,30,31,31,30,31,30,31)[as.numeric(substr(me$month,6,7))]
+
+expected=tapply(me$x/(me$pop*me$daysinmonth)*me$alive,me$batch,sum,na.rm=T)
+actual=tapply(me$dead,me$batch,sum,na.rm=T)
+
+options(width=90)
+excess=(actual/expected-1)*100
+round(sort(excess,T))</pre>
+<p>The output shows that the highest excess mortality percent is in batches 54, 58, and 1:</p>
+<pre>  54   58    1   53   31   25  116   45   55   46   22   72   47  113   94   21   52   23
+ 106   97   92   92   73   68   65   60   60   60   55   53   52   52  48   47   45   41
+  59   43   71   44   32   79   42   75   19   73   51   26   20   50   41   33  121  118
+  33   32   31   31   29   26   22   22   20   19   19   19   19   17   16   15   15   14
+  40   95   80   70   49   76    4   78   56   38   48   90   81    2   74   83   39   15
+  14   13   12   12   12   11   11   10   10    8    7    7    7    6    6    6    4    2
+  37  122   82  110    3   68  117   17   77   89   69   67    6  108   36  114  107  105
+   1    1    1   -1   -2   -2   -4   -4   -4   -5   -5   -6   -6   -6   -7   -8   -9  -10
+  18  111   11   16   93   14   10   35  104  106   66   84   13   92  112    8   86  109
+ -10  -11  -12  -13  -13  -14  -14  -16  -16  -17  -18  -18  -20  -20  -20  -21  -21  -21
+  65   98    9  103   64   85   63  115   62   34   60   91  102   97   61   99  124  100
+ -22  -22  -23  -24  -24  -28  -28  -30  -31  -31  -35  -35  -35  -39  -39  -42  -42  -44
+ 101    7   88   96  119  120  123    5   12   87  125
+ -46  -49  -56  -57  -67  -69  -75 -100 -100 -100 -100</pre>
+<p>However out of the ten deadliest batches that were shown by Barry Young in the interview with Liz Gunn, half got negative excess mortality:</p>
+<pre>&gt; round(excess[as.character(c(1,8,3,4,6,2,7,72,62,71))])
+  1   8   3   4   6   2   7  72  62  71
+ 92 -21  -2  11  -6   6 -49  53 -31  31</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
