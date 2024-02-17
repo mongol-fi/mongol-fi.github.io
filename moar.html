@@ -145,8 +145,9 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Excess_mortality_relative_to_weekly_deaths_in_4_broad_age_groups>Excess mortality relative to weekly deaths in 4 broad age groups</a></li>
 <li><a href=#FOIA_response_which_said_that_vaccinated_people_are_likely_to_have_a_high_all_cause_mortality_risk>FOIA response which said that vaccinated people are likely to have a high all-cause mortality risk</a></li>
 <li><a href=#Barrys_plot_for_age_distribution_at_the_time_of_the_last_dose>Barry's plot for age distribution at the time of the last dose</a></li>
-<li><a href=#Even_more_errors_by_Scoops_McGoo>Even more errors by Scoops McGoo</a></li>
+<li><a href=#Excess_mortality_for_dose_1_in_July_2021_in_Scoops_McGoos_Proof_v_3_spreadsheet>Excess mortality for dose 1 in July 2021 in Scoops McGoo's Proof v.3 spreadsheet</a></li>
 <li><a href=#Calculating_excess_mortality_per_batch_relative_to_reported_mortality_rate_in_5_year_age_groups>Calculating excess mortality per batch relative to reported mortality rate in 5-year age groups</a></li>
+<li><a href=#FOIA_response_for_monthly_deaths_by_vaccination_status_group_and_age>FOIA response for monthly deaths by vaccination status group and age</a></li>
 </ul></li>
 </ul>
 
@@ -6225,7 +6226,7 @@ round(data.frame(a,row.names=1))</pre>
 <img src="i/moar-barry-vaxage.jpg">
 </div>
 <h3>
-<a href=#Even_more_errors_by_Scoops_McGoo id=Even_more_errors_by_Scoops_McGoo>Even more errors by Scoops McGoo</a>
+<a href=#Excess_mortality_for_dose_1_in_July_2021_in_Scoops_McGoos_Proof_v_3_spreadsheet id=Excess_mortality_for_dose_1_in_July_2021_in_Scoops_McGoos_Proof_v_3_spreadsheet>Excess mortality for dose 1 in July 2021 in Scoops McGoo's Proof v.3 spreadsheet</a>
 </h3>
 <p>Scoops McGoo posted a spreadsheet where he got about 2854% total excess mortality for people with 1 dose in July 2021, but he got about -98% excess mortality in unvaccinated people: [<a href="https://twitter.com/sco0psmcgoo/status/1757815767158993063">https://twitter.com/sco0psmcgoo/status/1757815767158993063</a>, <a href="https://docs.google.com/spreadsheets/d/1Vqj6LhT9NRowUxpmYdDj1CvsaN4Be_m9cq8Be2Yqswc">https://docs.google.com/spreadsheets/d/1Vqj6LhT9NRowUxpmYdDj1CvsaN4Be_m9cq8Be2Yqswc</a>]</p>
 <div class="width5">
@@ -6300,6 +6301,42 @@ subset(dead,year_reg==2021&amp;month_reg==7&amp;ethnicity==&quot;Total&quot;)$co
 pop=read.csv(&quot;https://sars2.net/f/nz_infoshare_population_quarterly.csv&quot;)
 sum(pop[pop[,1]==&quot;2021Q3&quot;,-1])
 # 5114950 (estimated resident population in the third quarter of 2021)</pre>
+<p>In the <span class="quote">&quot;Proof v.3.1&quot;</span> spreadsheet, the population size for dose 1 is only 383 on July 1st 2021, because I think Scoops only kept people whose final dose in the PPD data was dose 1:</p>
+<pre>t=data.table::fread(&quot;nz-record-level-data-4M-records.csv&quot;,showProgress=F)
+ua=\(x,y,...){u=unique(x);y(u,...)[match(x,u)]}
+k=grep(&quot;date&quot;,colnames(t));t[,(k):=lapply(.SD,ua,as.Date,&quot;%m-%d-%Y&quot;),.SDcols=k]
+d=as.Date(&quot;2021-7-1&quot;);d2=as.Date(&quot;2021-7-31&quot;)
+
+sum(t$dose_number==1&amp;t$date_t&lt;=d&amp;(is.na(t$date_of_death)|t$date_of_death&gt;=d))
+# 28191: Number of people who had received dose 1 on July 1st 2021
+# or earlier and who hadn&#39;t died before July 1st.
+
+t2=t[rev(order(date_time_of_service))][!duplicated(mrn)]
+
+sum(t2$dose_number==1&amp;t2$date_t&lt;=d&amp;(is.na(t2$date_of_death)|t2$date_of_death&gt;=d))
+# 397: Number of people who got dose 1 in July 1st 2021 or
+# earlier, whose final dose included in the PPD dataset was dose
+# 1, and who hadn&#39;t died before July 1st; close to the figure of
+# 383 in the Proof v.3.1 spreadsheet.
+
+sum(t2$dose_number==1&amp;t2$date_of_death&gt;=d&amp;t2$date_of_death&lt;=d2,na.rm=T)
+# 24: Number of deaths in July 2021 for people whose final dose
+# was dose 1; close to the figure of 26 in the Proof v.3.1
+# spreadsheet.
+
+# A common reason why the final dose of a person would be dose 1
+# is that the person died before they could get subsequent doses,
+# so it introduces a big bias to the method where you only keep
+# the final dose for each person when you count the number of
+# people under each dose. It would be probably be better to simply
+# look at people who had received dose 1 on July 1st 2021 or
+# earlier and who hadn&#39;t died, which is 28,191. Or it&#39;s 15,498 if
+# you omit people who had received further doses after the first
+# dose.</pre>
+<p>I also get over 3000% excess mortality for dose 1 in July 2021 if I only include people who didn't get further doses later:</p>
+<div class="width0">
+<img src=i/moar-scoops-final-1.png class=width5><img src=i/moar-scoops-final-2.png class=width5><img src=i/moar-scoops-final-3.png class=width5>
+</div>
 <h3>
 <a href=#Calculating_excess_mortality_per_batch_relative_to_reported_mortality_rate_in_5_year_age_groups id=Calculating_excess_mortality_per_batch_relative_to_reported_mortality_rate_in_5_year_age_groups>Calculating excess mortality per batch relative to reported mortality rate in 5-year age groups</a>
 </h3>
@@ -6373,6 +6410,46 @@ round(sort(excess,T))</pre>
 <pre>&gt; round(excess[as.character(c(1,8,3,4,6,2,7,72,62,71))])
   1   8   3   4   6   2   7  72  62  71
  92 -21  -2  11  -6   6 -49  53 -31  31</pre>
+<h3>
+<a href=#FOIA_response_for_monthly_deaths_by_vaccination_status_group_and_age id=FOIA_response_for_monthly_deaths_by_vaccination_status_group_and_age>FOIA response for monthly deaths by vaccination status group and age</a>
+</h3>
+<p>In February 2024 a FOIA response was released which showed the monthly number of deaths by vaccination status group in 6 age groups: <a href="https://fyi.org.nz/request/25021-number-of-covid19-vax-deaths-by-age-band-location-and-month#incoming-96520">https://fyi.org.nz/request/25021-number-of-covid19-vax-deaths-by-age-band-location-and-month#incoming-96520</a>.</p>
+<p>The FOIA response would've been a lot more useful if it included the number of person-days by vaccination status group and not just deaths, because I haven't found any good dataset which would show the percentage of vaccinated people by age group and month in New Zealand.</p>
+<p>From August 2021 until May 2023, the NZ MoH published weekly or monthly CSV files which showed the number of people in each vaccination status group by age, sex, ethnicity, and location: <a href="https://github.com/minhealthnz/nz-covid-data/blob/main/vaccine-data/2023-05-03/dhb_residence_uptake.csv">https://github.com/minhealthnz/nz-covid-data/blob/main/vaccine-data/2023-05-03/dhb_residence_uptake.csv</a>. However at different periods of time the CSV files used three different sets of age groups.</p>
+<p>There's also age periods of time when some age groups have over 100% vaccinated people, and there's a couple of points in time when the previously published figures drop dramatically:</p>
+<div class="width6">
+<img src="i/moar-foia-1.png">
+</div>
+<p>The reason for the sudden jumps in the plot above might be due to an update to a newer version of the Health Service User population. [<a href="https://twitter.com/Thoughtfulnz/status/1758538017101463783">https://twitter.com/Thoughtfulnz/status/1758538017101463783</a>] Te Whatu Ora's website says: <span class="quote">&quot;The person view includes all people that are currently alive and in the latest Health Service User (HSU) population. The current HSU in use is the financial year 2022/23 HSU (FY2022/23 HSU). The HSU is an estimate of the population using the health system in New Zealand. A person is included in the HSU if they use health services (including births and deaths) in the reference period, or are enrolled in a primary health organisation (PHO) during the reference period. The reference period for the FY2022/23 HSU is: 1/7/2022 to 30/6/2023.&quot;</span> [<a href="https://www.tewhatuora.govt.nz/our-health-system/data-and-statistics/covid-vaccine-data/">https://www.tewhatuora.govt.nz/our-health-system/data-and-statistics/covid-vaccine-data/</a>]</p>
+<p>But anyway, the last CSV file published at the GitHub of the MoH was from May 2023, so I compared it to figures for May 2023 in the the FOIA response. I was able to roughly match the age groups at GitHub to the age groups in the FOIA response, even though the biggest mismatch are that the files at GitHub are missing ages 0-4 and the age group 18-24 does not fit neatly to the age groups used in the FOIA response:</p>
+<pre>t=read.csv(&quot;https://github.com/minhealthnz/nz-covid-data/raw/main/vaccine-data/2023-05-03/dhb_residence_uptake.csv&quot;)
+t=t[t$Age!=&quot;Various&quot;,]
+
+age=as.numeric(sub(&quot;[-+].*&quot;,&quot;&quot;,t$Age.group))%/%20*20
+d=data.frame(nz_vaccinated_population_pct=tapply(t$At.least,age,sum)/tapply(t$Population,age,sum)*100)
+
+foi=read.csv(&quot;http://sars2.net/f/nz_monthly_vax_status_deaths_foia.csv&quot;,na.strings=&quot;&lt;5&quot;)
+foi[is.na(foi)]=2 # replace &lt;5 with 2 (the average of 1-4 would be 2.5 but lower values are probably more likely)
+foi=foi[foi$age!=&quot;Total&quot;&amp;foi$month_of_death==&quot;2023-05&quot;,]
+m=tapply(foi$count,list(foi$last_dose==0,pmin(80,as.numeric(sub(&quot;[_+].*&quot;,&quot;&quot;,foi$age))%/%20*20)),sum)
+d$foia_vaccinated_deaths_pct=m[1,]/colSums(m)*100
+
+rownames(d)=c(&quot;5-24 / 0-20&quot;,&quot;25-39 / 21-40&quot;,&quot;40-59 / 41-60&quot;,&quot;60-79 / 61-80&quot;,&quot;80+ / 81+&quot;)
+round(d,1)</pre>
+<!-- -->
+<pre>              nz_vaccinated_population_pct foia_vaccinated_deaths_pct
+5-24 / 0-20                           73.1                       56.0
+25-39 / 21-40                         88.4                       78.8
+40-59 / 41-60                         91.1                       84.8
+60-79 / 61-80                         95.7                       92.3
+80+ / 81+                             97.7                       96.4</pre>
+<p>In the spreadsheet from the FOIA response, I think the days between vaccination and death is always for the final vaccination before death. So you can't see the days between first dose and death for people who got two or more doses:</p>
+<pre>&gt; foi=read.csv(&quot;http://sars2.net/f/nz_monthly_vax_status_deaths_foia.csv&quot;,na.strings=&quot;&lt;5&quot;)
+&gt; foi=foi[foi$age==&quot;Total&quot;,]
+&gt; foi[is.na(foi)]=2
+&gt; table(rep(foi$days_between_last_vaccination_and_death,foi$count))
+&lt;=_180  &lt;=_30 &lt;=_365  &lt;=_90  366_+     NA
+ 22543   7008  21844  15215  14791  79303</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
