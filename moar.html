@@ -148,6 +148,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Excess_mortality_for_dose_1_in_July_2021_in_Scoops_McGoos_Proof_v_3_spreadsheet>Excess mortality for dose 1 in July 2021 in Scoops McGoo's Proof v.3 spreadsheet</a></li>
 <li><a href=#Calculating_excess_mortality_per_batch_relative_to_reported_mortality_rate_in_5_year_age_groups>Calculating excess mortality per batch relative to reported mortality rate in 5-year age groups</a></li>
 <li><a href=#FOIA_response_for_monthly_deaths_by_vaccination_status_and_age>FOIA response for monthly deaths by vaccination status and age</a></li>
+<li><a href=#Monthly_deaths_in_FOIA_response_compared_to_other_sources>Monthly deaths in FOIA response compared to other sources</a></li>
 </ul></li>
 </ul>
 
@@ -6473,6 +6474,119 @@ $ for x in 2022-0[123]*.csv;do grep Auckland,Asian,12-17,Female $x|sed &quot;s/.
 &gt; sa2=read.csv(&quot;https://github.com/minhealthnz/nz-covid-data/raw/main/vaccine-data/2023-05-03/sa2_all_ethnicity.csv&quot;)
 &gt; sum(as.numeric(gsub(&quot;,&quot;,&quot;&quot;,sa2$Population)))
 [1] 4967173</pre>
+<p>The vaccination statistics here go back a few months further than the CSV files at GitHub: <a href="http://web.archive.org/web/*/https://health.govt.nz/our-work/diseases-and-conditions/covid-19-novel-coronavirus/covid-19-data-and-statistics/covid-19-vaccine-data">http://web.archive.org/web/*/https://health.govt.nz/our-work/diseases-and-conditions/covid-19-novel-coronavirus/covid-19-data-and-statistics/covid-19-vaccine-data</a>. canceledmouse compiled the snapshots from archive.org to this CSV file: <a href="https://drive.google.com/file/d/1J6TQAFAGhxPaDAzGDHNe2Qnugv3-1Kfk/view">https://drive.google.com/file/d/1J6TQAFAGhxPaDAzGDHNe2Qnugv3-1Kfk/view</a>.</p>
+<h3>
+<a href=#Monthly_deaths_in_FOIA_response_compared_to_other_sources id=Monthly_deaths_in_FOIA_response_compared_to_other_sources>Monthly deaths in FOIA response compared to other sources</a>
+</h3>
+<p>In the dataset for monthly deaths by registration date, deaths peak in August 2022 and not in July, but it's probably because of a registration delay, because deaths peak in July in the new FOIA response, in the dataset for weekly deaths by date of occurrence, and in a dataset for monthly deaths at infoshare.stats.govt.nz. But in the dataset for monthly deaths by registration date, for some reason there also seems to be deaths missing in July and August 2021:</p>
+<div class="width7">
+<img src="i/moar-foiavs.png">
+</div>
+<p>If you compare the orange line for unadjusted deaths in the PPD data the red line for deaths among vaccinated people in the FOIA response, the spike around July 2022 seems to be much less pronounced, but it's because a lot of new people were added to the PPD dataset in July and August 2022:</p>
+<pre>&gt; ppd=as.data.frame(data.table::fread(&quot;nz-record-level-data-4M-records.csv&quot;,showProgress=F))
+&gt; ua=\(x,y,...){u=unique(x);y(u,...)[match(x,u)]}
+&gt; for(i in grep(&quot;date&quot;,colnames(ppd)))ppd[,i]=ua(ppd[,i],as.Date,&quot;%m-%d-%Y&quot;)
+&gt; ppd=ppd[order(ppd$date_time_of_service),]
+&gt; ppd=ppd[!duplicated(ppd$mrn),]
+&gt; table(ua(ppd$date_time_of_service,substr,1,7))
+2021-04 2021-05 2021-06 2021-07 2021-08 2021-09 2021-10 2021-11
+    650   11815   18771   49270  340826  296685  181180  113196
+2021-12 2022-01 2022-02 2022-03 2022-04 2022-05 2022-06 2022-07
+ 132096  275237  178324   57106   13178   13080   31921  139772
+2022-08 2022-09 2022-10 2022-11 2022-12 2023-01 2023-02 2023-03
+  86306   35631   27786   27196   23131   10222    4282   11327
+2023-04 2023-05 2023-06 2023-07 2023-08 2023-09 2023-10
+  60269   43355   20113    5186    4158    3367     293</pre>
+<!-- -->
+<pre>library(ggplot2)
+
+week=read.csv(&quot;http://sars2.net/f/nz_deaths_weekly.csv&quot;)
+week=week[week$age==&quot;Total&quot;&amp;week$date&gt;=&quot;2019-01-01&quot;,-2]
+week$date=as.Date(week$date)-3
+week=tempdisagg::td(week~1,,&quot;daily&quot;,&quot;fast&quot;)$values
+xy=aggregate(week$value,list(substr(week$time,1,7)),sum)|&gt;&quot;names&lt;-&quot;(c(&quot;month&quot;,&quot;weekly&quot;))
+
+foi=read.csv(&quot;http://sars2.net/f/nz_monthly_vax_status_deaths_foia.csv&quot;,na.strings=&quot;&lt;5&quot;)
+foi=foi[foi$month!=&quot;Total&quot;,]
+foivax=with(subset(foi,last_dose_number&gt;0),tapply(count,month_of_death,sum,na.rm=T))
+foi=tapply(foi$count,foi$month_of_death,sum,na.rm=T)
+xy$foi=foi[match(xy$month,names(foi))]
+xy$foivax=foivax[match(xy$month,names(foivax))]
+
+mon=read.csv(&quot;http://sars2.net/f/nz_monthly_deaths_by_age.csv&quot;)|&gt;subset(ethnicity==&quot;Total&quot;)
+mon=tapply(mon$count,sprintf(&quot;%d-%02d&quot;,mon$year,mon$month),sum)
+xy$monthly=mon[match(xy$month,names(mon))]
+
+mon2=read.csv(&quot;http://sars2.net/f/nz_infoshare_deaths_monthly.csv&quot;)
+mon2=tapply(mon2$deaths,sprintf(&quot;%d-%02d&quot;,mon2$year,mon2$month),sum)
+xy$monthly2=mon2[match(xy$month,names(mon2))]
+
+ppd=as.data.frame(data.table::fread(&quot;nz-record-level-data-4M-records.csv&quot;,showProgress=F))
+ppd=ppd[ppd$date_of_death!=&quot;&quot;&amp;!duplicated(ppd$mrn),]
+ppd=table(format(as.Date(ppd$date_of_death,&quot;%m-%d-%Y&quot;),&quot;%Y-%m&quot;))
+xy$ppd=ppd[match(xy$month,names(ppd))]
+
+nzpop=read.csv(&quot;http://sars2.net/f/nz_infoshare_population.csv&quot;)|&gt;subset(year==2022)
+nzpop=unlist(nzpop[-1])
+
+buck=data.table::fread(&quot;buckets.gz&quot;,showProgress=F)
+buck=buck[,month:=substr(date,1,7),by=date][,.(dead=sum(dead),alive=sum(alive)),by=.(month,age=pmin(age,95))]
+buck$dim=lubridate::days_in_month(paste0(buck$month,&quot;-1&quot;))
+buck=with(buck,tapply(dead/alive*dim*nzpop[age+1],month,sum,na.rm=T))
+xy$buck=buck[match(xy$month,names(buck))]
+
+xy$month=as.Date(paste0(xy$month,&quot;-1&quot;))
+
+xstart=as.Date(&quot;2019-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;);ystart=0
+cand=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
+ymax=max(xy[,-1],na.rm=T)
+ystep=cand[which.min(abs(cand-ymax/5))]
+yend=ystep*ceiling(ymax/ystep)
+yend=ymax
+
+color=c(&quot;black&quot;,&quot;#aa00aa&quot;,&quot;#00aaaa&quot;,&quot;#00aa00&quot;,&quot;#aa0000&quot;,&quot;#ee6600&quot;,&quot;#aa8800&quot;)
+label=c(&quot;FOIA response for monthly deaths by vaccination status&quot;,&quot;Monthly deaths by registration date&quot;,&quot;Weekly deaths by date of occurrence&quot;,&quot;Monthly deaths by date of occurrence (Infoshare)&quot;,&quot;Vaccinated people in FOIA response&quot;,&quot;Vaccinated people in pay-per-dose data released by Barry Young&quot;,&quot;Vaccinated people in pay-per-dose data matched to 2022 NZ population by age&quot;)
+leg=data.frame(x=xstart+.015*(xend-xstart),y=rev(seq(yend*.06,,yend/16,length(label))),label)
+
+cap=&quot;Sources: fyi.org.nz/request/25021-number-of-covid19-vax-deaths-by-age-band-location-and-month,
+stats.govt.nz/information-releases/births-and-deaths-year-ended-september-2023,
+stats.govt.nz/experimental/covid-19-data-portal,
+kirschsubstack.com/p/data-from-us-medicare-and-the-new, and
+infoshare.stats.govt.nz (\&quot;Population &gt; Deaths &gt; Month and year of death (Monthly)\&quot;).
+Weekly deaths were interpolated to daily deaths with the tempdisagg R package.&quot;
+
+ggplot(xy,aes(x=month,y=foi))+
+geom_vline(xintercept=seq(as.Date(&quot;2019-1-1&quot;),as.Date(&quot;2024-1-1&quot;),&quot;3 month&quot;),color=&quot;gray90&quot;,linewidth=.25,lineend=&quot;square&quot;)+
+geom_hline(yintercept=c(ystart,0,yend),color=&quot;gray75&quot;,linewidth=.3,lineend=&quot;square&quot;)+
+geom_vline(xintercept=seq(as.Date(&quot;2019-1-1&quot;),as.Date(&quot;2024-1-1&quot;),&quot;year&quot;),color=&quot;gray75&quot;,linewidth=.3,lineend=&quot;square&quot;)+
+geom_line(color=color[1],linewidth=.4)+
+geom_line(aes(y=monthly),color=color[2],linewidth=.4)+
+geom_line(aes(y=weekly),color=color[3],linewidth=.4)+
+geom_line(aes(y=monthly2),color=color[4],linewidth=.4)+
+geom_line(aes(y=foivax),color=color[5],linewidth=.4)+
+geom_line(aes(y=ppd),color=color[6],linewidth=.4)+
+geom_line(aes(y=buck),color=color[7],linewidth=.4)+
+geom_label(data=leg,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.85),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.1,&quot;lines&quot;),label.size=0,color=color,size=2.7,hjust=0)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+scale_x_date(limits=c(xstart,xend),breaks=seq(xstart,xend,&quot;3 month&quot;),date_labels=&quot;%b\n%y&quot;)+
+scale_y_continuous(limits=c(ystart,yend),breaks=seq(ystart,yend,ystep))+
+labs(title=&quot;Comparison of monthly deaths in New Zealand according to different sources&quot;,x=NULL,y=NULL,caption=cap)+
+scale_color_manual(values=color)+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.ticks=element_line(linewidth=.3,color=&quot;gray75&quot;),
+  axis.ticks.length=unit(.2,&quot;lines&quot;),
+  axis.title=element_text(size=8),
+  axis.title.y.left=element_text(margin=margin(0,2,0,0)),
+  axis.title.y.right=element_text(margin=margin(0,0,0,3)),
+  legend.position=&quot;none&quot;,
+  panel.background=element_rect(fill=&quot;white&quot;),
+  panel.grid=element_blank(),
+  plot.background=element_rect(fill=&quot;white&quot;),
+  plot.margin=margin(.4,.8,.4,.4,&quot;lines&quot;),
+  plot.caption=element_text(size=7.2,hjust=0),
+  plot.title=element_text(size=8.5))
+ggsave(&quot;1.png&quot;,width=5,height=3.7,dpi=400)
+system(&quot;qlmanage -p 1.png&amp;&gt;/dev/null&quot;)</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
