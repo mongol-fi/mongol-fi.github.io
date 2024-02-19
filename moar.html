@@ -146,6 +146,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#FOIA_response_which_said_that_vaccinated_people_are_likely_to_have_a_high_all_cause_mortality_risk>FOIA response which said that vaccinated people are likely to have a high all-cause mortality risk</a></li>
 <li><a href=#Barrys_plot_for_age_distribution_at_the_time_of_the_last_dose>Barry's plot for age distribution at the time of the last dose</a></li>
 <li><a href=#Excess_mortality_for_dose_1_in_July_2021_in_Scoops_McGoos_Proof_v_3_spreadsheet>Excess mortality for dose 1 in July 2021 in Scoops McGoo's Proof v.3 spreadsheet</a></li>
+<li><a href=#Simulation_which_shows_that_the_dose_categorization_method_used_by_Scoops_is_biased>Simulation which shows that the dose categorization method used by Scoops is biased</a></li>
 <li><a href=#Calculating_excess_mortality_per_batch_relative_to_reported_mortality_rate_in_5_year_age_groups>Calculating excess mortality per batch relative to reported mortality rate in 5-year age groups</a></li>
 <li><a href=#FOIA_response_for_monthly_deaths_by_vaccination_status_and_age>FOIA response for monthly deaths by vaccination status and age</a></li>
 <li><a href=#Monthly_deaths_in_FOIA_response_compared_to_other_sources>Monthly deaths in FOIA response compared to other sources</a></li>
@@ -6339,6 +6340,75 @@ sum(t2$dose_number==1&amp;t2$date_of_death&gt;=d&amp;t2$date_of_death&lt;=d2,na.
 <div class="width0">
 <img src=i/moar-scoops-final-1.png class=width5><img src=i/moar-scoops-final-2.png class=width5><img src=i/moar-scoops-final-3.png class=width5>
 </div>
+<p>In these heatmaps I calculated excess mortality in a different way, but they also demonstrate the difference between the three different ways of defining the dose categories:</p>
+<div class="width00">
+<img src=i/moar-scoops-finalheat-1.png class=width8><img src=i/moar-scoops-finalheat-2.png class=width8><img src=i/moar-scoops-finalheat-3.png class=width8>
+</div>
+<p>With the definition of dose categories used by Scoops, all people who died when dose 1 was their newest dose are included under dose 1, but most people who didn't die when dose 1 was their newest dose are excluded from dose 1. So it introduces a huge bias.</p>
+<p>The dose categories used by Scoops would also result in a high mortality rate for unvaccinated people, because the numerator would include all deaths that occurred in unvaccinated people, but the denominator would exclude the person-days of people who subsequently got vaccinated.</p>
+<h3>
+<a href=#Simulation_which_shows_that_the_dose_categorization_method_used_by_Scoops_is_biased id=Simulation_which_shows_that_the_dose_categorization_method_used_by_Scoops_is_biased>Simulation which shows that the dose categorization method used by Scoops is biased</a>
+</h3>
+<p>I generated a simulated table of record-level data for a million people that was similar to the CSV file published by Kirsch. The simulation ran for 3 years, and there was a 1 in 300 chance of being vaccinated each day. There was a <code>1/100/365</code> chance of dying each day, so that the expected mortality rate was about 1000 deaths per 100k person-years. When I classified each person under the final vaccine dose they took in the simulation, I got about 2 times higher mortality rate for people with 1 dose than for people with 4 doses (even though actually the vaccination had no effect on the likelihood of dying). And unvaccinated people got an even higher mortality rate, which was about 6600 deaths per 100k person-years, so it was about 560% higher than the mortality rate of the total simulated population:</p>
+<pre>set.seed(0)
+simdays=365*3
+simpeople=1e6
+vaxchance=1/300
+deathchance=1/100/365
+
+records=data.frame(person=1:simpeople,vaxday=0,dose=0)
+vax=which(matrix(runif(simdays*simpeople)&lt;vaxchance,simpeople),T)
+records=rbind(records,data.frame(person=vax[,1],vaxday=vax[,2],dose=rowid(vax[,1])-1))
+deaths=which(matrix(runif(simdays*simpeople)&lt;deathchance,simpeople),T)
+records$deathday=tapply(deaths[,2],factor(deaths[,1],1:simpeople),min)[records$person]
+records=records[is.na(records$deathday)|records$vaxday&lt;=records$deathday,]
+
+out=data.frame(dose=0:max(records$dose))
+finaldose=records[rev(!duplicated(rev(records$person))),]
+out$deaths=tapply(!is.na(finaldose$deathday),factor(finaldose$dose,out$dose),sum)
+lastdays=pmin(simdays,finaldose$deathday,na.rm=T)
+out$persondays=tapply(lastdays-finaldose$vaxday+1,factor(finaldose$dose,out$dose),sum)
+out$cmr=out$deaths/out$persondays*365e5
+
+print.data.frame(round(out),row.names=F)</pre>
+<!-- -->
+<pre> dose deaths persondays  cmr
+    0  15099   81566769 6757
+    1   5645   62347893 3305
+    2   3941   56920084 2527
+    3   2425   41158421 2151
+    4   1311   25126785 1904
+    5    667   12909129 1886
+    6    235    5916804 1450
+    7     93    2389381 1421
+    8     34     863182 1438
+    9      9     277859 1182
+   10      4      92013 1587
+   11      1      23320 1565
+   12      0       5137    0
+   13      0       1565    0
+   14      0         64    0</pre>
+<p>In the same way that my heatmaps in the previous section showed that the retrospective categorization method used by Scoops produced positive total excess mortality for all doses except the fifth dose, my simulation above also produced a mortality rate of over 1000 deaths per 100k person-yers for all doses (even though the total mortality rate of all people included in the simulation was about 1000 deaths per 100k person-years).</p>
+<p>Next when I tried selecting people who had received the first dose before day 51 of the simulation, their mortality rate on days 51-100 of the simulation was about 29000, or about 2800% higher than the normal mortality rate:</p>
+<pre>out=data.frame(dose=0:max(records$dose))
+day1=51;day2=100
+finaldose=records[rev(!duplicated(rev(records$person))),]
+finaldose=finaldose[finaldose$dose==1&amp;finaldose$vaxday&lt;day1,]
+finaldose=finaldose[is.na(finaldose$deathday)|finaldose$deathday%in%day1:day2,]
+out$deaths=tapply(!is.na(finaldose$deathday),factor(finaldose$dose,out$dose),sum)
+lastdays=pmin(day2,finaldose$deathday,na.rm=T)
+out$persondays=tapply(lastdays-day1+1,factor(finaldose$dose,out$dose),sum)
+out$cmr=out$deaths/out$persondays*365e5
+
+print.data.frame(na.omit(round(out)),row.names=F)</pre>
+<!-- -->
+<pre> dose deaths persondays   cmr
+    1     14      17675 28911</pre>
+<p>The total mortality rate of the simulated population was about 997 deaths per 100k person-years:</p>
+<pre>uniq=records[!duplicated(records$person),]
+sum(!is.na(uniq$deathday))/sum(pmin(simdays,uniq$deathday,na.rm=T))*365e5</pre>
+<!-- -->
+<pre>[1] 996.8977</pre>
 <h3>
 <a href=#Calculating_excess_mortality_per_batch_relative_to_reported_mortality_rate_in_5_year_age_groups id=Calculating_excess_mortality_per_batch_relative_to_reported_mortality_rate_in_5_year_age_groups>Calculating excess mortality per batch relative to reported mortality rate in 5-year age groups</a>
 </h3>
@@ -6587,6 +6657,14 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   plot.title=element_text(size=8.5))
 ggsave(&quot;1.png&quot;,width=5,height=3.7,dpi=400)
 system(&quot;qlmanage -p 1.png&amp;&gt;/dev/null&quot;)</pre>
+<p>Here I matched the deaths in the PPD data to monthly population sizes by single year of age (and not to 2022 population like in the previous plot). People in the PPD data still have lower deaths than the FOIA response on almost every month:</p>
+<div class="width7">
+<img src="i/moar-foiavs-2.png">
+</div>
+<p>For the spreadsheet jockeys Scoops and Kirsch, I also made a Google Docs version of the same calculation [<a href="https://docs.google.com/spreadsheets/d/1Q3iuTsVLDBM50aGCaoykSREIyJyQ0nxzLDcIh-uTgN8">https://docs.google.com/spreadsheets/d/1Q3iuTsVLDBM50aGCaoykSREIyJyQ0nxzLDcIh-uTgN8</a>]:</p>
+<div class="width8">
+<img src="i/moar-foiavs-3.png">
+</div>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
