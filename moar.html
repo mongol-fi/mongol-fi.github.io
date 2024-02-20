@@ -150,6 +150,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Calculating_excess_mortality_per_batch_relative_to_reported_mortality_rate_in_5_year_age_groups>Calculating excess mortality per batch relative to reported mortality rate in 5-year age groups</a></li>
 <li><a href=#FOIA_response_for_monthly_deaths_by_vaccination_status_and_age>FOIA response for monthly deaths by vaccination status and age</a></li>
 <li><a href=#Monthly_deaths_in_FOIA_response_compared_to_other_sources>Monthly deaths in FOIA response compared to other sources</a></li>
+<li><a href=#Tweet_by_Scoops_for_mortality_by_batch_relative_to_age>Tweet by Scoops for mortality by batch relative to age</a></li>
 </ul></li>
 </ul>
 
@@ -6611,7 +6612,7 @@ $ for x in *;do awk &#39;NR==1||/Auckland,Asian,90\+,Female/&#39; $x|csvtk cut -
 &gt; sum(as.numeric(gsub(&quot;,&quot;,&quot;&quot;,sa2$Population)))
 [1] 4967173</pre>
 <p>The vaccination statistics here go back a few months further than the CSV files at GitHub: <a href="http://web.archive.org/web/*/https://health.govt.nz/our-work/diseases-and-conditions/covid-19-novel-coronavirus/covid-19-data-and-statistics/covid-19-vaccine-data">http://web.archive.org/web/*/https://health.govt.nz/our-work/diseases-and-conditions/covid-19-novel-coronavirus/covid-19-data-and-statistics/covid-19-vaccine-data</a>. canceledmouse compiled the snapshots from archive.org to this CSV file: <a href="https://drive.google.com/file/d/1J6TQAFAGhxPaDAzGDHNe2Qnugv3-1Kfk/view">https://drive.google.com/file/d/1J6TQAFAGhxPaDAzGDHNe2Qnugv3-1Kfk/view</a>.</p>
-<p>Uncle John Returns has also posted useful tweets about the FOIA data: <a href="https://x.com/UncleJo46902375/status/1759906206259318917">https://x.com/UncleJo46902375/status/1759906206259318917</a>, <a href="https://x.com/UncleJo46902375/status/1759500002831810649">https://x.com/UncleJo46902375/status/1759500002831810649</a>, <a href="https://x.com/UncleJo46902375/status/1759877133189451831">https://x.com/UncleJo46902375/status/1759877133189451831</a>, <a href="https://x.com/UncleJo46902375/status/1759906950429421644">https://x.com/UncleJo46902375/status/1759906950429421644</a>.</p>
+<p>Uncle John Returns has also posted useful information about the FOIA data: <a href="https://x.com/UncleJo46902375/status/1759906206259318917">https://x.com/UncleJo46902375/status/1759906206259318917</a>, <a href="https://x.com/UncleJo46902375/status/1759500002831810649">https://x.com/UncleJo46902375/status/1759500002831810649</a>, <a href="https://x.com/UncleJo46902375/status/1759877133189451831">https://x.com/UncleJo46902375/status/1759877133189451831</a>, <a href="https://x.com/UncleJo46902375/status/1759906950429421644">https://x.com/UncleJo46902375/status/1759906950429421644</a>, <a href="https://twitter.com/UncleJo46902375/status/1759937447457075692">https://twitter.com/UncleJo46902375/status/1759937447457075692</a>.</p>
 <h3>
 <a href=#Monthly_deaths_in_FOIA_response_compared_to_other_sources id=Monthly_deaths_in_FOIA_response_compared_to_other_sources>Monthly deaths in FOIA response compared to other sources</a>
 </h3>
@@ -6732,6 +6733,84 @@ system(&quot;qlmanage -p 1.png&amp;&gt;/dev/null&quot;)</pre>
 <div class="width8">
 <img src="i/moar-foiavs-3.png">
 </div>
+<h3>
+<a href=#Tweet_by_Scoops_for_mortality_by_batch_relative_to_age id=Tweet_by_Scoops_for_mortality_by_batch_relative_to_age>Tweet by Scoops for mortality by batch relative to age</a>
+</h3>
+<p>Scoops McGoo posted this tweet: [<a href="https://twitter.com/sco0psmcgoo/status/1759974740532314439">https://twitter.com/sco0psmcgoo/status/1759974740532314439</a>]</p>
+<div class="width5">
+<img src="i/moar-scoopsbatch-1.jpg">
+</div>
+<p>One reason why batch 1 might have high mortality is if it was given to vulnerable people who were priorized during the early rollout. The batch numbers are roughly in chronological order, and the average date of vaccination is the earliest in batch 3 and second-earliest in batch 1.</p>
+<p>Howevevr the expected mortality rate of a batch doesn't only depend on the average age but also on the age composition within the batch. The average age is about 62.3 for batch 1 and 64.9 for batch 3, but batch 1 has about 44% higher expected mortality rate derived from the age composition:</p>
+<div class="width6">
+<img src="i/moar-scoopsbatch-2.png">
+</div>
+<pre>library(ggplot2);library(colorspace)
+
+t=read.table(&quot;bucketsbatch&quot;,header=T)
+a=aggregate(t[,4:5],t[,2:3],sum)
+
+nzpop=subset(read.csv(&quot;https://sars2.net/f/nz_infoshare_population.csv&quot;),year%in%2021:2023)[,2:96]
+nzdeath=subset(read.csv(&quot;https://sars2.net/f/nz_infoshare_deaths.csv&quot;),year%in%2021:2023)[,2:96]
+cmr=data.frame(x=0:94,y=colMeans(nzdeath)/colMeans(nzpop)*1e5)
+cmr=c(cmr$y,predict(lm(y~poly(x),tail(cmr,10)),list(x=95:120)))
+
+wmg=\(x,y,z)tapply(x*y,z,sum,na.rm=T)/tapply(y,z,sum,na.rm=T)
+x=wmg(a$age,a$alive,a$batch)
+y=wmg(cmr[a$age+1],a$alive,a$batch)
+z=(tapply(a$dead,factor(a$batch),sum)/tapply(a$alive/365e5*cmr[a$age+1],factor(a$batch),sum)-1)*100
+
+xy=data.frame(x,y,z)
+name=names(y)
+
+ystart=0
+cand=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
+ystep=cand[which.min(abs(cand-max(xy$y)/6))]
+yend=ystep*ceiling(max(xy$y)/ystep)
+ybreak=seq(ystart,yend,ystep)
+xstep=cand[which.min(abs(cand-(max(xy$x)-min(xy$x))/8))]
+xend=xstep*ceiling(max(xy$x)/xstep)
+xstart=xstep*floor(min(xy$x)/xstep)
+xbreak=seq(xstart,xend,xstep)
+
+pal=colorRampPalette(hex(HSV(c(210,210,210,210,0,0,0,0,0),c(1,.8,.6,.3,0,.3,.6,.8,1),c(.3,.65,1,1,1,1,1,.65,.3))))(256)
+maxcolor=max(abs(xy$z))
+
+ggplot(xy,aes(x,y))+
+geom_smooth(method=&quot;lm&quot;,formula=y~x,linewidth=.3,se=F,color=&quot;black&quot;,linetype=2)+
+geom_vline(xintercept=c(xstart,xend),color=&quot;gray50&quot;,linewidth=.3,lineend=&quot;square&quot;)+
+geom_hline(yintercept=c(ystart,yend),color=&quot;gray50&quot;,linewidth=.3,lineend=&quot;square&quot;)+
+geom_point(aes(color=z),size=.5)+
+ggrepel::geom_text_repel(label=name,size=2.3,max.overlaps=Inf,segment.size=.2,min.segment.length=.2,force=10,force_pull=2,box.padding=.13)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak)+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
+scale_color_gradientn(colors=pal,breaks=seq(-100,100,50),limits=c(-100,100),name=&quot;Excess mortality %&quot;,guide=guide_colorbar(ticks.color=&quot;gray50&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+labs(title=&quot;Batches in NZ pay-per-dose data: Expected mortality rate compared to average age&quot;,x=&quot;Average age&quot;,y=&quot;Expected deaths per 100k person-years&quot;,subtitle=stringr::str_wrap(&quot;The expected mortality rate was derived from a weighted average NZ of mortality rates for each age in 2021-2023, where the weight was the number of person-days for each age within a batch. The expected mortality rate is not adjusted for seasonality, so it depends only on age composition.&quot;,90))+
+guides(color=guide_colorbar(ticks.colour=&quot;gray50&quot;,ticks.linewidth=.2,frame.colour=&quot;gray50&quot;,frame.linewidth=.2))+
+theme(axis.text=element_text(size=8,color=&quot;black&quot;),
+  axis.ticks=element_line(linewidth=.3,color=&quot;gray50&quot;),
+  axis.ticks.length=unit(.2,&quot;lines&quot;),
+  axis.title=element_text(size=9),
+  axis.title.x=element_text(margin=margin(4,0,0,0)),
+  legend.position=c(.48,.90),
+  legend.background=element_rect(fill=&quot;gray80&quot;),
+  legend.key=element_rect(fill=&quot;gray80&quot;),
+  legend.box.background=element_rect(color=&quot;gray50&quot;,fill=&quot;gray80&quot;,linewidth=.3),
+  legend.box.margin=margin(.2,.6,.1,.1,unit=&quot;lines&quot;),
+  legend.justification=&quot;center&quot;,
+  legend.direction=&quot;horizontal&quot;,
+  legend.key.width=unit(1,&quot;lines&quot;),
+  legend.key.height=unit(1,&quot;lines&quot;),
+  legend.spacing.y=unit(.05,&quot;cm&quot;),
+  legend.text=element_text(size=8,vjust=.5),
+  legend.title=element_text(size=8,vjust=.73),
+  panel.background=element_rect(fill=&quot;gray70&quot;),
+  panel.grid=element_blank(),
+  plot.margin=margin(.4,.5,.4,.5,&quot;lines&quot;),
+  plot.subtitle=element_text(size=8.5),
+  plot.title=element_text(size=9.5))
+ggsave(&quot;1.png&quot;,width=5.6,height=4.4)</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
