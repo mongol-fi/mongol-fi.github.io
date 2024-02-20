@@ -6388,7 +6388,7 @@ print.data.frame(round(out),row.names=F)</pre>
    12      0       5137    0
    13      0       1565    0
    14      0         64    0</pre>
-<p>In the same way that my heatmaps in the previous section showed that the retrospective categorization method used by Scoops produced positive total excess mortality for all doses except the fifth dose, my simulation above also produced a mortality rate of over 1000 deaths per 100k person-yers for all doses (even though the total mortality rate of all people included in the simulation was about 1000 deaths per 100k person-years).</p>
+<p>In the same way that my heatmaps in the previous section showed that the retrospective categorization method used by Scoops produced positive total excess mortality for all doses except the fifth dose, my simulation above also produced a mortality rate of over 1000 deaths per 100k person-years for all doses (even though the total mortality rate of all people included in the simulation was about 1000 deaths per 100k person-years).</p>
 <p>Next when I tried selecting people who had received the first dose before day 51 of the simulation, their mortality rate on days 51-100 of the simulation was about 29000, or about 2800% higher than the normal mortality rate:</p>
 <pre>out=data.frame(dose=0:max(records$dose))
 day1=51;day2=100
@@ -6405,10 +6405,26 @@ print.data.frame(na.omit(round(out)),row.names=F)</pre>
 <pre> dose deaths persondays   cmr
     1     14      17675 28911</pre>
 <p>The total mortality rate of the simulated population was about 997 deaths per 100k person-years:</p>
-<pre>uniq=records[!duplicated(records$person),]
-sum(!is.na(uniq$deathday))/sum(pmin(simdays,uniq$deathday,na.rm=T))*365e5</pre>
-<!-- -->
-<pre>[1] 996.8977</pre>
+<pre>&gt; uniq=records[!duplicated(records$person),]
+&gt; sum(!is.na(uniq$deathday))/sum(pmin(simdays,uniq$deathday,na.rm=T))*365e5
+[1] 996.8977</pre>
+<p>In the code below when I kept the first dose for each person but I excluded unvaccinated people, the mortality rate was close to 1000 deaths per 1k person-years. But when I only kept the last dose for each person, the number of deaths remained the same but the number of person-days was reduced by about 61%, so the mortality rate became about 2.5 times higher:</p>
+<pre># keep only earliest dose for each person
+firstdose=records[records$dose&gt;0,];firstdose=firstdose[!duplicated(firstdose$person),]
+pdays=sum(pmin(simdays,firstdose$deathday,na.rm=T)-firstdose$vaxday+1)
+pdays # 528922982 (about 1.4 person-years per person)
+deaths=sum(!is.na(firstdose$deathday))
+deaths # 14365 (number of deaths)
+deaths/pdays*365e5 # 991.3022 (mortality rate is close to 1000 per 1k person-years)
+
+# keep only last dose for each person
+lastdose=records[records$dose&gt;0,];lastdose=lastdose[!rev(duplicated(rev(lastdose$person))),]
+pdays=sum(pmin(simdays,lastdose$deathday,na.rm=T)-lastdose$vaxday+1)
+pdays # 208031637 (about 0.6 person-years per person)
+deaths=sum(!is.na(lastdose$deathday))
+deaths # 14365 (number of deaths)
+deaths/pdays*365e5 # 2520.398 (mortality rate is about 2.5 times higher)</pre>
+<p>The Proof v.3.1 spreadsheet by Scoops has this same problem but it's not as extreme, because it only includes 1,038,224,664 person-days up to the end of September 2023 even though there should be a total of 1,333,216,460 person-days.</p>
 <h3>
 <a href=#Calculating_excess_mortality_per_batch_relative_to_reported_mortality_rate_in_5_year_age_groups id=Calculating_excess_mortality_per_batch_relative_to_reported_mortality_rate_in_5_year_age_groups>Calculating excess mortality per batch relative to reported mortality rate in 5-year age groups</a>
 </h3>
@@ -6522,18 +6538,68 @@ round(d,1)</pre>
 &gt; table(rep(foi$days_between_last_vaccination_and_death,foi$count))
 &lt;=_180  &lt;=_30 &lt;=_365  &lt;=_90  366_+     NA
  22543   7008  21844  15215  14791  79303</pre>
-<p>In the CSV files at GitHub, the population size of Asian females aged 12-17 in Auckland increases about 4-fold during a single week in March 2022:</p>
+<p>In the CSV files for 2022-03-23, 2022-08-10, and 2023-03-01, there's a sudden jump to either the previously published total population size or number of vaccinated people. The jump in March 2022 mostly seems to affect the oldest age groups, which also had a linear increase in the number of vaccinated people from January to February 2022 (which is split across multiple files so it's strange that it's almost perfectly linear):</p>
+<div class="width6">
+<img src="i/moar-githubcsvjumps.png">
+</div>
+<p>For example for Asian females aged 90+ in Auckland, there was a sudden drop in the number of vaccinated people in March 2023, and there was a sudden increase in population size in August 2022 and in March 2023:</p>
 <pre>$ mkdir nzvax;cd nzvax
 $ for x in 2021-08-31 2021-09-07 2021-09-14 2021-09-21 2021-09-28 2021-10-05 2021-10-12 2021-10-19 2021-10-26 2021-11-03 2021-11-10 2021-11-17 2021-11-24 2021-12-01 2021-12-08 2021-12-15 2021-12-22 2021-12-29 2022-01-05 2022-01-12 2022-02-16 2022-02-23 2022-03-02 2022-03-09 2022-03-16 2022-03-23 2022-03-30 2022-04-06 2022-04-13 2022-04-20 2022-04-27 2022-05-04 2022-05-11 2022-05-18 2022-05-25 2022-06-01 2022-06-08 2022-06-15 2022-06-22 2022-06-29 2022-07-06 2022-07-13 2022-07-20 2022-07-27 2022-08-03 2022-08-10 2022-08-17 2022-08-24 2022-08-31 2022-09-07 2022-09-14 2022-09-21 2022-09-28 2022-10-05 2022-11-02 2022-12-07 2022_02-09 2023-01-11 2023-02-01 2023-03-01 2023-04-05 2023-05-03;do curl https://github.com/minhealthnz/nz-covid-data/raw/main/vaccine-data/$x/dhb_residence_uptake.csv&gt;$x.csv;done
-$ for x in 2022-0[123]*.csv;do grep Auckland,Asian,12-17,Female $x|sed &quot;s/.*,//;s/\$/ $x/&quot;;done
-1032 2022-02-16.csv
-1029 2022-02-23.csv
-1027 2022-03-02.csv
-4302 2022-03-09.csv
-4302 2022-03-16.csv
-4302 2022-03-23.csv
-4302 2022-03-30.csv</pre>
-<p>However I guess it's because new people got added to the HSU population after they got vaccinated. A report about the HSU population by Stats NZ said: <span class="quote">&quot;Vaccination data should be used to increase the HSU where people were not previously in the HSU at each reference date. [...] The mass rollout of COVID-19 vaccines in 2021 presented an opportunity for capturing, in the HSU, people who were not PHO-enrolled or active users of the health system. However, since the bulk of the COVID-19 vaccinations were received in the latter half of 2021 and the HSU is produced with a six-month lag, vaccine-only activity was not included in the previous HSU.&quot;</span> [<a href="https://www.stats.govt.nz/reports/review-of-health-service-user-population-methodology">https://www.stats.govt.nz/reports/review-of-health-service-user-population-methodology</a>]</p>
+$ for x in *;do awk &#39;NR==1||/Auckland,Asian,90\+,Female/&#39; $x|csvtk cut -Ff&#39;First dose administered|At least partially vaccinated$,Population&#39;|sed 1d|sed &quot;s/\$/ $x/&quot;;done
+162,179 2021-11-03.csv
+164,179 2021-11-10.csv
+165,179 2021-11-17.csv
+166,179 2021-11-24.csv
+172,179 2021-12-01.csv
+174,179 2021-12-08.csv
+174,179 2021-12-15.csv
+175,179 2021-12-22.csv
+176,179 2021-12-29.csv
+176,179 2022-01-05.csv
+176,179 2022-01-12.csv
+205,179 2022-02-16.csv
+205,179 2022-02-23.csv
+208,179 2022-03-02.csv
+209,179 2022-03-09.csv
+209,179 2022-03-16.csv
+193,179 2022-03-23.csv
+193,179 2022-03-30.csv
+193,179 2022-04-06.csv
+193,179 2022-04-13.csv
+193,179 2022-04-20.csv
+193,179 2022-04-27.csv
+193,179 2022-05-04.csv
+191,179 2022-05-11.csv
+189,179 2022-05-18.csv
+187,179 2022-05-25.csv
+185,179 2022-06-01.csv
+185,179 2022-06-08.csv
+183,179 2022-06-15.csv
+183,179 2022-06-22.csv
+183,179 2022-06-29.csv
+184,179 2022-07-06.csv
+182,179 2022-07-13.csv
+181,179 2022-07-20.csv
+185,179 2022-07-27.csv
+183,179 2022-08-03.csv
+203,226 2022-08-10.csv
+203,226 2022-08-17.csv
+202,226 2022-08-24.csv
+202,226 2022-08-31.csv
+202,226 2022-09-07.csv
+202,226 2022-09-14.csv
+204,226 2022-09-21.csv
+204,226 2022-09-28.csv
+204,226 2022-10-05.csv
+209,226 2022-11-02.csv
+205,226 2022-12-07.csv
+210,226 2023-01-11.csv
+209,226 2023-02-01.csv
+207,234 2023-03-01.csv
+205,234 2023-04-05.csv
+208,234 2023-05-03.csv</pre>
+<p>The sudden increases in the population size in August 2022 and March 2023 might be because new people got added to the HSU population.</p>
+<p>Unvaccinated people are probably underrepresented in the HSU population because people were added to the HSU population after they were vaccinated. A report about the HSU population by Stats NZ said: <span class="quote">&quot;Vaccination data should be used to increase the HSU where people were not previously in the HSU at each reference date. [...] The mass rollout of COVID-19 vaccines in 2021 presented an opportunity for capturing, in the HSU, people who were not PHO-enrolled or active users of the health system. However, since the bulk of the COVID-19 vaccinations were received in the latter half of 2021 and the HSU is produced with a six-month lag, vaccine-only activity was not included in the previous HSU.&quot;</span> [<a href="https://www.stats.govt.nz/reports/review-of-health-service-user-population-methodology">https://www.stats.govt.nz/reports/review-of-health-service-user-population-methodology</a>]</p>
 <p>In the last set of CSV files that were published on the MoH's GitHub page, for some reason the total population size is about 5.23 million in <code>hsu_population.csv</code> but about 4.97 million in <code>dhb_residence_uptake.csv</code> and <code>sa2_all_ethnicity.csv</code>:</p>
 <pre>&gt; hsu=read.csv(&quot;https://github.com/minhealthnz/nz-covid-data/raw/main/vaccine-data/2023-05-03/hsu_population.csv&quot;)
 &gt; sum(hsu$Population)
@@ -6545,6 +6611,7 @@ $ for x in 2022-0[123]*.csv;do grep Auckland,Asian,12-17,Female $x|sed &quot;s/.
 &gt; sum(as.numeric(gsub(&quot;,&quot;,&quot;&quot;,sa2$Population)))
 [1] 4967173</pre>
 <p>The vaccination statistics here go back a few months further than the CSV files at GitHub: <a href="http://web.archive.org/web/*/https://health.govt.nz/our-work/diseases-and-conditions/covid-19-novel-coronavirus/covid-19-data-and-statistics/covid-19-vaccine-data">http://web.archive.org/web/*/https://health.govt.nz/our-work/diseases-and-conditions/covid-19-novel-coronavirus/covid-19-data-and-statistics/covid-19-vaccine-data</a>. canceledmouse compiled the snapshots from archive.org to this CSV file: <a href="https://drive.google.com/file/d/1J6TQAFAGhxPaDAzGDHNe2Qnugv3-1Kfk/view">https://drive.google.com/file/d/1J6TQAFAGhxPaDAzGDHNe2Qnugv3-1Kfk/view</a>.</p>
+<p>Uncle John Returns has also posted useful tweets about the FOIA data: <a href="https://x.com/UncleJo46902375/status/1759906206259318917">https://x.com/UncleJo46902375/status/1759906206259318917</a>, <a href="https://x.com/UncleJo46902375/status/1759500002831810649">https://x.com/UncleJo46902375/status/1759500002831810649</a>, <a href="https://x.com/UncleJo46902375/status/1759877133189451831">https://x.com/UncleJo46902375/status/1759877133189451831</a>, <a href="https://x.com/UncleJo46902375/status/1759906950429421644">https://x.com/UncleJo46902375/status/1759906950429421644</a>.</p>
 <h3>
 <a href=#Monthly_deaths_in_FOIA_response_compared_to_other_sources id=Monthly_deaths_in_FOIA_response_compared_to_other_sources>Monthly deaths in FOIA response compared to other sources</a>
 </h3>
