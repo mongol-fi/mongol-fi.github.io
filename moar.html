@@ -1860,6 +1860,14 @@ ggsave(&quot;1.png&quot;,width=4.6,height=3.3)</pre>
 <p>Previously we used a different expected deaths baseline: the average number of deaths over the years 2015-2019. We made this change because using the five-year average has an important limitation - it does not account for year-to-year trends in mortality and thus can misestimate excess mortality.b The WMD projection, on the other hand, does not suffer from this limitation because it accounts for these year-to-year trends. Our charts using the five-year average are still accessible in links in the sections below.</p>
 </blockquote>
 <p>The article by Karlinsky and Kobak that was linked above said: <span class="quote">&quot;For each country, we predicted the <span class="quote">'baseline'</span> mortality in 2020 based on the 2015-2019 data (accounting for linear trend and seasonal variation; see Materials and methods).&quot;</span></p>
+<p>If you use the 2011-2015 average as the baseline then you also get 12% excess deaths in 2019. You can try it out at next.mortality.watch where there's an unreleased feature where you can change the baseline type and baseline period: [<a href="https://next.mortality.watch/explorer/?c=NZL&t=deaths&ct=yearly&df=2011&dt=2022&bf=2011&bt=2015&bm=mean&v=2">https://next.mortality.watch/explorer/?c=NZL&amp;t=deaths&amp;ct=yearly&amp;df=2011&amp;dt=2022&amp;bf=2011&amp;bt=2015&amp;bm=mean&amp;v=2</a>]</p>
+<div class="width5">
+<img src="i/moar-mortalitywatch-baseline.jpg">
+</div>
+<p>Jean Fisch also made this plot which demonstrates how a linear trend is more accurate than an average baseline: [<a href="https://twitter.com/Jean%5f%5fFisch/status/1760245035193299177">https://twitter.com/Jean%5f%5fFisch/status/1760245035193299177</a>]</p>
+<div class="width6">
+<img src="i/moar-fisch.jpg">
+</div>
 <h3>
 <a href=#Plot_for_excess_mortality_by_Denis_Rancourt id=Plot_for_excess_mortality_by_Denis_Rancourt>Plot for excess mortality by Denis Rancourt</a>
 </h3>
@@ -6540,7 +6548,7 @@ round(d,1)</pre>
 &gt; table(rep(foi$days_between_last_vaccination_and_death,foi$count))
 &lt;=_180  &lt;=_30 &lt;=_365  &lt;=_90  366_+     NA
  22543   7008  21844  15215  14791  79303</pre>
-<p>In the CSV files for 2022-03-23, 2022-08-10, and 2023-03-01, there's a sudden jump to either the previously published total population size or number of vaccinated people. The jump in March 2022 mostly seems to affect the oldest age groups, which also had a sudden increase in the number of vaccinated people in the file from February 16th 2022:</p>
+<p>In the CSV files for 2022-02-16, 2022-03-23, 2022-08-10, and 2023-03-01, there's a sudden jump to either the previously published total population size or number of vaccinated people. The jump in March 2022 mostly seems to affect the oldest age groups, which also had a sudden increase in the number of vaccinated people in the file from February 16th 2022:</p>
 <div class="width6">
 <img src="i/moar-githubcsvjumps.png">
 </div>
@@ -6845,33 +6853,51 @@ ggsave(&quot;1.png&quot;,width=5.6,height=4.4)</pre>
   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0</pre>
 <p>Batch 1 has about 9% doses given to ages 90 and above, but the next-highest percentage is only about 3% in batch 113. Here when the batches are sorted by the combined percentage of ages 80-89 and 90+, you can also see that other early batches like 3 have a much lower percentage of doses given to ages 80 and above:</p>
 <pre>&gt; t=as.data.frame(data.table::fread(&quot;nz-record-level-data-4M-records.csv&quot;))
+&gt; ua=\(x,y,...){u=unique(x);y(u,...)[match(x,u)]}
 &gt; for(i in grep(&quot;date&quot;,colnames(t)))t[,i]=ua(t[,i],as.Date,&quot;%m-%d-%Y&quot;)
 &gt; age=\(x,y){x=as.numeric(x);y=as.numeric(y);(y-x-(y-789)%/%1461+(x-789)%/%1461)%/%365}
 &gt; ages=age(t$date_of_birth,t$date_time_of_service)
 &gt; m=table(t$batch,ifelse(ages&gt;=90,&quot;90+&quot;,ages%/%10*10))
 &gt; m=m/rowSums(m)*100
-&gt; head(round(m[order(-rowSums(m[,9:10])),]),16)
-       0 10 20 30 40 50 60 70 80 90+
-  1    0  2  4  7  8 14 19 19 19   9
-  63   3  3  2  3  3 11 24 32 17   3
-  100  0  0  1  6  7 10 22 34 17   3
-  62   2  3  2  3  3 11 24 33 16   3
-  64   2  3  2  3  3 13 25 30 16   3
-  101  0  0  1  6  8 12 23 31 16   3
-  102  0  1  1  7  9 13 23 29 15   3
-  68   1  2  2  3  3 15 26 28 14   3
-  65   2  2  2  3  3 14 27 30 15   3
-  61   3  4  2  4  3 11 23 34 15   2
-  8    0  1  2  2  3 12 25 38 15   2
-  67   1  2  2  3  3 16 27 30 14   3
-  103  0  0  1  7  9 14 24 27 14   3
-  116  1  1  2  6  8 17 25 23 13   3
-  66   2  3  2  3  3 16 26 28 14   3
-  3    0  1  2  3  5  9 27 37 15   2</pre>
-<p>I also made this spreadsheet which shows two different ways to calculate excess mortality per batch: [<a href="https://docs.google.com/spreadsheets/d/126_3eU6Vq6IOFr8SMq3rnbv5rrkN0kPYIyy_yBZmQ4g">https://docs.google.com/spreadsheets/d/126_3eU6Vq6IOFr8SMq3rnbv5rrkN0kPYIyy_yBZmQ4g</a>]</p>
+&gt; m=cbind(ave=tapply(ages,t$batch,mean),m)
+&gt; head(round(m[order(-rowSums(m[,10:11])),]),16)
+    ave 0 10 20 30 40 50 60 70 80 90+
+1    65 0  2  4  7  8 14 19 19 19   9
+63   66 3  3  2  3  3 11 24 32 17   3
+100  67 0  0  1  6  7 10 22 34 17   3
+62   66 2  3  2  3  3 11 24 33 16   3
+64   66 2  3  2  3  3 13 25 30 16   3
+101  66 0  0  1  6  8 12 23 31 16   3
+102  65 0  1  1  7  9 13 23 29 15   3
+68   65 1  2  2  3  3 15 26 28 14   3
+65   66 2  2  2  3  3 14 27 30 15   3
+61   64 3  4  2  4  3 11 23 34 15   2
+8    68 0  1  2  2  3 12 25 38 15   2
+67   65 1  2  2  3  3 16 27 30 14   3
+103  65 0  0  1  7  9 14 24 27 14   3
+116  63 1  1  2  6  8 17 25 23 13   3
+66   64 2  3  2  3  3 16 26 28 14   3
+3    67 0  1  2  3  5  9 27 37 15   2</pre>
+<p>I also made this spreadsheet which demonstrates two different methods to calculate excess mortality per batch: [<a href="https://docs.google.com/spreadsheets/d/126_3eU6Vq6IOFr8SMq3rnbv5rrkN0kPYIyy_yBZmQ4g">https://docs.google.com/spreadsheets/d/126_3eU6Vq6IOFr8SMq3rnbv5rrkN0kPYIyy_yBZmQ4g</a>]</p>
 <div class="width6">
 <img src="i/moar-scoopsbatch-4.png">
 </div>
+<p>Batch 1 has a bimodal distribution of vaccination dates with one peak in May 2021 and a second peak in July 2021. People who were given a dose from batch 1 in July subsequently had much lower excess mortality than people who were given a dose from batch 1 in April to June:</p>
+<div class="width7">
+<img src="i/moar-scoopsbatch-5.png">
+</div>
+<p>The reason why people vaccinated in July had low mortality could be because the vaccine rollout was divided to 4 phases and the 4th phase started in July: [<a href="https://covid19.govt.nz/news-and-data/latest-news/covid-19-vaccine-rollout-plan/">https://covid19.govt.nz/news-and-data/latest-news/covid-19-vaccine-rollout-plan/</a>]</p>
+<blockquote>
+<p>There are four main groups (timings will overlap, and dates might shift slightly as the Ministry continues to undertake modelling):</p>
+<h3>Group 1</h3>
+<p>Our 50,000 border and MIQ workers, their household contacts and the people they live with. This started last month and the vast bulk will be completed this month, with at least one dose administered.</p>
+<h3>Group 2</h3>
+<p>Approximately 480,000 frontline workers and people living in high-risk settings. Starting with the 57,000 healthcare workers on community frontlines, and then moving through to healthcare workers protecting our most vulnerable and some priority populations. This started in February and will continue through to May.</p>
+<h3>Group 3</h3>
+<p>Priority populations. Approximately 1.7 million people who are at higher risk if they catch COVID-19. This is planned to start in May.</p>
+<h3>Group 4</h3>
+<p>The remainder of the general population - approximately 2 million people. Starting from July.</p>
+</blockquote>
 <h3>
 <a href=#Missing_deaths_in_ages_0_20_in_the_FOIA_response_for_deaths_by_vaccination_status id=Missing_deaths_in_ages_0_20_in_the_FOIA_response_for_deaths_by_vaccination_status>Missing deaths in ages 0-20 in the FOIA response for deaths by vaccination status</a>
 </h3>
@@ -6879,7 +6905,7 @@ ggsave(&quot;1.png&quot;,width=5.6,height=4.4)</pre>
 <div class="width5">
 <img src="i/moar-foia-delay-1.jpg">
 </div>
-<p>However I think it's because ages 0-20 have a longer registration delay for deaths than elderly age groups. The ONS has published a spreadsheet which analyzes the impact of registration delay on mortality statistics: <a href="https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/articles/impactofregistrationdelaysonmortalitystatisticsinenglandandwales/2021">https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/articles/impactofregistrationdelaysonmortalitystatisticsinenglandandwales/2021</a>. In sheet 10 of the spreadsheet, 15% of deaths in ages 1-14 registered in 2021 had a registration delay of over a year and 12% of deaths had a registration delay of 6 months to one year. Sheet 2a of the spreadsheet also shows that deaths from external causes have a long registration delay, but young people have a high percentage of deaths from external causes.</p>
+<p>However it's probably because ages 0-20 have a longer registration delay for deaths than elderly age groups. The ONS has published a spreadsheet which analyzes the impact of registration delay on mortality statistics: <a href="https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/articles/impactofregistrationdelaysonmortalitystatisticsinenglandandwales/2021">https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/articles/impactofregistrationdelaysonmortalitystatisticsinenglandandwales/2021</a>. In sheet 10 of the spreadsheet, out of deaths in ages 1-14 that were registered in 2021, 15% had a registration delay of over a year and 12% had a registration delay of 6 months to one year. However in ages 75-84 only about 1% of deaths had a registration delay of six months or longer. Sheet 2a of the spreadsheet also shows that deaths from external causes have a long registration delay, but young people have a high percentage of deaths from external causes.</p>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
