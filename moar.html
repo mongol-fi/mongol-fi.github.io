@@ -6436,6 +6436,89 @@ deaths=sum(!is.na(lastdose$deathday))
 deaths # 21355 (number of deaths)
 deaths/pdays*365e5 # 2995.016 (mortality rate is about 3 times higher)</pre>
 <p>The spreadsheet by Scoops has this same problem but it's not as extreme, because it only includes 1,038,224,664 person-days up to the end of September 2023 even though there should be a total of 1,333,216,460 person-days.</p>
+<p>This plot also shows that people under dose 1 got about 2000% excess mortality around day 100 of the simulation (which roughly corresponds to July 2021 in the plot by Scoops):</p>
+<div class="width7">
+<img src="i/moar-scoopssim.png">
+</div>
+<pre>set.seed(0)
+simdays=365*3
+simpeople=1e6
+vaxchance=1/300
+deathchance=1/100/365
+
+records=data.frame(person=1:simpeople,vaxday=0,dose=0)
+vax=which(matrix(runif(simdays*simpeople)&lt;vaxchance,simpeople),T)
+records=rbind(records,data.frame(person=vax[,1],vaxday=vax[,2],dose=data.table::rowid(vax[,1])))
+deaths=which(matrix(runif(simdays*simpeople)&lt;deathchance,simpeople),T)
+records$deathday=tapply(deaths[,2],factor(deaths[,1],1:simpeople),min)[records$person]
+records=records[is.na(records$deathday)|records$vaxday&lt;=records$deathday,]
+
+out=data.frame(dose=0:max(records$dose))
+finaldose=records[rev(!duplicated(rev(records$person))),]
+out$deaths=tapply(!is.na(finaldose$deathday),factor(finaldose$dose,out$dose),sum)
+lastdays=pmin(simdays,finaldose$deathday,na.rm=T)
+out$persondays=tapply(lastdays-finaldose$vaxday+1,factor(finaldose$dose,out$dose),sum)
+out$cmr=out$deaths/out$persondays*365e5
+
+sub=subset(finaldose,dose&lt;=5)
+sub$vaxday[sub$dose==0]=1
+
+dead=sub[!is.na(sub$deathday),]
+dead=table(factor(dead$deathday,1:simdays),pmin(dead$dose,5))
+pop=apply(table(sub$vaxday,sub$dose)-dead,2,cumsum)
+
+ma=\(x,b=1,f=b)rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T)
+popma=apply(pop,2,ma,10)
+cmr=apply(dead,2,ma,10)/popma*365e5
+cmr[popma&lt;300]=NA
+doses=c(&quot;Unvaccinated&quot;,paste0(&quot;Dose &quot;,c(1:5)))
+xy=data.frame(x=1:simdays,y=c(cmr),z=factor(rep(doses,each=simdays),doses),pop=c(pop))
+
+uniq=records[!duplicated(records$person),]
+totaldead=table(factor(uniq$deathday,1:simdays))
+totalpop=cumsum(c(simpeople,rep(0,simdays-1))-totaldead)
+xy=rbind(xy,data.frame(x=1:simdays,y=ma(totaldead,10)/ma(totalpop,10)*365e5,z=&quot;Total&quot;,pop=NA))
+allcmr=sum(totaldead)/sum(totalpop)*365e5
+
+xstart=1;xend=simdays;xstep=100;ystart=0;yend=40e3;ystep=5e3
+yend2=22e4;ystep2=2e4;secmult=yend/yend2
+
+color=c(&quot;black&quot;,hcl(c(210,120,60,0,300)+15,100,50),&quot;gray50&quot;)
+
+lab=paste0(levels(xy$z),&quot; (&quot;,round(c(out$cmr[1:6],allcmr)),&quot;)&quot;)
+label=data.frame(x=xend/2,y=seq(ystart+(yend-ystart)*.95,,-(yend-ystart)/16,nlevels(xy$z)),label=lab)
+
+tit=&quot;Simulation using the retrospective dose categorization method by Scoops McGoo: mortality rate per 100k person-years (21-day centered moving average). The simulation ran for 365*3 days, and it started out with a million people out of whom &quot;
+tit=paste0(tit,formatC(sum(out$deaths),digits=0,format=&quot;f&quot;,big.mark=&quot;,&quot;),&quot; ended up dying. The likelihood of dying each day was 1/100/365 and the likelihood of being vaccinated each day was 1/300. Each person was assigned under their final dose during the simulation, and they only got added to the population on the day when they got their final dose. The mortality rate is not shown on days when the 21-day centered moving average of the population size was below 300 people. The total mortality rate of all people in the simulation was about &quot;,round(allcmr),&quot; deaths per 100k person-days. However all individual dose categories up to dose 9 got a higher total mortality rate. The total mortality rate of a dose is shown in parentheses. Doses 6 and above are not displayed but they are included in the gray total line.&quot;)
+
+kilo=\(x)ifelse(x==0,0,paste0(x/1e3,&quot;k&quot;))
+
+library(ggplot2);ggplot(xy,aes(x,y))+
+geom_hline(yintercept=c(ystart,yend),color=&quot;gray50&quot;,linewidth=.3,lineend=&quot;square&quot;)+
+geom_vline(xintercept=c(xstart,xend),color=&quot;gray50&quot;,linewidth=.3,lineend=&quot;square&quot;)+
+geom_line(aes(color=z),linewidth=.4)+
+geom_line(aes(y=pop*secmult,color=z),linewidth=.3,linetype=2)+
+annotate(geom=&quot;rect&quot;,xmin=.36*xend,xmax=.64*xend,ymin=yend*.52,ymax=yend,linewidth=.3,color=&quot;gray50&quot;,fill=&quot;white&quot;,lineend=&quot;square&quot;)+
+geom_label(data=label,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.85),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.1,&quot;lines&quot;),label.size=0,color=color[1:nrow(label)],size=2.7,hjust=.5)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+scale_x_continuous(limits=c(xstart,xend),breaks=seq(xstart,xend,xstep))+
+scale_y_continuous(limits=c(ystart,yend),breaks=seq(ystart,yend,ystep),labels=kilo,sec.axis=sec_axis(trans=~./secmult,breaks=seq(0,yend2,ystep2),label=kilo,name=&quot;Population size&quot;))+
+labs(x=&quot;Day of simulation&quot;,y=&quot;Deaths per 100k person-years&quot;)+
+scale_color_manual(values=color)+
+theme(axis.text=element_text(size=6.8,color=&quot;black&quot;),
+  axis.ticks=element_line(linewidth=.3,color=&quot;gray50&quot;),
+  axis.ticks.length=unit(.17,&quot;lines&quot;),
+  axis.title=element_text(size=7.8),
+  axis.title.y.left=element_text(margin=margin(0,2,0,0)),
+  axis.title.y.right=element_text(margin=margin(0,0,0,3)),
+  legend.position=&quot;none&quot;,
+  panel.background=element_rect(fill=&quot;white&quot;),
+  panel.grid=element_blank(),
+  plot.margin=margin(.4,.8,.4,.6,&quot;lines&quot;),
+  plot.title=element_text(size=7.6))
+ggsave(&quot;0.png&quot;,width=5,height=3,dpi=400)
+system(paste0(&quot;mogrify -trim 0.png;convert 0.png -gravity northwest -splice x16 -size `identify -format %w 0.png`x -interline-spacing -5 -pointsize 41 -font /Library/Fonts/Arial\\ Unicode.ttf caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&#39;&quot;,tit),&quot;&#39; +swap -append -trim -bordercolor white -border 30 1.png&quot;))
+system(&quot;qlmanage -p 1.png&amp;&gt;/dev/null&quot;)</pre>
 <h3>
 <a href=#Calculating_excess_mortality_per_batch_relative_to_reported_mortality_rate_in_5_year_age_groups id=Calculating_excess_mortality_per_batch_relative_to_reported_mortality_rate_in_5_year_age_groups>Calculating excess mortality per batch relative to reported mortality rate in 5-year age groups</a>
 </h3>
