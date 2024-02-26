@@ -4,6 +4,7 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 .prompt{color:hsl(0,80%,70%)}
 .output{color:hsl(210,85%,85%)}
 .comment{color:#aaa}</style>
+<title>r.txt</title>
 <pre>
 <span class=title># use NA instead of zero for missing values in `xtabs`</span></span>
 <span class=prompt>&gt;</span> <span class=code>d=data.frame(month=month.name[c(1,1,2)],year=c(2022,2023,2023),val=c(5,2,9))</span>
@@ -586,15 +587,6 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=prompt>&gt;</span> <span class=code>x=1;y=2;swap(x,y);c(x,y)</span>
 <span class=output>[1] 2 1</span>
 <span class=output>
-<span class=title># swap items of two vectors in place at indexes where a condition is true</span></span>
-<span class=prompt>&gt;</span> <span class=code>swaw=\(x,y,cond){x2=x;y2=y;y2[cond]=x[cond];x2[cond]=y[cond];env=parent.frame();</span>
-<span class=prompt>+</span> <span class=code>do.call(&quot;=&quot;,list(substitute(x),x2),,env);do.call(&quot;=&quot;,list(substitute(y),y2),,env)}</span>
-<span class=prompt>&gt;</span> <span class=code>a=month.name[1:6];b=month.name[7:12];swaw(a,b,a&gt;b)</span>
-<span class=prompt>&gt;</span> <span class=code>a</span>
-<span class=output>[1] &quot;January&quot;  &quot;August&quot;   &quot;March&quot;    &quot;April&quot;    &quot;May&quot;      &quot;December&quot;</span>
-<span class=prompt>&gt;</span> <span class=code>b</span>
-<span class=output>[1] &quot;July&quot;      &quot;February&quot;  &quot;September&quot; &quot;October&quot;   &quot;November&quot;  &quot;June&quot;</span>
-<span class=output>
 <span class=title># reorder a hierarchical clustering tree so that similar branches are grouped together</span></span>
 <span class=prompt>&gt;</span> <span class=code>hc=as.hclust(reorder(as.dendrogram(hclust(eurodist)),cmdscale(eurodist,1)))</span>
 <span class=comment># `cmdscale` does classical multidimensional scaling which is similar to PCA but which takes a distance matrix as the input</span>
@@ -807,7 +799,7 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=output>[1] &quot;2024-01-25&quot;</span>
 <span class=output>
 <span class=title># get US state name from abbreviation</span></span>
-<span class=prompt>&gt;</span> <span class=code>state.name[match(&quot;CT&quot;,state.abb)]</span><span class=comment> # these are in the base `datasets` package</span>
+<span class=prompt>&gt;</span> <span class=code>state.name[match(&quot;CT&quot;,state.abb)]</span><span class=comment> # these variables are from the base `datasets` package</span>
 <span class=output>[1] &quot;Connecticut&quot;</span>
 <span class=output>
 <span class=title># calculate z-scores</span></span>
@@ -1027,6 +1019,9 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=output>
 <span class=title># convert a long vector of dates with many repeated dates to character faster</span></span>
 <span class=prompt>&gt;</span> <span class=code>v=as.Date(sample(18000:19000,1e6,T),&quot;1970-1-1&quot;)</span>
+<span class=prompt>&gt;</span> <span class=code>system.time(as.character(v))</span>
+<span class=output>   user  system elapsed</span>
+<span class=output>  1.639   0.030   1.688</span>
 <span class=prompt>&gt;</span> <span class=code>system.time({u=unique(v);as.character(u)[match(v,u)]})</span>
 <span class=output>   user  system elapsed</span>
 <span class=output>  0.036   0.002   0.038</span>
@@ -1036,9 +1031,6 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=prompt>&gt;</span> <span class=code>system.time(data.table(x=v)[,y:=as.character(x),by=x]$y)</span>
 <span class=output>   user  system elapsed</span>
 <span class=output>  0.103   0.003   0.105</span>
-<span class=prompt>&gt;</span> <span class=code>system.time(as.character(v))</span>
-<span class=output>   user  system elapsed</span>
-<span class=output>  1.639   0.030   1.688</span>
 <span class=output>
 <span class=title># convert date to year and month</span></span>
 <span class=prompt>&gt;</span> <span class=code>v=Sys.Date()-sample(1e3,1e5,T)</span>
@@ -1178,4 +1170,15 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=prompt>&gt;</span> <span class=code>v=seq(0,1,,16);runif(length(v))&lt;v</span>
 <span class=output> [1] FALSE FALSE FALSE FALSE FALSE FALSE  TRUE  TRUE  TRUE  TRUE FALSE  TRUE</span>
 <span class=output>[13] FALSE FALSE  TRUE  TRUE</span>
+<span class=output>
+<span class=title># select first column that exists</span></span>
+<span class=prompt>&gt;</span> <span class=code>mtcars[1:2,]|&gt;dplyr::select(dplyr::any_of(c(&quot;horses&quot;,&quot;horsepower&quot;,&quot;hp&quot;)))</span>
+<span class=output>               hp</span>
+<span class=output>Mazda RX4     110</span>
+<span class=output>Mazda RX4 Wag 110</span>
+<span class=prompt>&gt;</span> <span class=code>firstof=\(x,...)for(a in as.character(match.call(expand.dots=F)$...))if(!is.null(x[[a]]))return(x[,a,drop=F])</span>
+<span class=prompt>&gt;</span> <span class=code>mtcars[1:2,]|&gt;firstof(horses,horsepower,hp)</span>
+<span class=output>               hp</span>
+<span class=output>Mazda RX4     110</span>
+<span class=output>Mazda RX4 Wag 110</span>
 </pre>
