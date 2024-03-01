@@ -152,6 +152,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Monthly_deaths_in_FOIA_response_compared_to_other_sources>Monthly deaths in FOIA response compared to other sources</a></li>
 <li><a href=#Tweet_by_Scoops_for_mortality_by_batch_relative_to_age>Tweet by Scoops for mortality by batch relative to age</a></li>
 <li><a href=#Missing_deaths_in_ages_0_20_in_the_FOIA_response_for_deaths_by_vaccination_status>Missing deaths in ages 0-20 in the FOIA response for deaths by vaccination status</a></li>
+<li><a href=#Another_indication_that_the_healthy_vaccinee_effect_lasts_longer_than_3_weeks>Another indication that the healthy vaccinee effect lasts longer than 3 weeks</a></li>
 </ul></li>
 </ul>
 
@@ -6371,7 +6372,7 @@ deathchance=1/100/365
 
 records=data.frame(person=1:simpeople,vaxday=0,dose=0)
 vax=which(matrix(runif(simdays*simpeople)&lt;vaxchance,simpeople),T)
-records=rbind(records,data.frame(person=vax[,1],vaxday=vax[,2],dose=rowid(vax[,1])))
+records=rbind(records,data.frame(person=vax[,1],vaxday=vax[,2],dose=data.table::rowid(vax[,1])))
 deaths=which(matrix(runif(simdays*simpeople)&lt;deathchance,simpeople),T)
 records$deathday=tapply(deaths[,2],factor(deaths[,1],1:simpeople),min)[records$person]
 records=records[is.na(records$deathday)|records$vaxday&lt;=records$deathday,]
@@ -6723,6 +6724,22 @@ $ for x in *;do awk &#39;NR==1||/Auckland,Asian,90\+,Female/&#39; $x|csvtk cut -
 <p>Their documentation of changes is poor. But cock-up not conspiracy.</p>
 <p><img src=i/moar-uncle-foia-4.png class=width5></p>
 </blockquote>
+<p>In the FOIA response there's less deaths per day in days 0-30 after vaccination than days 31-90, even though it's not adjusted for person-days and days 0-30 have more person-days per day:</p>
+<pre>t=read.csv(&quot;http://sars2.net/f/nz_monthly_vax_status_deaths_foia.csv&quot;,na.strings=&quot;&lt;5&quot;)
+t$count[is.na(t$count)]=2
+t=t[grepl(&quot;^[2468]&quot;,t$age)&amp;t$days%in%unique(t$days)[2:5],]
+
+t$days=factor(t$days,unique(t$days))
+levels(t$days)=c(&quot;0-30&quot;,&quot;31-90&quot;,&quot;91-180&quot;,&quot;181-365&quot;)
+
+m=xtabs(count~age_at_death+days,t)
+round(t(m)/c(30,60,90,185),1)
+#          age_at_death
+# days      21_to_40 41_to_60 61_to_80 81_to_100
+#   0-30         4.2     17.3     79.9     129.3
+#   31-90        3.9     18.2     88.3     141.0
+#   91-180       3.2     16.9     89.3     138.8
+#   181-365      2.0      9.9     43.6      61.1</pre>
 <h3>
 <a href=#Monthly_deaths_in_FOIA_response_compared_to_other_sources id=Monthly_deaths_in_FOIA_response_compared_to_other_sources>Monthly deaths in FOIA response compared to other sources</a>
 </h3>
@@ -7011,6 +7028,13 @@ ggsave(&quot;1.png&quot;,width=5.6,height=4.4)</pre>
 <img src="i/moar-foia-delay-1.jpg">
 </div>
 <p>However it's probably because ages 0-20 have a longer registration delay for deaths than elderly age groups. The ONS has published a spreadsheet which analyzes the impact of registration delay on mortality statistics: <a href="https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/articles/impactofregistrationdelaysonmortalitystatisticsinenglandandwales/2021">https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/articles/impactofregistrationdelaysonmortalitystatisticsinenglandandwales/2021</a>. In sheet 10 of the spreadsheet, out of deaths in ages 1-14 that were registered in 2021, 15% had a registration delay of over a year and 12% had a registration delay of 6 months to one year. However in ages 75-84 only about 1% of deaths had a registration delay of six months or longer. Sheet 2a of the spreadsheet also shows that deaths from external causes have a long registration delay, but young people have a high percentage of deaths from external causes.</p>
+<h3>
+<a href=#Another_indication_that_the_healthy_vaccinee_effect_lasts_longer_than_3_weeks id=Another_indication_that_the_healthy_vaccinee_effect_lasts_longer_than_3_weeks>Another indication that the healthy vaccinee effect lasts longer than 3 weeks</a>
+</h3>
+<p>In a Dutch report which included ASMR values by vaccination status, the people in the report were divided based on whether they were in long-term care or not, but in both groups it took until 2022 for the difference in the mortality rates to stabilize. So it's an indication that the <span class="quote">&quot;temporal healthy vaccinee effect&quot;</span> lasts longer than 3 weeks contrary to what Kirsch claims, since in the elderly age groups which account for most deaths, few people were getting their first vaccine in 2022 or especially in late 2022: [<a href="https://www.cbs.nl/nl-nl/longread/rapportages/2024/covid-vaccinatiestatus-en-sterfte/3-resultaten">https://www.cbs.nl/nl-nl/longread/rapportages/2024/covid-vaccinatiestatus-en-sterfte/3-resultaten</a>]</p>
+<div class="width13">
+<img src="i/moar-dutch.jpg">
+</div>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")

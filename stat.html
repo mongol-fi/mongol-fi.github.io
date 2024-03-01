@@ -76,6 +76,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Make_a_heatmap_of_factor_by_which_age_groups_are_overrepresented_in_ASMR_figures_relative_to_ESP2013>Make a heatmap of factor by which age groups are overrepresented in ASMR figures relative to ESP2013</a></li>
 <li><a href=#Calculate_excess_ASMR_percentage_as_average_of_excess_ASMR_in_each_age_group_weighted_by_person_years>Calculate excess ASMR percentage as average of excess ASMR in each age group weighted by person-years</a></li>
 <li><a href=#Calculate_percentage_of_ASMR_accounted_for_by_each_age_group>Calculate percentage of ASMR accounted for by each age group</a></li>
+<li><a href=#Calculate_excess_CMR_by_age_group_relative_to_monthly_CMR_in_the_English_resident_population>Calculate excess CMR by age group relative to monthly CMR in the English resident population</a></li>
 </ul></li>
 <li><a href=#United_Nations>United Nations</a>
 <ul>
@@ -1122,7 +1123,7 @@ system(&quot;mogrify -gravity center -trim -border 16 -bordercolor white 1.png&q
 <h3>
 <a href=#Plot_monthly_ASMR_by_vaccination_status id=Plot_monthly_ASMR_by_vaccination_status>Plot monthly ASMR by vaccination status</a>
 </h3>
-<pre>t=read.table(sep=&quot;\t&quot;,&quot;https://sars2.net/onstable1.tsv&quot;,na.strings=c(&quot;x&quot;,&quot;&lt;3&quot;),header=T)
+<pre>t=read.table(sep=&quot;\t&quot;,&quot;https://sars2.net/f/onstable1.tsv&quot;,na.strings=c(&quot;x&quot;,&quot;&lt;3&quot;),header=T)
 t=t[t$Cause==&quot;All causes&quot;,]
 
 xy=data.frame(x=as.Date(paste0(t$Year,&quot;-&quot;,match(t$Month,month.name),&quot;-1&quot;)),y=t$Age,pop=t$Person.years)
@@ -1580,6 +1581,90 @@ round(100*t(t(d)/colSums(d)),2)</pre>
 80-84  16.19       2.56 15.20 2.5
 85-89  18.18       1.56 16.75 1.5
 90+    21.61       0.92 22.59 1.0</pre>
+<h3>
+<a href=#Calculate_excess_CMR_by_age_group_relative_to_monthly_CMR_in_the_English_resident_population id=Calculate_excess_CMR_by_age_group_relative_to_monthly_CMR_in_the_English_resident_population>Calculate excess CMR by age group relative to monthly CMR in the English resident population</a>
+</h3>
+<pre>library(ggplot2);library(colorspace)
+
+download.file(&quot;https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/adhocs/1343dailydeathsbydateofoccurrence1stjune2014to31stmay2023bysingleyearofageengland/dailydeaths2014to2023england.xlsx&quot;,&quot;dailydeaths2014to2023england.xlsx&quot;)
+
+death=as.data.frame(readxl::read_excel(&quot;dailydeaths2014to2023england.xlsx&quot;,sheet=4,range=&quot;A6:CP3293&quot;))
+date=as.Date(paste0(death$Year,&quot;-&quot;,death$Month,&quot;-&quot;,death$Day))
+death=death[,-c(1:3)]
+
+pop=read.csv(&quot;https://sars2.net/f/englandpop.csv&quot;,row.names=1)
+pop=apply(pop,2,\(x)predict(lm(y~x,data.frame(x=as.Date(paste0(rownames(pop),&quot;-7-1&quot;)),y=x)),data.frame(x=date,y=NA)))
+
+ranges=data.frame(start=c(18,40,50,60,70,80,90))
+ranges$end=c(ranges$start[-1]-1,90)
+
+death2=apply(ranges,1,\(x)rowSums(death[,(x[1]:x[2])+1,drop=F]))
+pop2=apply(ranges,1,\(x)rowSums(pop[,(x[1]:x[2])+1,drop=F]))
+
+months=substr(date,1,7)
+rowmean=\(x,y)t(sapply(split.data.frame(x,y),colMeans))
+cmr=rowsum(death2,months)/rowmean(pop2,months)*365e5/lubridate::days_in_month(paste0(unique(months),&quot;-1&quot;))
+colnames(cmr)=c(head(apply(ranges,1,paste,collapse=&quot;-&quot;),-1),&quot;90+&quot;)
+
+m1=t(tail(cmr,20))
+
+t=read.table(sep=&quot;\t&quot;,&quot;https://sars2.net/f/ons-august-2023-table-2.tsv&quot;,na.strings=c(&quot;x&quot;,&quot;&lt;3&quot;),header=T)
+t=t[t$Cause.of.Death==&quot;All causes&quot;,]
+t2=data.frame(age=t$Age.group,date=sprintf(&quot;%d-%02d&quot;,t$Year,match(t$Month,month.name)),status=t$Vaccination.status,personyears=t$Person.years,cmr=t$Count.of.deaths/t$Person.years*1e5)
+t2=t2[t2$date&gt;=&quot;2021-10&quot;,]
+
+m2=with(subset(t2,status==&quot;Third dose or booster, at least 21 days ago&quot;),tapply(cmr,list(age,date),c))
+m3=with(subset(t2,status==&quot;Fourth dose or booster, at least 21 days ago&quot;),tapply(cmr,list(age,date),c))
+
+m2=(m2/m1-1)*100
+m3=(m3/m1-1)*100
+disp2=round(m2)
+disp3=round(m3)
+
+maxcolor=400
+pal=colorRampPalette(hex(HSV(c(210,210,210,210,0,0,0,0,0),c(1,.8,.6,.3,0,.3,.6,.8,1),c(.3,.65,1,1,1,1,1,.65,.3))))(256)
+
+pheatmap::pheatmap(m2,filename=&quot;i2.png&quot;,display_numbers=disp2,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;gray90&quot;,number_color=ifelse(abs(m2)&gt;maxcolor*.6,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(-maxcolor,maxcolor,,256),pal)
+
+pheatmap::pheatmap(m3,filename=&quot;i3.png&quot;,display_numbers=disp3,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;gray90&quot;,number_color=ifelse(abs(m3)&gt;maxcolor*.6,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(-maxcolor,maxcolor,,256),pal)
+
+system(&quot;w=`identify -format %w i2.png`;convert i2.png -gravity northwest \\( -splice x16 -size $[w-44]x -pointsize 35 caption:&#39;3rd dose or booster, at least 21 days ago: Excess mortality percent relative to total population of England&#39; -extent $[w-44]x -gravity center \\) +swap -append -bordercolor white -border 6 +repage l2.png&quot;)
+system(&quot;w=`identify -format %w i3.png`;convert i3.png -gravity northwest \\( -splice x16 -size $[w-44]x -pointsize 35 caption:&#39;4th dose or booster, at least 21 days ago: Excess mortality percent relative to total population of England&#39; -extent $[w-44]x -gravity center \\) +swap -append -bordercolor white -border 6 +repage l3.png&quot;)
+
+system(&quot;montage -geometry +0+0 -tile 1x l[23].png 1.png&quot;)
+
+pop2=with(subset(t2,status==&quot;Third dose or booster, at least 21 days ago&quot;),tapply(personyears,list(age,date),c))
+pop3=with(subset(t2,status==&quot;Fourth dose or booster, at least 21 days ago&quot;),tapply(personyears,list(age,date),c))
+
+kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;p=!is.na(x);x[p]=paste0(sprintf(paste0(&quot;%.&quot;,ifelse(e[p]%%3==0,1,0),&quot;f&quot;),x[p]/1e3^(e2[p]-1)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2[p]]);x}
+disp2=ifelse(pop2&lt;10,pop2,kimi(pop2))
+disp3=ifelse(pop3&lt;10,pop3,kimi(pop3))
+
+maxcolor=max(pop2,pop3)
+pal=sapply(seq(1,0,,256),\(i)rgb(i,i,i))
+
+pheatmap::pheatmap(pop2,filename=&quot;p2.png&quot;,display_numbers=disp2,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;white&quot;,number_color=ifelse(pop2&gt;maxcolor*.45,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(0,maxcolor,,256),pal)
+
+pheatmap::pheatmap(pop3,filename=&quot;p3.png&quot;,display_numbers=disp3,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;white&quot;,number_color=ifelse(pop3&gt;maxcolor*.45,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(0,maxcolor,,256),pal)
+
+system(&quot;w=`identify -format %w p2.png`;convert p2.png -gravity northwest \\( -splice x16 -size $[w-44]x -pointsize 35 caption:&#39;3rd dose or booster, at least 21 days ago: Population size in person-years&#39; -extent $[w-44]x -gravity center \\) +swap -append -bordercolor white -border 6 +repage l2.png&quot;)
+system(&quot;w=`identify -format %w p3.png`;convert p3.png -gravity northwest \\( -splice x16 -size $[w-44]x -pointsize 35 caption:&#39;4th dose or booster, at least 21 days ago: Population size in person-years&#39; -extent $[w-44]x -gravity center \\) +swap -append -bordercolor white -border 6 +repage l3.png&quot;)
+system(&quot;montage -geometry +0+0 -tile 1x l[23].png 2.png&quot;)</pre>
+<div class="width12">
+<img src="i/stat-ons-excess.png">
+</div>
 <h2>
 <a href=#United_Nations id=United_Nations>United Nations</a>
 </h2>
