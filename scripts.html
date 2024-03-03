@@ -92,6 +92,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Calculate_distance_to_Wuhan_Hu_1_in_RdRp_region>Calculate distance to Wuhan-Hu-1 in RdRp region</a></li>
 <li><a href=#Search_for_ORFs_on_reverse_strand_in_SARS2_and_Pfizer_vaccine_contigs>Search for ORFs on reverse strand in SARS2 and Pfizer vaccine contigs</a></li>
 <li><a href=#Retrieve_STAT_results_from_SRA_Database_Backend_API>Retrieve STAT results from SRA Database Backend API</a></li>
+<li><a href=#Find_most_common_viruses_in_wastewater_metagenomes>Find most common viruses in wastewater metagenomes</a></li>
 </ul>
 
 <h2>
@@ -1981,7 +1982,9 @@ ggsave(&quot;1.png&quot;,width=6,height=4.5)</pre>
 <p>Wikipedia says that almost all known RNA viruses are contained within the realm of <em>Riboviria</em>: <span class="quote">&quot;As of May 2020, all known RNA viruses encoding an RNA-directed RNA polymerase are believed to form a monophyletic group, known as the realm <em>Riboviria</em>.[4] The majority of such RNA viruses fall into the kingdom <em>Orthornavirae</em> and the rest have a positioning not yet defined.[5] The realm does not contain all RNA viruses: <em>Deltavirus</em>, <em>Asunviroidae</em>, and <em>Pospiviroidae</em> are taxa of RNA viruses that were mistakenly included in 2019,[a] but corrected in 2020.[6]&quot;</span> The genus <em>Deltavirus</em> consists solely of hepatitis delta which has an extremely short genome, and <em>Asunviroidae</em> and <em>Pospiviroidae</em> are families of viroids that have short genomes.</p>
 <p>I wanted to search which RNA viruses had the longest genomes, so I searched the NCBI's nucleotide database for all reference sequences classified under the realm of <em>Riboviria</em>. [<a href="https://www.ncbi.nlm.nih.gov/nuccore/?term=%22Riboviria%22%5BOrganism%5D+AND+refseq%5Bfilter%5D">https://www.ncbi.nlm.nih.gov/nuccore/?term=%22Riboviria%22%5BOrganism%5D+AND+refseq%5Bfilter%5D</a>] You can download a FASTA file of the results by clicking <span class="quote">&quot;Send to&quot;</span>, setting the format to FASTA, and clicking <span class="quote">&quot;Create File&quot;</span>. Or alternatively you can run <code>esearch -db nuccore -query '&quot;Riboviria&quot;[Organism] AND refseq[filter]'|efetch -format fasta</code>.</p>
 <p>There was a total of 9,116 results. The longest sequence among the results was 41,178 bases long and titled <span class="quote">&quot;Planarian secretory cell nidovirus isolate UIUC&quot;</span>. It was published in a paper from 2018 titled <span class="quote">&quot;A planarian nidovirus expands the limits of RNA genome size&quot;</span>. The longest coronavirus was <span class="quote">&quot;Beluga whale coronavirus SW1&quot;</span> which was 31,686 bases long and came on 8th place:</p>
-<pre>$ seqkit fx2tab sequence.fasta|awk -F\\t &#39;{print length($2),$1}&#39;|sort -nr|head
+<pre>$ curl ftp://ftp.ncbi.nlm.nih.gov/entrez/entrezdirect/install-edirect.sh|sh
+$ esearch -db nuccore -query &#39;&quot;Riboviria&quot;[Organism] AND refseq[filter]&#39;|efetch -format fasta&gt;riboviridae.fa
+$ seqkit fx2tab riboviridae.fa|awk -F\\t &#39;{print length($2),$1}&#39;|sort -nr|head
 41178 NC_040361.1 Planarian secretory cell nidovirus isolate UIUC, complete genome
 36652 NC_076697.1 MAG: Pacific salmon nidovirus isolate H14 ORF1a polyprotein (QKQ71_gp1), ORF1b polyprotein (QKQ71_gp2), LAP1C-like protein (QKQ71_gp3), spike protein (QKQ71_gp4), envelope (QKQ71_gp5), membrane protein (QKQ71_gp6), and nucleoprotein (QKQ71_gp7) genes, complete cds
 36144 NC_076911.1 Veiled chameleon serpentovirus B, complete sequence
@@ -2027,7 +2030,7 @@ $ seqkit seq -s sv40.fa|awk &#39;{for(i=1;;i++){delete a;for(j=1;j&lt;=length-i+
 </h2>
 <p>The code below shows how many mutations closer each GISAID sample is to RaTG13 than to Wuhan-Hu-1. There is one sample from Guangdong which has five mutations relative to Wuhan-Hu-1 but all of them are shared with RaTG13. The five mutations are the three mutations of proCoV2/WA1 in addition to two additional mutations, even though the collection date of the sample is in late February, so the two additional mutations might be reversions that occurred due to chance:</p>
 <pre>$ curl https://sars2.net/f/gisaid2020.tsv.xz|xz -dc&gt;gisaid2020.tsv
-$ grep RaTG13 gisaid2020.tsv|cut -f12|tr , \\n|awk -F\\t &#39;NR==FNR{a[$0];next}$11&lt;10{split($12,b,&quot;,&quot;);n=0;for(i in b)n+=b[i]in a?1:-1;print n FS$0}&#39; - early.comb|awk &#39;$1&gt;=3&#39;|sort -rn|cut -f1,2,4-8,12-13|tr \\t \||head
+$ grep RaTG13 gisaid2020.tsv|cut -f12|tr , \\n|awk -F\\t &#39;NR==FNR{a[$0];next}$11&lt;10{split($12,b,&quot;,&quot;);n=0;for(i in b)n+=b[i]in a?1:-1;print n FS$0}&#39; - gisaid2020.tsv|awk &#39;$1&gt;=3&#39;|sort -rn|cut -f1,2,4-8,12-13|tr \\t \||head
 5|EPI_ISL_413892|2020-03-09|2020-02-28|A|China|Guangdong|5|C8782T,C18060T,C21711T,C24382T,T28144C
 3|EPI_ISL_855195|2021-01-19|2020-03-15|A|USA|New York|3|C8782T,C18060T,T28144C
 3|EPI_ISL_671375|2020-12-02|2020-03-20|A|Ireland|Kerry|3|C8782T,C18060T,T28144C
@@ -2115,8 +2118,9 @@ system(paste0(&quot;convert -gravity north \\( -splice 0x26 -pointsize 46 label:
 <div class="width6">
 <img src="i/scripts-nucmultiheat.png">
 </div>
-<p>The heatmap above shows that you can divide the viruses that are the closest to SARS1 to four groups based on the N-terminal domain and receptor binding motif. WIV1 has a different NTD but similar RBM, Rs4231 has a different RBM but similar NTD, in SHC014 both NTD and RBM are different, and in WIV16 both the NTD and RBM are similar. The NTD is located approximately at positions 1-318 and the RBM is located at approximately positions 438-508:</p>
-<div class="width6">
+<p>The heatmap above shows that you can divide the viruses that are the closest to SARS1 to four groups based on the N-terminal domain and receptor binding motif. WIV1 has a different NTD but similar RBM, Rs4231 has a different RBM but similar NTD, in SHC014 both NTD and RBM are different, and in WIV16 both the NTD and RBM are similar.</p>
+<p>This image from a patent by Ralph Baric et al. shows that the NTD is located approximately at positions 1-318 and the RBM is located at approximately positions 438-509: [<a href="https://patents.google.com/patent/US9884895B2/en">https://patents.google.com/patent/US9884895B2/en</a>]</p>
+<div class="width5">
 <img src="i/chimera-mix.png">
 </div>
 <h2>
@@ -2222,6 +2226,36 @@ $ jq -r &#39;[.[]|.tax_table[]|.parent]as$par|[.[]|.tax_table[]|select(.tax_id a
 3      RDHV-like virus SF1 - unclassified viruses:Viruses
 3      Paramecium bursaria Chlorella virus NW665.2 - unclassified Chlorovirus:Chlorovirus:Phycodnaviridae:Viruses
 3      Microviridae sp. - unclassified Microviridae:Microviridae:Viruses</pre>
+<h2>
+<a href=#Find_most_common_viruses_in_wastewater_metagenomes id=Find_most_common_viruses_in_wastewater_metagenomes>Find most common viruses in wastewater metagenomes</a>
+</h2>
+<p>I tried looking at the STAT results of 1000 random SRA runs which matched the phrase <span class="quote">&quot;wastewater metagenome 2023[dp]&quot;</span>. These were the most common leaf nodes in the STAT hits. SARS2 has by far the highest number of reads but it's probably because in many runs they were specifically targeting SARS2:</p>
+<pre>$ curl ftp://ftp.ncbi.nlm.nih.gov/entrez/entrezdirect/install-edirect.sh|sh
+[...]
+$ esearch -db sra -query &#39;wastewater 2020:2024[dp]&#39;|efetch -format runinfo&gt;waste.runinfo
+$ mkdir waste;sed 1d waste.runinfo|gshuf -n1000|cut -d, -f1|parallel -j10 -q curl -m 30 -s &#39;https://trace.ncbi.nlm.nih.gov/Traces/sra-db-be/run_taxonomy?acc={}&amp;cluster_name=public&#39; -o waste/{}.stat
+$ for f in waste/*;do jq -r &#39;.[]|.tax_table[]|[.org,.total_count,.tax_id,.parent]|@tsv&#39; $f|awk -F\\t &#39;{out[$3]=$0;parent[$3]=$4;name[$3]=$1;nonleaf[$4]}END{for(i in out){j=parent[i];chain=&quot;&quot;;do{chain=(chain?chain&quot;:&quot;:&quot;&quot;)name[j];j=parent[j]}while(j!=&quot;&quot;);print out[i]&quot;\t&quot;!(i in nonleaf)&quot;\t&quot;chain}}&#39;|awk -F\\t &#39;$5{print$2 FS$1&quot; - &quot;$6}&#39;;done&gt;temp
+$ grep Viruses temp|awk -F\\t &#39;{a[$2]+=$1}END{for(i in a)print a[i]&quot;\t&quot;i}&#39;|sort -rn|head -n20|column -ts$&#39;\t&#39;
+139686660  Severe acute respiratory syndrome coronavirus 2 - Severe acute respiratory syndrome-related coronavirus:Sarbecovirus:Betacoronavirus:Orthocoronavirinae:Coronaviridae:Cornidovirineae:Nidovirales:Pisoniviricetes:Pisuviricota:Orthornavirae:Riboviria:Viruses
+321282     Caudoviricetes sp. - unclassified Caudoviricetes:Caudoviricetes:Uroviricota:Heunggongvirae:Duplodnaviria:Viruses
+131071     Sapovirus Hu/Chiba/010451S/2001 - Sapovirus isolates:Sapporo virus:Sapovirus:Caliciviridae:Picornavirales:Pisoniviricetes:Pisuviricota:Orthornavirae:Riboviria:Viruses
+100819     EBPR siphovirus 1 - unclassified Caudoviricetes:Caudoviricetes:Uroviricota:Heunggongvirae:Duplodnaviria:Viruses
+85839      Sapovirus GI.1 - Sapovirus GI:Sapporo virus:Sapovirus:Caliciviridae:Picornavirales:Pisoniviricetes:Pisuviricota:Orthornavirae:Riboviria:Viruses
+54246      Bacteriophage sp. - unclassified bacterial viruses:Viruses
+22293      Microviridae sp. - unclassified Microviridae:Microviridae:Petitvirales:Malgrandaviricetes:Phixviricota:Sangervirae:Monodnaviria:Viruses
+20054      Sapovirus GI.2 - Sapovirus GI:Sapporo virus:Sapovirus:Caliciviridae:Picornavirales:Pisoniviricetes:Pisuviricota:Orthornavirae:Riboviria:Viruses
+12342      Vibrio phage VvAW1 - unclassified Caudoviricetes:Caudoviricetes:Uroviricota:Heunggongvirae:Duplodnaviria:Viruses
+9327       Gordonia phage GMA7 - Getseptimavirus GMA7:Getseptimavirus:Caudoviricetes:Uroviricota:Heunggongvirae:Duplodnaviria:Viruses
+8646       Sapovirus Hu/S07026/2006/DNK - Sapovirus isolates:Sapporo virus:Sapovirus:Caliciviridae:Picornavirales:Pisoniviricetes:Pisuviricota:Orthornavirae:Riboviria:Viruses
+7626       Mycobacterium phage Myrna - Myrnavirus myrna:Myrnavirus:Ceeclamvirinae:Caudoviricetes:Uroviricota:Heunggongvirae:Duplodnaviria:Viruses
+5031       Microvirus sp. - unclassified Microviridae:Microviridae:Petitvirales:Malgrandaviricetes:Phixviricota:Sangervirae:Monodnaviria:Viruses
+4684       Caulobacter phage CcrRogue - Poindextervirus rogue:Poindextervirus:Dolichocephalovirinae:Caudoviricetes:Uroviricota:Heunggongvirae:Duplodnaviria:Viruses
+4269       Tombunodavirus UC1 - unclassified viruses:Viruses
+4185       Aeromonas phage phiA005 - unclassified Caudoviricetes:Caudoviricetes:Uroviricota:Heunggongvirae:Duplodnaviria:Viruses
+3827       Sphaerotilus phage vB_SnaP-R1 - unclassified Krylovirinae:Krylovirinae:Autographiviridae:Caudoviricetes:Uroviricota:Heunggongvirae:Duplodnaviria:Viruses
+2891       uncultured human fecal virus - environmental samples:Viruses
+2762       Brevundimonas phage vB_BsubS-Delta - unclassified Caudoviricetes:Caudoviricetes:Uroviricota:Heunggongvirae:Duplodnaviria:Viruses
+2722       Murine coronavirus - Embecovirus:Betacoronavirus:Orthocoronavirinae:Coronaviridae:Cornidovirineae:Nidovirales:Pisoniviricetes:Pisuviricota:Orthornavirae:Riboviria:Viruses</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
