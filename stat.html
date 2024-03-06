@@ -78,6 +78,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Calculate_percentage_of_ASMR_accounted_for_by_each_age_group>Calculate percentage of ASMR accounted for by each age group</a></li>
 <li><a href=#Calculate_excess_CMR_by_age_group_relative_to_monthly_CMR_in_the_English_resident_population>Calculate excess CMR by age group relative to monthly CMR in the English resident population</a></li>
 <li><a href=#Plot_CMR_and_excess_mortality_by_age_group>Plot CMR and excess mortality by age group</a></li>
+<li><a href=#Plot_excess_mortality_by_dose>Plot excess mortality by dose</a></li>
 </ul></li>
 <li><a href=#United_Nations>United Nations</a>
 <ul>
@@ -1678,7 +1679,7 @@ system(&quot;montage -geometry +0+0 -tile 1x l[23].png 2.png&quot;)</pre>
 rowmean=\(x,y)t(sapply(split.data.frame(x,y),colMeans))
 kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;p=!is.na(x);x[p]=paste0(sprintf(paste0(&quot;%.&quot;,ifelse(e[p]%%3==0,1,0),&quot;f&quot;),x[p]/1e3^(e2[p]-1)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2[p]]);x}
 
-## download.file(&quot;https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/adhocs/1343dailydeathsbydateofoccurrence1stjune2014to31stmay2023bysingleyearofageengland/dailydeaths2014to2023england.xlsx&quot;,&quot;dailydeaths2014to2023england.xlsx&quot;)
+download.file(&quot;https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/adhocs/1343dailydeathsbydateofoccurrence1stjune2014to31stmay2023bysingleyearofageengland/dailydeaths2014to2023england.xlsx&quot;,&quot;dailydeaths2014to2023england.xlsx&quot;)
 
 dead=as.data.frame(readxl::read_excel(&quot;dailydeaths2014to2023england.xlsx&quot;,sheet=4,range=&quot;A6:CP3293&quot;))
 date=as.Date(paste0(dead$Year,&quot;-&quot;,dead$Month,&quot;-&quot;,dead$Day))
@@ -1750,6 +1751,9 @@ system(&quot;w=`identify -format %w i1.png`;convert i1.png -gravity northwest \\
 system(&quot;w=`identify -format %w i2.png`;convert i2.png -gravity northwest \\( -splice x16 -size $[w-44]x -pointsize 38 caption:&#39;Vaccinated: Deaths per 100k person-years&#39; -extent $[w-44]x -gravity center \\) +swap -append l2.png&quot;)
 system(&quot;w=`identify -format %w i3.png`;convert i3.png -gravity northwest \\( -splice x16 -size $[w-44]x -pointsize 38 caption:&#39;Unvaccinated: Deaths per 100k person-years&#39; -extent $[w-44]x -gravity center \\) +swap -append l3.png&quot;)
 
+r2=rbind(r2,Weighted=colSums(head(t(t(r2*pop2)/colSums(pop2)),-1)))
+r3=rbind(r3,Weighted=colSums(head(t(t(r3*pop3)/colSums(pop3)),-1)))
+
 disp2=round(r2)
 disp3=round(r3)
 
@@ -1793,8 +1797,107 @@ system(&quot;w=`identify -format %w p3.png`;convert p3.png -gravity northwest \\
 system(&quot;montage -geometry +0+0 -tile 2x l[23].png m1.png&quot;)
 system(&quot;montage -geometry +0+0 -tile 2x {rl2,rl3,pl2,pl3}.png m2.png&quot;)
 system(&quot;montage -geometry +0+0 -gravity west -tile 1x l1.png m[12].png 1.png;mogrify -bordercolor white -border 10 1.png&quot;)</pre>
-<div class="width13">
+<div class="width14">
 <img src="i/stat-ons-excess2.png">
+</div>
+<h3>
+<a href=#Plot_excess_mortality_by_dose id=Plot_excess_mortality_by_dose>Plot excess mortality by dose</a>
+</h3>
+<pre>library(ggplot2);library(colorspace)
+
+rowmean=\(x,y)t(sapply(split.data.frame(x,y),colMeans))
+kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;p=!is.na(x);x[p]=paste0(sprintf(paste0(&quot;%.&quot;,ifelse(e[p]%%3==0,1,0),&quot;f&quot;),x[p]/1e3^(e2[p]-1)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2[p]]);x}
+
+# download.file(&quot;https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/adhocs/1343dailydeathsbydateofoccurrence1stjune2014to31stmay2023bysingleyearofageengland/dailydeaths2014to2023england.xlsx&quot;,&quot;dailydeaths2014to2023england.xlsx&quot;)
+
+dead=as.data.frame(readxl::read_excel(&quot;dailydeaths2014to2023england.xlsx&quot;,sheet=4,range=&quot;A6:CP3293&quot;))
+date=as.Date(paste0(dead$Year,&quot;-&quot;,dead$Month,&quot;-&quot;,dead$Day))
+dead=dead[,-c(1:3)]
+
+pop=read.csv(&quot;https://sars2.net/f/englandpop.csv&quot;,row.names=1)
+pop=apply(pop,2,\(x)predict(lm(y~x,data.frame(x=as.Date(paste0(rownames(pop),&quot;-7-1&quot;)),y=x)),data.frame(x=date,y=NA)))
+
+ranges=data.frame(start=c(18,40,50,60,70,80,90))
+ranges$end=c(ranges$start[-1]-1,90)
+
+dead=apply(ranges,1,\(x)rowSums(dead[,(x[1]:x[2])+1,drop=F]))
+pop=apply(ranges,1,\(x)rowSums(pop[,(x[1]:x[2])+1,drop=F]))
+
+months=substr(date,1,7)
+dead=t(rowsum(dead,months))
+pop=t(rowmean(pop,months)/365*lubridate::days_in_month(paste0(unique(months),&quot;-1&quot;)))
+
+rownames(dead)=rownames(pop)=c(head(apply(ranges,1,paste,collapse=&quot;-&quot;),-1),&quot;90+&quot;)
+pick=colnames(dead)&gt;=&quot;2021-04&quot;;dead=dead[,pick];pop=pop[,pick]
+
+pop=cbind(pop,Total=rowSums(pop));pop=rbind(pop,Total=colSums(pop))
+dead=cbind(dead,Total=rowSums(dead));dead=rbind(dead,Total=colSums(dead))
+
+m1=dead/pop*1e5
+
+t=read.table(sep=&quot;\t&quot;,&quot;https://sars2.net/f/ons-august-2023-table-2.tsv&quot;,na.strings=c(&quot;x&quot;,&quot;&lt;3&quot;),header=T)
+t=t[t$Cause.of.Death==&quot;All causes&quot;,]
+
+status=sub(&quot;dose.*&quot;,&quot;dose&quot;,t$Vaccination.status)
+
+t2=data.frame(age=t$Age.group,date=sprintf(&quot;%d-%02d&quot;,t$Year,match(t$Month,month.name)),status,pop=t$Person.years,dead=t$Count.of.deaths)
+t2=t2[t2$date&gt;=&quot;2021-04&quot;,]
+a=aggregate(t2[,4:5],t2[,1:3],sum,na.rm=T)
+
+a2=a[a$status!=&quot;Unvaccinated&quot;,]
+a=rbind(a,aggregate(a2[,4:5],cbind(a2[,1:2],status=&quot;Ever vaccinated&quot;),sum,na.rm=T))
+a$status=factor(a$status,c(&quot;Ever vaccinated&quot;,unique(status)))
+
+a=rbind(a,aggregate(a[,4:5],cbind(age=&quot;Total&quot;,a[,2:3]),sum))
+a=rbind(a,aggregate(a[,4:5],cbind(date=&quot;Total&quot;,a[,c(1,3)]),sum))
+
+a$cmr=a$dead/a$pop*1e5
+a$date=factor(a$date,unique(a$date))
+
+excess=lapply(split(a,a$status),\(x)(tapply(x$cmr,list(x$age,x$date),c)))
+pop=lapply(split(a,a$status),\(x)tapply(x$pop,list(x$age,x$date),c))
+
+max1=900;max2=1e6;exp1=.6;exp2=.7
+
+pal1=colorRampPalette(hex(HSV(c(210,210,210,210,0,0,0,0,0),c(1,.8,.6,.3,0,.3,.6,.8,1),c(.3,.65,1,1,1,1,1,.65,.3))))(256)
+pal2=sapply(seq(1,0,,256),\(i)rgb(i,i,i))
+
+for(i in 1:length(excess)){
+  m=excess[[i]]
+  ex=(m/m1-1)*100
+  mpop=pop[[i]]
+  disp=round(rbind(ex[-nrow(ex),],colSums(ex[-nrow(ex),]*mpop[-nrow(mpop),])/colSums(mpop[-nrow(mpop),])))
+  rat=(m-m1)/ifelse(m&gt;m1,m1,m)*100
+  rat[is.infinite(rat)]=-max1
+
+  rat0=rat[-nrow(rat),-ncol(rat)]
+  pop0=mpop[-nrow(mpop),-ncol(mpop)]
+
+  rat=rbind(head(rat,-1),Weighted=colSums(head(rat,-1)*head(mpop,-1))/colSums(head(mpop,-1)))
+
+  rat[nrow(rat),ncol(rat)]=sum(rat0*pop0,na.rm=T)/sum(pop0)
+  ex[nrow(ex),ncol(ex)]=sum(ex[-nrow(ex),-ncol(ex)]*pop0,na.rm=T)/sum(pop0)
+
+  pheatmap::pheatmap(sign(rat)*abs(rat)^exp1,filename=paste0(&quot;e&quot;,i,&quot;.png&quot;),display_numbers=disp,
+    cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=7.8,
+    border_color=NA,na_col=&quot;gray90&quot;,number_color=ifelse(abs(rat)^exp1&gt;max1^exp1*.53,&quot;white&quot;,&quot;black&quot;),
+    breaks=seq(-max1^exp1,max1^exp1,,256),pal1)
+
+  m=pop[[i]]
+  pheatmap::pheatmap(m^exp2,filename=paste0(&quot;p&quot;,i,&quot;.png&quot;),display_numbers=ifelse(m&lt;10,m,kimi(m)),
+    cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=7.8,
+    border_color=NA,na_col=&quot;gray90&quot;,number_color=ifelse(m^exp2&gt;max2^exp2*.42,&quot;white&quot;,&quot;black&quot;),
+    breaks=seq(0,max2^exp2,,256),pal2)
+
+  system(paste0(&quot;w=`identify -format %w e&quot;,i,&quot;.png`;convert e&quot;,i,&quot;.png -gravity northwest \\( -splice x16 -size $[w-44]x -pointsize 40 caption:&#39;&quot;,names(excess)[i],&quot;: Excess mortality percent relative to general population of England&#39; -extent $[w-44]x -gravity center \\) +swap -append -bordercolor white -border 6 +repage e&quot;,i,&quot;..png&quot;))
+  system(paste0(&quot;w=`identify -format %w p&quot;,i,&quot;.png`;convert p&quot;,i,&quot;.png -gravity northwest \\( -splice x16 -size $[w-44]x -pointsize 40 caption:&#39;&quot;,names(excess)[i],&quot;: Population size in person-years&#39; -extent $[w-44]x -gravity center \\) +swap -append -bordercolor white -border 6 +repage p&quot;,i,&quot;..png&quot;))
+}
+
+system(&quot;montage -geometry +0+0 -tile 2x {e1,p1,e2,p2,e3,p3,e4,p4,e5,p5,e6,p6}..png 1.png&quot;)</pre>
+<p>This script combines the categories for people who were vaccinated within 3 weeks or more than 3 weeks ago into a single category, which is possible because it uses CMR and not ASMR.</p>
+<p>The <span class="quote">&quot;Weighted&quot;</span> row shows the weighted average of the excess mortality percent of the age groups where the weight is the number of person-years in each age group.</p>
+<div class="width13">
+<img src="i/stat-ons-alldose.png">
 </div>
 <h2>
 <a href=#United_Nations id=United_Nations>United Nations</a>
