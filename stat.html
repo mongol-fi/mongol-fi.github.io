@@ -74,8 +74,6 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Compare_crude_mortality_rate_in_ever_vaccinated_and_unvaccinated_people_by_age_group>Compare crude mortality rate in ever vaccinated and unvaccinated people by age group</a></li>
 <li><a href=#Make_a_heatmap_of_weekly_excess_mortality_percentage_by_age_group>Make a heatmap of weekly excess mortality percentage by age group</a></li>
 <li><a href=#Make_a_heatmap_of_factor_by_which_age_groups_are_overrepresented_in_ASMR_figures_relative_to_ESP2013>Make a heatmap of factor by which age groups are overrepresented in ASMR figures relative to ESP2013</a></li>
-<li><a href=#Calculate_excess_ASMR_percentage_as_average_of_excess_ASMR_in_each_age_group_weighted_by_person_years>Calculate excess ASMR percentage as average of excess ASMR in each age group weighted by person-years</a></li>
-<li><a href=#Calculate_percentage_of_ASMR_accounted_for_by_each_age_group>Calculate percentage of ASMR accounted for by each age group</a></li>
 <li><a href=#Calculate_excess_CMR_by_age_group_relative_to_monthly_CMR_in_the_English_resident_population>Calculate excess CMR by age group relative to monthly CMR in the English resident population</a></li>
 <li><a href=#Plot_CMR_and_excess_mortality_by_age_group>Plot CMR and excess mortality by age group</a></li>
 <li><a href=#Plot_excess_mortality_by_dose>Plot excess mortality by dose</a></li>
@@ -1129,11 +1127,13 @@ system(&quot;mogrify -gravity center -trim -border 16 -bordercolor white 1.png&q
 <h3>
 <a href=#Plot_monthly_ASMR_by_vaccination_status id=Plot_monthly_ASMR_by_vaccination_status>Plot monthly ASMR by vaccination status</a>
 </h3>
-<pre>t=read.table(sep=&quot;\t&quot;,&quot;https://sars2.net/f/onstable1.tsv&quot;,na.strings=c(&quot;x&quot;,&quot;&lt;3&quot;),header=T)
-t=t[t$Cause==&quot;All causes&quot;,]
+<pre>library(ggplot2)
 
-xy=data.frame(x=as.Date(paste0(t$Year,&quot;-&quot;,match(t$Month,month.name),&quot;-1&quot;)),y=t$Age,pop=t$Person.years)
-xy$z=factor(t$Vac,unique(t$Vac))
+t=read.csv(&quot;s/f/ons-table-1-2023-august.csv&quot;,na.strings=c(&quot;x&quot;,&quot;&lt;3&quot;))
+t=t[t$cause==&quot;All causes&quot;,]
+
+xy=data.frame(x=as.Date(paste0(t$year,&quot;-&quot;,match(t$month,month.name),&quot;-1&quot;)),y=t$asmr,pop=t$person_years)
+xy$z=factor(t$status,unique(t$status))
 
 xy$frac=xy$pop/with(subset(xy,xy$z!=&quot;Ever vaccinated&quot;),tapply(pop,x,sum))[as.character(xy$x)]
 xy$frac[xy$z==&quot;Ever vaccinated&quot;]=0
@@ -1142,7 +1142,7 @@ ystart=0;yend=7000;xstart=min(xy$x);xend=max(xy$x)
 
 pal=c(hcl(c(210,110,110,60,60,60,0,0,310,310)+15,c(90,90,70,90,70,60,90,70,90,70),c(70,70,50,70,50,30,70,50,70,50)),&quot;black&quot;)
 
-library(ggplot2);ggplot(xy,aes(x=x,y=y,color=z))+
+ggplot(xy,aes(x=x,y=y,color=z))+
 geom_area(aes(y=frac*yend*.9999,fill=z),linewidth=.1,show.legend=F,alpha=.3)+
 geom_hline(yintercept=c(ystart,yend),linewidth=.3,lineend=&quot;square&quot;)+
 geom_vline(xintercept=c(xstart,xend),linewidth=.3,lineend=&quot;square&quot;)+
@@ -1153,7 +1153,7 @@ scale_x_date(breaks=unique(xy$x),expand=expansion(0),date_labels=&quot;%b\n%y&qu
 scale_y_continuous(limits=c(ystart,yend),breaks=seq(0,yend,1000),expand=expansion(0),labels=\(i)ifelse(i&lt;1000,i,paste0(round(i/1e3),&quot;k&quot;)),sec.axis=sec_axis(trans=~./yend*100,name=&quot;Percentage of group&quot;))+
 coord_cartesian(clip=&quot;off&quot;)+
 labs(x=NULL,y=&quot;Age-standardized mortality rate per 100,000 person-years&quot;)+
-ggtitle(&quot;All-cause age-standardized mortality rate in England from January 2021 to May 2023&quot;,subtitle=&quot;Data from ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/datasets/deathsbyvaccinationstatusengland&quot;)+
+ggtitle(&quot;All-cause age-standardized mortality rate in England&quot;,subtitle=&quot;Data from ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/datasets/deathsbyvaccinationstatusengland&quot;)+
 scale_color_manual(values=pal)+
 scale_fill_manual(values=pal)+
 guides(color=guide_legend(ncol=3))+
@@ -1184,11 +1184,9 @@ ggsave(&quot;1.png&quot;,width=5.6,height=4,dpi=400)</pre>
 <a href=#Compare_crude_mortality_rate_in_ever_vaccinated_and_unvaccinated_people_by_age_group id=Compare_crude_mortality_rate_in_ever_vaccinated_and_unvaccinated_people_by_age_group>Compare crude mortality rate in ever vaccinated and unvaccinated people by age group</a>
 </h3>
 <p>In Table 2 of the spreadsheet published by the ONS which shows ASMR by age group, for some reason there is no <span class="quote">&quot;ever vaccinated&quot;</span> group included but only individual vaccination status groups. However you can still calculate a total crude mortality rate within all vaccinated people by summing together the deaths and person-years in individual vaccination status groups:</p>
-<pre>t=read.table(&quot;http://sars2.net/f/ons-august-2023-table-2.tsv&quot;,header=T,sep=&quot;\t&quot;,na.strings=c(&quot;x&quot;,&quot;&lt;3&quot;))
+<pre>t=read.csv(&quot;http://sars2.net/f/ons-table-2-2023-august.csv&quot;,na.strings=c(&quot;x&quot;,&quot;&lt;3&quot;))
 
-dim=list(t$Age.group,sprintf(&quot;%d-%02d&quot;,t$Year,match(t$Month,month.name)),t$Vaccination.status!=&quot;Unvaccinated&quot;)
-
-d=data.frame(age=t$Age.group,month=sprintf(&quot;%d-%02d&quot;,t$Year,match(t$Month,month.name)),status=t$Vaccination.status!=&quot;Unvaccinated&quot;,dead=t$Count.of.deaths,pop=t$Person.years)
+d=data.frame(age=t$age,month=sprintf(&quot;%d-%02d&quot;,t$year,match(t$month,month.name)),status=t$status!=&quot;Unvaccinated&quot;,dead=t$dead,pop=t$person_years)
 d=rbind(d,cbind(aggregate(d[,4:5],d[,c(1,3)],sum,na.rm=T),month=&quot;Total&quot;))
 
 dead=tapply(d$dead,d[,1:3],sum,na.rm=T)
@@ -1287,25 +1285,25 @@ system(&quot;mogrify -gravity center -trim -border 16 -bordercolor white 1.png&q
 <a href=#Make_a_heatmap_of_factor_by_which_age_groups_are_overrepresented_in_ASMR_figures_relative_to_ESP2013 id=Make_a_heatmap_of_factor_by_which_age_groups_are_overrepresented_in_ASMR_figures_relative_to_ESP2013>Make a heatmap of factor by which age groups are overrepresented in ASMR figures relative to ESP2013</a>
 </h3>
 <p>In December 2022 when ASMR peaked in triple-jabbed people, there were about 16 times as many people with 4 doses than 3 doses in the age groups 80-89 and 90+:</p>
-<pre>&gt; t=read.table(sep=&quot;\t&quot;,&quot;https://sars2.net/f/ons-august-2023-table-2.tsv&quot;,na.strings=c(&quot;x&quot;,&quot;&lt;3&quot;),header=T)
-&gt; t=t[t$Cause.of.Death==&quot;All causes&quot;&amp;t$Month==&quot;December&quot;&amp;t$Year==2022,]
-&gt; t3=t[grepl(&quot;Third&quot;,t$Vaccination.status),]
-&gt; t4=t[grepl(&quot;Fourth&quot;,t$Vaccination.status),]
-&gt; tapply(t4$Person.years,t4[,4],sum)/tapply(t3$Person.years,t3[,4],sum)
+<pre>&gt; t=read.csv(&quot;https://sars2.net/f/ons-table-2-2023-august.csv&quot;,na.strings=c(&quot;x&quot;,&quot;&lt;3&quot;))
+&gt; t=t[t$cause==&quot;All causes&quot;&amp;t$month==&quot;December&quot;&amp;t$year==2022,]
+&gt; t3=t[grepl(&quot;Third&quot;,t$status),]
+&gt; t4=t[grepl(&quot;Fourth&quot;,t$status),]
+&gt; tapply(t4$person_years,t4[,4],sum)/tapply(t3$person_years,t3[,4],sum)
      18-39      40-49      50-59      60-69      70-79      80-89        90+
  0.1355542  0.2381953  1.5760131  3.5165494  9.5796245 15.7584568 15.7678801</pre>
 <p>People aged 80-89 make up 4% of the 2013 European Standard Population. But in the group <span class="quote">&quot;Third dose or booster, at least 21 days ago&quot;</span> in December 2022, people aged 80-89 accounted for only about 0.9% of total person-years, but they are still given 4% weight when calculating the ASMR value, so they are overrepresented by a factor of about 4.6 in the ASMR figure relative to their population size:</p>
-<pre>&gt; t=read.table(sep=&quot;\t&quot;,&quot;https://sars2.net/f/ons-august-2023-table-2.tsv&quot;,na.strings=c(&quot;x&quot;,&quot;&lt;3&quot;),header=T)
-&gt; t=t[t$Cause.of.Death==&quot;All causes&quot;&amp;t$Month==&quot;December&quot;&amp;t$Year==2022&amp;t[,5]==&quot;Third dose or booster, at least 21 days ago&quot;,]
-&gt; data.frame(age_group=t$Age.group,person_years_pct=100*t$Person.years/sum(t$Person.years))
-  age_group person_years_pct
-1     18-39       44.5346856
-2     40-49       26.5409559
-3     50-59       16.4248962
-4     60-69        8.3923697
-5     70-79        3.0091160
-6     80-89        0.9048194
-7       90+        0.1931572</pre>
+<pre>&gt; t=read.csv(&quot;https://sars2.net/f/ons-table-2-2023-august.csv&quot;,na.strings=c(&quot;x&quot;,&quot;&lt;3&quot;))
+&gt; t=t[t$cause==&quot;All causes&quot;&amp;t$month==&quot;December&quot;&amp;t$year==2022&amp;t$status==&quot;Third dose or booster, at least 21 days ago&quot;,]
+&gt; print.data.frame(data.frame(age=t$age,person_years_pct=round(100*t$person_years/sum(t$person_years),1)),row.names=F)
+   age person_years_pct
+ 18-39             44.5
+ 40-49             26.5
+ 50-59             16.4
+ 60-69              8.4
+ 70-79              3.0
+ 80-89              0.9
+   90+              0.2</pre>
 <p>The following code calculates a similar overrepresentation factor for each age and vaccination status group:</p>
 <pre># install.packages(&quot;BiocManager&quot;)
 # BiocManager::install(&quot;ComplexHeatmap&quot;)
@@ -1318,15 +1316,14 @@ library(circlize)
 
 esp=setNames(c(27700,14000,13500,11500,9000,4000,1000),c(&quot;18-39&quot;,&quot;40-49&quot;,&quot;50-59&quot;,&quot;60-69&quot;,&quot;70-79&quot;,&quot;80-89&quot;,&quot;90+&quot;))
 
-t=read.table(sep=&quot;\t&quot;,&quot;https://sars2.net/f/ons-august-2023-table-2.tsv&quot;,na.strings=c(&quot;x&quot;,&quot;&lt;3&quot;),header=T)
-## t=read.table(sep=&quot;\t&quot;,&quot;d/sars/ukdeath9tab2&quot;,na.strings=c(&quot;x&quot;,&quot;&lt;3&quot;),header=T)
-t=t[t$Cause.of.Death==&quot;All causes&quot;,]
-d2=data.frame(date=paste0(t$Year,sprintf(&quot;-%02d&quot;,match(t$Month,month.name))),age=t$Age.group,status=t$Vaccination.status,personyears=t[,7])
+t=read.csv(&quot;https://sars2.net/f/ons-table-2-2023-august.csv&quot;,na.strings=c(&quot;x&quot;,&quot;&lt;3&quot;))
+t=t[t$cause==&quot;All causes&quot;,]
+d2=data.frame(date=paste0(t$year,sprintf(&quot;-%02d&quot;,match(t$month,month.name))),age=t$age,status=t$status,pop=t$person_years)
 
-sums=aggregate(d2$personyears,list(d2$date,d2$status),sum)|&gt;`colnames&lt;-`(c(&quot;date&quot;,&quot;status&quot;,&quot;sum&quot;))
+sums=aggregate(d2$pop,list(d2$date,d2$status),sum)|&gt;`colnames&lt;-`(c(&quot;date&quot;,&quot;status&quot;,&quot;sum&quot;))
 d3=merge(d2,sums)
-d3$ratio=ifelse(d3$personyears==0,NA,(esp[d3$age]/1e5)/(d3$personyears/d3$sum))
-d3=d3[order(match(d3$status,unique(t$Vaccination.status)),d3$age),]
+d3$ratio=ifelse(d3$pop==0,NA,(esp[d3$age]/1e5)/(d3$pop/d3$sum))
+d3=d3[order(match(d3$status,unique(t$status)),d3$age),]
 
 l2w=\(x,row=1,col=2,val=3,default=NA){c1=as.character(x[,row]);c2=as.character(x[,col]);u1=unique(c1);u2=unique(c2);o=matrix(default,length(u1),length(u2),,list(u1,u2));o[cbind(c1,c2)]=x[,val];o}
 m=l2w(data.frame(paste0(d3$status,&quot;: &quot;,d3$age),d3$date,d3$ratio))
@@ -1343,6 +1340,7 @@ ht_opt$ROW_ANNO_PADDING=unit(0,&quot;mm&quot;)
 
 disp=sprintf(ifelse(abs(m)&gt;=10,&quot;%.0f&quot;,&quot;%.1f&quot;),m)|&gt;matrix(nrow(m))
 
+m=m-sign(m)
 m=ifelse(m&lt;0,-1,1)*abs(m)^.5
 maxcolor=max(m,na.rm=T)
 
@@ -1360,7 +1358,7 @@ Heatmap(
   cluster_columns=F,
   cluster_rows=F,
   na_col=&quot;white&quot;,
-  column_title=stringr::str_wrap(&quot;Factor by which an age group is overrepresented in ASMR value relative to its share of person-years. For example the age group 80-89 makes up 4% of the 2013 European Standard Population, but  in the group \&quot;Third dose or booster, at least 21 days ago\&quot; in December 2022, the age group 80-89 made up about 1.2% of total person years so it was overrepresented by a factor of about 4.4 in the ASMR figure. A negative value means that an age group is underrepresented. An empty square indicates that there were zero people in the group. The reason why people with three doses have had high ASMR in 2023 might be because of the healthy vaccinee effect, where the age groups 80-89 and 90+ now contain about 15-17 times as many people with 4 doses as 3 doses, and people with only three doses in elderly age groups consist of a small number of \&quot;stragglers\&quot; who have a disproportionate effect on the ASMR figures.&quot;,130),
+  column_title=stringr::str_wrap(&quot;English mortality statistics by vaccination status: factor by which an age group is overrepresented in ASMR value relative to its share of person-years. The AMSR figures are calculated based on the 2013 European Standard Population, where for example the age group 80-89 is always given 4% weight because it makes up 4% of ESP2013. But in the group \&quot;Third dose or booster, at least 21 days ago\&quot; in December 2022, the age group 80-89 made up about 1.2% of total person years so it was overrepresented by a factor of about 4.4 in the ASMR figure. A negative value means that an age group is underrepresented. An empty square indicates that there were zero people in the group. The reason why people with three doses have had high ASMR in 2023 might be because of the healthy vaccinee effect, because in 2023 the age groups 80-89 and 90+ have contained about 15-17 times as many people with 4 doses as 3 doses, and people with only three doses in elderly age groups consist of a small number of \&quot;stragglers\&quot; who have a disproportionate effect on the ASMR figures. R code: sars2.net/stat.html.&quot;,130),
   column_title_gp=gpar(fontsize=26),
   rect_gp=gpar(col=&quot;gray80&quot;,lwd=0),
   top_annotation=columnAnnotation(text=anno_text(gt_render(colnames(m),padding=unit(c(3,3,3,3),&quot;mm&quot;)),just=&quot;left&quot;,rot=90,location=unit(0,&quot;npc&quot;),gp=gpar(fontsize=17,border=&quot;gray70&quot;,lwd=1))),
@@ -1376,217 +1374,6 @@ system(&quot;mogrify -gravity center -trim -border 16 -bordercolor white 1.png&q
 <div class="width8">
 <img src="i/ons-overrepresentation.png">
 </div>
-<h3>
-<a href=#Calculate_excess_ASMR_percentage_as_average_of_excess_ASMR_in_each_age_group_weighted_by_person_years id=Calculate_excess_ASMR_percentage_as_average_of_excess_ASMR_in_each_age_group_weighted_by_person_years>Calculate excess ASMR percentage as average of excess ASMR in each age group weighted by person-years</a>
-</h3>
-<p>Compared to the regular way of calculating ASMR, this method gives more weight to younger age groups, so there is also a larger depression in mortality during the last months of data, because the average registration delay for deaths is higher in younger age groups than older age groups. [<a href="https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/articles/impactofregistrationdelaysonmortalitystatisticsinenglandandwales/2021">https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/articles/impactofregistrationdelaysonmortalitystatisticsinenglandandwales/2021</a>]</p>
-<p>In each age group, the baseline for excess ASMR is calculated by first doing a linear projection of ASMR from data between 2015 and 2019, and then the trend is adjusted for seasonality so that for example the average difference from the linear trend on each January 1st in 2015-2019 is added to the trend for each subsequent January 1st, and the same adjustment is repeated for the other 365 days of the year. Therefore the increase in mortality during the winter is smaller than in the regular ASMR data that is published by the ONS.</p>
-<pre>library(ggplot2)
-
-long=\(x)data.frame(x=rownames(x)[row(x)],y=unname(c(unlist(x))),z=colnames(x)[col(x)])
-
-# European Standard Population 2013, with ages below 18 omitted, 2/5 of population size for age group 15-19 used as population size of age group 18-19, and age group 90-94 combined with 95+
-esp=read.table(text=&quot;18 2200
-20 6000
-25 6000
-30 6500
-35 7000
-40 7000
-45 7000
-50 7000
-55 6500
-60 6000
-65 5500
-70 5000
-75 4000
-80 2500
-85 1500
-90 1000&quot;)
-esp$end=c(esp[-1,1]-1,90)
-
-# https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/adhocs/1343dailydeathsbydateofoccurrence1stjune2014to31stmay2023bysingleyearofageengland
-# download.file(&quot;https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/adhocs/1343dailydeathsbydateofoccurrence1stjune2014to31stmay2023bysingleyearofageengland/dailydeaths2014to2023england.xlsx&quot;,&quot;dailydeaths2014to2023england.xlsx&quot;)
-death=as.data.frame(readxl::read_excel(&quot;dailydeaths2014to2023england.xlsx&quot;,sheet=4,range=&quot;A6:CP3293&quot;))
-date=as.Date(paste0(death$Year,&quot;-&quot;,death$Month,&quot;-&quot;,death$Day))
-death=death[,-c(1:3)]
-
-# https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationestimates/datasets/populationestimatesforukenglandandwalesscotlandandnorthernireland
-# &quot;Mid-2001 to mid-2020 detailed time series edition of this dataset&quot;, supporting file &quot;Regional population estimates for England and Wales, 1971 to 2020 (XLSX, 665.0 KB)&quot;
-pop=read.csv(&quot;https://sars2.net/f/englandpop.csv&quot;,row.names=1)
-year=as.numeric(rownames(pop))
-pop=pop[year&gt;=2015&amp;year&lt;=2019,]
-pop=apply(pop,2,\(x)predict(lm(y~x,data.frame(x=as.Date(paste0(rownames(pop),&quot;-7-1&quot;)),y=x)),data.frame(x=date,y=NA)))
-
-death2=apply(esp,1,\(x)rowSums(death[,(x[1]:x[3])+1,drop=F]))
-pop2=apply(esp,1,\(x)rowSums(pop[,(x[1]:x[3])+1,drop=F]))
-
-starts=c(18,40,50,60,70,80,90)
-ranges=data.frame(start=match(starts,esp[,1]))
-ranges$end=c(ranges$start[-1]-1,nrow(esp))
-asmr=apply(ranges,1,\(x)colSums((t(death2/pop2)*esp[,2]*1e5)[x[1]:x[2],,drop=F])/sum(esp[x[1]:x[2],2]))
-
-colnames(asmr)=paste0(starts,c(paste0(&quot;-&quot;,starts[-1]-1),&quot;+&quot;))
-rownames(asmr)=as.character(date)
-
-asmr2=long(asmr)
-asmr2$x=as.Date(asmr2$x)
-
-model=split(asmr2,asmr2$z)|&gt;sapply(\(x){
-  past=x$x&gt;=as.Date(&quot;2015-1-1&quot;)&amp;x$x&lt;as.Date(&quot;2020-1-1&quot;)
-  future=seq(min(x$x),as.Date(&quot;2023-12-31&quot;),1)
-  proj=setNames(predict(lm(y~x,x[past,]),data.frame(x=future,y=NA)),future)
-  daily=tapply(x$y[past]-proj[which(past)],substr(x$x[past],6,10),mean)
-  setNames(proj+daily[substr(names(proj),6,10)],future)
-})|&gt;long()
-
-model=tapply(model[,2],list(sub(&quot;..$&quot;,&quot;01&quot;,model[,1]),model[,3]),\(x)sum(x)*365.2425/length(x))|&gt;long()
-
-t=read.table(sep=&quot;\t&quot;,&quot;https://sars2.net/f/ons-august-2023-table-2.tsv&quot;,na.strings=c(&quot;x&quot;,&quot;&lt;3&quot;),header=T)
-t=t[t$Cause.of.Death==&quot;All causes&quot;,]
-t2=data.frame(age=t$Age.group,date=as.Date(paste(t$Year,t$Month,1),&quot;%Y %B %d&quot;),status=t$Vaccination.status,personyears=t$Person.years,asmr=t[,8])
-
-me=model|&gt;`colnames&lt;-`(c(&quot;date&quot;,&quot;model&quot;,&quot;age&quot;))|&gt;transform(date=as.Date(date))|&gt;merge(t2)|&gt;na.omit()
-me=tapply(me$personyears,list(me$status,me$date),sum)|&gt;long()|&gt;`colnames&lt;-`(c(&quot;status&quot;,&quot;sum&quot;,&quot;date&quot;))|&gt;transform(date=as.Date(date))|&gt;merge(me)
-me$excess=100*(me$asmr/me$model-1)
-me=me[me$sum&gt;=1000,]
-
-xy=tapply(me$excess*me$personyears/me$sum,list(me$date,me$status),sum,na.rm=T)|&gt;long()|&gt;na.omit()
-xy$x=as.Date(xy$x)
-
-xy=xy|&gt;merge(aggregate(t2$personyears,t2[,c(2,3)],sum,na.rm=T)|&gt;`colnames&lt;-`(c(&quot;x&quot;,&quot;z&quot;,&quot;personyears&quot;)))
-xy$pct=100*xy$personyears/tapply(xy$personyears,xy[,1],sum)[as.character(xy$x)]
-xy=xy[xy$pct&gt;=.5,]
-
-candidates=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
-xstart=as.Date(&quot;2021-4-1&quot;)
-xend=as.Date(&quot;2023-5-1&quot;)
-xy=xy[xy$x&gt;=xstart&amp;xy$x&lt;=xend,]
-xbreak=seq(xstart,xend,&quot;1 month&quot;)
-ystep=candidates[which.min(abs(candidates-(max(xy$y,na.rm=T)-min(xy$y,na.rm=T))/7))]
-ystart=ystep*floor(min(xy$y,na.rm=T)/ystep)
-yend=ystep*ceiling(max(xy$y,na.rm=T)/ystep)
-
-ystep2=10
-yend2=ceiling(max(xy$pct)/ystep2)*ystep2
-secmult=yend/yend2
-
-color=c(&quot;black&quot;,hcl(c(110,110,60,60,0,0,310,310)+15,c(90,70,90,70,90,70,90,70),c(80,50,80,50,80,50,80,50)))
-
-group=factor(xy$z,unique(t$Vaccination.status))
-label=levels(group)
-labels=data.frame(x=as.Date(xstart+.015*(xend-xstart)),y=seq(yend,,-.06*(yend-ystart),length(label)+1)[-1],label)
-
-ggplot(xy,aes(x,y))+
-geom_hline(yintercept=c(ystart,0,yend),color=&quot;gray65&quot;,linewidth=.3,lineend=&quot;square&quot;)+
-geom_vline(xintercept=c(xstart,xend),color=&quot;gray65&quot;,linewidth=.3,lineend=&quot;square&quot;)+
-geom_line(aes(color=group),linewidth=.3)+
-geom_point(aes(color=group,y=pct*secmult),size=.25)+
-geom_label(data=labels,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.7),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.04,&quot;lines&quot;),label.size=0,color=head(color,length(label)),size=2.1,hjust=0)+
-scale_x_date(limits=c(xstart,xend),breaks=xbreak,expand=expansion(mult=0),date_labels=&quot;%b %y&quot;)+
-scale_y_continuous(limits=c(ystart,yend),breaks=seq(ystart,yend,ystep),expand=expansion(0),sec.axis=sec_axis(trans=~.*yend2/yend,breaks=seq(0,yend2,ystep2),name=&quot;Percentage of group (dots)&quot;))+
-coord_cartesian(clip=&quot;off&quot;)+
-scale_linewidth(range=range(xy$linewidth))+
-labs(y=&quot;Excess ASMR percent&quot;,x=NULL)+
-ggtitle(&quot;Excess ASMR percent in England (average of excess ASMR percent in each age group weighted
-by person years) relative to seasonality-adjusted linear projection of ASMR in 2015-2019&quot;,&quot;Sources: https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/datasets/
-deathsbyvaccinationstatusengland, https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/adhocs/
-1343dailydeathsbydateofoccurrence1stjune2014to31stmay2023bysingleyearofageengland, https://www.ons.gov.uk/
-peoplepopulationandcommunity/populationandmigration/populationestimates/datasets/
-populationestimatesforukenglandandwalesscotlandandnorthernireland. Age-and-vaccination-status groups with less than 1,000 person
-years during a month omitted, vaccination status groups with monthly person-years below 0.5% of total omitted.&quot;)+
-scale_color_manual(values=color)+
-theme(
-  axis.text=element_text(size=6.5,color=&quot;black&quot;),
-  axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
-  axis.ticks=element_line(linewidth=.3,color=&quot;gray65&quot;),
-  axis.ticks.length=unit(.2,&quot;lines&quot;),
-  axis.title=element_text(size=7),
-  axis.title.y.right=element_text(margin=margin(0,0,0,6)),
-  legend.position=&quot;none&quot;,
-  panel.background=element_rect(fill=&quot;white&quot;),
-  panel.grid=element_blank(),
-  plot.background=element_rect(fill=&quot;white&quot;),
-  plot.subtitle=element_text(size=5.5),
-  plot.title=element_text(size=8)
-)
-
-ggsave(&quot;1.png&quot;,width=5.3,height=3.9)</pre>
-<div class="width8">
-<img src="i/stat-asmr-pct-weighted.png">
-</div>
-<p>In table 2 of the ONS spreadsheet which shows deaths by vaccination status and age group, if you look at all-cause deaths in December 2022, ages 18-39 accounted for only about 0.9% of total deaths, about 0.1% of total CMR, and about 0.6% of total ASMR:</p>
-<pre>&gt; t=read.table(sep=&quot;\t&quot;,&quot;https://sars2.net/f/ons-august-2023-table-2.tsv&quot;,na.strings=c(&quot;x&quot;,&quot;&lt;3&quot;),header=T)
-&gt; t=t[t$Cause.of.Death==&quot;All causes&quot;&amp;t$Year==2022&amp;t$Month==&quot;December&quot;,]
-&gt; d=data.frame(deaths=tapply(t$Count.of.deaths,t$Age.group,sum,na.rm=T))
-&gt; d$personyears=tapply(t$Person.years,t$Age.group,sum,na.rm=T)
-&gt; d$cmr=d$deaths/d$personyears
-&gt; d$esp=c(16900,14000,13500,11500,9000,4000,1000)
-&gt; d$asmr=d$cmr*d$esp
-&gt; round(100*t(t(d)/colSums(d)),1)
-      deaths personyears  cmr  esp asmr
-18-39    0.9        33.4  0.1 24.2  0.6
-40-49    1.5        16.0  0.3 20.0  1.7
-50-59    4.7        17.6  0.9 19.3  4.6
-60-69   10.5        14.6  2.4 16.5 10.7
-70-79   23.2        11.7  6.7 12.9 23.2
-80-89   35.1         5.5 21.4  5.7 32.9
-90+     24.0         1.2 68.2  1.4 26.2</pre>
-<p>So even if deaths in ages 18-39 would increase 2-fold, it would only increase the total ASMR for all age groups by about 0.6%. However if you calculate the excess ASMR percent for each age group and take the average of the excess ASMR percentages weighted by the person years of each age group, then a lot more weight is given to younger age groups.</p>
-<p>If you simply take the average excess CMR percent in each age group without weighting by person-years, the results are again completely different. This method gives less weight to young age groups than the weighted average but still more weight than the regular way of calculating ASMR:</p>
-<div class="width8">
-<img src="i/stat-cmr-pct-unweighted.png">
-</div>
-<p>(The total ASMR figures reported by the ONS also include ages 10-17, but they are not listed in table 2 so I was not able to include them in the calculations above.)</p>
-<h3>
-<a href=#Calculate_percentage_of_ASMR_accounted_for_by_each_age_group id=Calculate_percentage_of_ASMR_accounted_for_by_each_age_group>Calculate percentage of ASMR accounted for by each age group</a>
-</h3>
-<pre># https://ec.europa.eu/eurostat/web/products-manuals-and-guidelines/-/ks-ra-13-028 (Annex F of linked PDF)
-esp=read.csv(&quot;https://sars2.net/f/esp2013.csv&quot;)
-esp=esp[-nrow(esp),]
-esp[nrow(esp),2]=1000
-esp$end=c(esp[-1,1]-1,90)
-
-# https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/adhocs/1343dailydeathsbydateofoccurrence1stjune2014to31stmay2023bysingleyearofageengland
-download.file(&quot;https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/adhocs/1343dailydeathsbydateofoccurrence1stjune2014to31stmay2023bysingleyearofageengland/dailydeaths2014to2023england.xlsx&quot;,&quot;dailydeaths2014to2023england.xlsx&quot;)
-death=as.data.frame(readxl::read_excel(&quot;dailydeaths2014to2023england.xlsx&quot;,sheet=4,range=&quot;A6:CP3293&quot;))
-date=as.Date(paste0(death$Year,&quot;-&quot;,death$Month,&quot;-&quot;,death$Day))
-death=death[,-c(1:3)]
-
-# https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationestimates/datasets/populationestimatesforukenglandandwalesscotlandandnorthernireland
-# &quot;Mid-2001 to mid-2020 detailed time series edition of this dataset&quot;, supporting file &quot;Regional population estimates for England and Wales, 1971 to 2020 (XLSX, 665.0 KB)&quot;
-pop=read.csv(&quot;https://sars2.net/f/englandpop.csv&quot;,row.names=1)[&quot;2019&quot;,]
-
-pop2=apply(esp,1,\(x)sum(pop[(x[1]:x[3])+1]))
-death2=apply(esp,1,\(x)rowSums(death[,(x[1]:x[3])+1,drop=F]))
-
-ages=c(0,paste0(esp[,1],&quot;-&quot;,esp[,3])[2:(nrow(esp)-1)],&quot;90+&quot;)
-
-deaths=colSums(death2[grepl(2019,date),])
-d=data.frame(row.names=ages,deaths,population=pop2,asmr=deaths/pop2*esp[,2],esp=esp[,2])
-
-round(100*t(t(d)/colSums(d)),2)</pre>
-<p>The output shows that in 2009 in England, for example the age group 15-19 accounted for about 0.14% of total deaths, about 5.49% of total population, and about 0.13% of total ASMR based on ESP2013:</p>
-<pre>      deaths population  asmr esp
-0       0.49       1.10  0.42 1.0
-1-4     0.07       4.76  0.06 4.0
-5-9     0.05       6.29  0.04 5.5
-10-14   0.06       5.96  0.05 5.5
-15-19   0.14       5.49  0.13 5.5
-20-24   0.25       6.20  0.23 6.0
-25-29   0.33       6.75  0.28 6.0
-30-34   0.47       6.77  0.44 6.5
-35-39   0.70       6.63  0.71 7.0
-40-44   0.91       6.07  1.01 7.0
-45-49   1.57       6.60  1.60 7.0
-50-54   2.44       6.94  2.37 7.0
-55-59   3.41       6.52  3.27 6.5
-60-64   4.52       5.53  4.72 6.0
-65-69   6.42       4.97  6.82 5.5
-70-74  10.04       4.94  9.76 5.0
-75-79  12.15       3.45 13.54 4.0
-80-84  16.19       2.56 15.20 2.5
-85-89  18.18       1.56 16.75 1.5
-90+    21.61       0.92 22.59 1.0</pre>
 <h3>
 <a href=#Calculate_excess_CMR_by_age_group_relative_to_monthly_CMR_in_the_English_resident_population id=Calculate_excess_CMR_by_age_group_relative_to_monthly_CMR_in_the_English_resident_population>Calculate excess CMR by age group relative to monthly CMR in the English resident population</a>
 </h3>
@@ -1614,9 +1401,9 @@ colnames(cmr)=c(head(apply(ranges,1,paste,collapse=&quot;-&quot;),-1),&quot;90+&
 
 m1=t(tail(cmr,20))
 
-t=read.table(sep=&quot;\t&quot;,&quot;https://sars2.net/f/ons-august-2023-table-2.tsv&quot;,na.strings=c(&quot;x&quot;,&quot;&lt;3&quot;),header=T)
-t=t[t$Cause.of.Death==&quot;All causes&quot;,]
-t2=data.frame(age=t$Age.group,date=sprintf(&quot;%d-%02d&quot;,t$Year,match(t$Month,month.name)),status=t$Vaccination.status,personyears=t$Person.years,cmr=t$Count.of.deaths/t$Person.years*1e5)
+t=read.csv(&quot;https://sars2.net/f/ons-table-2-2023-august.csv&quot;,na.strings=c(&quot;x&quot;,&quot;&lt;3&quot;))
+t=t[t$cause==&quot;All causes&quot;,]
+t2=data.frame(age=t$age,date=sprintf(&quot;%d-%02d&quot;,t$year,match(t$month,month.name)),status=t$status,pop=t$person_years,cmr=t$dead/t$person_years*1e5)
 t2=t2[t2$date&gt;=&quot;2021-10&quot;,]
 
 m2=with(subset(t2,status==&quot;Third dose or booster, at least 21 days ago&quot;),tapply(cmr,list(age,date),c))
@@ -1645,8 +1432,8 @@ system(&quot;w=`identify -format %w i3.png`;convert i3.png -gravity northwest \\
 
 system(&quot;montage -geometry +0+0 -tile 1x l[23].png 1.png&quot;)
 
-pop2=with(subset(t2,status==&quot;Third dose or booster, at least 21 days ago&quot;),tapply(personyears,list(age,date),c))
-pop3=with(subset(t2,status==&quot;Fourth dose or booster, at least 21 days ago&quot;),tapply(personyears,list(age,date),c))
+pop2=with(subset(t2,status==&quot;Third dose or booster, at least 21 days ago&quot;),tapply(pop,list(age,date),c))
+pop3=with(subset(t2,status==&quot;Fourth dose or booster, at least 21 days ago&quot;),tapply(pop,list(age,date),c))
 
 kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;p=!is.na(x);x[p]=paste0(sprintf(paste0(&quot;%.&quot;,ifelse(e[p]%%3==0,1,0),&quot;f&quot;),x[p]/1e3^(e2[p]-1)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2[p]]);x}
 disp2=ifelse(pop2&lt;10,pop2,kimi(pop2))
@@ -1706,10 +1493,9 @@ dead=cbind(dead,Total=rowSums(dead));dead=rbind(dead,Total=colSums(dead))
 
 m1=dead/pop*1e5
 
-t=read.table(sep=&quot;\t&quot;,&quot;https://sars2.net/f/ons-august-2023-table-2.tsv&quot;,na.strings=c(&quot;x&quot;,&quot;&lt;3&quot;),header=T)
-t=t[t$Cause.of.Death==&quot;All causes&quot;,]
-t2=data.frame(age=t$Age.group,date=sprintf(&quot;%d-%02d&quot;,t$Year,match(t$Month,month.name)),status=t$Vaccination.status,pop=t$Person.years,dead=t$Count.of.deaths)
-t2$status[t2$status!=&quot;Unvaccinated&quot;]=&quot;Vaccinated&quot;
+t=read.csv(&quot;https://sars2.net/f/ons-table-2-2023-august.csv&quot;,na.strings=c(&quot;x&quot;,&quot;&lt;3&quot;))
+t=t[t$cause==&quot;All causes&quot;,]
+t2=data.frame(age=t$age,date=sprintf(&quot;%d-%02d&quot;,t$year,match(t$month,month.name)),status=ifelse(t$status==&quot;Unvaccinated&quot;,&quot;Unvaccinated&quot;,&quot;Vaccinated&quot;),pop=t$person_years,dead=t$dead)
 a=aggregate(t2[,4:5],t2[,1:3],sum,na.rm=T)
 
 a=rbind(a,aggregate(a[,4:5],data.frame(age=a$age,date=&quot;Total&quot;,status=a$status),sum))
@@ -1717,9 +1503,11 @@ a=rbind(a,aggregate(a[,4:5],data.frame(age=&quot;Total&quot;,date=a$date,status=
 
 m2=with(subset(a,status==&quot;Vaccinated&quot;),tapply(dead/pop*1e5,list(age,date),c))
 m3=with(subset(a,status==&quot;Unvaccinated&quot;),tapply(dead/pop*1e5,list(age,date),c))
+m4=with(aggregate(a[,4:5],a[,1:2],sum),tapply(dead/pop*1e5,list(age,date),c))
 
 r2=(m2/m1-1)*100
 r3=(m3/m1-1)*100
+r4=(m4/m1-1)*100
 
 disp1=kimi(m1)
 disp2=m2;disp2[!is.na(disp2)]=kimi(disp2[!is.na(disp2)])
@@ -1751,11 +1539,12 @@ system(&quot;w=`identify -format %w i1.png`;convert i1.png -gravity northwest \\
 system(&quot;w=`identify -format %w i2.png`;convert i2.png -gravity northwest \\( -splice x16 -size $[w-44]x -pointsize 38 caption:&#39;Vaccinated: Deaths per 100k person-years&#39; -extent $[w-44]x -gravity center \\) +swap -append l2.png&quot;)
 system(&quot;w=`identify -format %w i3.png`;convert i3.png -gravity northwest \\( -splice x16 -size $[w-44]x -pointsize 38 caption:&#39;Unvaccinated: Deaths per 100k person-years&#39; -extent $[w-44]x -gravity center \\) +swap -append l3.png&quot;)
 
-r2=rbind(r2,Weighted=colSums(head(t(t(r2*pop2)/colSums(pop2)),-1)))
-r3=rbind(r3,Weighted=colSums(head(t(t(r3*pop3)/colSums(pop3)),-1)))
+# r2=rbind(r2,Weighted=colSums(head(t(t(r2*pop2)/colSums(pop2)),-1)))
+# r3=rbind(r3,Weighted=colSums(head(t(t(r3*pop3)/colSums(pop3)),-1)))
 
 disp2=round(r2)
 disp3=round(r3)
+disp4=round(r4)
 
 maxcolor=max(r2,r3)
 pal=colorRampPalette(hex(HSV(c(210,210,210,210,0,0,0,0,0),c(1,.8,.6,.3,0,.3,.6,.8,1),c(.3,.65,1,1,1,1,1,.65,.3))))(256)
@@ -1770,8 +1559,15 @@ pheatmap::pheatmap(r3,filename=&quot;r3.png&quot;,display_numbers=disp3,
   border_color=NA,na_col=&quot;gray90&quot;,number_color=ifelse(abs(r3)&gt;maxcolor*.6,&quot;white&quot;,&quot;black&quot;),
   breaks=seq(-maxcolor,maxcolor,,256),pal)
 
-system(&quot;w=`identify -format %w r2.png`;convert r2.png -gravity northwest \\( -splice x16 -size $[w-44]x -pointsize 35 caption:&#39;Vaccinated: Excess crude mortality rate percent relative to total population of England&#39; -extent $[w-44]x -gravity center \\) +swap -append rl2.png&quot;)
-system(&quot;w=`identify -format %w r3.png`;convert r3.png -gravity northwest \\( -splice x16 -size $[w-44]x -pointsize 35 caption:&#39;Unvaccinated: Excess crude mortality rate percent relative to total population of England&#39; -extent $[w-44]x -gravity center \\) +swap -append rl3.png&quot;)
+pheatmap::pheatmap(r4,filename=&quot;r4.png&quot;,display_numbers=disp4,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;gray90&quot;,number_color=ifelse(abs(r4)&gt;maxcolor*.6,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(-maxcolor,maxcolor,,256),pal)
+
+system(&quot;w=`identify -format %w r4.png`;convert r4.png -gravity northwest \\( -splice x16 -size $[w-44]x -pointsize 38 caption:&#39;Unvaccinated + vaccinated: Deaths per 100k person-years&#39; -extent $[w-44]x -gravity center \\) +swap -append rl4.png&quot;)
+
+system(&quot;w=`identify -format %w r2.png`;convert r2.png -gravity northwest \\( -splice x16 -size $[w-44]x -pointsize 35 caption:&#39;Vaccinated: Excess mortality percent relative to general population of England&#39; -extent $[w-44]x -gravity center \\) +swap -append rl2.png&quot;)
+system(&quot;w=`identify -format %w r3.png`;convert r3.png -gravity northwest \\( -splice x16 -size $[w-44]x -pointsize 35 caption:&#39;Unvaccinated: Excess mortality percent relative to general population of England&#39; -extent $[w-44]x -gravity center \\) +swap -append rl3.png&quot;)
 
 pop2=with(subset(a,status==&quot;Vaccinated&quot;),tapply(pop,list(age,date),c))
 pop3=with(subset(a,status==&quot;Unvaccinated&quot;),tapply(pop,list(age,date),c))
@@ -1835,13 +1631,9 @@ dead=cbind(dead,Total=rowSums(dead));dead=rbind(dead,Total=colSums(dead))
 
 m1=dead/pop*1e5
 
-t=read.table(sep=&quot;\t&quot;,&quot;https://sars2.net/f/ons-august-2023-table-2.tsv&quot;,na.strings=c(&quot;x&quot;,&quot;&lt;3&quot;),header=T)
-t=t[t$Cause.of.Death==&quot;All causes&quot;,]
+t=read.csv(&quot;https://sars2.net/f/ons-table-2-2023-august.csv&quot;,na.strings=c(&quot;x&quot;,&quot;&lt;3&quot;))|&gt;subset(cause==&quot;All causes&quot;)
 
-status=sub(&quot;dose.*&quot;,&quot;dose&quot;,t$Vaccination.status)
-
-t2=data.frame(age=t$Age.group,date=sprintf(&quot;%d-%02d&quot;,t$Year,match(t$Month,month.name)),status,pop=t$Person.years,dead=t$Count.of.deaths)
-t2=t2[t2$date&gt;=&quot;2021-04&quot;,]
+t2=data.frame(age=t$age,date=sprintf(&quot;%d-%02d&quot;,t$year,match(t$month,month.name)),status=sub(&quot;dose.*&quot;,&quot;dose&quot;,t$status),pop=t$person_years,dead=t$dead)
 a=aggregate(t2[,4:5],t2[,1:3],sum,na.rm=T)
 
 a2=a[a$status!=&quot;Unvaccinated&quot;,]
