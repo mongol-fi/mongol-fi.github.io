@@ -77,6 +77,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Calculate_excess_CMR_by_age_group_relative_to_monthly_CMR_in_the_English_resident_population>Calculate excess CMR by age group relative to monthly CMR in the English resident population</a></li>
 <li><a href=#Plot_CMR_and_excess_mortality_by_age_group>Plot CMR and excess mortality by age group</a></li>
 <li><a href=#Plot_excess_mortality_by_dose>Plot excess mortality by dose</a></li>
+<li><a href=#Make_multiple_line_plots_for_CMR_by_age_group>Make multiple line plots for CMR by age group</a></li>
 </ul></li>
 <li><a href=#United_Nations>United Nations</a>
 <ul>
@@ -88,7 +89,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 </ul></li>
 <li><a href=#China>China</a>
 <ul>
-<li><a href=#Plot_new_COVID_cases_by_day_in_early_2020_in_China>Plot new COVID cases by day in early 2020 in China</a></li>
+<li><a href=#Plot_COVID_cases_by_province_and_day_in_early_2020_in_China>Plot COVID cases by province and day in early 2020 in China</a></li>
 </ul></li>
 </ul>
 
@@ -1132,7 +1133,7 @@ system(&quot;mogrify -gravity center -trim -border 16 -bordercolor white 1.png&q
 t=read.csv(&quot;s/f/ons-table-1-2023-august.csv&quot;,na.strings=c(&quot;x&quot;,&quot;&lt;3&quot;))
 t=t[t$cause==&quot;All causes&quot;,]
 
-xy=data.frame(x=as.Date(paste0(t$year,&quot;-&quot;,match(t$month,month.name),&quot;-1&quot;)),y=t$asmr,pop=t$person_years)
+xy=data.frame(x=as.Date(paste0(t$year,&quot;-&quot;,match(t$month,month.name),&quot;-1&quot;)),y=t$asmr,pop=t$pop)
 xy$z=factor(t$status,unique(t$status))
 
 xy$frac=xy$pop/with(subset(xy,xy$z!=&quot;Ever vaccinated&quot;),tapply(pop,x,sum))[as.character(xy$x)]
@@ -1186,7 +1187,7 @@ ggsave(&quot;1.png&quot;,width=5.6,height=4,dpi=400)</pre>
 <p>In Table 2 of the spreadsheet published by the ONS which shows ASMR by age group, for some reason there is no <span class="quote">&quot;ever vaccinated&quot;</span> group included but only individual vaccination status groups. However you can still calculate a total crude mortality rate within all vaccinated people by summing together the deaths and person-years in individual vaccination status groups:</p>
 <pre>t=read.csv(&quot;http://sars2.net/f/ons-table-2-2023-august.csv&quot;,na.strings=c(&quot;x&quot;,&quot;&lt;3&quot;))
 
-d=data.frame(age=t$age,month=sprintf(&quot;%d-%02d&quot;,t$year,match(t$month,month.name)),status=t$status!=&quot;Unvaccinated&quot;,dead=t$dead,pop=t$person_years)
+d=data.frame(age=t$age,month=sprintf(&quot;%d-%02d&quot;,t$year,match(t$month,month.name)),status=t$status!=&quot;Unvaccinated&quot;,dead=t$dead,pop=t$pop)
 d=rbind(d,cbind(aggregate(d[,4:5],d[,c(1,3)],sum,na.rm=T),month=&quot;Total&quot;))
 
 dead=tapply(d$dead,d[,1:3],sum,na.rm=T)
@@ -1289,14 +1290,14 @@ system(&quot;mogrify -gravity center -trim -border 16 -bordercolor white 1.png&q
 &gt; t=t[t$cause==&quot;All causes&quot;&amp;t$month==&quot;December&quot;&amp;t$year==2022,]
 &gt; t3=t[grepl(&quot;Third&quot;,t$status),]
 &gt; t4=t[grepl(&quot;Fourth&quot;,t$status),]
-&gt; tapply(t4$person_years,t4[,4],sum)/tapply(t3$person_years,t3[,4],sum)
+&gt; tapply(t4$pop,t4[,4],sum)/tapply(t3$pop,t3[,4],sum)
      18-39      40-49      50-59      60-69      70-79      80-89        90+
  0.1355542  0.2381953  1.5760131  3.5165494  9.5796245 15.7584568 15.7678801</pre>
 <p>People aged 80-89 make up 4% of the 2013 European Standard Population. But in the group <span class="quote">&quot;Third dose or booster, at least 21 days ago&quot;</span> in December 2022, people aged 80-89 accounted for only about 0.9% of total person-years, but they are still given 4% weight when calculating the ASMR value, so they are overrepresented by a factor of about 4.6 in the ASMR figure relative to their population size:</p>
 <pre>&gt; t=read.csv(&quot;https://sars2.net/f/ons-table-2-2023-august.csv&quot;,na.strings=c(&quot;x&quot;,&quot;&lt;3&quot;))
 &gt; t=t[t$cause==&quot;All causes&quot;&amp;t$month==&quot;December&quot;&amp;t$year==2022&amp;t$status==&quot;Third dose or booster, at least 21 days ago&quot;,]
-&gt; print.data.frame(data.frame(age=t$age,person_years_pct=round(100*t$person_years/sum(t$person_years),1)),row.names=F)
-   age person_years_pct
+&gt; print.data.frame(data.frame(age=t$age,pop_pct=round(100*t$pop/sum(t$pop),1)),row.names=F)
+   age pop_pct
  18-39             44.5
  40-49             26.5
  50-59             16.4
@@ -1318,7 +1319,7 @@ esp=setNames(c(27700,14000,13500,11500,9000,4000,1000),c(&quot;18-39&quot;,&quot
 
 t=read.csv(&quot;https://sars2.net/f/ons-table-2-2023-august.csv&quot;,na.strings=c(&quot;x&quot;,&quot;&lt;3&quot;))
 t=t[t$cause==&quot;All causes&quot;,]
-d2=data.frame(date=paste0(t$year,sprintf(&quot;-%02d&quot;,match(t$month,month.name))),age=t$age,status=t$status,pop=t$person_years)
+d2=data.frame(date=paste0(t$year,sprintf(&quot;-%02d&quot;,match(t$month,month.name))),age=t$age,status=t$status,pop=t$pop)
 
 sums=aggregate(d2$pop,list(d2$date,d2$status),sum)|&gt;`colnames&lt;-`(c(&quot;date&quot;,&quot;status&quot;,&quot;sum&quot;))
 d3=merge(d2,sums)
@@ -1386,7 +1387,7 @@ date=as.Date(paste0(death$Year,&quot;-&quot;,death$Month,&quot;-&quot;,death$Day
 death=death[,-c(1:3)]
 
 pop=read.csv(&quot;https://sars2.net/f/englandpop.csv&quot;,row.names=1)
-pop=apply(pop,2,\(x)predict(lm(y~x,data.frame(x=as.Date(paste0(rownames(pop),&quot;-7-1&quot;)),y=x)),data.frame(x=date,y=NA)))
+pop=apply(pop,2,\(x)predict(smooth.spline(data.frame(x=as.numeric(as.Date(paste0(rownames(pop),&quot;-7-1&quot;))),y=x)),as.numeric(date))$y)|&gt;&quot;rownames&lt;-&quot;(as.character(date))
 
 ranges=data.frame(start=c(18,40,50,60,70,80,90))
 ranges$end=c(ranges$start[-1]-1,90)
@@ -1403,7 +1404,7 @@ m1=t(tail(cmr,20))
 
 t=read.csv(&quot;https://sars2.net/f/ons-table-2-2023-august.csv&quot;,na.strings=c(&quot;x&quot;,&quot;&lt;3&quot;))
 t=t[t$cause==&quot;All causes&quot;,]
-t2=data.frame(age=t$age,date=sprintf(&quot;%d-%02d&quot;,t$year,match(t$month,month.name)),status=t$status,pop=t$person_years,cmr=t$dead/t$person_years*1e5)
+t2=data.frame(age=t$age,date=sprintf(&quot;%d-%02d&quot;,t$year,match(t$month,month.name)),status=t$status,pop=t$pop,cmr=t$dead/t$pop*1e5)
 t2=t2[t2$date&gt;=&quot;2021-10&quot;,]
 
 m2=with(subset(t2,status==&quot;Third dose or booster, at least 21 days ago&quot;),tapply(cmr,list(age,date),c))
@@ -1473,7 +1474,7 @@ date=as.Date(paste0(dead$Year,&quot;-&quot;,dead$Month,&quot;-&quot;,dead$Day))
 dead=dead[,-c(1:3)]
 
 pop=read.csv(&quot;https://sars2.net/f/englandpop.csv&quot;,row.names=1)
-pop=apply(pop,2,\(x)predict(lm(y~x,data.frame(x=as.Date(paste0(rownames(pop),&quot;-7-1&quot;)),y=x)),data.frame(x=date,y=NA)))
+pop=apply(pop,2,\(x)data.frame(x=date,y=predict(smooth.spline(data.frame(x=as.numeric(as.Date(paste0(rownames(pop),&quot;-7-1&quot;))),y=x)),as.numeric(date))$y))
 
 ranges=data.frame(start=c(18,40,50,60,70,80,90))
 ranges$end=c(ranges$start[-1]-1,90)
@@ -1495,7 +1496,7 @@ m1=dead/pop*1e5
 
 t=read.csv(&quot;https://sars2.net/f/ons-table-2-2023-august.csv&quot;,na.strings=c(&quot;x&quot;,&quot;&lt;3&quot;))
 t=t[t$cause==&quot;All causes&quot;,]
-t2=data.frame(age=t$age,date=sprintf(&quot;%d-%02d&quot;,t$year,match(t$month,month.name)),status=ifelse(t$status==&quot;Unvaccinated&quot;,&quot;Unvaccinated&quot;,&quot;Vaccinated&quot;),pop=t$person_years,dead=t$dead)
+t2=data.frame(age=t$age,date=sprintf(&quot;%d-%02d&quot;,t$year,match(t$month,month.name)),status=ifelse(t$status==&quot;Unvaccinated&quot;,&quot;Unvaccinated&quot;,&quot;Vaccinated&quot;),pop=t$pop,dead=t$dead)
 a=aggregate(t2[,4:5],t2[,1:3],sum,na.rm=T)
 
 a=rbind(a,aggregate(a[,4:5],data.frame(age=a$age,date=&quot;Total&quot;,status=a$status),sum))
@@ -1611,7 +1612,7 @@ date=as.Date(paste0(dead$Year,&quot;-&quot;,dead$Month,&quot;-&quot;,dead$Day))
 dead=dead[,-c(1:3)]
 
 pop=read.csv(&quot;https://sars2.net/f/englandpop.csv&quot;,row.names=1)
-pop=apply(pop,2,\(x)predict(lm(y~x,data.frame(x=as.Date(paste0(rownames(pop),&quot;-7-1&quot;)),y=x)),data.frame(x=date,y=NA)))
+pop=apply(pop,2,\(x)predict(smooth.spline(data.frame(x=as.numeric(as.Date(paste0(rownames(pop),&quot;-7-1&quot;))),y=x)),as.numeric(date))$y)|&gt;&quot;rownames&lt;-&quot;(as.character(date))
 
 ranges=data.frame(start=c(18,40,50,60,70,80,90))
 ranges$end=c(ranges$start[-1]-1,90)
@@ -1633,7 +1634,7 @@ m1=dead/pop*1e5
 
 t=read.csv(&quot;https://sars2.net/f/ons-table-2-2023-august.csv&quot;,na.strings=c(&quot;x&quot;,&quot;&lt;3&quot;))|&gt;subset(cause==&quot;All causes&quot;)
 
-t2=data.frame(age=t$age,date=sprintf(&quot;%d-%02d&quot;,t$year,match(t$month,month.name)),status=sub(&quot;dose.*&quot;,&quot;dose&quot;,t$status),pop=t$person_years,dead=t$dead)
+t2=data.frame(age=t$age,date=sprintf(&quot;%d-%02d&quot;,t$year,match(t$month,month.name)),status=sub(&quot;dose.*&quot;,&quot;dose&quot;,t$status),pop=t$pop,dead=t$dead)
 a=aggregate(t2[,4:5],t2[,1:3],sum,na.rm=T)
 
 a2=a[a$status!=&quot;Unvaccinated&quot;,]
@@ -1690,6 +1691,118 @@ system(&quot;montage -geometry +0+0 -tile 2x {e1,p1,e2,p2,e3,p3,e4,p4,e5,p5,e6,p
 <p>The <span class="quote">&quot;Weighted&quot;</span> row shows the weighted average of the excess mortality percent of the age groups where the weight is the number of person-years in each age group.</p>
 <div class="width13">
 <img src="i/stat-ons-alldose.png">
+</div>
+<h3>
+<a href=#Make_multiple_line_plots_for_CMR_by_age_group id=Make_multiple_line_plots_for_CMR_by_age_group>Make multiple line plots for CMR by age group</a>
+</h3>
+<pre>library(ggplot2)
+
+cutl=\(x,y)cut(x,c(y,Inf),y,T,F)
+rowmean=\(x,y)t(sapply(split.data.frame(x,y),colMeans))
+kim=\(x)ifelse(x&gt;=1e3,ifelse(x&gt;=1e6,paste0(x/1e6,&quot;M&quot;),paste0(x/1e3,&quot;k&quot;)),x)
+
+# download.file(&quot;https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/adhocs/1343dailydeathsbydateofoccurrence1stjune2014to31stmay2023bysingleyearofageengland/dailydeaths2014to2023england.xlsx&quot;,&quot;dailydeaths2014to2023england.xlsx&quot;)
+
+dead=as.data.frame(readxl::read_excel(&quot;dailydeaths2014to2023england.xlsx&quot;,sheet=4,range=&quot;A6:CP3293&quot;))
+date=as.Date(paste0(dead$Year,&quot;-&quot;,dead$Month,&quot;-&quot;,dead$Day))
+dead=dead[,-c(1:3)]
+
+pop=read.csv(&quot;http://sars2.net/f/englandpop.csv&quot;,row.names=1)
+pop=apply(pop,2,\(x)predict(smooth.spline(data.frame(x=as.numeric(as.Date(paste0(rownames(pop),&quot;-7-1&quot;))),y=x)),as.numeric(date))$y)
+
+months=substr(date,1,7)
+ages=c(0,18,seq(40,90,10))
+dead=t(rowsum(t(rowsum(dead,months)),cutl(0:90,ages)))
+pop=t(rowmean(pop,months)/365*lubridate::days_in_month(paste0(unique(months),&quot;-1&quot;)))|&gt;rowsum(cutl(0:90,ages))|&gt;t()
+
+colnames(dead)=colnames(pop)=c(paste0(head(ages,-1),&quot;-&quot;,ages[-1]-1),&quot;90+&quot;)
+pick=rownames(dead)&gt;=&quot;2020-01&quot;;dead=dead[pick,-1];pop=pop[pick,-1]
+
+for(age in colnames(dead)){
+
+t=read.csv(&quot;s/f/ons-table-2-2023-august.csv&quot;,na.strings=c(&quot;x&quot;,&quot;&lt;3&quot;))[,1:8]
+t=t[t$cause==&quot;All causes&quot;&amp;t$age==age,]
+date=as.Date(paste0(t$year,&quot;-&quot;,match(t$month,month.name),&quot;-1&quot;))
+
+a=aggregate(t[,6:7],list(status=sub(&quot; dose.*&quot;,&quot; dose&quot;,t$status),date=date),sum,na.rm=T)
+a2=a[a$status!=&quot;Unvaccinated&quot;,]
+a3=aggregate(a[,3:4],data.frame(status=&quot;Vaccinated and unvaccinated&quot;,date=a$date),sum)
+a=rbind(a,a3,aggregate(a2[,3:4],data.frame(status=&quot;Vaccinated&quot;,date=a2$date),sum))
+
+a=rbind(a,data.frame(status=&quot;General population of England&quot;,date=as.Date(paste0(rownames(dead),&quot;-1&quot;)),dead=dead[,age],pop=pop[,age]))
+
+label=c(&quot;General population of England&quot;,&quot;Vaccinated and unvaccinated&quot;,&quot;Vaccinated&quot;,&quot;Unvaccinated&quot;,&quot;First dose&quot;,&quot;Second dose&quot;,&quot;Third dose&quot;,&quot;Fourth dose&quot;)
+a$status=factor(a$status,label)
+
+a$cmr=a$dead/a$pop*1e5
+
+a$frac=a$pop/with(subset(a,!a$status%in%label[1:3]),tapply(pop,date,sum))[as.character(a$date)]
+a$frac[a$status%in%label[1:3]]=0
+
+ystart=0;xstart=min(a$date);xend=max(a$date)
+cand=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
+ymax=max(a$cmr,na.rm=T)
+ystep=cand[which.min(abs(cand-ymax/5))]
+yend=ystep*ceiling(ymax/ystep)
+ybreak=seq(0,yend,ystep)
+
+color=c(&quot;gray30&quot;,&quot;gray70&quot;,&quot;black&quot;,hcl(c(210,120,60,0,300)+15,100,60))
+title=paste0(&quot;Ages &quot;,age)
+
+ggplot(a,aes(x=date,y=cmr))+
+geom_area(aes(y=frac*yend*.9999,fill=status,color=status),linewidth=.1,show.legend=F,alpha=.3)+
+geom_hline(yintercept=c(ystart,yend),linewidth=.3,lineend=&quot;square&quot;)+
+geom_vline(xintercept=c(xstart,xend),linewidth=.3,lineend=&quot;square&quot;)+
+geom_line(aes(color=status,linetype=status),linewidth=.3)+
+geom_point(aes(color=status),data=subset(a,status!=&quot;General population of England&quot;),size=.6,show.legend=F)+
+scale_x_date(breaks=seq(xstart,xend,&quot;2 month&quot;),date_labels=&quot;%b\n%y&quot;)+
+scale_y_continuous(limits=c(ystart,yend),breaks=c(0,ybreak),labels=c(&quot;1.5k&quot;,kim(ybreak)),sec.axis=sec_axis(trans=~./yend*100))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+labs(x=NULL,y=NULL,color=title,linetype=title)+
+scale_color_manual(values=color)+
+scale_fill_manual(values=color)+
+scale_linetype_manual(values=c(2,rep(1,7)))+
+guides(color=guide_legend(ncol=1))+
+theme(axis.text=element_text(size=6,color=&quot;black&quot;),
+  axis.text.y.left=element_text(color=alpha(&quot;black&quot;,c(0,rep(1,length(ybreak))))),
+  axis.ticks=element_line(linewidth=.3),
+  axis.ticks.length=unit(.2,&quot;lines&quot;),
+  axis.title=element_text(size=7.5),
+  legend.background=element_blank(),
+  legend.box.just=&quot;center&quot;,
+  legend.direction=&quot;vertical&quot;,
+  legend.key=element_rect(fill=alpha(&quot;white&quot;,0)),
+  legend.spacing.x=unit(.15,&quot;lines&quot;),
+  legend.key.size=unit(.68,&quot;lines&quot;),
+  legend.key.width=unit(0.65,&quot;lines&quot;),
+  legend.box.background=element_rect(fill=alpha(&quot;white&quot;,.7),color=&quot;black&quot;,linewidth=.3),
+  legend.margin=margin(.4,.3,.2,.3,&quot;lines&quot;),
+  legend.position=c(0,1),
+  legend.justification=c(0,1),
+  legend.text=element_text(size=6.3,vjust=.5),
+  legend.title=element_text(size=8.3),
+  panel.background=element_rect(fill=&quot;white&quot;),
+  panel.grid=element_blank(),
+  plot.margin=margin(.2,.1,0,.1,&quot;lines&quot;),
+  plot.subtitle=element_text(size=6,margin=margin(0,0,.6,0,&quot;lines&quot;)),
+  plot.title=element_text(size=9,margin=margin(.1,0,.4,0,&quot;lines&quot;)))
+ggsave(paste0(&quot;age.&quot;,age,&quot;.png&quot;),width=4.8,height=2.5,dpi=400)
+
+}
+
+tit=&quot;ONS dataset for mortality by vaccination status: Deaths per 100k person-years. The right axis displays the percentage of each vaccination status group.&quot;
+sub=&quot;The ONS dataset for mortality by vaccination status was released in August 2023, and the dataset for deaths in the general English population was released in July 2023, so both datasets are missing a fairly large number of deaths because of a registration delay.
+
+Sources:
+ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/datasets/deathsbyvaccinationstatusengland
+ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/adhocs/1343dailydeathsbydateofoccurrence1stjune2014to31stmay2023bysingleyearofageengland
+ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationestimates/datasets/populationestimatesforukenglandandwalesscotlandandnorthernireland&quot;
+
+system(paste0(&quot;wh=$(identify -format %w\\ %h age.18-39.png|awk &#39;{print$1*2,$2}&#39;);convert -gravity west -size $(awk &#39;{print ($1-80)\&quot;x\&quot;}&#39;&lt;&lt;&lt;\&quot;$wh\&quot;) \\( -pointsize 55 -bordercolor white -border 40 caption:&#39;&quot;,tit,&quot;&#39; \\) \\( -pointsize 42 -border 40 caption:&#39;&quot;,sub,&quot;&#39; \\) -append -extent $(tr \\  x&lt;&lt;&lt;\&quot;$wh\&quot;) 0.png&quot;))
+system(&quot;montage -geometry +0+0 -tile 3x age.* 0.png 1.png;mogrify -trim -bordercolor white -border 30 1.png&quot;)
+system(&quot;qlmanage -p 1.png&amp;&gt;/dev/null&quot;)</pre>
+<div class="width13">
+<img src="i/stat-ons-multiline.jpg">
 </div>
 <h2>
 <a href=#United_Nations id=United_Nations>United Nations</a>
@@ -1840,7 +1953,7 @@ ggsave(&quot;1.png&quot;,width=7,height=5)</pre>
 <a href=#China id=China>China</a>
 </h2>
 <h3>
-<a href=#Plot_new_COVID_cases_by_day_in_early_2020_in_China id=Plot_new_COVID_cases_by_day_in_early_2020_in_China>Plot new COVID cases by day in early 2020 in China</a>
+<a href=#Plot_COVID_cases_by_province_and_day_in_early_2020_in_China id=Plot_COVID_cases_by_province_and_day_in_early_2020_in_China>Plot COVID cases by province and day in early 2020 in China</a>
 </h3>
 <p>Source: <a href="https://github.com/cheongsa/Coronavirus-COVID-19-statistics-in-China">https://github.com/cheongsa/Coronavirus-COVID-19-statistics-in-China</a>.</p>
 <pre>library(colorspace)
