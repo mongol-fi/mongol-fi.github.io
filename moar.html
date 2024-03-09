@@ -155,6 +155,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Comparison_to_Dutch_all_cause_mortality_data_by_vaccination_status>Comparison to Dutch all-cause mortality data by vaccination status</a></li>
 <li><a href=#Records_for_oldest_people_removed_from_the_4M_CSV_file>Records for oldest people removed from the 4M CSV file</a></li>
 <li><a href=#Modified_version_of_obfuscation_algorithm_txt>Modified version of obfuscation_algorithm.txt</a></li>
+<li><a href=#Heatmap_for_excess_mortality_by_weeks_after_vaccination_and_age_group>Heatmap for excess mortality by weeks after vaccination and age group</a></li>
 </ul></li>
 </ul>
 
@@ -3086,18 +3087,21 @@ system(&quot;convert -trim 0.png -gravity northwest -splice x14 -size `identify 
 </div>
 <p>The plot above shows that at first dose 5 had high ASMR when it had been given to only a small number of people, who probably included some immunocompromised or other vulnerable people, but the ASMR of dose 5 drops below the baseline in April 2023 when a larger percentage of people get the fifth dose. And similarly the ASMR of dose 4 is initially above the baseline, but it drops below the baseline in July 2022 when a larger percentage of people get the fourth dose.</p>
 <p>R code for the heatmap:</p>
-<pre>death=read.csv(&quot;https://sars2.net/f/nz_monthly_deaths_by_age.csv&quot;)|&gt;subset(ethnicity==&quot;Total&quot;)
+<pre>library(data.table);library(colorspace);library(tempdisagg)
+
+death=read.csv(&quot;https://sars2.net/f/nz_monthly_deaths_by_age.csv&quot;)|&gt;subset(ethnicity==&quot;Total&quot;)
 a=with(death,aggregate(count,list(year=year_reg,month=month_reg,age=as.numeric(substr(age_group,1,2))),sum,drop=F))
 
 esp=c(10,40,55,55,55,60,60,65,70,70,70,70,65,60,55,50,40,25,15,8,2)*100;espage=c(0,1,seq(5,95,5))
-pop=read.csv(&quot;https://sars2.net/f/nz_infoshare_population_quarterly.csv&quot;,check.names=F,row.names=1)
-pop=pop[c(rbind(NA,1:nrow(pop),NA)),]|&gt;apply(2,zoo::na.spline)
-pop=tapply(c(pop),list(row(pop),rep(cut(as.numeric(colnames(pop)),c(espage,Inf),,T,F),each=nrow(pop))),sum,na.rm=T)
-me=data.frame(year=rep(1991:2023,each=12),month=1:12)[rep(1:nrow(pop),ncol(pop)),]|&gt;cbind(age=rep(espage,each=nrow(pop)),pop=c(pop))|&gt;merge(a)
+
+pop=read.csv(&quot;https://sars2.net/f/nz_infoshare_population_quarterly.csv&quot;,check.names=F,row.names=1)|&gt;tail(12)
+pop=t(rowsum(t(pop),cut(as.numeric(colnames(pop)),c(espage,Inf),,T,F)))
+pop=apply(pop,2,\(i)as.numeric(predict(td(ts(i,frequency=4)~1,&quot;mean&quot;,to=&quot;monthly&quot;))))
+
+me=data.frame(year=rep(2021:2023,each=12),month=1:12,age=rep(espage,each=nrow(pop)),pop=c(pop))|&gt;merge(a)
 me$pop=me$pop/365*c(31,28,31,30,31,30,31,31,30,31,30,31)[me$month]
 ag=aggregate(me$x/me$pop*esp[match(me$age,espage)],me[,1:2],sum,na.rm=T)
 
-library(data.table)
 ua=\(x,y,...){u=unique(x);y(u,...)[match(x,u)]}
 buck=fread(&quot;buckets&quot;)[,.(alive=sum(alive),dead=sum(dead)),by=.(month=ua(date,substring,1,7),dose=ifelse(dose&gt;5,&quot;6+&quot;,dose),age=cut(age,c(espage,Inf),,T,F))]
 x=paste0(&quot;Dose &quot;,buck$dose);buck$dose=factor(x,unique(x))
@@ -3114,11 +3118,9 @@ mpop=tapply(buck$alive,buck[,2:1],sum)/365
 hide=!is.na(mpop)&amp;mpop&lt;10;m[hide]=disp[hide]=NA
 exp=1
 m=abs(m)^exp*sign(m)
-# maxcolor=max(m,na.rm=T)
 maxcolor=250^exp
 m[is.infinite(m)]=-maxcolor
 
-library(colorspace)
 pheatmap::pheatmap(m,filename=&quot;i1.png&quot;,display_numbers=disp,
   cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,
   border_color=NA,na_col=&quot;white&quot;,
@@ -3137,12 +3139,12 @@ disp2=mpop;disp2[is.na(disp2)]=0;disp2=kimi(disp2)
 pheatmap::pheatmap(mpop2,filename=&quot;i2.png&quot;,display_numbers=disp2,
   cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,
   border_color=NA,na_col=&quot;white&quot;,
-  number_color=ifelse(mpop2&gt;maxcolor2*.45,&quot;white&quot;,&quot;black&quot;),
+  number_color=ifelse(mpop2&gt;maxcolor2*.4,&quot;white&quot;,&quot;black&quot;),
   breaks=seq(0,maxcolor2,,256),
   sapply(seq(1,0,,256),\(i)rgb(i,i,i)))
 
-system(&quot;w=`identify -format %w i1.png`;convert i1.png -gravity northwest -shave x10 \\( -size $[$w-40]x -pointsize 40 caption:&#39;Excess ASMR percent in pay-per-dose data relative to reported ASMR among whole NZ population (people are removed under previous doses after a new dose)&#39; -extent $[w-40]x -gravity center \\) +swap -append -trim -bordercolor white -border 24 +repage 1..png&quot;)
-system(&quot;w=`identify -format %w i2.png`;convert i2.png -gravity northwest -shave x10 \\( -size $[$w-40]x -pointsize 40 caption:&#39;Population in person-years in pay-per-dose data relative to reported ASMR among whole NZ population (people are removed under previous doses after a new dose)&#39; -extent $[w-40]x -gravity center \\) +swap -append -trim -bordercolor white -border 24 +repage 2..png&quot;)
+system(&quot;w=`identify -format %w i1.png`;convert i1.png -gravity northwest -shave x10 \\( -size $[$w-70]x -splice x15 -pointsize 40 caption:&#39;Excess ASMR percent in pay-per-dose data relative to reported ASMR among whole NZ population (people are removed under previous doses after a new dose)&#39; -extent $[w-70]x -gravity center \\) +swap -append -bordercolor white -border 6 +repage 1..png&quot;)
+system(&quot;w=`identify -format %w i2.png`;convert i2.png -gravity northwest -shave x10 \\( -size $[$w-70]x -pointsize 40 caption:&#39;Population in person-years&#39; -extent $[w-70]x -gravity center \\) +swap -append -bordercolor white -border 6 +repage 2..png&quot;)
 system(&quot;montage -geometry +0+0 -tile 1x [12]..png 1.png&quot;)</pre>
 <p>R code for the line plot:</p>
 <pre>death=read.csv(&quot;http://sars2.net/f/nz_monthly_deaths_by_age.csv&quot;)|&gt;subset(ethnicity==&quot;Total&quot;)
@@ -7168,8 +7170,57 @@ The &quot;Age&quot; field was inserted as a convenience item for use in Excel.
 
 Anyone doing serious work on the data should always use the date of birth to compute the exact age at the time of the record.</pre>
 <p>I don't know if Kirsch actually used the further methods to obfuscate the data which he described in the newer version of the <code>obfuscation_algorithm.txt</code> file, or if he just said he did so he would be less likely to get in trouble with Health New Zealand who were threatening to shut his website down. [<a href="https://kirschsubstack.com/p/health-new-zealand-is-at-it-again">https://kirschsubstack.com/p/health-new-zealand-is-at-it-again</a>] There's one person I was able to identify from the 4M CSV file, where their birthday and date of death were both 16 days later than their actual birthday and date of death, even though the birthday was in March and the date of death was in August, so their birthday doesn't seem to have been <span class="quote">&quot;shifted by a large amount randomly&quot;</span>.</p>
-<p>I downloaded the files on Kirsch's S3 server with <code>rclone</code> which preserves the original modification dates, so I can see that the older version of the <code>obfuscation_algorithm.txt</code> file has a modification date on 2023-12-10 01:05:26 UTC, but the newer version has a modification date a few minutes earlier on 2023-12-10 00:56:12 UTC. However the older version was still included in a version of the data I mirrored on December 20th UTC. So did Kirsch give an incorrect modification date for the newer version to cover up his tracks? The earliest copy of the newer version I have is included in a set of files I synced on January 23rd UTC, but I haven't saved any copies of the data between then and December 20th UTC.</p>
+<p>I downloaded the files on Kirsch's S3 server with <code>rclone</code> which preserves the original modification dates, so I can see that the older version of the <code>obfuscation_algorithm.txt</code> file has a modification date on 2023-12-10 01:05:26 UTC, but the newer version has a modification date a few minutes earlier on 2023-12-10 00:56:12 UTC. However the older version was still included in a version of the data I mirrored on December 20th UTC. So did Kirsch give an incorrect modification date for the newer version to cover up his tracks? The earliest copy of the newer version I have is included in a set of files I synced on January 23rd UTC, but I hadn't saved any copies of the data between then and December 20th UTC.</p>
 <p>In the different versions of the data I had mirrored up to February 2024, there hadn't been any changes to the <code>nz-record-level-data-4M-records.csv</code> file, so the file hasn't been changed to employ further obfuscation procedures between the times when I mirrored it.</p>
+<h3>
+<a href=#Heatmap_for_excess_mortality_by_weeks_after_vaccination_and_age_group id=Heatmap_for_excess_mortality_by_weeks_after_vaccination_and_age_group>Heatmap for excess mortality by weeks after vaccination and age group</a>
+</h3>
+<div class="width8">
+<img src="i/moar-excess-week-age.png">
+</div>
+<pre>library(data.table);library(tempdisagg);library(colorspace)
+
+cutl=\(x,y)cut(x,c(y,Inf),y,T,F) # cut left
+ua=\(x,y,...){u=unique(x);y(u,...)[match(x,u)]} # unique apply
+
+download.file(&quot;http://sars2.net/f/bucketskeep.gz&quot;,&quot;bucketskeep.gz&quot;)
+
+ages=seq(0,90,10)
+t=fread(&quot;bucketskeep.gz&quot;,showProgress=F)[dose==4][,age:=cutl(age,ages)]
+bin=4
+x=paste0(&quot;Week &quot;,t$week%/%bin*bin,&quot;-&quot;,(t$week%/%bin+1)*bin-1)
+t=t[,.(alive=sum(alive),dead=sum(dead)),by=.(week=factor(x,unique(x)),date,age)]
+
+t=rbind(t,t[,.(alive=sum(alive),dead=sum(dead),week=&quot;Total&quot;),by=.(date,age)])
+
+pop=read.csv(&quot;http://sars2.net/f/nz_infoshare_population_quarterly.csv&quot;,check.names=F,row.names=1)|&gt;tail(11)
+pop=t(rowsum(t(pop),cutl(as.numeric(colnames(pop)),ages)))
+dead=read.csv(&quot;http://sars2.net/f/nz_monthly_deaths_by_age.csv&quot;)|&gt;subset(ethnicity==&quot;Total&quot;)
+dead=xtabs(count~as.Date(paste(year_reg,month_reg,1,sep=&quot;-&quot;))+age_group,dead)|&gt;tail(33)
+dead=t(rowsum(t(dead),as.numeric(sub(&quot;_.*&quot;,&quot;&quot;,colnames(dead)))%/%10*10))
+pop=apply(pop,2,\(i)predict(td(data.frame(seq(as.Date(&quot;2021-1-1&quot;),as.Date(&quot;2023-9-1&quot;),&quot;3 month&quot;),i)~1,&quot;mean&quot;,&quot;daily&quot;,&quot;fast&quot;))$value)
+dead=apply(dead,2,\(i)predict(td(data.frame(as.Date(rownames(dead)),i)~1,,&quot;daily&quot;,&quot;fast&quot;))$value)
+
+t$base=t$alive*(dead/pop)[cbind(as.numeric(t$date)-as.numeric(as.Date(&quot;2021-1-2&quot;)),t$age)]
+a=aggregate(t[,5:6],t[,c(1,3)],sum)
+
+disp=round(xtabs((dead/base-1)*100~age+week,a))
+m=xtabs((dead-base)/ifelse(dead&gt;base,base,dead)~age+week,a)*100
+
+rownames(m)=c(head(paste0(ages,&quot;-&quot;,ages+9),-1),&quot;90+&quot;)
+
+maxcolor=400
+exp=.6
+m[is.infinite(m)]=-maxcolor
+pal=colorRampPalette(hex(HSV(c(210,210,210,210,0,0,0,0,0),c(1,.8,.6,.3,0,.3,.6,.8,1),c(.3,.65,1,1,1,1,1,.65,.3))))(256)
+
+pheatmap::pheatmap(abs(m)^exp*sign(m),filename=&quot;0.png&quot;,display_numbers=disp,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=20,cellheight=20,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;gray90&quot;,
+  number_color=ifelse(abs(m)^exp&gt;maxcolor^exp*.6,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(-maxcolor^exp,maxcolor^exp,,256),pal)
+
+system(&quot;w=`identify -format %w 0.png`;convert 0.png -gravity northwest \\( -splice x16 -size $[w-44]x -pointsize 44 -font /Library/Fonts/Arial\\ Unicode.ttf -interline-spacing -5 caption:&#39;NZ pay-per-dose data, 4th dose: Excess mortality percent by weeks after vaccination and age group. People are kept under the 4th dose after subsequent doses. The baseline was calculated relative to daily mortality rate among the general NZ population, which was interpolated from monthly deaths by registration date and quarterly population figures: stats.govt.nz/information-releases/births-and-deaths-year-ended-september-2023, infoshare.stats.govt.nz. So therefore the baseline is adjusted for seasonal variation in mortality and the impact of COVID waves.&#39; -extent $[w-44]x -gravity center \\) +swap -append -bordercolor white -border 0 +repage 1.png&quot;)</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
