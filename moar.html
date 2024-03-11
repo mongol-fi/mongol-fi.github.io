@@ -5623,8 +5623,11 @@ cmr[56+1]/cmr[46+1]</pre>
 </h3>
 <p>John Gibson wrote a paper about excess deaths in New Zealand, where he said that the excess number of deaths during COVID is underestimated because there was reduced immigration during the lockdown: <a href="https://repec.its.waikato.ac.nz/wai/econwp/2302.pdf">https://repec.its.waikato.ac.nz/wai/econwp/2302.pdf</a>.</p>
 <p>Gibson used a simplistic method to add extra people to his model that he estimated were missing because of reduced immigration, where he used the average mortality rate of the total NZ population as the mortality rate of the extra people. He wrote: <span class="quote">&quot;By the end of 2022 the K&amp;K approach assumes an extrapolated population that is over 0.17 million above New Zealand's actual population then. Using the average death rate in 2022, this exaggerated population yields 1290 more <span class="quote">'expected'</span> deaths that year than the actual population would warrant.&quot;</span></p>
-<p>However migrants are much younger than the total NZ population: <a href="https://figure.nz/chart/MnjhHdNUDNzsCcin-q0tTkArydlAa8oLC">https://figure.nz/chart/MnjhHdNUDNzsCcin-q0tTkArydlAa8oLC</a>. In 2022 there was only a small number of immigrants in ages 75 and above, even though ages 75 and above have accounted for about 63-66% of deaths in New Zealand in recent years.</p>
-<p>When I calculated an expected number of deaths among a cohort with the same age distribution as the migrant arrivals to New Zealand in 2022, I got only about 302 expected deaths per year:</p>
+<p>However Gibson failed to account that migrants are much younger than the total NZ population. In 2022 there was only a small number of immigrants in ages 75 and above, even though ages 75 and above have accounted for about 63-66% of deaths in New Zealand in recent years: [<a href="https://figure.nz/chart/MnjhHdNUDNzsCcin-q0tTkArydlAa8oLC">https://figure.nz/chart/MnjhHdNUDNzsCcin-q0tTkArydlAa8oLC</a>]</p>
+<div class="width5">
+<img src="i/moar-migration-bars.jpg">
+</div>
+<p>When I calculated an expected number of deaths among a cohort with the same age distribution as the migrant arrivals to New Zealand in 2022, I got only about 303 deaths per year:</p>
 <pre>&gt; migrantpop=c(7621,7196,6051,5733,10511,17296,16363,11646,8039,5207,4126,3867,4042,3319,1930,1096,562,307)
 &gt; migrantage=seq(0,85,5)
 &gt; nzdead=unlist(subset(read.csv(&quot;https://sars2.net/f/nz_infoshare_deaths.csv&quot;),year==2022)[-1])
@@ -5636,10 +5639,43 @@ cmr[56+1]/cmr[46+1]</pre>
 [1] 302.7572</pre>
 <p>The reported number of migrant arrivals was about 120,000 in 2022, about 60,000 in 2021, about 90,000 in 2020, about 170,000 in 2019, and about 140,000 in 2018 and earlier: <a href="https://www.stats.govt.nz/information-releases/international-migration-july-2023/#annual">https://www.stats.govt.nz/information-releases/international-migration-july-2023/#annual</a>. For some reason the number of migrant arrivals was much bigger in 2019 than in previous prepandemic years, but if you subtract the number of new arrivals in 2022 from the number of new arrivals in 2018 and earlier, the difference is something like 20,000 people (even though the number of migrant departures was also reduced during the lockdown).</p>
 <p>Gibson also wrote: <span class="quote">&quot;For example, New Zealand recorded 3640 more deaths in 2022 than in 2021 [...] The attribution of the extra deaths in 2022 to COVID-19 also cannot not be the full story given that fewer than 2700 deaths have been attributed to COVID-19 over the entire three-year COVID-era. Thus, in 2022 approximately 1000 extra deaths are likely to be from causes other than COVID-19 but there seems to be little questioning about these non-COVID deaths.&quot;</span> However he failed to account that there was negative excess mortality in 2021 and that NZ has an increasing trend in the number of deaths per year. You cannot derive the number of excess deaths in 2022 by simply subtracting the number of deaths in 2021. I got only about 2289 excess deaths in 2022 when I used the linear trend in 2015-2019 as the baseline.</p>
-<p>Migration actually has a bigger impact on the total population than I expected, because for example in 2023 there were almost 5 times as many migrant arrivals as births:</p>
-<div class="width5">
+<p>Thoughtfulnz pointed out that on Infoshare there's also a dataset for migrant arrivals and departures in 5-year age groups, which can be combined with another Infoshare dataset for mortality rates within 5-year age groups. When I used them to calculate the expected number of deaths among the migrant arrivals in 2022, I got only about 234 deaths. Migration actually has a bigger impact on the total population than I expected, because for example in 2023 there were almost 5 times as many migrant arrivals as births, but migrants are so young that they have little effect on the number of deaths per year:</p>
+<div class="width7">
 <img src="i/moar-migration-heat.png">
 </div>
+<pre>kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;p=!is.na(x);x[p]=paste0(sprintf(paste0(&quot;%.&quot;,ifelse(e[p]%%3==0,1,0),&quot;f&quot;),x[p]/1e3^(e2[p]-1)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2[p]]);x}
+
+minyear=2010
+birth=subset(read.csv(&quot;http://sars2.net/f/nz_infoshare_births.csv&quot;),year&gt;=minyear)
+
+mig=subset(read.csv(&quot;http://sars2.net//f/nz_infoshare_migration.csv&quot;),year&gt;=minyear&amp;type!=&quot;net&quot;)
+mig2=aggregate(mig$count,mig[,1:2],sum)
+m=xtabs(x~type+year,mig2)
+rownames(m)=c(&quot;Migrant arrivals&quot;,&quot;Migrant departures&quot;)
+
+death=rowSums(subset(read.csv(&quot;https://sars2.net/f/nz_infoshare_deaths.csv&quot;),year&gt;=minyear)[-1])
+
+m=rbind(m,Births=birth$births,Deaths=death)
+m=rbind(m,&quot;Net change&quot;=m[1,]+m[3,]-m[2,]-m[4,])
+
+rate=subset(read.csv(&quot;http://sars2.net/f/nz_infoshare_cmr.csv&quot;,check=F),year&gt;=minyear)
+rate=data.frame(year=rate[1],age=rep(colnames(rate[-1]),each=nrow(rate)),rate=unlist(rate[-1]))
+me=merge(mig,rate)
+m2=xtabs(rate*count/1e5~type+year,me)
+rownames(m2)=paste0(rownames(m)[1:2],&quot; (expected deaths)&quot;)
+m=rbind(m,m2)
+
+disp=kimi(as.matrix(m))
+maxcolor=max(m)
+
+pheatmap::pheatmap(m,filename=&quot;0.png&quot;,display_numbers=disp,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=20,cellheight=20,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;gray90&quot;,
+  number_color=ifelse(abs(m)&gt;maxcolor*.5,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(-maxcolor,maxcolor,,256),
+  colorRampPalette(hex(HSV(c(210,210,210,210,0,0,0,0,0),c(.9,.75,.6,.3,0,.3,.6,.75,.9),c(.4,.65,1,1,1,1,1,.65,.4))))(256))
+
+system(&quot;w=`identify -format %w 0.png`;convert 0.png -gravity northwest \\( -splice x14 -size $[w-44]x -font /Library/Fonts/Arial\\ Unicode.ttf -interline-spacing -5 -pointsize 40 caption:&#39;Source: infoshare.stats.govt.nz, datasets: \&quot;Estimated migration by direction, age group and sex, 12/16-month rule (Annual-Dec)\&quot;, \&quot;Live births (by sex), stillbirths (Maori and total population) (Annual-Dec)\&quot;, \&quot;Deaths by age and sex (Annual-Dec)\&quot;, and \&quot;Age-specific death rates by sex, December years (total population) (Annual-Dec)\&quot;. In order to calculate the expected number of deaths among migrants, the yearly number of migrants in each 5-year age group was multiplied by the mortality rate for the age group the same year among the general NZ population.&#39; -extent $[w-44]x -gravity center \\) +swap -append +repage 1.png&quot;)</pre>
 <h3>
 <a href=#Plot_by_an_epidemiologist_for_mortality_rates_in_5_year_age_groups id=Plot_by_an_epidemiologist_for_mortality_rates_in_5_year_age_groups>Plot by an epidemiologist for mortality rates in 5-year age groups</a>
 </h3>
@@ -6712,7 +6748,7 @@ $ for x in *;do awk &#39;NR==1||/Auckland,Asian,90\+,Female/&#39; $x|csvtk cut -
 <img src="i/moar-foia-2.png">
 </div>
 <p>The vaccination statistics here go back a few months further than the CSV files at GitHub: <a href="http://web.archive.org/web/*/https://health.govt.nz/our-work/diseases-and-conditions/covid-19-novel-coronavirus/covid-19-data-and-statistics/covid-19-vaccine-data">http://web.archive.org/web/*/https://health.govt.nz/our-work/diseases-and-conditions/covid-19-novel-coronavirus/covid-19-data-and-statistics/covid-19-vaccine-data</a>. canceledmouse compiled the snapshots from archive.org to this CSV file: <a href="https://drive.google.com/file/d/1J6TQAFAGhxPaDAzGDHNe2Qnugv3-1Kfk/view">https://drive.google.com/file/d/1J6TQAFAGhxPaDAzGDHNe2Qnugv3-1Kfk/view</a>.</p>
-<p>Uncle John Returns has also posted useful information about the FOIA data: <a href="https://x.com/UncleJo46902375/status/1759906206259318917">https://x.com/UncleJo46902375/status/1759906206259318917</a>, <a href="https://x.com/UncleJo46902375/status/1759500002831810649">https://x.com/UncleJo46902375/status/1759500002831810649</a>, <a href="https://x.com/UncleJo46902375/status/1759877133189451831">https://x.com/UncleJo46902375/status/1759877133189451831</a>, <a href="https://x.com/UncleJo46902375/status/1759906950429421644">https://x.com/UncleJo46902375/status/1759906950429421644</a>, <a href="https://x.com/UncleJo46902375/status/1759937447457075692">https://x.com/UncleJo46902375/status/1759937447457075692</a>]</p>
+<p>Uncle John Returns has also posted useful analysis about the FOIA data: <a href="https://x.com/UncleJo46902375/status/1759906206259318917">https://x.com/UncleJo46902375/status/1759906206259318917</a>, <a href="https://x.com/UncleJo46902375/status/1759500002831810649">https://x.com/UncleJo46902375/status/1759500002831810649</a>, <a href="https://x.com/UncleJo46902375/status/1759877133189451831">https://x.com/UncleJo46902375/status/1759877133189451831</a>, <a href="https://x.com/UncleJo46902375/status/1759906950429421644">https://x.com/UncleJo46902375/status/1759906950429421644</a>, <a href="https://x.com/UncleJo46902375/status/1759937447457075692">https://x.com/UncleJo46902375/status/1759937447457075692</a>, <a href="https://x.com/UncleJo46902375/status/1766783021116469711">https://x.com/UncleJo46902375/status/1766783021116469711</a>.</p>
 <p>In March 2022 there was a news report that the Cantenbury region had reached over 100% vaccinated people. [<a href="https://www.facebook.com/watch/?v=487259226282502">https://www.facebook.com/watch/?v=487259226282502</a>] It said <span class="quote">&quot;Vaccination stats are calculated using health service data that only includes people enrolled with a primary health service organization or have used other health services during the calendar year.&quot;</span> Then a statistical analyst commented: <span class="quote">&quot;If you use the Stats NZ estimate for the total population of Cantenbury, the vaccination rate is more like 96%.&quot;</span> Then the newscaster said: <span class="quote">&quot;Even using the ministry's data, the numbers are fluctuating. Since March 11th, Cantenbury DHB reported a perfect 100% for first doses. In today's COVID update, that number dropped to 99.6%.&quot;</span></p>
 <p>Uncle John Returns posted these tweets: [<a href="https://twitter.com/UncleJo46902375/status/1761594924733018278">https://twitter.com/UncleJo46902375/status/1761594924733018278</a>]</p>
 <blockquote>
@@ -6792,6 +6828,62 @@ lapply(o,\(x){names(dimnames(x))=NULL;round(t(x)/c(31,60,90,185),1)})</pre>
 31-90     0.0   0.8   8.7   17.7  27.1
 91-180    0.0   0.8   9.7   18.6  29.1
 181-365   0.0   0.2   2.2    3.3   5.7</pre>
+<p>It could also be that the OIA response included stillbirths before 2023 but not in 2023, because in 2020-2022 the OIA response has a much higher number of deaths in ages 0-20 than Infoshare:</p>
+<table>
+<tr><th>
+2020
+</th><th>
+2021
+</th><th>
+2022
+</th><th>
+2023
+</th><th></th></tr>
+<tr><td>
+992
+</td><td>
+1094
+</td><td>
+893
+</td><td>
+283
+</td><th>
+deaths in ages 0-20 in OIA response (&lt;5 replaced with 2)
+</th></tr>
+<tr><td>
+992
+</td><td>
+1082
+</td><td>
+846
+</td><td>
+255
+</td><th>
+deaths in ages 0-20 in OIA response (&lt;5 replaced with 1)
+</th></tr>
+<tr><td>
+486
+</td><td>
+567
+</td><td>
+438
+</td><td>
+477
+</td><th>
+deaths in ages 0-20 at Infoshare (not including stillbirths)
+</th></tr>
+<tr><td>
+348
+</td><td>
+339
+</td><td>
+366
+</td><td>
+315
+</td><th>
+stillbirths
+</th></tr>
+</table>
 <h3>
 <a href=#Monthly_deaths_in_FOIA_response_compared_to_other_sources id=Monthly_deaths_in_FOIA_response_compared_to_other_sources>Monthly deaths in FOIA response compared to other sources</a>
 </h3>
@@ -7173,6 +7265,8 @@ Anyone doing serious work on the data should always use the date of birth to com
 <h3>
 <a href=#Heatmap_for_excess_mortality_by_weeks_after_vaccination_and_age_group id=Heatmap_for_excess_mortality_by_weeks_after_vaccination_and_age_group>Heatmap for excess mortality by weeks after vaccination and age group</a>
 </h3>
+<p>Kirsch keeps saying that the healthy vaccinee effect doesn't last longer than 3 weeks, so it's somehow a major safety signal that the mortality rate of vaccinated people goes up for several months after vaccination. However he refuses to calculate the baseline for the mortality rate properly using the age composition of the cohort, so I thought that maybe I would have better luck trying to get him to compare the mortality rate within some specific age group to the general NZ population.</p>
+<p>So I made him this heatmap which shows that for example for people with 4 doses in ages 70-79, the mortality rate during the first 4 weeks after vaccination was about 54% lower than in the general NZ population, but during the second 4 weeks it was only about 42% lower, during the third 4 weeks it was only about -26% lower, and so on:</p>
 <div class="width8">
 <img src="i/moar-excess-week-age.png">
 </div>
