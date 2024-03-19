@@ -1720,18 +1720,23 @@ pick=rownames(dead)&gt;=&quot;2020-01&quot;;dead=dead[pick,-1];pop=pop[pick,-1]
 
 for(age in colnames(dead)){
 
-t=read.csv(&quot;s/f/ons-table-2-2023-august.csv&quot;,na.strings=c(&quot;x&quot;,&quot;&lt;3&quot;))[,1:8]
+t=read.csv(&quot;http://sars2.net/f/ons-table-2-2023-august.csv&quot;,na.strings=c(&quot;x&quot;,&quot;&lt;3&quot;))
 t=t[t$cause==&quot;All causes&quot;&amp;t$age==age,]
+
+t0=read.csv(&quot;http://sars2.net/f/ons-table-2-2022-july.csv&quot;,na.strings=c(&quot;x&quot;,&quot;&lt;3&quot;))|&gt;subset(cause==&quot;All causes&quot;)
+t0=t0[t0$age==age,]
+t=rbind(subset(t0,year==2021&amp;month%in%month.name[1:3]),t)
+
 date=as.Date(paste0(t$year,&quot;-&quot;,match(t$month,month.name),&quot;-1&quot;))
 
 a=aggregate(t[,6:7],list(status=sub(&quot; dose.*&quot;,&quot; dose&quot;,t$status),date=date),sum,na.rm=T)
 a2=a[a$status!=&quot;Unvaccinated&quot;,]
-a3=aggregate(a[,3:4],data.frame(status=&quot;Vaccinated and unvaccinated&quot;,date=a$date),sum)
+a3=aggregate(a[,3:4],data.frame(status=&quot;ONS data total&quot;,date=a$date),sum)
 a=rbind(a,a3,aggregate(a2[,3:4],data.frame(status=&quot;Vaccinated&quot;,date=a2$date),sum))
 
-a=rbind(a,data.frame(status=&quot;General population of England&quot;,date=as.Date(paste0(rownames(dead),&quot;-1&quot;)),dead=dead[,age],pop=pop[,age]))
+a=rbind(a,data.frame(status=&quot;England total&quot;,date=as.Date(paste0(rownames(dead),&quot;-1&quot;)),dead=dead[,age],pop=pop[,age]))
 
-label=c(&quot;General population of England&quot;,&quot;Vaccinated and unvaccinated&quot;,&quot;Vaccinated&quot;,&quot;Unvaccinated&quot;,&quot;First dose&quot;,&quot;Second dose&quot;,&quot;Third dose&quot;,&quot;Fourth dose&quot;)
+label=c(&quot;England total&quot;,&quot;ONS data total&quot;,&quot;Vaccinated&quot;,&quot;Unvaccinated&quot;,&quot;First dose&quot;,&quot;Second dose&quot;,&quot;Third dose&quot;,&quot;Fourth dose&quot;)
 a$status=factor(a$status,label)
 
 a$cmr=a$dead/a$pop*1e5
@@ -1763,6 +1768,7 @@ scale_color_manual(values=color)+
 scale_fill_manual(values=color)+
 scale_linetype_manual(values=c(2,rep(1,7)))+
 guides(color=guide_legend(ncol=1))+
+guides(colour=guide_legend(override.aes=list(linewidth=.4)))+
 theme(axis.text=element_text(size=6,color=&quot;black&quot;),
   axis.text.y.left=element_text(color=alpha(&quot;black&quot;,c(0,rep(1,length(ybreak))))),
   axis.ticks=element_line(linewidth=.3),
@@ -1774,7 +1780,7 @@ theme(axis.text=element_text(size=6,color=&quot;black&quot;),
   legend.key=element_rect(fill=alpha(&quot;white&quot;,0)),
   legend.spacing.x=unit(.15,&quot;lines&quot;),
   legend.key.size=unit(.68,&quot;lines&quot;),
-  legend.key.width=unit(0.65,&quot;lines&quot;),
+  legend.key.width=unit(0.89,&quot;lines&quot;),
   legend.box.background=element_rect(fill=alpha(&quot;white&quot;,.7),color=&quot;black&quot;,linewidth=.3),
   legend.margin=margin(.4,.3,.2,.3,&quot;lines&quot;),
   legend.position=c(0,1),
@@ -1790,16 +1796,20 @@ ggsave(paste0(&quot;age.&quot;,age,&quot;.png&quot;),width=4.8,height=2.5,dpi=40
 
 }
 
-tit=&quot;ONS dataset for mortality by vaccination status: Deaths per 100k person-years. The right axis displays the percentage of each vaccination status group.&quot;
-sub=&quot;The ONS dataset for mortality by vaccination status was released in August 2023, and the dataset for deaths in the general English population was released in July 2023, so both datasets are missing a fairly large number of deaths because of a registration delay.
+tit=&quot;ONS dataset for mortality by vaccination status: Deaths per 100k person-years&quot;
+sub=&quot;The right axis displays the percentage of each vaccination status group.
+      The line labeled \&quot;England total\&quot; shows the general population of England which includes people who are not included in the ONS dataset. The line labeled \&quot;ONS data total\&quot; consists of vaccinated and unvaccinated people in the ONS dataset added together.
+      People are counted as vaccinated from the day of vaccination and not with a delay of 1-4 weeks. The group labeled \&quot;First dose\&quot; is a sum of the groups in the ONS data labeled \&quot;First dose, less than 21 days ago\&quot; and \&quot;First dose, at least 21 days ago\&quot;, and similarly for other doses.
+      The ONS dataset for mortality by vaccination status was released in August 2023, and the dataset for deaths in the general English population was released in July 2023, so both datasets are missing a fairly large number of deaths because of a registration delay.
+      Data for January-March 2021 is taken from the July 2022 edition of the ONS dataset, which was linked to the 2011 census and not the 2021 census like the subsequent editions.
+      Sources: ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/datasets/
+deathsbyvaccinationstatusengland, ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/
+deaths/adhocs/1343dailydeathsbydateofoccurrence1stjune2014to31stmay2023bysingleyearofageengland,
+ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationestimates/datasets/
+populationestimatesforukenglandandwalesscotlandandnorthernireland.&quot;
 
-Sources:
-ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/datasets/deathsbyvaccinationstatusengland
-ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/adhocs/1343dailydeathsbydateofoccurrence1stjune2014to31stmay2023bysingleyearofageengland
-ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationestimates/datasets/populationestimatesforukenglandandwalesscotlandandnorthernireland&quot;
-
-system(paste0(&quot;wh=$(identify -format %w\\ %h age.18-39.png|awk &#39;{print$1*2,$2}&#39;);convert -gravity west -size $(awk &#39;{print ($1-80)\&quot;x\&quot;}&#39;&lt;&lt;&lt;\&quot;$wh\&quot;) \\( -pointsize 55 -bordercolor white -border 40 caption:&#39;&quot;,tit,&quot;&#39; \\) \\( -pointsize 42 -border 40 caption:&#39;&quot;,sub,&quot;&#39; \\) -append -extent $(tr \\  x&lt;&lt;&lt;\&quot;$wh\&quot;) 0.png&quot;))
-system(&quot;montage -geometry +0+0 -tile 3x age.* 0.png 1.png;mogrify -trim -bordercolor white -border 30 1.png&quot;)
+system(paste0(&quot;wh=$(identify -format %w\\ %h age.18-39.png|awk &#39;{print$1,$2}&#39;);convert -font &#39;/Library/Fonts/Arial Unicode.ttf&#39; -interline-spacing -5 -gravity west -size $(awk &#39;{print ($1-80)\&quot;x\&quot;}&#39;&lt;&lt;&lt;\&quot;$wh\&quot;) \\( -pointsize 50 -bordercolor white -border 44 caption:&#39;&quot;,tit,&quot;&#39; \\) -gravity southwest -shave x40 \\( -pointsize 38 -border 40 caption:&#39;&quot;,sub,&quot;&#39; -gravity northwest -shave x48 \\) -append -gravity west -extent $(tr \\  x&lt;&lt;&lt;\&quot;$wh\&quot;) 0.png&quot;))
+system(&quot;montage -geometry +0+0 -tile 2x age.* 0.png 1.png;mogrify -trim -bordercolor white -border 30 1.png&quot;)
 system(&quot;qlmanage -p 1.png&amp;&gt;/dev/null&quot;)</pre>
 <div class="width11">
 <img src="i/stat-ons-multiline.jpg">
