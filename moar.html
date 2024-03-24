@@ -6781,7 +6781,10 @@ days      21_to_40 41_to_60 61_to_80 81_to_100
   31-90        3.9     18.2     88.3     141.0
   91-180       3.2     16.9     89.3     138.8
   181-365      2.0      9.9     43.6      61.1</pre>
-<p>For doses 3-5, the number of deaths per day is even higher on days 91-180 than days 31-90 (if you count the total for all ages except 0-20 and 100+ like I did here). Even though I think a lot of people got the 5th dose less than 180 before the end of data, or a lot of people got the 4th dose less than 180 days after the 3rd dose:</p>
+<p>If you further disaggregate the results by dose number, then it shows that dose 1 has more deaths per day on days 0-30 than days 31-90. However that's because my calculation was not adjusted for days of exposure within each group of days since vaccination, so that I assumed that each person spent 60 days in the 31-90 days category even though in reality many people got the second dose 3-4 weeks after the first dose so they didn't necessarily spend any days in the 31-90 days category. However doses 2-5 have more deaths per day on days 31-90 than days 0-30, because the time until the next dose was typically more than 90 days:</p>
+<div class="width6">
+<img src="i/moar-foia-death-bins.png">
+</div>
 <pre>t=read.csv(&quot;http://sars2.net/f/nz_monthly_vax_status_deaths_foia.csv&quot;,na.strings=&quot;&lt;5&quot;)
 t$count[is.na(t$count)]=2
 t=t[t$month_of_death!=&quot;Total&quot;,]
@@ -6794,42 +6797,27 @@ t$days=factor(t$days,unique(t$days))
 levels(t$days)=c(&quot;0-30&quot;,&quot;31-90&quot;,&quot;91-180&quot;,&quot;181-365&quot;)
 
 o=lapply(1:5,\(i)xtabs(count~age_at_death+days,subset(t,last_dose_number==i)))
-lapply(o,\(x){names(dimnames(x))=NULL;round(t(x)/c(31,60,90,185),1)})</pre>
-<!-- -->
-<pre>[[1]]
-        21-40 41-60 61-80 81-100 Total
-0-30      1.5   4.3  19.2   28.5  53.5
-31-90     0.5   2.1   6.6    8.6  17.7
-91-180    0.3   0.3   1.0    1.4   3.0
-181-365   0.1   0.1   0.3    0.3   0.9
+o=lapply(o,\(x){names(dimnames(x))=NULL;t(x)/c(31,60,90,185)})
 
-[[2]]
-        21-40 41-60 61-80 81-100 Total
-0-30      1.5   6.1  21.4   30.7  59.7
-31-90     2.0   7.4  27.8   42.5  79.7
-91-180    1.6   6.3  25.3   36.5  69.7
-181-365   0.9   2.6   6.8    7.7  18.0
+maxcolor=max(sapply(o,max))
+pal=colorRampPalette(hex(HSV(c(210,210,210,160,110,60,30,0),c(0,.25,rep(.5,6)),rep(1,8))))(256)
+pal=sapply(seq(1,0,,256),\(i)rgb(i,i,i))
 
-[[3]]
-        21-40 41-60 61-80 81-100 Total
-0-30      0.7   4.0  18.1   28.7  51.5
-31-90     1.1   5.8  26.2   40.6  73.8
-91-180    1.1   6.8  33.3   49.3  90.4
-181-365   0.9   5.3  19.6   26.3  52.1
+for(i in 1:5){
+  m=o[[i]]
+  disp=apply(m,2,sprintf,fmt=&quot;%.1f&quot;)
+  pheatmap::pheatmap(m,filename=paste0(&quot;i&quot;,i,&quot;.png&quot;),display_numbers=disp,
+    main=paste(&quot;Dose &quot;,i),
+    cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,
+    border_color=NA,na_col=&quot;gray90&quot;,number_color=ifelse(m&gt;maxcolor*.45,&quot;white&quot;,&quot;black&quot;),
+    breaks=seq(0,maxcolor,,256),pal)
+}
 
-[[4]]
-        21-40 41-60 61-80 81-100 Total
-0-30      0.4   1.6  12.5   23.9  38.4
-31-90     0.3   2.1  18.5   31.1  52.1
-91-180    0.2   2.6  19.7   32.7  55.2
-181-365   0.1   1.6  14.6   23.5  39.8
+x=&quot;NZ OIA response for deaths by vaccination status: deaths by days since vaccination and age group. The OIA data is missing days of exposure for each category, so in this analysis each person was assumed to have spent 60 days in the category for 31-90 days after vaccination, even though in reality for example a person who got a second dose 40 days after the first dose only spent 9 or 10 days in the 31-90 days category, which explains why dose 1 has a &quot;
+x=paste0(x,&quot;higher mortality rate for days 0-30 than days 31-90. The issue is less pronounced for the second and later doses if days 0-30 are compared to days 31-90, since there was typically an interval of more than 90 days between further vaccine doses, but the issue still has a big impact for all doses if days 181-365 are compared to days 91-180. The OIA data only included deaths up to early December 2023, so many people also got the 5th dose less than 365 days before the end of data. Source: fyi.org.nz/request/25021-number-of-covid19-vax-deaths-by-age-band-location-and-month.&quot;)
 
-[[5]]
-        21-40 41-60 61-80 81-100 Total
-0-30      0.1   0.6   5.6   12.7  19.0
-31-90     0.0   0.8   8.7   17.7  27.1
-91-180    0.0   0.8   9.7   18.6  29.1
-181-365   0.0   0.2   2.2    3.3   5.7</pre>
+system(&quot;montage i[1-5].png -trim -geometry +20+20 -tile 3x 0.png&quot;)
+system(paste0(&quot;mogrify -trim 0.png;convert -font /Library/Fonts/Arial\\ Unicode.ttf -interline-spacing -5 -size `identify -format %wx 0.png`x -pointsize 42 caption:&#39;&quot;,x,&quot;&#39; -gravity south -splice x20 0.png -append -trim -bordercolor white -border 26 1.png&quot;))</pre>
 <p>It could also be that the OIA response included stillbirths before 2023 but not in 2023, because in 2020-2022 the OIA response has a much higher number of deaths in ages 0-20 than Infoshare. But even if you add stillbirths to the number of deaths at Infoshare, it's still actually lower than the number of deaths in the OIA response in 2020-2022:</p>
 <table>
 <tr><th>

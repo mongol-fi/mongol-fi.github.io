@@ -62,6 +62,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Ethical_Skeptic_COVID_deaths_per_capita_compared_to_percentage_of_vaccinated_population_in_US_counties>Ethical Skeptic: COVID deaths per capita compared to percentage of vaccinated population in US counties</a></li>
 <li><a href=#Tore_Aarhus_Gulbrandsen_Reduced_z_scores_for_Finland_at_EUROMOMO>Tore Aarhus Gulbrandsen: Reduced z-scores for Finland at EUROMOMO</a></li>
 <li><a href=#David_Bell_Increase_in_cancer_deaths_in_ages_15_44_at_CDC_WONDER>David Bell: Increase in cancer deaths in ages 15-44 at CDC WONDER</a></li>
+<li><a href=#Clare_Craig_Mortality_rate_by_percentage_of_vaccinated_people_in_US_counties>Clare Craig: Mortality rate by percentage of vaccinated people in US counties</a></li>
 </ul>
 
 <h2>
@@ -355,6 +356,10 @@ Heatmap(m,
 dev.off()
 
 system(&quot;mogrify -trim 0.png;convert 0.png -gravity northwest -splice x10 -size `identify -format %w 0.png`x -pointsize 25 caption:&#39;Percentage of vaccinated people in ages 25-49 as percentage of the percentage of vaccinated people in ages 65 and above. Source: CDC dataset titled \&quot;COVID-19 Vaccination Age and Sex Trends in the United States, National and Jurisdictional\&quot;. The monthly percentages were calculated as the average of daily percentages for males and daily percentages for females. In the CDC dataset percentages above 95% are displayed as 95%, and from late 2021 onwards there are regions where the percentages for both age groups are always 95%, so the ratio between the age groups is always 100%.&#39; +swap -append -trim -bordercolor white -border 24 +repage 1.png&quot;)</pre>
+<p>In the southern states which had a low percentage of vaccinated people in young age groups relative to old age groups, the excess all-cause mortality during the Delta wave was also higher in young age groups:</p>
+<div class="width10">
+<img src="i/debunk-spieker-all-cause.png">
+</div>
 <h3>
 <a href=#COVID_deaths_by_month_in_5_year_age_groups id=COVID_deaths_by_month_in_5_year_age_groups>COVID deaths by month in 5-year age groups</a>
 </h3>
@@ -793,58 +798,105 @@ ggsave(&quot;1.png&quot;,width=5.2,height=3.1,dpi=450)</pre>
 <img src="i/debunk-bell-2.png">
 </div>
 <p>And also it could be that if COVID results in an increase in cancer, then people who started to develop cancer because of COVID in 2020 didn't necessarily die until 2021 or later.</p>
-<pre>t=read.csv(&quot;d/cd/wondercancerage&quot;)|&gt;subset(year!=2024)
+<pre>library(ggplot2)
+
+t=read.csv(&quot;https://pastebin.com/raw/NKYeAhD8&quot;)|&gt;subset(year!=2024)
 t=t[as.numeric(sub(&quot;[-+N].*&quot;,&quot;&quot;,t$age))%in%15:40,]
 std=with(subset(t,year==2020),setNames(pop,age))
 
 year=sort(unique(t$year))
 
-xy=data.frame(x=year,y=tapply(std[t$age]/sum(std)*t$dead/t$pop,t$year,sum,na.rm=T)*1e5,z=&quot;Age-standardized mortality rate&quot;)
-xy=rbind(xy,data.frame(x=year,y=tapply(t$dead,t$year,sum)/tapply(t$pop,t$year,sum)*1e5,z=&quot;Crude mortality rate&quot;))
+xy=data.frame(x=year,cmr=tapply(t$dead,t$year,sum)/tapply(t$pop,t$year,sum)*1e5)
+xy$asmr=tapply(std[t$age]/sum(std)*t$dead/t$pop,t$year,sum,na.rm=T)*1e5
+xy$dead=tapply(t$dead,t$year,sum)
 
-xy$z=factor(xy$z,unique(xy$z))
-
-candidates=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
-ystep=candidates[which.min(abs(candidates-max(xy$y,na.rm=T)/8))]
-ystart=ystep*floor(min(xy$y,na.rm=T)/ystep)
-yend=ystep*ceiling(max(xy$y,na.rm=T)/ystep)
+cand=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
+ymax=max(xy[,2:3]);ymin=min(xy[,2:3])
+ystep=cand[which.min(abs(cand-(ymax-ymin)/8))]
+ystart=ystep*floor(ymin/ystep)
+yend=ystep*ceiling(ymax/ystep)
 ybreak=seq(ystart,yend,ystep)
 xstart=min(xy$x);xend=max(xy$x)
 
-color=c(&quot;#4E70BE&quot;,&quot;#B02318&quot;)
+ystep2=cand[which.min(abs(cand-max(xy$dead)/8))]
+ystart2=ystep2*floor(min(xy$dead)/ystep2)
+yend2=ystep2*ceiling(max(xy$dead)/ystep2)
+ybreak2=seq(ystart2,yend2,ystep2)
 
-ggplot(xy,aes(x,y,color=z))+
-geom_hline(yintercept=c(ystart,0,yend),color=&quot;black&quot;,linewidth=.3)+
-geom_vline(xintercept=c(xstart,xend),color=&quot;black&quot;,linewidth=.3)+
-geom_line(linewidth=.4)+
-labs(title=&quot;CDC WONDER: Deaths per 100k people with underlying cause C00-D48\n(Neoplasms), ages 15-44&quot;,subtitle=str_wrap(&quot;Source: wonder.cdc.gov/mcd-icd10.html. The age-standardized mortality rate was calculated for 5-year age groups using the 2020 population as the standard population.&quot;,86),x=NULL,y=NULL)+
+xy$cmr=(xy$cmr-ystart)/(yend-ystart)
+xy$asmr=(xy$asmr-ystart)/(yend-ystart)
+xy$dead=(xy$dead-ystart2)/(yend2-ystart2)
+
+color1=c(hcl(225,100,40),&quot;#cc0000&quot;)
+color2=&quot;black&quot;
+
+leg1=data.frame(x=xstart+.025*(xend-xstart),y=seq(.93,0,,11)[1:2],label=c(&quot;Crude mortality rate per 100k&quot;,&quot;Age-standardized mortality rate per 100k&quot;))
+leg2=data.frame(x=xstart+.975*(xend-xstart),y=.93,label=&quot;Deaths&quot;)
+
+kim=\(x)ifelse(x&gt;=1e3,ifelse(x&gt;=1e6,paste0(x/1e6,&quot;M&quot;),paste0(x/1e3,&quot;k&quot;)),x)
+
+ggplot(xy,aes(x,y))+
+geom_hline(yintercept=c(0,1),color=&quot;black&quot;,linewidth=.3,lineend=&quot;square&quot;)+
+geom_vline(xintercept=c(xstart,xend),color=&quot;black&quot;,linewidth=.3,lineend=&quot;square&quot;)+
+geom_line(aes(y=cmr),color=color1[1],linewidth=.4)+
+geom_line(aes(y=asmr),color=color1[2],linewidth=.4)+
+geom_line(aes(y=dead),color=color2[1],linewidth=.4)+
+geom_label(data=leg1,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.85),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.04,&quot;lines&quot;),label.size=0,color=color1,size=2.5,hjust=0)+
+geom_label(data=leg2,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.85),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.04,&quot;lines&quot;),label.size=0,color=color2,size=2.5,hjust=1)+
+labs(title=&quot;Deaths in ages 15-44 with underlying cause C00-D48 (Neoplasms)&quot;,subtitle=stringr::str_wrap(&quot;Source: wonder.cdc.gov/mcd-icd10.html. The age-standardized mortality rate was calculated for 5-year age groups using the 2020 population as the standard population.&quot;,86),x=NULL,y=NULL)+
 coord_cartesian(clip=&quot;off&quot;,expand=F)+
-scale_x_continuous(limits=c(xstart,xend),breaks=seq(1990,2030,5))+
-scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
-scale_color_manual(values=color)+
+scale_x_continuous(limits=c(xstart,xend),breaks=seq(xstart,xend))+
+scale_y_continuous(limits=c(0,1),breaks=seq(0,1,,length(ybreak)),labels=ybreak,sec.axis=sec_axis(trans=~.+0,breaks=seq(0,1,,length(ybreak2)),labels=kim(ybreak2)))+
 guides(colour=guide_legend(override.aes=list(linewidth=.5)))+
 theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
   axis.ticks=element_line(linewidth=.3,color=&quot;black&quot;),
   axis.ticks.length=unit(.2,&quot;lines&quot;),
   axis.title=element_text(size=8),
-  legend.background=element_blank(),
-  legend.box.just=&quot;left&quot;,
-  legend.key=element_rect(fill=&quot;white&quot;),
-  legend.spacing.x=unit(.15,&quot;lines&quot;),
-  legend.key.size=unit(.75,&quot;lines&quot;),
-  legend.position=c(1,1),
-  legend.justification=c(1,1),
-  legend.box.background=element_rect(fill=alpha(&quot;white&quot;,1),color=&quot;black&quot;,linewidth=.3),
-  legend.margin=margin(-.15,.35,.25,.35,&quot;lines&quot;),
-  legend.text=element_text(size=7,vjust=.5),
-  legend.title=element_blank(),
+  legend.position=&quot;none&quot;,
   panel.background=element_rect(fill=&quot;white&quot;),
-  panel.grid.major=element_line(linewidth=.3,color=&quot;gray90&quot;),
   plot.background=element_rect(fill=&quot;white&quot;),
   plot.margin=margin(.4,.6,.4,.5,&quot;lines&quot;),
   plot.subtitle=element_text(size=7),
   plot.title=element_text(size=8))
 ggsave(&quot;1.png&quot;,width=4.2,height=2.8,dpi=450)</pre>
+<h2>
+<a href=#Clare_Craig_Mortality_rate_by_percentage_of_vaccinated_people_in_US_counties id=Clare_Craig_Mortality_rate_by_percentage_of_vaccinated_people_in_US_counties>Clare Craig: Mortality rate by percentage of vaccinated people in US counties</a>
+</h2>
+<p>Clare Craig posted this plot which appears to show that in US counties which had a higher percentage of vaccinated people in 2022, the 2021 mortality rate minus 2020 mortality rate tended to be higher than in counties with a lower percentage of vaccinated people: [<a href="https://twitter.com/ClareCraigPath/status/1771230708511449587">https://twitter.com/ClareCraigPath/status/1771230708511449587</a>]</p>
+<div class="width5">
+<img src="i/debunk-craig-county-1.jpg">
+</div>
+<p>However actually her plot shows the mortality rate in 2020 minus the mortality rate in 2021. With 2021 minus 2020 I got the opposite trend:</p>
+<div class="width8">
+<img src="i/debunk-craig-county-2.png">
+</div>
+<p>In Craig's plot the county which had about 9% vaccinated people was Long County, Georgia, which had a higher mortality rate in 2021 than 2020 on CDC Wonder, so it should've been above zero on the y-axis in her plot. This plot also shows that the county with about 9% vaccinated people had a higher mortality rate in 2021 than 2020: [<a href="https://twitter.com/ClareCraigPath/status/1771167720634978639">https://twitter.com/ClareCraigPath/status/1771167720634978639</a>]</p>
+<div class="width5">
+<img src="i/debunk-craig-county-3.jpg">
+</div>
+<p>Craig also posted this tweet where she used the same CDC dataset for vaccinations by county, but she plotted the <code>Completeness_pct</code> column and not the <code>Administered_Dose1_Pop_Pct</code> column: [<a href="https://twitter.com/ClareCraigPath/status/1771154704992465029">https://twitter.com/ClareCraigPath/status/1771154704992465029</a>]</p>
+<div class="width5">
+<img src="i/debunk-craig-county-4.jpg">
+</div>
+<p>It's not clear why there's such a drastic difference between the two columns (or why the values of the <code>Completeness_pct</code> column seem to fall to a certain fixed set of values where other values in between are omitted):</p>
+<pre>&gt; vax=fread(&quot;COVID-19_Vaccinations_in_the_United_States_County_20240227.csv&quot;)
+&gt; d=vax[Date==&quot;01/01/2022&quot;,]
+&gt; table(round(d$Completeness_pct))
+  0  60  74  81  86  90  91  93  94  95  96  97  98  99
+ 26 160  15 125   4 185 122 122 473  88 305 591 533 528
+&gt; table(round(d$Administered_Dose1_Pop_Pct))
+  0  10  14  15  16  17  18  19  20  21  22  23  24  25  26  27  28
+152   1   2   3   6  11   8   5   6   6   9  11   9   9   9  15   6
+ 29  30  31  32  33  34  35  36  37  38  39  40  41  42  43  44  45
+  7   8   7  10   9  12  22  32  26  44  50  59  65  76  56  90  67
+ 46  47  48  49  50  51  52  53  54  55  56  57  58  59  60  61  62
+106  75 101  68 108  84 103  83 120  93  93  70  89  75  97  70  68
+ 63  64  65  66  67  68  69  70  71  72  73  74  75  76  77  78  79
+ 56  70  52  52  39  48  32  42  37  36  17  30  25  23  27  28  18
+ 80  81  82  83  84  85  86  87  88  89  90  91  92  93  94  95
+ 21  18  22  20   9  18  17  10  12  10  10   2  12   5   7  38</pre>
+<p>The <code>Completeness_pct</code> column is described like this: <span class="quote">&quot;Represents the proportion of people with a completed primary series whose Federal Information Processing Standards (FIPS) code is reported and matches a valid county FIPS code in the jurisdiction.&quot;</span> [<a href="https://data.cdc.gov/Vaccinations/COVID-19-Vaccinations-in-the-United-States-County/8xkx-amqh/about_data">https://data.cdc.gov/Vaccinations/COVID-19-Vaccinations-in-the-United-States-County/8xkx-amqh/about_data</a>] And the <code>Administered_Dose1_Pop_Pct</code> column is described as the <span class="quote">&quot;Percent of Total Pop with at least one Dose by State of Residence&quot;</span>.</p>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
