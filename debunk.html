@@ -63,7 +63,8 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Tore_Aarhus_Gulbrandsen_Reduced_z_scores_for_Finland_at_EUROMOMO>Tore Aarhus Gulbrandsen: Reduced z-scores for Finland at EUROMOMO</a></li>
 <li><a href=#David_Bell_Increase_in_cancer_deaths_in_ages_15_44_at_CDC_WONDER>David Bell: Increase in cancer deaths in ages 15-44 at CDC WONDER</a></li>
 <li><a href=#Clare_Craig_Mortality_rate_by_percentage_of_vaccinated_people_in_US_counties>Clare Craig: Mortality rate by percentage of vaccinated people in US counties</a></li>
-<li><a href=#Martin_Neil_and_Norman_Fenton_March_2024_preprint_about_the_cheap_trick>Martin Neil and Norman Fenton: March 2024 preprint about the cheap trick</a></li>
+<li><a href=#Martin_Neil_and_Norman_Fenton_Simulation_in_March_2024_preprint_about_the_cheap_trick>Martin Neil and Norman Fenton: Simulation in March 2024 preprint about the cheap trick</a></li>
+<li><a href=#Wouter_Aukema_Dutch_CBS_mortality_statistics_by_vaccination_status>Wouter Aukema: Dutch CBS mortality statistics by vaccination status</a></li>
 </ul>
 
 <h2>
@@ -899,7 +900,7 @@ ggsave(&quot;1.png&quot;,width=4.2,height=2.8,dpi=450)</pre>
  21  18  22  20   9  18  17  10  12  10  10   2  12   5   7  38</pre>
 <p>The <code>Completeness_pct</code> column is described like this: <span class="quote">&quot;Represents the proportion of people with a completed primary series whose Federal Information Processing Standards (FIPS) code is reported and matches a valid county FIPS code in the jurisdiction.&quot;</span> [<a href="https://data.cdc.gov/Vaccinations/COVID-19-Vaccinations-in-the-United-States-County/8xkx-amqh/about_data">https://data.cdc.gov/Vaccinations/COVID-19-Vaccinations-in-the-United-States-County/8xkx-amqh/about_data</a>] And the <code>Administered_Dose1_Pop_Pct</code> column is described as the <span class="quote">&quot;Percent of Total Pop with at least one Dose by State of Residence&quot;</span>.</p>
 <h2>
-<a href=#Martin_Neil_and_Norman_Fenton_March_2024_preprint_about_the_cheap_trick id=Martin_Neil_and_Norman_Fenton_March_2024_preprint_about_the_cheap_trick>Martin Neil and Norman Fenton: March 2024 preprint about the cheap trick</a>
+<a href=#Martin_Neil_and_Norman_Fenton_Simulation_in_March_2024_preprint_about_the_cheap_trick id=Martin_Neil_and_Norman_Fenton_Simulation_in_March_2024_preprint_about_the_cheap_trick>Martin Neil and Norman Fenton: Simulation in March 2024 preprint about the cheap trick</a>
 </h2>
 <p>In March 2024, Martin Neil, Norman Fenton, and Scott McLachlan published a preprint titled <span class="quote">&quot;The extent and impact of vaccine status miscategorisation on covid-19 vaccine efficacy studies&quot;</span>: <a href="https://www.medrxiv.org/content/10.1101/2024.03.09.24304015v1.full.pdf">https://www.medrxiv.org/content/10.1101/2024.03.09.24304015v1.full.pdf</a>.</p>
 <p>The abstract said: <span class="quote">&quot;Systematic review identified thirty-nine studies that suffered from one particular and serious form of bias called miscategorisation bias, whereby study participants who have been vaccinated are categorised as unvaccinated up to and until some arbitrarily defined time after vaccination occurred. Simulation demonstrates that this miscategorisation bias artificially boosts vaccine efficacy and infection rates even when a vaccine has zero or negative efficacy. Furthermore, simulation demonstrates that repeated boosters, given every few months, are needed to maintain this misleading impression of efficacy. Given this, any claims of Covid-19 vaccine efficacy based on these studies are likely to be a statistical illusion.&quot;</span></p>
@@ -985,6 +986,126 @@ ggsave(&quot;1.png&quot;,width=3,height=3,dpi=450)</pre>
 </blockquote>
 <p>In the Substack post where Neil and Fenton described their simulation procedure in more detail, even people in their comment section were able to tell that it was BS, so I wonder if that's why they didn't include a proper description of their simulation procedure in their preprint.</p>
 <p>In any case Neil and Fenton knew that their simulation method was controversial, so they could've mentioned in their preprint that there's an alternative way to perform the simulations where the cheap trick is also applied to the denominator and which produces completely different results, and that they were not sure which method was used in real vaccine efficacy studies.</p>
+<h2>
+<a href=#Wouter_Aukema_Dutch_CBS_mortality_statistics_by_vaccination_status id=Wouter_Aukema_Dutch_CBS_mortality_statistics_by_vaccination_status>Wouter Aukema: Dutch CBS mortality statistics by vaccination status</a>
+</h2>
+<p>Denis Rancourt posted this tweet: [<a href="https://twitter.com/denisrancourt/status/1772434188223824079">https://twitter.com/denisrancourt/status/1772434188223824079</a>]</p>
+<div class="width5">
+<img src="i/debunk-aukema-1.jpg">
+</div>
+<p>However the spike in December 2022 probably wasn't even caused by COVID, because the Dutch CBS data has a low number of COVID deaths in December 2022:</p>
+<div class="width6">
+<img src="i/debunk-aukema-2.png">
+</div>
+<pre>library(ggplot2)
+
+t=read.csv(&quot;http://sars2.net/f/dutch_cbs_aukema.csv&quot;)
+t=t[!grepl(&quot;ully&quot;,t$status),]
+
+xy=aggregate(t[,4,drop=F],list(x=as.Date(t$week_ending)-3,z=paste0(t$status,ifelse(t$covid,&quot;, COVID&quot;,&quot;, not COVID&quot;))),sum)
+
+xy$z=factor(xy$z,paste0(rep(c(&quot;Unvaccinated&quot;,&quot;Vaccinated&quot;),2),rep(c(&quot;, not COVID&quot;,&quot;, COVID&quot;),each=2)))
+colnames(xy)[3]=&quot;y&quot;
+
+xstart=as.Date(&quot;2021-1-1&quot;);xend=as.Date(&quot;2023-1-1&quot;)
+xbreak=seq(xstart,xend,&quot;2 month&quot;)
+cand=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
+ystep=cand[which.min(abs(cand-(max(xy$y,na.rm=T)-min(xy$y,na.rm=T))/6))]
+ystart=ystep*floor(min(xy$y,na.rm=T)/ystep)
+yend=ystep*ceiling(max(xy$y,na.rm=T)/ystep)
+ybreak=seq(ystart,yend,ystep)
+
+color=c(hcl(c(210,0)+15,110,70),hcl(c(210,0)+15,100,30))
+
+ggplot(xy,aes(x=x,y=y))+
+geom_vline(xintercept=xbreak,linewidth=.3,lineend=&quot;square&quot;,color=&quot;gray84&quot;)+
+geom_vline(xintercept=c(xstart,xend),linewidth=.3,lineend=&quot;square&quot;)+
+geom_hline(yintercept=c(ystart,yend),linewidth=.3,lineend=&quot;square&quot;)+
+geom_line(aes(color=z),linewidth=.4)+
+labs(x=NULL,y=NULL)+
+scale_x_date(limits=c(xstart,xend),breaks=xbreak,date_labels=&quot;%b\n%y&quot;)+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
+scale_color_manual(values=color)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.ticks=element_line(linewidth=.3),
+  axis.ticks.length=unit(.15,&quot;lines&quot;),
+  axis.title=element_text(size=8),
+  legend.background=element_blank(),
+  legend.box.background=element_rect(fill=alpha(&quot;white&quot;,.85),color=&quot;black&quot;,linewidth=.3),
+  legend.box.just=&quot;center&quot;,
+  legend.direction=&quot;vertical&quot;,
+  legend.justification=c(0,1),
+  legend.key=element_rect(fill=alpha(&quot;white&quot;,0)),
+  legend.key.size=unit(.8,&quot;lines&quot;),
+  legend.margin=margin(.5,.4,.3,.4,&quot;lines&quot;),
+  legend.position=c(0,1),
+  legend.spacing.x=unit(.15,&quot;lines&quot;),
+  legend.spacing.y=unit(-.2,&quot;lines&quot;),
+  legend.text=element_text(size=7,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_rect(fill=&quot;white&quot;),
+  panel.grid.major=element_line(linewidth=.3,color=&quot;gray88&quot;),
+  plot.margin=margin(.5,.7,.3,.4,&quot;lines&quot;),
+  plot.title=element_text(size=7.5,margin=margin(.2,0,.4,0,&quot;lines&quot;)))
+ggsave(&quot;0.png&quot;,width=4.3,height=2.8,dpi=400)
+system(&quot;f=0.png;mogrify -trim $f;w=`identify -format %w $f`;convert -gravity northwest -splice x0 -size $[w]x -pointsize 45 -font /Library/Fonts/Arial\\ Unicode.ttf -interline-spacing -5 caption:&#39;Netherlands mortality statistics by vaccination status: Weekly number of deaths&#39; -pointsize 39 caption:&#39;Source: cbs.nl/nl-nl/longread/rapportages/2024/covid-vaccinatiestatus-en-sterfte/3-resultaten. People are counted as vaccinated from the day of the first vaccination. Weeks are plotted on Thursday.&#39; -gravity south -splice x20 $f -append -trim -bordercolor white -border 30 +repage 1.png&quot;)</pre>
+<p>In winter 2021-2022 COVID deaths peaked on the week ending December 5th 2021, but even then COVID deaths accounted for only about 25% of all deaths in the Dutch CBS data:</p>
+<pre>&gt; t=read.csv(&quot;http://sars2.net/f/dutch_cbs_aukema.csv&quot;)
+&gt; t=t[!grepl(&quot;ully&quot;,t$status)&amp;t$week_ending==&quot;2021-12-05&quot;,]
+&gt; m=tapply(t$deaths,list(ifelse(t$covid,&quot;COVID&quot;,&quot;not COVID&quot;),t$status),sum)
+&gt; m=cbind(m,total=rowSums(m))
+&gt; rbind(m,&quot;COVID pct&quot;=round(m[1,]/colSums(m)*100))
+          Unvaccinated Vaccinated total
+COVID              315        765  1080
+not COVID          568       2750  3318
+COVID pct           36         22    25</pre>
+<p>The plot below shows that compared to the number of deaths in January 2022, the spike in all-cause deaths in December 2021 was a lot higher in unvaccinated people than vaccinated people. (The unvaccinated population size gets smaller over time as more people get vaccinated, but only a small number of people got their first vaccine dose between the start of December 2021 and the end of January 2022.)</p>
+<div class="width6">
+<img src="i/debunk-aukema-4.png">
+</div>
+<p>Vaccinated people have lower non-COVID ASMR than unvaccinated people because of the healthy vaccinee effect, but you can adjust for it if you divide COVID ASMR by all-cause ASMR. But even then the ratio in unvaccinated people is much higher during the COVID wave in December 2021:</p>
+<div class="width6">
+<img src="i/debunk-aukema-7.png">
+</div>
+<p>The Netherlands had a high number of influenza cases in December 2022, which might explain why there was an increase in deaths even though there was a low number of COVID deaths: [<a href="https://app.powerbi.com/view?r=eyJrIjoiYWU4YjUyN2YtMDBkOC00MGI1LTlhN2UtZGE5NThjY2E1ZThhIiwidCI6ImY2MTBjMGI3LWJkMjQtNGIzOS04MTBiLTNkYzI4MGFmYjU5MCIsImMiOjh9">https://app.powerbi.com/view?r=eyJrIjoiYWU4YjUyN2YtMDBkOC00MGI1LTlhN2UtZGE5NThjY2E1ZThhIiwidCI6ImY2MTBjMGI3LWJkMjQtNGIzOS04MTBiLTNkYzI4MGFmYjU5MCIsImMiOjh9</a>]</p>
+<div class="width9">
+<img src="i/debunk-aukema-5.jpg">
+</div>
+<p>Germany also had a spike in all-cause mortality in December 2022 which coincided with a spike in influenza-like illness but not COVID:</p>
+<div class="width6">
+<img src="i/debunk-aukema-6.png">
+</div>
+<p>In one plot Aukema double-counted deaths, so he had about 5000-7500 deaths per week even though it should've been half of that: [<a href="https://twitter.com/UncleJo46902375/status/1763550999916990885">https://twitter.com/UncleJo46902375/status/1763550999916990885</a>]</p>
+<div class="width5">
+<img src="i/debunk-aukema-3.jpg">
+</div>
+<p>Even though adding together ratios is not possible in many cases, in the case of this dataset it's possible to calculate all-cause ASMR by adding together COVID and non-COVID ASMR, because the denominators are the same:</p>
+<pre>&gt; stdpop=c(70000,30000)
+&gt; t=read.table(header=T,text=&quot;
++ age  pop  dead_covid dead_non_covid
++ 0-49 2345 3          28
++ 50+  1234 11         98&quot;)
+&gt; asmr_covid=sum(t$dead_covid/t$pop*stdpop)
+&gt; asmr_noncovid=sum(t$dead_non_covid/t$pop*stdpop)
+&gt; asmr_total=sum(rowSums(t[,3:4])/t$pop*stdpop)
+&gt; asmr_covid+asmr_noncovid
+[1] 3575.292
+&gt; asmr_total
+[1] 3575.292</pre>
+<p>So if you add together COVID and non-COVID ASMR, it's much higher in unvaccinated people than vaccinated people, even though it's partially because of the temporal healthy vaccinee effect which wanes out over time, so the difference gets smaller over time:</p>
+<div class="width6">
+<img src="i/debunk-aukema-8.jpg">
+</div>
+<p>Netherlands is also a bad country for calculating a Rancourtian correlation between all-cause mortality and vaccine doses, because the first two doses were rolled out between COVID waves, the first booster was also given earlier than in other countries where it coincided with the Omicron wave, and for some reason there was a small number of deaths during the Omicron wave even though the number of cases and PCR positivity were high:</p>
+<div class="width6">
+<img src="i/debunk-aukema-9.png">
+</div>
+<p>Aukema posted this plot which showed that vaccinated people accounted for about 82% of COVID deaths: [<a href="https://twitter.com/waukema/status/1763512462412845432">https://twitter.com/waukema/status/1763512462412845432</a>]</p>
+<div class="width5">
+<img src="i/debunk-aukema-10.jpg">
+</div>
+<p>However according to the ECDC's vaccine tracker, about 96% of the Dutch population of ages 60 and above had been vacccinated by December 2021, and after that the percentage remained at 96.3% until 2023. [<a href="https://vaccinetracker.ecdc.europa.eu/public/extensions/COVID-19/vaccine-tracker.html#uptake-tab">https://vaccinetracker.ecdc.europa.eu/public/extensions/COVID-19/vaccine-tracker.html#uptake-tab</a>] The percentage might be too high because in other countries these statistics for the percentage of vaccinated people by age group are unreliable. But in the elderly age groups which account for most deaths, the percentage of vaccinated people is still probably much higher than 82%.</p>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
