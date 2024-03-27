@@ -112,6 +112,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#US_cities_with_no_excess_mortality_in_2020>US cities with no excess mortality in 2020</a></li>
 <li><a href=#Deaths_in_European_countries_in_the_fourth_quarter_of_2020>Deaths in European countries in the fourth quarter of 2020</a></li>
 <li><a href=#Claim_that_ages_65_74_had_no_excess_mortality_in_Germany_in_2020>Claim that ages 65-74 had no excess mortality in Germany in 2020</a></li>
+<li><a href=#Excess_ASMR_in_Sweden_using_Q3_to_Q2_years>Excess ASMR in Sweden using Q3 to Q2 years</a></li>
 </ul></li>
 <li><a href=#J_J_Couey>J.J. Couey</a>
 <ul>
@@ -1871,7 +1872,7 @@ as.Date(r,&quot;1970-1-1&quot;)[country]</pre>
 <div class="width5">
 <img src="i/nopandemic-usmortality-germanyage-1.jpg">
 </div>
-<p>However if you read the small print, it says that the baseline was the 2017-2019 average. But developed countries usually have a decreasing rate in mortality rate within age groups, which means that the average baseline underestimates excess mortality if you look at CMR within age groups. With the default linear regression baseline used by Mortality Watch, I got about 3% excess CMR for ages 65-74 in 2020:</p>
+<p>However if you read the small print, it says that the baseline was the 2017-2019 average. But developed countries usually have a decreasing rate in mortality rate within age groups, which means that the average baseline underestimates excess mortality if you look at CMR within age groups. When I used the 5-year linear regression baseline that is used by Mortality Watch by default, I got about 3% excess CMR for ages 65-74 in 2020:</p>
 <div class="width5">
 <img src="i/nopandemic-usmortality-germanyage-2.png">
 </div>
@@ -1879,6 +1880,93 @@ as.Date(r,&quot;1970-1-1&quot;)[country]</pre>
 <div class="width5">
 <img src="i/nopandemic-usmortality-germanyage-3.png">
 </div>
+<h3>
+<a href=#Excess_ASMR_in_Sweden_using_Q3_to_Q2_years id=Excess_ASMR_in_Sweden_using_Q3_to_Q2_years>Excess ASMR in Sweden using Q3 to Q2 years</a>
+</h3>
+<p>USMortality posted this tweet: [<a href="https://twitter.com/USMortality/status/1772908341528006992">https://twitter.com/USMortality/status/1772908341528006992</a>]</p>
+<div class="width5">
+<img src="i/nopandemic-usmortality-ets-1.jpg">
+</div>
+<p>However his July 2019 to June 2020 year only includes one quarter during COVID, and the 3 quarters before it all had negative seasonality-adjusted excess mortality (at least with the baseline I used here, where I excluded 2019 because it had exceptionally low mortality):</p>
+<div class="width6">
+<img src="i/nopandemic-usmortality-ets-2.png">
+</div>
+<p>OWID uses a 2015-2019 linear regression baseline for all countries, but it's inaccurate in the case of Sweden because 2019 had such low mortality. However the ETS baseline that USMortality used in the plot above doesn't give too much weight to 2019, so it actually produces negative total excess ASMR in the vaccine era in 2021-2023:</p>
+<div class="width6">
+<img src="i/nopandemic-usmortality-ets-3.png">
+</div>
+<p>Mortality Watch calculates ASMR for some countries like Sweden so that it uses the five broad age groups at STMF (0-14, 15-64, 65-74, 75-84, and 85+). I thought it may have explained why Sweden got negative total excess ASMR in 2021-2023, but here I got positive excess ASMR in 2021-2023 even when I used the STMF age groups:</p>
+<div class="width5">
+<img src="i/nopandemic-usmortality-ets-4.png">
+</div>
+<p>So I guess the negative excess ASMR was mostly the result of using the ETS baseline, but actually the ETS baseline might even be more accurate than the 2000-2019 polynomial baseline I used above.</p>
+<pre>library(ggplot2)
+
+cutl=\(x,y)cut(x,c(y,Inf),y,T,F)
+
+t=read.csv(&quot;http://sars2.net/f/swedenpopdead.csv&quot;)|&gt;subset(year&gt;=1990)
+
+std=t$pop[t$year==2020]
+y=tapply(t$dead/t$pop*std[t$age+1]/sum(std)*1e5,t$year,sum)
+xy=data.frame(x=unique(t$year),y,z=&quot;ASMR by single year of age&quot;)
+
+a=aggregate(t[,3:4],list(year=t$year,age=cutl(t$age,seq(0,100,5))),sum)
+std=a$pop[a$year==2020]
+y=tapply(a$dead/a$pop*std[a$age]/sum(std)*1e5,a$year,sum)
+xy2=data.frame(x=unique(a$year),y,z=&quot;ASMR by five-year age groups&quot;)
+
+a=aggregate(t[,3:4],list(year=t$year,age=cutl(t$age,c(0,15,65,75,85))),sum)
+std=a$pop[a$year==2020]
+y=tapply(a$dead/a$pop*std[a$age]/sum(std)*1e5,a$year,sum)
+xy3=data.frame(x=unique(a$year),y,z=&quot;ASMR by five broad STMF age groups&quot;)
+
+xy=rbind(xy,xy2,xy3)
+xy$z=factor(xy$z,unique(xy$z))
+
+xy$trend=unlist(lapply(split(xy,xy$z),\(x)predict(lm(y~poly(x,2),subset(x,x&lt;2020)),x)))
+
+cand=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
+ystep=cand[which.min(abs(cand-(max(xy$y)-min(xy$y))/4))]
+ystart=ystep*floor(min(xy$y)/ystep)
+yend=ystep*ceiling(max(xy$y)/ystep)
+ybreak=seq(ystart,yend,ystep)
+xstart=min(xy$x);xend=max(xy$x)
+
+color=c(hcl(225,110,60),hcl(270,110,60),hcl(320,110,60))
+
+ggplot(xy,aes(x,y,color=z))+
+geom_hline(yintercept=c(ystart,0,yend),color=&quot;black&quot;,linewidth=.3,lineend=&quot;square&quot;)+
+geom_vline(xintercept=c(xstart,xend),color=&quot;black&quot;,linewidth=.3,lineend=&quot;square&quot;)+
+geom_line(aes(color=z),linewidth=.3)+
+geom_line(aes(y=trend,color=z),linetype=2,linewidth=.3)+
+labs(title=&quot;Age-standardized mortality rate per 100,000 in Sweden&quot;,subtitle=&quot;The dashed line is a 2000-2019 second-degree polynomial trend, and the standard population is the 2020 Swedish population. Source: statistikdatabasen.scb.se/pxweb/en/ssd/START__BE.&quot;|&gt;stringr::str_wrap(83),x=NULL,y=NULL)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+scale_x_continuous(limits=c(xstart,xend),breaks=seq(1900,2100,5))+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
+scale_color_manual(values=color)+
+guides(colour=guide_legend(override.aes=list(linewidth=.4)))+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.ticks=element_line(linewidth=.3,color=&quot;black&quot;),
+  axis.ticks.length=unit(.2,&quot;lines&quot;),
+  axis.title=element_text(size=8),
+  legend.background=element_blank(),
+  legend.box.just=&quot;left&quot;,
+  legend.key=element_rect(fill=&quot;white&quot;),
+  legend.spacing.x=unit(.15,&quot;lines&quot;),
+  legend.key.size=unit(.75,&quot;lines&quot;),
+  legend.position=c(1,1),
+  legend.justification=c(1,1),
+  legend.box.background=element_rect(fill=alpha(&quot;white&quot;,1),color=&quot;black&quot;,linewidth=.3),
+  legend.margin=margin(-.15,.35,.25,.35,&quot;lines&quot;),
+  legend.text=element_text(size=7,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_rect(fill=&quot;white&quot;),
+  panel.grid.major=element_line(linewidth=.3,color=&quot;gray90&quot;),
+  plot.background=element_rect(fill=&quot;white&quot;),
+  plot.margin=margin(.4,.6,.4,.5,&quot;lines&quot;),
+  plot.subtitle=element_text(size=7.2),
+  plot.title=element_text(size=8.5))
+ggsave(&quot;1.png&quot;,width=4,height=3.5,dpi=450)</pre>
 <h2>
 <a href=#J_J_Couey id=J_J_Couey>J.J. Couey</a>
 </h2>
