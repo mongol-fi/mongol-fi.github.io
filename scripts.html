@@ -96,6 +96,8 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Get_consensus_set_of_mutations_in_a_variant>Get consensus set of mutations in a variant</a></li>
 <li><a href=#Find_ORFs_with_seqkit>Find ORFs with seqkit</a></li>
 <li><a href=#Highlight_positions_in_an_alignment_which_differ_from_the_consensus_sequence>Highlight positions in an alignment which differ from the consensus sequence</a></li>
+<li><a href=#Show_amino_acid_alignment_next_to_nucleotide_alignment_and_highlight_positions_that_are_different_from_the_consensus>Show amino acid alignment next to nucleotide alignment and highlight positions that are different from the consensus</a></li>
+<li><a href=#Make_a_heatmap_for_the_percentage_of_nucleotide_changes_in_different_blocks_of_the_genome>Make a heatmap for the percentage of nucleotide changes in different blocks of the genome</a></li>
 </ul>
 
 <h2>
@@ -2262,36 +2264,37 @@ $ grep Viruses temp|awk -F\\t &#39;{a[$2]+=$1}END{for(i in a)print a[i]&quot;\t&
 <h2>
 <a href=#Get_consensus_set_of_mutations_in_a_variant id=Get_consensus_set_of_mutations_in_a_variant>Get consensus set of mutations in a variant</a>
 </h2>
+<p>This downloads metadata for a global subsample of about 3000 SARS2 sequences from NextStrain, and it selects mutations which appear in over half of all sequences where the variant is listed as Alpha:</p>
 <pre>$ curl https://data.nextstrain.org/files/ncov/open/global/metadata.tsv.xz|gzip -dc&gt;global.tsv
-$ awk -F\\t &#39;$34==&quot;Alpha&quot;&#39; global.tsv|cut -f56|awk &#39;{split($0,z,&quot;,&quot;);for(i in z)a[z[i]]++}END{for(i in a)if(a[i]&gt;NR/2)print i}&#39;
+$ awk -F\\t &#39;$34==&quot;Alpha&quot;&#39; global.tsv|cut -f56|awk &#39;{split($0,z,&quot;,&quot;);for(i in z)a[z[i]]++}END{for(i in a)if(a[i]&gt;NR/2)print substr(i,2),i}&#39;|sort -n|cut -d\  -f2
+C241T
+C913T
+C3037T
+C3267T
+C5388A
+C5986T
+T6954C
+C14408T
+C14676T
+C15279T
 T16176C
 A23063T
-C27972T
-T6954C
-C241T
-C14408T
-C5388A
-A23403G
-G24914C
-G28882A
-C3267T
-A28111G
-C14676T
-C23604A
-T24506G
-C5986T
-C913T
-C15279T
-G28048T
 C23271A
-G28881A
-C3037T
-G28883C
-C28977T
-A28281T
+A23403G
+C23604A
 C23709T
+T24506G
+G24914C
+C27972T
+G28048T
+A28111G
 G28280C
-T28282A</pre>
+A28281T
+T28282A
+G28881A
+G28882A
+G28883C
+C28977T</pre>
 <h2>
 <a href=#Find_ORFs_with_seqkit id=Find_ORFs_with_seqkit>Find ORFs with seqkit</a>
 </h2>
@@ -2342,11 +2345,118 @@ cohl()(awk &#39;NR==1{split($0,a,&quot;&quot;);next}{split($0,b,&quot;&quot;);fo
 cohl2()(x=$(cat);acons&lt;&lt;&lt;&quot;$x&quot;|cohl - &lt;(printf %s\\n &quot;$x&quot;))
 
 # highlight positions that are different from the consensus using FASTA input
-cohl3()(x=$(cat);paste -d\   &lt;(cut -f1 &lt;&lt;&lt;&quot;$x&quot;) &lt;(cut -f2-&lt;&lt;&lt;&quot;$x&quot;|cohl2))
+cohl3()(x=$(seqkit fx2tab);paste -d\   &lt;(cut -f1 &lt;&lt;&lt;&quot;$x&quot;) &lt;(cut -f2&lt;&lt;&lt;&quot;$x&quot;|cohl2))
 
-seqkit fx2tab env.aa|sed $&#39;s/lcl|//;s/_prot_[^\t]*//&#39;|awk -F\\t &#39;NR==FNR{a[$1]=$2;next}{print&quot;&gt;&quot;a[$1]&quot;\n&quot;$2}&#39; &lt;(seqkit seq -n sarbe.fa|sed &#39;s/,.*//;s/ \(ORF\|surface\).*//;s/ .* /\t/&#39;) -|mafft --quiet -|seqkit fx2tab|cut -f-2|cohl3|column -t</pre>
+seqkit fx2tab env.aa|sed $&#39;s/lcl|//;s/_prot_[^\t]*//&#39;|awk -F\\t &#39;NR==FNR{a[$1]=$2;next}{print&quot;&gt;&quot;a[$1]&quot;\n&quot;$2}&#39; &lt;(seqkit seq -n sarbe.fa|sed &#39;s/,.*//;s/ \(ORF\|surface\).*//;s/ .* /\t/&#39;) -|mafft --quiet -|cohl3|column -t</pre>
 <div class="width7">
 <img src="i/scripts-cohl.png">
+</div>
+<h2>
+<a href=#Show_amino_acid_alignment_next_to_nucleotide_alignment_and_highlight_positions_that_are_different_from_the_consensus id=Show_amino_acid_alignment_next_to_nucleotide_alignment_and_highlight_positions_that_are_different_from_the_consensus>Show amino acid alignment next to nucleotide alignment and highlight positions that are different from the consensus</a>
+</h2>
+<pre># awk consensus
+acons()(awk -F &#39;&#39; &#39;{for(i=1;i&lt;=NF;i++)a[i][$i]++}END{for(i in a){max=0;for(j in a[i])if(a[i][j]&gt;max){max=a[i][j];o=j}printf&quot;%s&quot;,o};print&quot;&quot;}&#39;)
+
+# highlight positions that are different from the first row
+cohl()(awk &#39;NR==1{split($0,a,&quot;&quot;);next}{split($0,b,&quot;&quot;);for(i=1;i&lt;=length;i++)printf&quot;%s&quot;,b[i]==a[i]?b[i]:&quot;\033[31m&quot;b[i]&quot;\033[0m&quot;;print&quot;&quot;}&#39; &quot;$@&quot;)
+
+# highlight positions that are different from the consensus using input with one sequence per line
+cohl2()(x=$(cat);acons&lt;&lt;&lt;&quot;$x&quot;|cohl - &lt;(printf %s\\n &quot;$x&quot;))
+
+brew install seqkit bowtie2
+curl -sL sars2.net/f/sarbe.fa.xz|gzip -dc&gt;sarbe.fa;seqkit seq -g sarbe.fa&gt;sarbe.ungap
+curl &#39;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&amp;rettype=fasta_cds_na&amp;id=NC_045512&#39;&gt;sars2.na
+bow()([[ -e $1.1.bt2 ]]||bowtie2-build --threads 3 &quot;$1&quot; &quot;$1&quot;;bowtie2 --no-unal -p3 -x &quot;$@&quot;)
+
+seqkit grep -nrp =S sars2.na|seqkit subseq -r $[438*3-2]:$[508*3]|bow sarbe.ungap -fU- -a --score-min L,-1,-1|grep -v ^@|ruby -ane&#39;puts [$F[2],$F[3],$F[3].to_i+$F[5].scan(/\d+(?=[MD])/).map(&amp;:to_i).sum-1]*&quot; &quot;&#39;|while read l m n;do seqkit grep -p $l sarbe.ungap|seqkit subseq -r $m:$n;done|seqkit grep -nrvp &#39;MP789 genomic sequence&#39;|sed -E $&#39;s/(,| surface| ORF1| genomic sequence).*//;s/.* /&gt;/&#39;&gt;rbm.fa
+
+seqkit translate rbm.fa|seqkit seq -s|sed &#39;s/./ &amp; /g&#39;|cohl2|sed s/31m/35m/g|paste -d\\n - &lt;(seqkit seq -s rbm.fa|cohl2)|paste -d\  - &lt;(seqkit seq -n rbm.fa|sed &#39;x;p;x&#39;)</pre>
+<div class="width14">
+<img src="i/scripts-rbm.png">
+</div>
+<h2>
+<a href=#Make_a_heatmap_for_the_percentage_of_nucleotide_changes_in_different_blocks_of_the_genome id=Make_a_heatmap_for_the_percentage_of_nucleotide_changes_in_different_blocks_of_the_genome>Make a heatmap for the percentage of nucleotide changes in different blocks of the genome</a>
+</h2>
+<pre># matrix sort grep (in a TSV file with rownames and colnames, pick first column whose name
+# matches substring and print rownames and the column sorted by the value of the column)
+masog()(awk -F\\t &#39;NR==1{for(i=2;i&lt;=NF;i++)if($i~x)break;next}{print$i,$1}&#39; x=&quot;$1&quot; &quot;${2--}&quot;|sort -n)
+
+# make a TSV file for percentage identity between aligned sequences
+curl -Ls sars2.net/f/pid.cpp&gt;pid.cpp;g++ pid.cpp -O3 -o pid
+
+(masog ZC45 sarbe.pid|awk &#39;$1&gt;88{print$2}&#39;|awk &#39;NR==FNR{a[$0];next}$0 in a&#39; &lt;(awk -F\\t &#39;NR&gt;1{for(i=2;i&lt;NR;i++)if($i&gt;98&amp;&amp;$1!~/BANAL|ZC45|ZXC21/)next;print$1}&#39; sarbe.pid|cut -d\  -f1);seqkit grep -nrp &#39;GD/P79-9/2019|BANAL|Tor2|MT121216.1&#39; sarbe.fa|seqkit seq -ni)|seqkit grep -f- sarbe.fa|mafft --quiet --thread 4 -&gt;nuc.fa;./pid&lt;nuc.fa&gt;nuc.pid</pre>
+<!-- -->
+<pre># install.packages(&quot;BiocManager&quot;);BiocManager::install(&quot;Biostrings&quot;)
+
+library(ggplot2)
+library(colorspace)
+library(Biostrings)
+
+t=readDNAStringSet(&quot;nuc.fa&quot;)
+names(t)=sub(&quot;^.*? &quot;,&quot;&quot;,sub(&quot;,.*&quot;,&quot;&quot;,names(t)))
+
+gene=read.csv(header=F,text=&quot;ORF1a,266,13468
+ORF1b,13468,21555
+S,21563,25384
+ORF3a,25393,26220
+E,26245,26472
+M,26523,27191
+ORF6,27202,27387
+ORF7a,27394,27759
+ORF8,27894,28259
+N,28274,29533
+ORF10,29558,29674&quot;)
+
+spike=read.csv(header=F,text=&quot;NTD,13,312
+RBD,319,528
+RBM,438,508
+S1,1,686
+S2,709,1273&quot;)
+
+gene=rbind(cbind(spike[1],(spike[2]-1)*3+gene[3,2],(spike[3]-1)*3+2+gene[3,2]),gene)
+
+m=as.matrix(t)
+ref=m[grepl(&quot;Wuhan-Hu-1&quot;,rownames(m)),]
+pos=seq_along(ref)-cumsum(ref==&quot;-&quot;)
+gene[,2]=sapply(gene[,2],\(x)which(pos==x)[1])
+gene[,3]=sapply(gene[,3],\(x)which(pos==x)[1])
+ranges=c(gene[1,3]+.5,gene[-1,2]-.5,gene[1,2],gene[nrow(gene),ncol(gene)])
+
+targname=&quot;BtSY2&quot;
+targ=grep(targname,names(t),value=T)
+
+step=1e3
+
+heat=100*apply(gene[-1],1,\(x)as.matrix(stringDist(subseq(t,x[1],x[2]),&quot;hamming&quot;))[targ,]/(x[2]-x[1]+1))
+
+# # don&#39;t count positions where either sequence has a gap
+# m2=m;m2[m2==&quot;-&quot;]=NA
+# heat=100*apply(gene[-1],1,\(x){block=m2[,x[1]:x[2]];1-colMeans(block[targ,]==t(block),na.rm=T)})
+
+colnames(heat)=gene[,1]
+
+dist=100-read.table(&quot;nuc.pid&quot;,sep=&quot;\t&quot;,row.names=1,header=T)
+
+hc=as.hclust(reorder(as.dendrogram(hclust(as.dist(dist))),cmdscale(dist,1)))
+
+rownames(heat)=sub(&quot;Severe acute respiratory syndrome&quot;,&quot;SARS&quot;,rownames(heat))
+rownames(heat)=sub(&quot; (ORF|surface).*&quot;,&quot;&quot;,rownames(heat))
+rownames(heat)=sub(&quot; isolate &quot;,&quot; &quot;,rownames(heat))
+
+pheatmap::pheatmap(heat,filename=&quot;0.png&quot;,legend=F,
+  clustering_callback=\(...)hc,cluster_cols=F,
+  gaps_col=nrow(spike),
+  cellwidth=17,cellheight=17,fontsize=9,treeheight_row=80,fontsize_number=8,treeheight_column=80,
+  border_color=NA,na_col=&quot;white&quot;,
+  display_numbers=round(heat),
+  number_color=matrix(ifelse(heat&gt;.8*max(heat),&quot;white&quot;,&quot;black&quot;),nrow(heat))[hc$order,],
+  breaks=seq(0,max(heat),,256),
+  colorRampPalette(hex(HSV(c(210,210,210,160,110,60,40,20,0,0,0),c(0,.25,rep(.5,9)),c(rep(1,9),.5,0))))(256)
+)
+
+system(paste0(&quot;convert -gravity north \\( -splice 0x26 -pointsize 46 label:&#39;Target: &quot;,targname,&quot; (percentage of nucleotide changes)&#39; \\) 0.png -append 1.png&quot;))</pre>
+<div class="width8">
+<img src="i/scripts-feature.png">
 </div>
 <script>
 let q=document.querySelectorAll('a,code,pre')
