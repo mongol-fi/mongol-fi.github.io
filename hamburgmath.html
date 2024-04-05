@@ -58,6 +58,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#What_were_the_other_384_095_contigs_produced_by_MEGAHIT>What were the other 384,095 contigs produced by MEGAHIT?</a></li>
 <li><a href=#STAT_results_of_SRA_reads>STAT results of SRA reads</a></li>
 <li><a href=#Results_of_Trinity_runs>Results of Trinity runs</a></li>
+<li><a href=#Was_SARS1_or_ZC45_used_as_a_reference_genome_to_assemble_Wuhan_Hu_1>Was SARS1 or ZC45 used as a reference genome to assemble Wuhan-Hu-1?</a></li>
 </ul></li>
 <li><a href=#Comparison_to_other_samples>Comparison to other samples</a>
 <ul>
@@ -102,15 +103,16 @@ th{background:#eee;text-align:left;font-weight:bold}
 <p>In the paper by the mathematician from Hamburg, there's plots for each virus reference sequence which show how many reads of each length aligned against the reference. The plot for SARS2 has a bimodal distribution with one peak around length 151 and another peak around length 35-40, but the plots for other viruses only have a single peak around length 35-40, which consists of reads which did not actually match the reference genome and which would have remained unaligned if he ran BBMap with the default parameters. But in the plot for SARS2, the y-axis is cut off in a deceptive way so you cannot see that the peak for reads around length 151 is much higher than the peaks around length 35-40 in the plots for other viruses.</p>
 <p>Wu et al. wrote that the longest contig they got with Trinity was only 11,760 bases long, but that's because Trinity split the genome of SARS2 into multiple shorter contigs, which probably either overlapped or had only small gaps in between. In order to merge the contigs, Wu et al. could've aligned all contigs against a related virus like ZC45 or SARS1, and they could've selected the most common base at each spot of the alignment. And if any gaps remained, Wu et al. could've filled in the gaps by using segments on either end of the gap as PCR primers and by sequencing the PCR amplicons. By default Trinity and MEGAHIT both require a region of a genome to be covered by at least two contigs before the contigs get merged, so Wu et al. may have also gotten Trinity to merge the shorter contigs into a single contig if they would've added the option <code>--min_glue 1</code> which reduces the minimum coverage requirement from 2 to 1.</p>
 <p>When I ran Trinity on Wu et al.'s raw reads without trimming, my longest contig was 29,879 bases long, and it was otherwise identical to the third version of Wuhan-Hu-1 except it included a 5-base insertion at the 5' end, it had one nucleotide change in the middle, and it was missing the last 29 bases of the poly(A) tail. When I ran Trinity again after trimming the reads, my longest contig was 31,241 bases long because there was a 1,379-base insertion in the middle which consisted of two segments that were identical to two different parts of Wuhan-Hu-1. The reason why Wu et al. failed to get a single complete contig with Trinity may have been because they used a different method to trim the reads, or because they used a different version of Trinity, or because Trinity was confused by the human reads which had been masked in my Trinity run.</p>
-<p>In the current 29,903-base version of Wuhan-Hu-1, the poly(A) tail is 33 bases long, but the full poly(A) tail cannot be assembled from the metagenomic raw reads because the full poly(A) tail is not included in the raw reads. Wu et al. wrote that they sequenced the ends of the genome with RACE (rapid amplification of cDNA ends), which is a method similar to PCR which only requires specifying a single primer instead of two primers, so it can be used to amplify the end of a genome by specifying a single segment near the end as the primer. In October 2020 when the sequence of RaTG13 was updated at GenBank so that a new 15-base segment was inserted to the 5' end, people from DRASTIC were suspecting fraud because the 15-base insert was not included in the metagenomic raw reads for RaTG13, but the insert was however included in the RACE amplicon sequences for RaTG13 which were only published later in 2021. But I believe the RACE amplicon sequences of Wuhan-Hu-1 have never been published.</p>
-<p>USMortality did an experiment where he downloaded the reference genomes of various viruses, he generated simulated short reads for the genomes, and he tried to assemble the reads back together with MEGAHIT, but he failed to get complete contigs for a couple of viruses, like HKU1, HIV-1, HIV-2, and porcine adenovirus. But that's because the reference genome of HKU1 contains a region where the same 30-base segment is repeated 14 times in a row. And in HIV-1 and HIV-2 there's a long terminal repeat where a long segment at the 5' end of the genome is repeated at the 3' end of the genome. And porcine adenovirus contains a tandem repeat where the same 724-base segment is repeated twice in a row. When USMortality did another experiment where he mixed together simulated reads from multiple different viruses and he ran MEGAHIT on the mixed reads, he failed to get complete contigs for SARS2 and SARS1, but that's because the contigs were split at a spot where there's a 74-base segment that is identical in the reference genomes of SARS2 and SARS1, and when I repeated his experiment, I was able to get complete contigs for SARS2 and SARS1 when I simply increased the maximum k-value of MEGAHIT from 141 to 161.</p>
+<p>In the current 29,903-base version of Wuhan-Hu-1, the poly(A) tail is 33 bases long, but the full poly(A) tail cannot be assembled from the metagenomic raw reads because the full poly(A) tail is not included in the raw reads. Wu et al. wrote that they sequenced the ends of the genome with RACE (rapid amplification of cDNA ends), which is a method similar to PCR which only requires specifying a single primer instead of two primers, so it can be used to amplify the end of a genome by specifying a single segment near the end as the primer. In October 2020 when the sequence of RaTG13 was updated at GenBank so that a new 15-base segment was inserted to the 5' end, some people from DRASTIC were suspecting fraud because the 15-base insert was not included in the metagenomic raw reads for RaTG13, but the insert was however included in the RACE amplicon sequences for RaTG13 which were only published later in 2021. But I believe the RACE amplicon sequences of Wuhan-Hu-1 have never been published.</p>
+<p>When Wu et al. wrote that they determined the viral genome organization of WHCV by aligning it against SARS-CoV Tor2 and bat SL-CoVZC45, they meant that after they had already assembled the complete genome of SARS2, they aligned it against SARS1 and ZC45 in order to make annotating the proteins easier. So if for example they got one open reading frame that started around position 21,500 and ended around position 25,000, they knew that it was the spike protein if it covered roughly the same region as the spike protein of SARS1. But they did not mean that they aligned the raw reads of SARS2 against a SARS1 genome in order to do reference-based assembly.</p>
+<p>USMortality did an experiment where he downloaded the reference genomes of various viruses, he generated simulated short reads for the genomes, and he tried to assemble the reads back together with MEGAHIT, but he failed to get complete contigs for a couple of viruses, like HKU1, HIV-1, HIV-2, and porcine adenovirus. But that's because the reference genome of HKU1 contains a region where the same 30-base segment is repeated 14 times in a row. And in HIV-1 and HIV-2 there's a long terminal repeat where a long segment at the 5' end of the genome is repeated at the 3' end of the genome. And porcine adenovirus contains a tandem repeat where the same 724-base segment is repeated twice in a row. And when USMortality did another experiment where he mixed together simulated reads from multiple different viruses and he ran MEGAHIT on the mixed reads, he failed to get complete contigs for SARS2 and SARS1, but that's because the contigs were split at a spot where there's a 74-base segment that is identical in the reference genomes of SARS2 and SARS1, and when I repeated his experiment, I was able to get complete contigs for SARS2 and SARS1 when I simply increased the maximum k-value of MEGAHIT from 141 to 161.</p>
 <h2>
 <a href=#Assembly_of_Wuhan_Hu_1 id=Assembly_of_Wuhan_Hu_1>Assembly of Wuhan-Hu-1</a>
 </h2>
 <h3>
 <a href=#Assembly_errors_in_first_two_versions_of_Wuhan_Hu_1_at_GenBank id=Assembly_errors_in_first_two_versions_of_Wuhan_Hu_1_at_GenBank>Assembly errors in first two versions of Wuhan-Hu-1 at GenBank</a>
 </h3>
-<p>The standard reference genome of SARS2 is known as Wuhan-Hu-1, and it was described in a paper by Wu et al. titled <span class="quote">&quot;A new coronavirus associated with human respiratory disease in China&quot;</span>. [<a href="https://www.nature.com/articles/s41586-020-2008-3">https://www.nature.com/articles/s41586-020-2008-3</a>] There's currently three versions of Wuhan-Hu-1 at GenBank: MN908947.1 is 30,474 bases long and it was published on January 12th 2020, MN908947.2 is 29,875 bases long and it was published on January 14th 2020, and MN908947.3 is 29,903 bases long and it was published on January 17th 2020. [<a href="https://www.ncbi.nlm.nih.gov/nuccore/MN908947.3?report=girevhist">https://www.ncbi.nlm.nih.gov/nuccore/MN908947.3?report=girevhist</a>] I'm not sure if the dates are in UTC or in the eastern U.S. timezone.</p>
+<p>The standard reference genome of SARS2 is known as Wuhan-Hu-1, and it was described in a paper by Wu et al. titled <span class="quote">&quot;A new coronavirus associated with human respiratory disease in China&quot;</span>. [<a href="https://www.nature.com/articles/s41586-020-2008-3">https://www.nature.com/articles/s41586-020-2008-3</a>] There's currently three versions of Wuhan-Hu-1 at GenBank: MN908947.1 is 30,474 bases long and it was published on January 12th 2020, MN908947.2 is 29,875 bases long and it was published on January 14th 2020, and MN908947.3 is 29,903 bases long and it was published on January 17th 2020. [<a href="https://www.ncbi.nlm.nih.gov/nuccore/MN908947.3?report=girevhist">https://www.ncbi.nlm.nih.gov/nuccore/MN908947.3?report=girevhist</a>] I believe the dates are in UTC and not in a local timezone.</p>
 <p>Apart from a single nucleotide change in the N gene, the only differences between the three versions are at the beginning of the genome in the 5' UTR and at the end of the genome in the 3' UTR:</p>
 <pre>$ brew install mafft
 [...]
@@ -221,8 +223,8 @@ aaaaattaaaaatatcctatagcaaagggctatggcatctttttgtaaaaataaggaaag
 caaggttttttgataatc</pre>
 <p>The best match is 616 bases long because it's missing the last 2 bases of the query, but 614 out of 616 bases are identical with a result titled <span class="quote">&quot;Human DNA sequence from clone RP11-173E24 on chromosome 1q31.1-31.3, complete sequence&quot;</span>.</p>
 <p>I have also found other sarbecovirus sequences where a piece of host DNA or rRNA was accidentally included at either end of the genome. For example in a sequence for the SARS-like bat virus Rs7907, I noticed that the 5' end had an insertion which was missing from other SARS-like viruses:</p>
-<pre class=width00>$ curl https://sars2.net/f/sarbe.fa.xz|xz -dc>sarbe.fa
-$ seqkit fx2tab sarbe.fa|grep -Ev 'Rs7931|Ra7909'|grep -C10 Rs7907|awk -F\\t '{print$1 FS substr($2,1,550)}'|seqkit tab2fx|mafft --globalpair --quiet -|seqkit fx2tab|awk -F\\t '{print $2 FS$1}'|cut -d, -f1|column -ts$'\t'
+<pre class=width00>$ curl https://sars2.net/f/sarbe.fa.xz|xz -dc&gt;sarbe.fa
+$ seqkit fx2tab sarbe.fa|grep -Ev &#39;Rs7931|Ra7909&#39;|grep -C10 Rs7907|awk -F\\t &#39;{print$1 FS substr($2,1,550)}&#39;|seqkit tab2fx|mafft --globalpair --quiet -|seqkit fx2tab|awk -F\\t &#39;{print $2 FS$1}&#39;|cut -d, -f1|column -ts$&#39;\t&#39;
 a----------------------------------------------------------------taaaaggattcatccttccc----  MT726044.1 Bat coronavirus isolate PREDICT/PDF-2370/OTBA35RSV
 a----------------------------------------------------------------taaaaggattcatccttccc----  MT726043.1 Sarbecovirus sp. isolate PREDICT/PDF-2386/OTBA40RSV
 -----------------------------------------------------------------taaaaggattaatccttccc----  KY352407.1 Severe acute respiratory syndrome-related coronavirus strain BtKY72
@@ -285,47 +287,44 @@ CTCAAGCCTTACCGCAGAGACAGAAG
 <pre>$ fastq-dump SRR16979454 # RACE sequences of RaTG13
 $ curl &#39;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&amp;rettype=fasta&amp;id=MN996532.&#39;{1,2}|mafft -&gt;ratg.fa # first and second version of RaTG13
 [...]
-$ Rscript -e &#39;m=t(as.matrix(Biostrings::readDNAStringSet(&quot;ratg.fa&quot;)));pick=which(rowSums(m!=m[,1])&gt;0);write.table(cbind(m[pick,],pick),quote=F,col.names=F,row.names=F)&#39;
-- A 1
-- T 2
-- T 3
-- A 4
-- A 5
-- A 6
-- G 7
-- G 8
-- T 9
-- T 10
-- T 11
-- A 12
-- T 13
-- A 14
-- C 15
-C T 2125
-C A 2132
-C A 6936
-G A 7127
-G T 18812
-C G 18813
-A - 29856
-A - 29857
-A - 29858
-A - 29859
-A - 29860
-A - 29861
-A - 29862
-A - 29863
-A - 29864
-A - 29865
-A - 29866
-A - 29867
-A - 29868
-A - 29869
-A - 29870
+$ aldi2(){ cat &quot;$@&quot;&gt;/tmp/aldi;Rscript --no-init-file -e &#39;m=t(as.matrix(Biostrings::readAAStringSet(&quot;/tmp/aldi&quot;)));diff=which(rowSums(m!=m[,1])&gt;0);split(diff,cumsum(diff(c(-Inf,diff))!=1))|&gt;sapply(\(x)c(if(length(x)==1)x else paste0(x[1],&quot;-&quot;,tail(x,1)),apply(m[x,,drop=F],2,paste,collapse=&quot;&quot;)))|&gt;t()|&gt;write.table(quote=F,sep=&quot;;&quot;,row.names=F)&#39;;}
+;MN996532.1 Bat coronavirus RaTG13, complete genome;MN996532.2 Bat coronavirus RaTG13, complete genome
+1-15;---------------;attaaaggtttatac
+2125;c;t
+2132;c;a
+6936;c;a
+7127;g;a
+18812-18813;gc;tg
+29856-29870;aaaaaaaaaaaaaaa;---------------
 $ seqkit locate -irp attaaaggtttatac SRR16979454.fastq|column -ts$&#39;\t&#39; # search RACE sequences for the 15-base segment that was added to the start of the second version of RaTG13
 seqID          patternName      pattern          strand  start  end  matched
 SRR16979454.4  attaaaggtttatac  attaaaggtttatac  -       461    475  ATTAAAGGTTTATAC</pre>
 <p>As far as I know, the RACE sequences used by Wu et al. were never published, but I guess they match a longer part of the poly(A) tail than the metagenomic reads which only included a few bases of the poly(A) tail.</p>
+<p>All five BANAL viruses are also missing parts of the 5' UTR like the first version of RaTG13:</p>
+<pre>$ curl -sL sars2.net/f/sarbe.fa.xz|xz -dc&gt;sarbe.fa
+$ wget sars2.net/f/sarbe.pid
+$ curl -s &#39;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&amp;rettype=fasta&amp;id=MN996532.1&#39;|sed &#39;1s/.*/&gt;RaTG13_version_1_no_RACE/&#39;&gt;ratg1.fa
+$ awk -F\\t &#39;NR==1{for(i=2;i&lt;=NF;i++)if($i~/Wuhan-Hu-1/)break;next}$i&gt;93{print$1}&#39; sarbe.pid|cut -d\  -f1|seqkit grep -f- sarbe.fa|cat - ratg1.fa|seqkit subseq -r1:1000|mafft --quiet --thread 4 -|seqkit subseq -r 1:60|seqkit fx2tab|sed $&#39;s/.* \\(.*\\),[^\t]*/\\1/&#39;|column -t
+Wuhan-Hu-1                attaaaggtttataccttcccaggtaacaaaccaaccaactttcgatctcttgtagatct
+BANAL-20-236/Laos/2020    -ttaaaggtttataccttcccaggtaacaaaccaaccaactctcgatctcttgtagatct
+BANAL-20-103/Laos/2020    -----------------------------------------ctcgaattcttgtagatct
+BANAL-20-52/Laos/2020     ------------------------taacaaaccaaccaactttcgatctcttgtagatct
+RaTG13                    attaaaggtttatacctttccaggtaacaaaccaacgaactctcgatctcttgtagatct
+bat/Yunnan/RpYN06/2020    attaaaggtttataccttcccaggtaacaaaccaaccaaccctcgatctcttgtagatct
+BANAL-20-247/Laos/2020    --------------------------------------actctcgatctcttgtagatct
+BANAL-20-116/Laos/2020    ------------------------------------------------------------
+RaTG13_version_1_no_RACE  ---------------ctttccaggtaacaaaccaacgaactctcgatctcttgtagatct</pre>
+<p>When I did local alignment of the metagenomic reads for RaTG13 against the second version of RaTG13 at GenBank, the minimum starting position among the aligned reads was only 15:</p>
+<pre>$ curl -s &#39;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&amp;rettype=fasta&amp;id=MN996532&#39;&gt;ratg13.fa
+$ parallel-fastq-dump --gzip --threads 10 --split-files --sra-id SRR11085797
+[...]
+$ minimap2 -a --sam-hit-only ratg13.fa SRR11085797_[12].fastq.gz|awk &#39;$10==&quot;*&quot;{$10=x}$11==&quot;*&quot;{$11=y}{x=$10;y=$11}1&#39; {,O}FS=\\t|samtools sort -@3 -&gt;ratg13.bam
+[...]
+$ samtools view ratg13.bam|head -n4|cut -f1,2,4,6,10,12|tr \\t \|
+SRR11085797.8084709|0|15|151M|CCTTTCCAGGTAACAAACCAACGAACTCTCGATCTCTTGTAGATCTGTTCTCTAAACGAACTTTAAAATCTGTGTGACTGTCACTCGGCTGCATGCTTAGTGCACTCACGCAGTATAATTAATAACTAATTACTGTCGTTGACAGGACACG|NM:i:0
+SRR11085797.8811160|0|16|150M|CTTTCCAGGTAACAAACCAACCAACTCTCGATCTCTTGTAGATCTGTTCTCTAAACGAACTTTAAAATCTGTGTGACTGTCACTCGGCTGCATGCTTAGTGCACTCACGCAGTATAATTAATAACTAATTACTGTCGTTTACAGGACACG|NM:i:2
+SRR11085797.8084709|16|18|150M|TTCCAGGTNACAAACCAACGAACTCTCGATCTCTTGTAGATCTGTTCTCTAAACGAACTTTAAAATCTGTGTGACTGTCACTCGGCTGCATGCTTAGTGCACTCACGCAGTATAATTAATAACTAATTACTGTCGTTGACAGGACACGAG|NM:i:1
+SRR11085797.3139935|0|25|143M|TAACAAACCAACCAACTCTCGATCTCTTGTAGATCTGTTCTCTAAACGAACTTTAAAATCTGTGTGACTGTCACTCGGCTGCATGCTTAGTGCACTCACGCAGTATAATTAATAACTAATTACTGTCGTTGACAGGACACGAG|NM:i:1</pre>
 <h3>
 <a href=#Missing_poly_A_tail_in_metagenomic_reads id=Missing_poly_A_tail_in_metagenomic_reads>Missing poly(A) tail in metagenomic reads</a>
 </h3>
@@ -413,12 +412,12 @@ trimmomatic PE SRR10971381_{1,2}.fastq.gz SRR10971381_{1,2}.paired.fq.gz SRR1097
 megahit -1 SRR10971381_1.paired.fq.gz -2 SRR10971381_2.paired.fq.gz -o megahutrimmo</pre>
 <p>The paper by Wu et al. says: <span class="quote">&quot;In total, we generated 56,565,928 sequence reads that were de novo-assembled and screened for potential aetiological agents. Of the 384,096 contigs assembled by Megahit [9], the longest (30,474 nucleotides (nt)) had a high abundance and was closely related to a bat SARS-like coronavirus (CoV) isolate - bat SL-CoVZC45 (GenBank accession number MG772933) - that had previously been sampled in China, with a nucleotide identity of 89.1% (Supplementary Tables 1, 2).&quot;</span>. And 56,565,928 is identical to the number of reads in the SRA run deposited by Wu et al.. [<a href="https://www.ncbi.nlm.nih.gov/sra/?term=SRR10971381">https://www.ncbi.nlm.nih.gov/sra/?term=SRR10971381</a>] And 30,474 is identical to the length of the first version of Wuhan-Hu-1 at GenBank.</p>
 <p>However when I tried aligning the reads in Wu et al.'s metagenomic dataset against the first version of Wuhan-Hu-1, I got zero coverage for the last 579 bases, and the following were the reads with the highest ending position:</p>
-<pre class=width00>$ curl -s 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&rettype=fasta&id=MN908947.1'>wuhu1.fa
+<pre class=width00>$ curl -s &#39;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&amp;rettype=fasta&amp;id=MN908947.1&#39;&gt;wuhu1.fa
 $ bowtie2-build wuhu1.fa{,}
 [...]
-$ bowtie2 -p3 -x wuhu1.fa -1 SRR10971381_1.fastq.gz -2 SRR10971381_2.fastq.gz --no-unal|samtools sort -@2 ->sorted59.bam
+$ bowtie2 -p3 -x wuhu1.fa -1 SRR10971381_1.fastq.gz -2 SRR10971381_2.fastq.gz --no-unal|samtools sort -@2 -&gt;sorted59.bam
 [...]
-$ samtools view sorted59.bam|ruby -alne'puts [$F[3],$F[3].to_i+$F[5].scan(/\d+(?=[MD])/).map(&:to_i).sum,$F[5],$F.grep(/NM:i/)[0][/\d+/],$F[9]]*" "'|sort -nk2|tail|column -t
+$ samtools view sorted59.bam|ruby -alne&#39;puts [$F[3],$F[3].to_i+$F[5].scan(/\d+(?=[MD])/).map(&amp;:to_i).sum,$F[5],$F.grep(/NM:i/)[0][/\d+/],$F[9]]*&quot; &quot;&#39;|sort -nk2|tail|column -t
 29791  29887  96M        9   CGGGGAGAGCTGCCTATATGGAAGAGCCCTAATGTGTAAAATTAATTTTAGTAGTGCTATCCCCATGTGATTTTAATAGCTTCTTAGGAGAATGTC
 29797  29888  91M        12  AAACTGCCTATATGGAAGAGCCCTAATGTGTAAAATTAATTTTAGTAGTGCTATCCGCATGTGATTTTAATAGCTTCTTAGGAGAATAACA
 29766  29889  118M2I5M   13  GGCTCGAGTGTACAGTGAACAATGCTAGGGAGAGCTGCCTATATGGAAGAGCCCTAATGTGTAAAATTAATTTTAGTAGTGCTATCCCCATCTGATTTTAATAGCTTCTTAGGAGAATGACAAAA
@@ -594,7 +593,7 @@ $ jq -r &#39;[.[]|.tax_table[]|.parent]as$par|[.[]|.tax_table[]|select(.tax_id a
 3793;Gorilla gorilla gorilla
 3791;Prevotella sp. ICM33</pre>
 <p>Almost all viral leaf nodes were classified under SARS2, but there were also about 700 reads classified under a CRESS virus which might be some kind of spurious matches, and there were a few reads for a parvovirus and a <em>Pseudonomas</em> phage (which both also got short contigs in my MEGAHIT run):</p>
-<pre class=width00>$ jq -r '.[]|.tax_table[]|[.org,.total_count,.tax_id,.parent]|@tsv' SRR10971381.stat|awk -F\\t '{out[$3]=$0;parent[$3]=$4;name[$3]=$1;nonleaf[$4]}END{for(i in out){j=parent[i];chain="";do{chain=(chain?chain":":"")name[j];j=parent[j]}while(j!="");print out[i]"\t"!(i in nonleaf)"\t"chain}}'|sort -nr|grep Virus|sort -t$'\t' -rnk2|awk -F\\t '$5{print$2 FS$1" - "$6}'|head -n20|column -ts$'\t'
+<pre class=width00>$ jq -r &#39;.[]|.tax_table[]|[.org,.total_count,.tax_id,.parent]|@tsv&#39; SRR10971381.stat|awk -F\\t &#39;{out[$3]=$0;parent[$3]=$4;name[$3]=$1;nonleaf[$4]}END{for(i in out){j=parent[i];chain=&quot;&quot;;do{chain=(chain?chain&quot;:&quot;:&quot;&quot;)name[j];j=parent[j]}while(j!=&quot;&quot;);print out[i]&quot;\t&quot;!(i in nonleaf)&quot;\t&quot;chain}}&#39;|sort -nr|grep Virus|sort -t$&#39;\t&#39; -rnk2|awk -F\\t &#39;$5{print$2 FS$1&quot; - &quot;$6}&#39;|head -n20|column -ts$&#39;\t&#39;
 54238  Severe acute respiratory syndrome coronavirus 2 - Severe acute respiratory syndrome-related coronavirus:Sarbecovirus:Betacoronavirus:Orthocoronavirinae:Coronaviridae:Cornidovirineae:Nidovirales:Riboviria:Viruses
 693    CRESS virus sp. - CRESS viruses:unclassified ssDNA viruses:unclassified DNA viruses:unclassified viruses:Viruses
 159    uncultured virus - environmental samples:Viruses
@@ -695,6 +694,41 @@ contig_name               start  end    length  mismatches  cigar_string
 TRINITY_DN39043_c0_g1_i2  4      29865  31241   1379        27790M1379I2072M
 TRINITY_DN39043_c0_g1_i1  21487  29852  9755    1413        6M4D5M1I3M3I2M3I28M1I2M2I6M9D6242M1379I2072M</pre>
 <p>When I did a BLAST search for the insert, it started with a 64-base segment which was identical to bases 29,109-29,172 of Wuhan-Hu-1 which was followed by a 1,315-base segment which was identical to bases 27,794-29,108 of Wuhan-Hu-1. So even though the starting position of the first segment was one base bigger than the ending position of the second segment, for some reason the order of the two segments was flipped in the insert.</p>
+<h3>
+<a href=#Was_SARS1_or_ZC45_used_as_a_reference_genome_to_assemble_Wuhan_Hu_1 id=Was_SARS1_or_ZC45_used_as_a_reference_genome_to_assemble_Wuhan_Hu_1>Was SARS1 or ZC45 used as a reference genome to assemble Wuhan-Hu-1?</a>
+</h3>
+<p>The paper by Wu et al. said: <span class="quote">&quot;The viral genome organization of WHCV was determined by sequence alignment to two representative members of the genus Betacoronavirus: a coronavirus associated with humans (SARS-CoV Tor2, GenBank accession number AY274119) and a coronavirus associated with bats (bat SL-CoVZC45, GenBank accession number MG772933). The un-translational regions and open-reading frame (ORF) of WHCV were mapped on the basis of this sequence alignment and ORF prediction. The WHCV viral genome was similar to these two coronaviruses (Fig. ​(Fig.11 and Supplementary Table 3). The order of genes (5' to 3') was as follows: replicase <em>ORF1ab</em>, <em>spike</em> (S), <em>envelope</em> (E), <em>membrane</em> (M) and <em>nucleocapsid</em> (N).&quot;</span> [<a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7094943/">https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7094943/</a>]</p>
+<p>So therefore Mark Bailey wrote: <span class="quote">&quot;As has been noted, <span class="quote">'bat SL-CoVZC45'</span> was an in silico genome, 29,802 nucleotides in length, invented in 2018, that was used by Fan Wu et al. as a template genome for the invention of the SARS-CoV-2 genome.&quot;</span> [<a href="https://drsambailey.substack.com/p/a-farewell-to-virology-expert-edition">https://drsambailey.substack.com/p/a-farewell-to-virology-expert-edition</a>]</p>
+<p>However the authors meant that after they had already assembled the complete genome of SARS2, they aligned it against the genomes of SARS1 and ZC45 in order to annotate the proteins corresponding to each ORF. They didn't mean that they used SARS1 as a reference genome when they assembled the raw reads.</p>
+<p>You can try running NCBI's ORFfinder on the genome of SARS2. Go here, enter <code>NC_045512</code> as the accession number, enable the option to ignore nested ORFs, and click submit: <a href="https://www.ncbi.nlm.nih.gov/orffinder/">https://www.ncbi.nlm.nih.gov/orffinder/</a>. It shows that the third ORF on the positive strand starts at position 21,536 and ends at position 25,384:</p>
+<div class="width7">
+<img src="i/hamburgmath-orf.jpg">
+</div>
+<p>In order to know what name you should give to the protein coded by the ORF, you can check which protein SARS1 has around the same region. But it happens to be the spike protein:</p>
+<pre>$ curl -s &#39;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&amp;rettype=fasta_cds_aa&amp;id=NC_004718&#39;|grep \&gt;|sed &#39;s/.*protein=//;s/\].*location=/: /;s/\].*//&#39;
+ORF1ab polyprotein: join(265..13392,13392..21485)
+ORF1a polyprotein: 265..13413
+spike glycoprotein: 21492..25259
+ORF3a protein: 25268..26092
+ORF3b protein: 25689..26153
+small envelope protein: 26117..26347
+membrane glycoprotein M: 26398..27063
+ORF6 protein: 27074..27265
+ORF7a protein: 27273..27641
+ORF7b protein: 27638..27772
+ORF8a protein: 27779..27898
+ORF8b protein: 27864..28118
+nucleocapsid protein: 28120..29388
+ORF9b protein: 28130..28426
+ORF9a protein: 28583..28795</pre>
+<p>But for example the ORF6 of Wuhan-Hu-1 starts at position 27,202, so if you simply looked at which ORF in SARS1 is the closest to it but you didn't align the sequences, it would be ORF7a. But if you align the sequences, then the ORF6 of SARS2 and SARS1 will have the same starting position so it's easier to do the annotation:</p>
+<pre>$ curl &#39;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&amp;rettype=fasta&amp;id=NC_004718,NC_045512&#39;&gt;sars12.fa
+$ mafft --quiet sars12.fa&gt;sars12.aln
+$ seqkit head -n1 sars12.fa|seqkit subseq -r27074:27100|seqkit locate -if- sars12.aln|sed 1d|cut -f5,6|seqkit subseq -r $(tr \\t :) sars12.aln
+&gt;NC_004718.3 SARS coronavirus Tor2, complete genome
+atgtttcatcttgttgacttccaggtt
+&gt;NC_045512.2 Severe acute respiratory syndrome coronavirus 2 isolate Wuhan-Hu-1, complete genome
+atgtttcatctcgttgactttcaggtt</pre>
 <h2>
 <a href=#Comparison_to_other_samples id=Comparison_to_other_samples>Comparison to other samples</a>
 </h2>
@@ -737,10 +771,10 @@ bowtie2-build sars2.fa{}
 x=wuhanjan;bowtie2 -p3 -x sars2.fa -1 SRR10903402_1.trim.fq.gz -2 SRR10903402_2.trim.fq.gz --no-unal|samtools sort -@2 -&gt;$x.bam
 samtools index $x.bam;bcftools mpileup -f sars2.fa $x.bam|bcftools call -mv -Ob -o $x.bcf;bcftools index $x.bcf;bcftools consensus -f sars2.fa $x.bcf&gt;$x.fa</pre>
 <p>Some of the reads aligned by Bowtie2 had a longer poly(A) tail than Wuhan-Hu-1, so I tried aligning the untrimmed reads against a version of Wuhan-Hu-1 with an extended poly(A) tail. I found one read where the poly(A) tail started 73 bases from the end of the read, even though it had a bunch of non-A bases near the end of the read and it only had 48 contiguous A bases. But I also got another read with 47 contiguous A bases, another with 39, and another with 38. And may of the long segments of A bases are preceded by <code>GAATGAC</code> which are also the last bases of Wuhan-Hu-1 before the poly(A) tail. So I guess the reads may have included samples of SARS2 which actually had a poly(A) tail longer than 33 bases:</p>
-<pre class=width00>$ (cat sars2.fa;echo AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA)>sars2a.fa
+<pre class=width00>$ (cat sars2.fa;echo AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA)&gt;sars2a.fa
 $ bowtie2-build sars2a.fa{}
 [...]
-$ bowtie2 -x sars2a.fa -1 SRR10903402_1.fastq.gz -2 SRR10903402_2.fastq.gz --no-unal -p3|samtools sort -@2 ->sorted54.bam
+$ bowtie2 -x sars2a.fa -1 SRR10903402_1.fastq.gz -2 SRR10903402_2.fastq.gz --no-unal -p3|samtools sort -@2 -&gt;sorted54.bam
 [...]
 $ samtools view sorted54.bam|cut -f4,10,17|tail -n8|column -t # show reads with highest starting position (NM is number of mismatches)
 29755  ACGTGTGCTCTTCCGATCTGCTAGGGAGAGCTGCCTATATGGAAGAGCCCTAATTTGTAAAATTAATTTTAGTAGTGCTATCCCCATGTGATTTTAATAGCTTTTTAGGAGAATGACAAAAAAAAAAAAAAAAAAAAAAAAAAAGAAAAAA  NM:i:14
@@ -753,7 +787,7 @@ $ samtools view sorted54.bam|cut -f4,10,17|tail -n8|column -t # show reads with 
 29773  GCTAGGGAGAGCTGCCTATATGGAAGAGCCCTAATGTGTAAAATTAATTTTAGTAGTGCTATCCCCATGTGATTTTAATAGCTTCTTAGGAGAATGACAAAAAAAAAAAAAAAAAAAAAAAAAAAAGAACGGAAGAGCGGCGGAGAGGAAA  NM:i:15
 29773  GCTAGGGAGAGCTGCCTATATGGAAGAGCCCTAATGTGTAAAATTAATTTTAGTAGTGCTATCCCCATGTGATTTTAATAGCTTCTTAGGAGAATGACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACGGAAAAGCAACGGA  NM:i:8
 29793  TGGAAGAGCCCTAATGAGTAAAATTAATTTTAGTAGTGCTATCCCCATGTGATTTTAATAGCTTCTTAGGAGAATGACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGGAAAAAGCAAGTGGAGGAAAAAAA  NM:i:11
-$ samtools view sorted54.bam|cut -f10|tail -n100|grep -Eo A+|awk '{print length}'|sort -n|tail # print the length of the longest consecutive segments of A bases among the last 100 reads
+$ samtools view sorted54.bam|cut -f10|tail -n100|grep -Eo A+|awk &#39;{print length}&#39;|sort -n|tail # print the length of the longest consecutive segments of A bases among the last 100 reads
 26
 27
 27
@@ -806,8 +840,8 @@ NC_011189.1  3418     1         34        0.994734    0.00  Mikania micrantha mo
 </h3>
 <p>Below I aligned 194 sequences of SARS1 and then printed the last 100 bases of the alignment. You can see that there's a lot of variation in the length of the poly(A) tail, and many sequences are even missing a part of the 3' end before the poly(A) tail:</p>
 <pre class=width00>$ wget https://sars2.net/f/sarbe.{pid,aln.xz}
-$ awk -F\\t <span class=quote>'NR==1{for(i=2;i<=NF;i++)if($i~/Tor2/)break;next}$1!=x{print$i,$1}'</span> sarbe.pid|awk '$1>=99{print$2}'|seqkit grep -f- sarbe.aln.xz|mafft --thread 4 --quiet ->sars1.aln
-$ seqkit subseq -r-100:-1 sars1.aln|seqkit fx2tab|awk -F\\t '{print$2,$1}'|sed 's/, complete genome//'
+$ awk -F\\t &#39;NR==1{for(i=2;i&lt;=NF;i++)if($i~/Tor2/)break;next}$1!=x{print$i,$1}&#39; sarbe.pid|awk &#39;$1&gt;=99{print$2}&#39;|seqkit grep -f- sarbe.aln.xz|mafft --thread 4 --quiet -&gt;sars1.aln
+$ seqkit subseq -r-100:-1 sars1.aln|seqkit fx2tab|awk -F\\t &#39;{print$2,$1}&#39;|sed &#39;s/, complete genome//&#39;
 gtgt-aaaattaattttagtagtgctatccccatgtgattttaatagcttcttag-gagaatgacaaaaaaaaaaaaaaaaa------------------ AY278489.2 SARS coronavirus GD01
 gtgt-aaaattaattttagtagtgctatccccatgtgattttaatagcttcttag-gagaatgacaaaa------------------------------- AY390556.1 SARS coronavirus GZ02
 gtgt-aaaattaattttagtagtgctatccccatgtgattttaatagcttctta---------------------------------------------- AY304488.1 SARS coronavirus SZ16
@@ -1397,7 +1431,7 @@ $ aldi2 temp.aln
 <img src="i/hamburgmath-usmortality-1.jpg">
 </div>
 <p>From the table of percentages above, you can see that when USMortality used <code>wgsim</code> to simulate short reads for the reference genome of HKU1, his longest contig was only about 89% of the length of the reference genome. I tried replicating his experiment so that I used <code>wgsim</code> to generate 100,000 70-base reads for the reference genome of HKU1. When I ran MEGAHIT to assemble the reads, I got two different contigs, and the longer contig was only 26,533 bases long even though the reference genome of HKU1 is 29,926 bases long:</p>
-<pre>$ brew install megahit -s
+<pre>$ brew install megahit -s # `-s` installs from source because the bottled version was compiled with GCC9 so I got an error when I tried to run it
 [...]
 $ brew install seqkit samtools
 [...]
@@ -1426,8 +1460,8 @@ AGATGTTGTTACTGGTGACAATGACGATGAAGATGTTGTTACTGGTGACAATGACGATGA
 AGATGTTGTTACTGGTGACAATGACGATGAAGATGTTGTTACTGGTGACAATGACGATGA
 AGATGTTGTTACTGGTGACAATGACGATGAAGATGTTGTTACTGG</pre>
 <p>A paper about HKU1 said: <span class="quote">&quot;Genome analysis also revealed various numbers of tandem copies of a perfect 30-base acidic tandem repeat (ATR) which encodes NDDEDVVTGD and various numbers and sequences of imperfect repeats in the N terminus of nsp3 inside the acidic domain upstream of papain-like protease 1 among the 22 genomes.&quot;</span> [<a href="https://pubmed.ncbi.nlm.nih.gov/16809319/">https://pubmed.ncbi.nlm.nih.gov/16809319/</a>] But <code>NDDEDVVTGD</code> is the translation of the 30-base repeated segment: <code>seqkit translate&lt;&lt;&lt;$'&gt;a\nAATGACGATGAAGATGTTGTTACTGGTGAC'</code>.</p>
-<p>Above I ran <code>wgsim</code> using the default read length which is 70 bases, and I used paired reads instead of unpaired reads. But if MEGAHIT would've had to assemble the contigs from unpaired reads that each were 70 bases long, how could it know how many times the 30-base segment was repeated if it can only see one a single 70-base window of the genome at a time? Actually one of the main reasons why the paired read layout is used is that it helps to assemble regions with repeats because the read pair covers a region that is longer than an individual read. [<a href="https://emea.illumina.com/science/technology/next-generation-sequencing/plan-experiments/paired-end-vs-single-read.html">https://emea.illumina.com/science/technology/next-generation-sequencing/plan-experiments/paired-end-vs-single-read.html</a>] But even though <code>wgsim</code> generated paired reads, I guess the region with repeats was so long and the read length was so short that the paired layout didn't help MEGAHIT to assemble the region correctly. However I also tried using a longer read length with <code>wgsim</code>, and I tried using a higher K-value with MEGAHIT, but neither helped with getting a complete contig for HKU1.</p>
-<p>USMortality also failed to assemble a complete contig for the genome of a porcine adenovirus, but that's because the genome contains a tandem repeat where the same 724-base segment is repeated twice in a row near the 3' end of the genome:</p>
+<p>Above I ran <code>wgsim</code> using the default read length which is 70 bases, and I used paired reads instead of unpaired reads. But if MEGAHIT would've had to assemble the contigs from unpaired reads that each were 70 bases long, how could it know how many times the 30-base segment was repeated if it can only see one a single 70-base window of the genome at a time? Actually one of the main reasons why the paired read layout is used is that it helps to assemble regions with repeats because the read pair covers a region that is longer than an individual read. [<a href="https://emea.illumina.com/science/technology/next-generation-sequencing/plan-experiments/paired-end-vs-single-read.html">https://emea.illumina.com/science/technology/next-generation-sequencing/plan-experiments/paired-end-vs-single-read.html</a>] But even though <code>wgsim</code> generated paired reads, I guess the region with repeats was so long and the read length was so short that the paired layout didn't help MEGAHIT to assemble the region correctly. However I also tried using a longer read length with <code>wgsim</code>, and I tried using a higher k-value with MEGAHIT, but neither helped with getting a complete contig for HKU1.</p>
+<p>USMortality also failed to assemble a complete contig for the reference genome of porcine adenovirus, but that's because it contains a tandem repeat where the same 724-base segment is repeated twice in a row near the 3' end:</p>
 <pre>$ curl &#39;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&amp;rettype=fasta&amp;id=NC_044935&#39;&gt;adeno.fa
 $ seqkit seq -s adeno.fa|awk &#39;{for(i=1;;i++){delete a;for(j=1;j&lt;=length-i+1;j++)a[substr($0,j,i)][j];found=0;for(x in a){if(length(a[x])&gt;1){found=1;for(y in a[x])print i,y,y+length(x)-1,x}}if(!found)exit}}&#39;|sort -srnk1,1|awk &#39;NR&gt;1&amp;&amp;$1!=x{exit}{x=$1}1&#39;
 725 29481 30205 CGAAGGACAACTCACCGTCCCCGCCACGGCCCCTTTAGTCTCAGGGAGCGCAGGCATCTCTTTCAACTACTCCAGCAATGACTTCGTCTTAGACAATGACAGTCTCAGTTTGAGGCCAAAGGCCATCTCTGTCACCCCTCCGCTGCAGTCCACAGAGGACACAATCTCCCTGAATTATTCTAACGACTTTTCTGTGGACAATGGCGCCCTCACCTTGGCTCCAACTTTCAAACCCTACACGCTGTGGACTGGCGCCTCACCCACAGCAAATGTCATTCTAACAAACACCACCACTCCCAACGGCACCTTTTTCCTATGCCTGACACGTGTGGGTGGGTTAGTTTTGGGTTCCTTTGCCCTGAAATCATCCATCGACCTTACTAGTATGACCAAAAAGGTCAATTTTATTTTTGATGGGGCAGGTCGGCTTCAGTCAGACTCCACTTATAAAGGGAGATTTGGATTTAGATCCAACGACAGCGTAATTGAACCCACAGCCGCAGGACTCAGTCCAGCCTGGTTAATGCCAAGCACCTTTATTTATCCACGCAACACCTCCGGTTCTTCCCTAACATCATTTGTATACATTAATCAGACATATGTGCATGTGGACATCAAGGTAAACACACTCTCTACAAACGGATATAGCCTAGAATTTAACTTTCAAAACATGAGCTTCTCCGCCCCCTTCTCCACCTCCTACGGGACCTTCTGCTACGTGCCCC
@@ -1484,7 +1518,7 @@ MN908947.3      ctctatctgtagtactatgaccaatagacagtttcatcaaaaattattgaaatcaatagc
 
 NC_004718.3     ---------------------
 MN908947.3      cgccactagaggagctactgt</pre>
-<p>The default read length used by wgsim is 70 bases, which is a few bases shorter than the length of the shared segment, but I failed to get single contigs for SARS1 and SARS2 even after I tried increasing the read length to 150 or 300. However when I increased the maximum K-value of MEGAHIT from 141 to 161, I was able to get single contigs for both SARS1 and SARS2 even with the default read length of 70:</p>
+<p>The default read length used by wgsim is 70 bases, which is a few bases shorter than the length of the shared segment, but I failed to get single contigs for SARS1 and SARS2 even after I tried increasing the read length to 150 or 300. However when I increased the maximum k-value of MEGAHIT from 141 to 161, I was able to get single contigs for both SARS1 and SARS2 even with the default read length of 70:</p>
 <pre>$ megahit -1 sars3_1.fq -2 sars3_2.fq -o megasars4 --k-list 21,29,39,59,79,99,119,141,161
 [...]
 2023-10-27 15:43:10 - 2 contigs, total 59634 bp, min 29751 bp, max 29883 bp, avg 29817 bp, N50 29883 bp
