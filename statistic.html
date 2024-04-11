@@ -1210,7 +1210,9 @@ system(&quot;f=0.png;w=`identify -format %w $f`;convert $f -gravity northwest \\
       ASMR was calculated using 5-year age groups so that the 2020 population of England and Wales was used as the standard population.
       On the row labeled \&quot;Population size times 2010-2019 linear trend in CMR by age\&quot;, a linear trend was calculated for crude mortality rate within each 5-year age group in 2010-2019, and then the projected trend was multiplied by the yearly population sizes of each age group, and the expected deaths for all age groups were added together to get the yearly total expected deaths.&#39; -extent $[w-44]x -gravity center \\) +swap -append -bordercolor white -border 6 +repage 1.png&quot;)</pre>
 <p>Craig wrote: <span class="quote">&quot;The ONS methodology is complex and opaque - for example, they have failed to publish any of the weightings they have used in their formula.&quot;</span> [<a href="https://www.hartgroup.org/too-many-deaths-are-to-be-expected/">https://www.hartgroup.org/too-many-deaths-are-to-be-expected/</a>] However the ONS published their R code at GitHub. [<a href="https://github.com/ONS-Health-modelling-hub/Excess_deaths/blob/main/ons_monthly_ed%2eR">https://github.com/ONS-Health-modelling-hub/Excess_deaths/blob/main/ons_monthly_ed%2eR</a>] Here's a simplified version of the code which just prints the expected number of deaths for England and Wales in December 2023:</p>
-<pre>d=openxlsx::read.xlsx(&quot;dataset20240220.xlsx&quot;,sheet=&quot;Table_2&quot;,startRow=5)
+<pre>getmonth=202312
+
+d=openxlsx::read.xlsx(&quot;dataset20240220.xlsx&quot;,sheet=&quot;Table_2&quot;,startRow=5)
 
 colnames(d)=c(&quot;year&quot;,&quot;month&quot;,&quot;weekdays&quot;,&quot;age&quot;,&quot;agecoarse&quot;,&quot;sex&quot;,&quot;geography&quot;,&quot;deaths&quot;,&quot;population&quot;)
 
@@ -1226,16 +1228,16 @@ d=d[order(d$age,d$sex,d$geography,d$period),]
 
 d$trend=ave(d$period,d$age,d$sex,d$geography,FUN=seq_along)
 
-fitting=d[d$trend%in%(d$trend[d$period==ref_period][1]-12:71),]
+fitting=d[d$trend%in%(d$trend[d$period==getmonth][1]-12:71),]
 fitting=subset(fitting,!period%in%c(202004,202005,202011,202012,202101,202102))
 
 reg=glm(deaths~age+sex+trend+month+weekdays+agecoarse:sex+agecoarse:trend+agecoarse:month+offset(log(population)),quasipoisson,fitting)
 
-out=d[d$period==202312,]
+out=d[d$period==getmonth,]
 out$excess=predict(reg,out,type=&quot;response&quot;)
 
 sum(out$excess)
-# 49728.14 (same as cell H7649 of Table 4 in the spreadsheet)</pre>
+# 49728.14 (same as cell H7649 of table 4 in the spreadsheet)</pre>
 <p>ONS is not the only organization which has switched away from using a simple average baseline. OWID previously also used a 2015-2019 average to calculate excess deaths, but they later switched to a 2015-2019 linear trend which is usually more accurate. OWID's website says: <span class="quote">&quot;Previously we used a different expected deaths baseline: the average number of deaths over the years 2015–2019.[8] We made this change because using the five-year average has an important limitation - it does not account for year-to-year trends in mortality and thus can misestimate excess mortality.[9] The WMD projection, on the other hand, does not suffer from this limitation because it accounts for these year-to-year trends.&quot;</span> [<a href="https://ourworldindata.org/excess-mortality-covid">https://ourworldindata.org/excess-mortality-covid</a>]</p>
 <p>The Australian Bureau of Statistics previously used a 2015-2019 average to calculate excess deaths during COVID, but in 2023 they switched to a more sophisticated cyclical linear regression method which reduced the excess deaths during COVID, because Australia has an increasing trend in deaths per year similar to most OECD countries. [<a href="https://www.abs.gov.au/articles/measuring-australias-excess-mortality-during-covid-19-pandemic-until-august-2023">https://www.abs.gov.au/articles/measuring-australias-excess-mortality-during-covid-19-pandemic-until-august-2023</a>]</p>
 <script>
