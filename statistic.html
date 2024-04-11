@@ -4,8 +4,7 @@
 body{background:#222;color:#e8e8e8;margin:6px 6px 6px max(6px, min(50vw - 275px, 100vw - 1200px))}
 body,td,th{font:14px/1.3 Arial,Helvetica,'Liberation Sans',sans-serif}
 p{max-width:520px}
-h1,h2,h3{font-weight:normal;color:#999}
-h2 a,h3 a{color:#999}
+h1,h2,h3,h2 a,h3 a{font-weight:normal;color:#999!important}
 h1{font-size:2em;margin-top:.9em}
 h2{font-size:1.6em}
 h3{font-size:1.23em}
@@ -22,7 +21,7 @@ blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(30,60%,70%)}
 blockquote blockquote blockquote,blockquote .quote .quote,.quote .quote .quote{color:hsl(30,70%,50%)}
 blockquote pre,blockquote code{color:black}
 code{padding:1px}
-img{max-width:100%;border:1.5px solid #ddd}
+img{max-width:100%}
 table{border-collapse:collapse}
 td,th{border:1.5px solid #ddd;padding:2px 4px}
 th{background:#eee;text-align:left;font-weight:bold}
@@ -1097,7 +1096,6 @@ sub=&quot;Source: ons.gov.uk/peoplepopulationandcommunity/healthandsocialcare/ca
       The gray baseline is a simple average of the past five years with 2020 excluded, so for example the baseline for 2023 consists of the years 2017-2019 and 2021-2022.&quot;
 
 system(paste0(&quot;mogrify -trim 0.png;convert 0.png -gravity northwest \\( -size `identify -format %w 0.png`x -font Arial -interline-spacing -3 -pointsize 46 caption:&#39;&quot;,sub,&quot;&#39; -gravity north -splice x30 \\) -append -bordercolor white -border 36 1.png&quot;))</pre>
-<p>Craig wrote: <span class="quote">&quot;The ONS methodology is complex and opaque - for example, they have failed to publish any of the weightings they have used in their formula.&quot;</span> [<a href="https://www.hartgroup.org/too-many-deaths-are-to-be-expected/">https://www.hartgroup.org/too-many-deaths-are-to-be-expected/</a>] However the ONS published their R code at GitHub. [<a href="https://github.com/ONS-Health-modelling-hub/Excess_deaths/blob/main/ons_monthly_ed%2eR">https://github.com/ONS-Health-modelling-hub/Excess_deaths/blob/main/ons_monthly_ed%2eR</a>]</p>
 <p>Craig also wrote: <span class="quote">&quot;However, you can't hide the truth forever. All that is needed is the calculation of an age-standardised mortality rate. This is a way of mapping mortality from a real population to one that has a standard age structure so different regions can be fairly compared with each other and across time. Using that methodology it is impossible to hide the issue of excess mortality.&quot;</span> In the code below I calculated ASMR for England and Wales using the spreadsheet that accompanied the methodology article by the ONS. I used the 2020 population as the standard population, and I used the 2005-2019 second-degree polynomial trend in ASMR as the baseline, which gave me only about 0.12% excess ASMR in the years 2016-2019 (so it's closer to the new ONS baseline than to the old ONS baseline):</p>
 <div class="width5">
 <img src="i/covidstat-onsbase-5.png">
@@ -1211,6 +1209,33 @@ pheatmap::pheatmap(m,filename=&quot;0.png&quot;,display_numbers=T,number_format=
 system(&quot;f=0.png;w=`identify -format %w $f`;convert $f -gravity northwest \\( -splice x16 -size $[w-44]x -pointsize 38 caption:&#39;Excess mortality percent in England and Wales (by date of registration, includes non-residents). Source: ONS dataset titled \&quot;Estimating excess deaths in the UK, methodology changes\&quot;.
       ASMR was calculated using 5-year age groups so that the 2020 population of England and Wales was used as the standard population.
       On the row labeled \&quot;Population size times 2010-2019 linear trend in CMR by age\&quot;, a linear trend was calculated for crude mortality rate within each 5-year age group in 2010-2019, and then the projected trend was multiplied by the yearly population sizes of each age group, and the expected deaths for all age groups were added together to get the yearly total expected deaths.&#39; -extent $[w-44]x -gravity center \\) +swap -append -bordercolor white -border 6 +repage 1.png&quot;)</pre>
+<p>Craig wrote: <span class="quote">&quot;The ONS methodology is complex and opaque - for example, they have failed to publish any of the weightings they have used in their formula.&quot;</span> [<a href="https://www.hartgroup.org/too-many-deaths-are-to-be-expected/">https://www.hartgroup.org/too-many-deaths-are-to-be-expected/</a>] However the ONS published their R code at GitHub. [<a href="https://github.com/ONS-Health-modelling-hub/Excess_deaths/blob/main/ons_monthly_ed%2eR">https://github.com/ONS-Health-modelling-hub/Excess_deaths/blob/main/ons_monthly_ed%2eR</a>] Here's a simplified version of the code which just prints the expected number of deaths for England and Wales in December 2023:</p>
+<pre>d=openxlsx::read.xlsx(&quot;dataset20240220.xlsx&quot;,sheet=&quot;Table_2&quot;,startRow=5)
+
+colnames(d)=c(&quot;year&quot;,&quot;month&quot;,&quot;weekdays&quot;,&quot;age&quot;,&quot;agecoarse&quot;,&quot;sex&quot;,&quot;geography&quot;,&quot;deaths&quot;,&quot;population&quot;)
+
+d=d[d$geography==&quot;England and Wales, including non-residents&quot;,]
+
+d$month=factor(d$month,month.name)
+d$age=factor(d$age,unique(d$age))
+d$agecoarse=factor(d$agecoarse,unique(d$agecoarse))
+d$sex=factor(d$sex)
+d$period=as.numeric(sprintf(&quot;%d%02d&quot;,d$year,match(d$month,month.name)))
+
+d=d[order(d$age,d$sex,d$geography,d$period),]
+
+d$trend=ave(d$period,d$age,d$sex,d$geography,FUN=seq_along)
+
+fitting=d[d$trend%in%(d$trend[d$period==ref_period][1]-12:71),]
+fitting=subset(fitting,!period%in%c(202004,202005,202011,202012,202101,202102))
+
+reg=glm(deaths~age+sex+trend+month+weekdays+agecoarse:sex+agecoarse:trend+agecoarse:month+offset(log(population)),quasipoisson,fitting)
+
+out=d[d$period==202312,]
+out$excess=predict(reg,out,type=&quot;response&quot;)
+
+sum(out$excess)
+# 49728.14 (same as cell H7649 of Table 4 in the spreadsheet)</pre>
 <p>ONS is not the only organization which has switched away from using a simple average baseline. OWID previously also used a 2015-2019 average to calculate excess deaths, but they later switched to a 2015-2019 linear trend which is usually more accurate. OWID's website says: <span class="quote">&quot;Previously we used a different expected deaths baseline: the average number of deaths over the years 2015–2019.[8] We made this change because using the five-year average has an important limitation - it does not account for year-to-year trends in mortality and thus can misestimate excess mortality.[9] The WMD projection, on the other hand, does not suffer from this limitation because it accounts for these year-to-year trends.&quot;</span> [<a href="https://ourworldindata.org/excess-mortality-covid">https://ourworldindata.org/excess-mortality-covid</a>]</p>
 <p>The Australian Bureau of Statistics previously used a 2015-2019 average to calculate excess deaths during COVID, but in 2023 they switched to a more sophisticated cyclical linear regression method which reduced the excess deaths during COVID, because Australia has an increasing trend in deaths per year similar to most OECD countries. [<a href="https://www.abs.gov.au/articles/measuring-australias-excess-mortality-during-covid-19-pandemic-until-august-2023">https://www.abs.gov.au/articles/measuring-australias-excess-mortality-during-covid-19-pandemic-until-august-2023</a>]</p>
 <script>

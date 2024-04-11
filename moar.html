@@ -1,26 +1,27 @@
 <!doctype html>
 <meta charset=utf-8>
 <style>
-body{margin:6px 6px 6px max(6px, min(50vw - 260px, 100vw - 1200px))}
+body{background:#222;color:#e8e8e8;margin:6px 6px 6px max(6px, min(50vw - 275px, 100vw - 1200px))}
 body,td,th{font:14px/1.3 Arial,Helvetica,'Liberation Sans',sans-serif}
 p{max-width:520px}
-h1,h2,h3{font-weight:normal}
-h2 a,h3 a{color:black}
+h1,h2,h3,h2 a,h3 a{font-weight:normal;color:#999!important}
 h1{font-size:2em;margin-top:.9em}
 h2{font-size:1.6em}
 h3{font-size:1.23em}
-pre,code{white-space:pre-wrap;word-wrap:break-word;font:13px Menlo,'DejaVu Sans Mono','Liberation Mono',Consolas,monospace;background:#dbdbdb}
-pre{padding:3px}
+a{color:hsl(220,100%,75%)}
+a:visited{color:hsl(270,100%,75%)}
+pre,code{white-space:pre-wrap;word-wrap:break-word;font:13px Menlo,'DejaVu Sans Mono','Liberation Mono',Consolas,monospace;background:#333;color:#d8d8d8}
+pre{padding:4px}
 blockquote{margin-left:40px;margin-right:0}
 blockquote p{max-width:480px}
 blockquote blockquote p{max-width:440px}
 blockquote blockquote blockquote p{max-width:400px}
-blockquote,.quote{color:hsl(30,65%,30%)}
-blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(30,45%,50%)}
-blockquote blockquote blockquote,blockquote .quote .quote,.quote .quote .quote{color:hsl(30,70%,60%)}
+blockquote,.quote{color:hsl(30,45%,65%)}
+blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(30,60%,70%)}
+blockquote blockquote blockquote,blockquote .quote .quote,.quote .quote .quote{color:hsl(30,70%,50%)}
 blockquote pre,blockquote code{color:black}
 code{padding:1px}
-img{max-width:100%;border:1.5px solid #ddd}
+img{max-width:100%}
 table{border-collapse:collapse}
 td,th{border:1.5px solid #ddd;padding:2px 4px}
 th{background:#eee;text-align:left;font-weight:bold}
@@ -1784,7 +1785,7 @@ ggsave(&quot;1.png&quot;,width=5.8,height=4.5)</pre>
 &gt; seasonal=linear+daily[days]
 &gt; sum((xy$y-seasonal)[xy$x&gt;=&quot;2020-01-01&quot;&amp;xy$x&lt;=&quot;2020-06-30&quot;])
 [1] -1736.934</pre>
-<p>Here's a plot of the same data from the Short-Term Mortality Fluctuations database:</p>
+<p>Here's a plot of the same data from the Short-Term Mortality Fluctuations dataset (updated in March 2024 so the number of deaths missing in 2023 is now lower):</p>
 <div class="width6">
 <img src="i/moar-seasonal-excess.png">
 </div>
@@ -1792,7 +1793,7 @@ ggsave(&quot;1.png&quot;,width=5.8,height=4.5)</pre>
 
 t=read.csv(&quot;https://www.mortality.org/File/GetDocument/Public/STMF/Outputs/NZL_NPstmfout.csv&quot;)
 t=t[t$Sex==&quot;b&quot;,]
-isoweek=\(year,week,weekday=1){d=as.Date(paste0(year,&quot;-1-7&quot;));d-(as.integer(format(d,&quot;%w&quot;))+6)%%7-1+7*(week-1)+weekday} # `as.Date` doesn&#39;t support `%V` (ISO 8601 week number)
+isoweek=\(year,week,weekday=1){d=as.Date(paste0(year,&quot;-1-7&quot;));d-(as.integer(format(d,&quot;%w&quot;))+6)%%7-1+7*(week-1)+weekday}
 xy=data.frame(x=isoweek(t$Year,t$Week,4),y=t$Total/7)
 xy=rbind(xy,data.frame(x=seq(min(xy$x),max(xy$x),1),y=NA))
 xy=xy[!duplicated(xy$x),]
@@ -1803,10 +1804,11 @@ linear=predict(lm(y~x,xy[prediction,]),xy)
 days=substr(xy$x,6,10)
 daily=tapply(xy$y[prediction]-linear[prediction],days[prediction],mean)
 seasonal=linear+daily[days]
-sum=sum((xy$y-seasonal)[xy$x&gt;=&quot;2020-01-01&quot;])
+sum=sum((xy$y-seasonal)[xy$x&gt;=&quot;2021-01-01&quot;&amp;xy$x&lt;=&quot;2023-12-31&quot;])
 
 names(xy)[2]=&quot;Actual deaths&quot;
-xy$`Linear projection`=linear
+xy$&quot;2015-2019 average&quot;=mean(xy$y[prediction])
+xy$`Linear projection (2015-2019)`=linear
 xy$`Seasonality-adjusted linear projection`=seasonal
 xy$`Actual deaths minus seasonality-adjusted linear projection`=xy[,2]-seasonal
 
@@ -1825,25 +1827,23 @@ yend=ybreak*ceiling(max(xy$y,na.rm=T)/ybreak)
 
 group=factor(xy$z,unique(xy$z))
 
-color=c(&quot;black&quot;,hcl(c(210,120,0)+15,95,50))
+color=c(&quot;black&quot;,hcl(50,50,50),hcl(c(210,120,0)+15,95,50))
 
-ystep=(yend-ystart)/15
-labels=data.frame(x=as.Date(xstart+.03*(xend-xstart),origin=&quot;1970-1-1&quot;),y=seq(62,by=-ystep,length.out=nlevels(group)),label=levels(group))
+ystep=(yend-ystart)/17
+labels=data.frame(x=as.Date(xstart+.03*(xend-xstart),origin=&quot;1970-1-1&quot;),y=seq(64,by=-ystep,length.out=nlevels(group)),label=levels(group))
 
 ggplot(xy,aes(x=x,y=y,color=group))+
 geom_hline(yintercept=c(ystart,0,yend),color=&quot;gray65&quot;,linewidth=.3)+
 geom_vline(xintercept=c(xstart,xend,as.Date(c(&quot;2020-1-1&quot;,&quot;2015-1-1&quot;))),color=&quot;gray65&quot;,linewidth=.3)+
 geom_line(aes(color=group),linewidth=.3)+
-annotate(geom=&quot;label&quot;,x=as.Date(&quot;2022-1-1&quot;),y=44,label=paste0(&quot;Total seasonality-adjusted\nexcess mortality since\nstart of 2020: &quot;,round(sum)),size=2.4,fill=&quot;gray90&quot;,label.r=unit(0,&quot;lines&quot;),label.padding=unit(.3,&quot;lines&quot;),label.size=0,hjust=.5)+
+annotate(geom=&quot;label&quot;,x=as.Date(&quot;2022-1-1&quot;),y=46,label=paste0(&quot;Total seasonality-adjusted\nexcess deaths from 2020\nto 2023: &quot;,round(sum)),size=2.3,fill=&quot;gray90&quot;,label.r=unit(0,&quot;lines&quot;),label.padding=unit(.3,&quot;lines&quot;),label.size=0,hjust=.5)+
 geom_label(data=labels,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.7),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.04,&quot;lines&quot;),label.size=0,color=color[1:nrow(labels)],size=2.6,hjust=0)+
-labs(title=&quot;Daily number of deaths in New Zealand (prediction interval 2015-2019)&quot;,x=NULL,y=NULL)+
+labs(title=&quot;Daily number of deaths in New Zealand (fitting period 2015-2019)&quot;,x=NULL,y=NULL)+
 coord_cartesian(clip=&quot;off&quot;)+
-scale_x_date(limits=c(xstart,xend),breaks=seq(xstart,xend,&quot;6 month&quot;),expand=expansion(0),labels=c(rbind(&quot;&quot;,2011:2023),&quot;&quot;))+
+scale_x_date(limits=c(xstart,xend),breaks=seq(xstart,xend,&quot;6 month&quot;),labels=c(rbind(&quot;&quot;,seq(2011,2023)),&quot;&quot;),expand=expansion(0))+
 scale_y_continuous(limits=c(ystart,yend),breaks=seq(ystart,yend,ybreak),expand=expansion(0))+
 scale_color_manual(values=color)+
-theme(
-  axis.text=element_text(size=7,color=&quot;black&quot;),
-  axis.text.x=element_text(angle=90,vjust=.5,hjust=.5),
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   axis.ticks=element_line(linewidth=.3,color=&quot;gray65&quot;),
   axis.ticks.length=unit(.2,&quot;lines&quot;),
   axis.ticks.x=element_line(color=c(&quot;gray65&quot;,NA)),
@@ -1854,9 +1854,7 @@ theme(
   plot.background=element_rect(fill=&quot;white&quot;),
   plot.margin=margin(.4,.6,.4,.5,&quot;lines&quot;),
   plot.subtitle=element_text(size=7),
-  plot.title=element_text(size=8.5)
-)
-
+  plot.title=element_text(size=8.5))
 ggsave(&quot;1.png&quot;,width=4.6,height=3.3)</pre>
 <p>OWID previously used the prepandemic average as the baseline for calculating excess mortality, but they later switched to using the 2015-2019 linear trend which produces more accurate results for most countries: [<a href="https://ourworldindata.org/excess-mortality-covid">https://ourworldindata.org/excess-mortality-covid</a>]</p>
 <blockquote>
@@ -5640,7 +5638,7 @@ cmr[56+1]/cmr[46+1]</pre>
 [1] 302.7572</pre>
 <p>The reported number of migrant arrivals was about 120,000 in 2022, about 60,000 in 2021, about 90,000 in 2020, about 170,000 in 2019, and about 140,000 in 2018 and earlier: <a href="https://www.stats.govt.nz/information-releases/international-migration-july-2023/#annual">https://www.stats.govt.nz/information-releases/international-migration-july-2023/#annual</a>. For some reason the number of migrant arrivals was much bigger in 2019 than in previous prepandemic years, but if you subtract the number of new arrivals in 2022 from the number of new arrivals in 2018 and earlier, the difference is something like 20,000 people (even though the number of migrant departures was also reduced during the lockdown).</p>
 <p>Gibson also wrote: <span class="quote">&quot;For example, New Zealand recorded 3640 more deaths in 2022 than in 2021 [...] The attribution of the extra deaths in 2022 to COVID-19 also cannot not be the full story given that fewer than 2700 deaths have been attributed to COVID-19 over the entire three-year COVID-era. Thus, in 2022 approximately 1000 extra deaths are likely to be from causes other than COVID-19 but there seems to be little questioning about these non-COVID deaths.&quot;</span> However he failed to account that there was negative excess mortality in 2021 and that NZ has an increasing trend in the number of deaths per year. You cannot derive the number of excess deaths in 2022 by simply subtracting the number of deaths in 2021. I got only about 2289 excess deaths in 2022 when I used the linear trend in 2015-2019 as the baseline.</p>
-<p>Thoughtfulnz pointed out that on Infoshare there's also a dataset for migrant arrivals and departures in 5-year age groups, which can be combined with another Infoshare dataset for mortality rates within 5-year age groups. When I used them to calculate the expected number of deaths among the migrant arrivals in 2022, I got only about 234 deaths. Migration actually has a bigger impact on the total population than I expected, because for example in 2023 there were almost 5 times as many migrant arrivals as births, but migrants are so young that they have little impact on the number of deaths per year:</p>
+<p>Thoughtfulnz pointed out that on Infoshare there's also a dataset for migrant arrivals and departures in 5-year age groups, which can be combined with another Infoshare dataset for mortality rates within 5-year age groups. When I used them to calculate the expected number of deaths among the migrant arrivals in 2022, I got only about 234 deaths. Migration actually has a bigger impact on the total population than I expected, because for example in 2023 there were almost 5 times as many migrant arrivals as births, but there are so few elderly people among migrants that migrants have little impact on the number of deaths per year:</p>
 <div class="width7">
 <img src="i/moar-migration-heat.png">
 </div>

@@ -1,26 +1,27 @@
 <!doctype html>
 <meta charset=utf-8>
 <style>
-body{margin:6px 6px 6px max(6px, min(50vw - 260px, 100vw - 1200px))}
+body{background:#222;color:#e8e8e8;margin:6px 6px 6px max(6px, min(50vw - 275px, 100vw - 1200px))}
 body,td,th{font:14px/1.3 Arial,Helvetica,'Liberation Sans',sans-serif}
 p{max-width:520px}
-h1,h2,h3{font-weight:normal}
-h2 a,h3 a{color:black}
+h1,h2,h3,h2 a,h3 a{font-weight:normal;color:#999!important}
 h1{font-size:2em;margin-top:.9em}
 h2{font-size:1.6em}
 h3{font-size:1.23em}
-pre,code{white-space:pre-wrap;word-wrap:break-word;font:13px Menlo,'DejaVu Sans Mono','Liberation Mono',Consolas,monospace;background:#dbdbdb}
-pre{padding:3px}
+a{color:hsl(220,100%,75%)}
+a:visited{color:hsl(270,100%,75%)}
+pre,code{white-space:pre-wrap;word-wrap:break-word;font:13px Menlo,'DejaVu Sans Mono','Liberation Mono',Consolas,monospace;background:#333;color:#d8d8d8}
+pre{padding:4px}
 blockquote{margin-left:40px;margin-right:0}
 blockquote p{max-width:480px}
 blockquote blockquote p{max-width:440px}
 blockquote blockquote blockquote p{max-width:400px}
-blockquote,.quote{color:hsl(30,65%,30%)}
-blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(30,45%,50%)}
-blockquote blockquote blockquote,blockquote .quote .quote,.quote .quote .quote{color:hsl(30,70%,60%)}
+blockquote,.quote{color:hsl(30,45%,65%)}
+blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(30,60%,70%)}
+blockquote blockquote blockquote,blockquote .quote .quote,.quote .quote .quote{color:hsl(30,70%,50%)}
 blockquote pre,blockquote code{color:black}
 code{padding:1px}
-img{max-width:100%;border:1.5px solid #ddd}
+img{max-width:100%}
 table{border-collapse:collapse}
 td,th{border:1.5px solid #ddd;padding:2px 4px}
 th{background:#eee;text-align:left;font-weight:bold}
@@ -67,7 +68,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Make_a_heatmap_of_weekly_COVID_deaths_per_capita_in_US_counties>Make a heatmap of weekly COVID deaths per capita in US counties</a></li>
 <li><a href=#Make_a_GIF_map_for_monthly_excess_mortality_by_US_county>Make a GIF map for monthly excess mortality by US county</a></li>
 <li><a href=#Make_a_heatmap_of_monthly_PCR_positivity_rate_by_US_state>Make a heatmap of monthly PCR positivity rate by US state</a></li>
-<li><a href=#Census_Bureau_get_monthly_population_estimates_by_single_year_of_age>Census Bureau: get monthly population estimates by single year of age</a></li>
+<li><a href=#US_Census_Bureau_get_monthly_population_estimates_by_single_year_of_age>US Census Bureau: get monthly population estimates by single year of age</a></li>
 </ul></li>
 <li><a href=#UK_Office_for_National_Statistics>UK Office for National Statistics</a>
 <ul>
@@ -1125,12 +1126,13 @@ system(&quot;mogrify -gravity center -trim -border 16 -bordercolor white 1.png&q
 <img src="i/pcr-states-heat.png">
 </div>
 <h3>
-<a href=#Census_Bureau_get_monthly_population_estimates_by_single_year_of_age id=Census_Bureau_get_monthly_population_estimates_by_single_year_of_age>Census Bureau: get monthly population estimates by single year of age</a>
+<a href=#US_Census_Bureau_get_monthly_population_estimates_by_single_year_of_age id=US_Census_Bureau_get_monthly_population_estimates_by_single_year_of_age>US Census Bureau: get monthly population estimates by single year of age</a>
 </h3>
 <pre>u=https://www2.census.gov/programs-surveys/popest/datasets
-parallel -j20 curl -s ::: $u/2020-2022/national/asrh/nc-est2022-alldata-c-file0{1..8}.csv|grep -v UNIVERSE|cut -d, -f2-5 &gt;new
-parallel -j20 curl -s ::: $u/2010-2020/national/asrh/NC-EST2020-ALLDATA-C-File{01..24}.csv|grep -v UNIVERSE|cut -d, -f2-5 &gt;old
-awk -F, &#39;$2!=2021&amp;&amp;($2!=2020||$1&lt;4)&#39; old|cat - new|awk -F, &#39;$3!=999&amp;&amp;$1!~/4\.[12]/{print$3 FS$2 FS$1 FS$4}&#39;|sort -t, -nk1,1 -nk2,2 -nk3,3|sed s/X//|(echo age,year,month,pop;cat)&gt;popagemonth.csv</pre>
+parallel -j20 curl -s ::: $u/2020-2022/national/asrh/nc-est2022-alldata-r-file0{1..8}.csv|awk &#39;NR==1||!/UNIVERSE/&#39;&gt;new
+parallel -j20 curl -s ::: $u/2010-2020/national/asrh/NC-EST2020-ALLDATA-R-File{01..24}.csv|awk &#39;NR==1||!/UNIVERSE/&#39; &gt;old
+sed 1d old|cut -d, -f2-5|awk -F, &#39;$2!=2021&amp;&amp;($2!=2020||$1&lt;4)&#39;|cat - &lt;(sed 1d new|cut -d, -f2-5)|awk -F, &#39;$3!=999&amp;&amp;$1!~/4\.[12]/{print$3 FS$2 FS$1 FS$4}&#39;|sort -t, -nk1,1 -nk2,2 -nk3,3|sed s/X//|(echo age,year,month,pop;cat)&gt;usmonthpop.csv</pre>
+<p>The methodology article by the Census Bureau says: <span class="quote">&quot;We then divide these estimates into the following universes: household (HH), civilian (CIV), civilian noninstitutionalized (CNI), and resident plus Armed Forces overseas (RES+AFO).&quot;</span> [<a href="https://www2.census.gov/programs-surveys/popest/technical-documentation/methodology/2020-2022/methods-statement-v2022.pdf">https://www2.census.gov/programs-surveys/popest/technical-documentation/methodology/2020-2022/methods-statement-v2022.pdf</a>] In the filenames of the CSV files, I believe R is resident, C is civilian, H is household, N is noninstitutionalized, and P is RES+AFO.</p>
 <h2>
 <a href=#UK_Office_for_National_Statistics id=UK_Office_for_National_Statistics>UK Office for National Statistics</a>
 </h2>
