@@ -12,14 +12,17 @@ h3{font-size:1.23em}
 a{color:hsl(220,100%,75%)}
 a:visited{color:hsl(270,100%,75%)}
 pre,code{white-space:pre-wrap;word-wrap:break-word;font:13px Menlo,'DejaVu Sans Mono','Liberation Mono',Consolas,monospace;background:#333;color:#d8d8d8}
-pre{padding:3px}
-blockquote{margin-left:45px;margin-right:0;max-width:505px}
-blockquote blockquote{max-width:460px}
-blockquote blockquote blockquote{max-width:415px}
+pre{padding:4px}
+blockquote{margin-left:40px;margin-right:0}
+blockquote p{max-width:480px}
+blockquote blockquote p{max-width:440px}
+blockquote blockquote blockquote p{max-width:400px}
 blockquote,.quote{color:hsl(30,45%,65%)}
+blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(30,60%,70%)}
+blockquote blockquote blockquote,blockquote .quote .quote,.quote .quote .quote{color:hsl(30,70%,50%)}
 blockquote pre,blockquote code{color:black}
 code{padding:1px}
-img{max-width:100%}
+img{max-width:100%;border:1.5px solid #ddd}
 table{border-collapse:collapse}
 td,th{border:1.5px solid #ddd;padding:2px 4px}
 th{background:#eee;text-align:left;font-weight:bold}
@@ -37,7 +40,8 @@ th{background:#eee;text-align:left;font-weight:bold}
 .width12{max-width:1200px}
 .width13{max-width:1300px}
 .width14,.width0{max-width:1400px}
-.width00{margin-left:calc(-1 * max(0px, min(50vw - 275px, 100vw - 1200px)) + 6px)}
+.width00{margin-left:calc(-1 * max(0px, min(50vw - 260px, 100vw - 1200px)) + 6px)}
+.width00 img,.width0 img{margin:0 -1.5px -1.5px 0;vertical-align:bottom}
 @media print{body{margin:0px;zoom:.75;print-color-adjust:exact;-webkit-print-color-adjust:exact}}
 </style>
 <title>Comments about COVID statistics</title>
@@ -1094,10 +1098,11 @@ sub=&quot;Source: ons.gov.uk/peoplepopulationandcommunity/healthandsocialcare/ca
 
 system(paste0(&quot;mogrify -trim 0.png;convert 0.png -gravity northwest \\( -size `identify -format %w 0.png`x -font Arial -interline-spacing -3 -pointsize 46 caption:&#39;&quot;,sub,&quot;&#39; -gravity north -splice x30 \\) -append -bordercolor white -border 36 1.png&quot;))</pre>
 <p>Craig wrote: <span class="quote">&quot;The ONS methodology is complex and opaque - for example, they have failed to publish any of the weightings they have used in their formula.&quot;</span> [<a href="https://www.hartgroup.org/too-many-deaths-are-to-be-expected/">https://www.hartgroup.org/too-many-deaths-are-to-be-expected/</a>] However the ONS published their R code at GitHub. [<a href="https://github.com/ONS-Health-modelling-hub/Excess_deaths/blob/main/ons_monthly_ed%2eR">https://github.com/ONS-Health-modelling-hub/Excess_deaths/blob/main/ons_monthly_ed%2eR</a>]</p>
-<p>Craig also wrote: <span class="quote">&quot;However, you can't hide the truth forever. All that is needed is the calculation of an age-standardised mortality rate. This is a way of mapping mortality from a real population to one that has a standard age structure so different regions can be fairly compared with each other and across time. Using that methodology it is impossible to hide the issue of excess mortality.&quot;</span> In the code below I calculated ASMR for England and Wales using the spreadsheet that accompanied the methodology article by the ONS. I used the 2020 population as the standard population, and I used the 2005-2019 second-degree polynomial trend in ASMR as the baseline, which gave me only about 0.14% excess ASMR in the years 2016-2019 (so it's closer to the new ONS baseline than to the old ONS baseline):</p>
-<pre># download.file(&quot;https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/healthandsocialcare/causesofdeath/datasets/estimatingexcessdeathsintheukmethodologychanges/current/dataset20240220.xlsx&quot;,&quot;dataset20240220.xlsx&quot;)
-
-t=as.data.frame(readxl::read_excel(&quot;dataset20240220.xlsx&quot;,skip=4,sheet=5))
+<p>Craig also wrote: <span class="quote">&quot;However, you can't hide the truth forever. All that is needed is the calculation of an age-standardised mortality rate. This is a way of mapping mortality from a real population to one that has a standard age structure so different regions can be fairly compared with each other and across time. Using that methodology it is impossible to hide the issue of excess mortality.&quot;</span> In the code below I calculated ASMR for England and Wales using the spreadsheet that accompanied the methodology article by the ONS. I used the 2020 population as the standard population, and I used the 2005-2019 second-degree polynomial trend in ASMR as the baseline, which gave me only about 0.12% excess ASMR in the years 2016-2019 (so it's closer to the new ONS baseline than to the old ONS baseline):</p>
+<div class="width5">
+<img src="i/covidstat-onsbase-5.png">
+</div>
+<pre>t=as.data.frame(readxl::read_excel(&quot;dataset20240220.xlsx&quot;,skip=4,sheet=5))
 t=t[t$Geography==&quot;England and Wales, including non-residents&quot;,]
 
 dim=list(age=as.numeric(sub(&quot; .*&quot;,&quot;&quot;,sub(&quot;Less.*&quot;,0,t$Age))),year=t$Year)
@@ -1115,33 +1120,99 @@ d$excessdead=(d$asmr-d$trend)/1e5*d$pop
 
 print.data.frame(round(d),row.names=F)
 # year asmr trend excesspct      pop excessdead
-# 2005 1100  1097         0 53569582       1660
-# 2006 1062  1070        -1 53958732      -4399
-# 2007 1050  1045         0 54389720       2706
-# 2008 1048  1022         3 54834344      14101
-# 2009  994  1002        -1 55243469      -4768
-# 2010  978   985        -1 55695362      -3513
-# 2011  941   969        -3 56162059     -15732
-# 2012  951   956        -1 56578624      -2773
-# 2013  949   945         0 56995298       2329
-# 2014  921   936        -2 57442224      -9137
-# 2015  959   930         3 57887460      16673
-# 2016  936   926         1 58347631       5465
-# 2017  936   925         1 58697682       6386
-# 2018  937   925         1 59008790       6769
-# 2019  902   929        -3 59293219     -15703
-# 2020 1023   934        10 59445253      52765
-# 2021  973   942         3 59704283      18913
-# 2022  941   952        -1 60243501      -6510
-# 2023  931   964        -3 60856738     -19881
+# 2005 1100   987        11 53569582      60692
+# 2006 1062   982         8 53958732      43042
+# 2007 1050   977         7 54389720      39671
+# 2008 1048   972         8 54834344      41695
+# 2009  994   967         3 55243469      14567
+# 2010  978   963         2 55695362       8736
+# 2011  941   958        -2 56162059      -9383
+# 2012  951   953         0 56578624      -1114
+# 2013  949   948         0 56995298        550
+# 2014  921   943        -2 57442224     -13077
+# 2015  959   939         2 57887460      11881
+# 2016  936   934         0 58347631       1158
+# 2017  936   929         1 58697682       3941
+# 2018  937   924         1 59008790       7575
+# 2019  902   919        -2 59293219     -10239
+# 2020 1023   915        12 59445253      64287
+# 2021  973   910         7 59704283      37939
+# 2022  941   905         4 60243501      21604
+# 2023  931   900         3 60856738      18938
 
 with(d[d$year%in%2016:2019,],sum(asmr)/sum(trend)-1)*100
-# 0.1412499 (total excess ASMR percent in in 2016-2019)
+# 0.115167 (total excess ASMR percentage in 2016-2019)
 
 sum(d$excessdead[d$year%in%2016:2019])
-# 2917.109 (total excess deaths in 2016-2019 derived from ASMR)</pre>
+# 2435.476 (total excess deaths in 2016-2019 derived from ASMR)
+
+png(&quot;1.png&quot;,800,500,res=150)
+par(mar=c(2.3,2.3,2.1,.8),mgp=c(0,.6,0))
+tit=&quot;ASMR in England and Wales&quot;
+leg=c(&quot;Actual&quot;,&quot;Baseline&quot;)
+col=c(&quot;black&quot;,&quot;red&quot;)
+plot(d$year,d$asmr,type=&quot;l&quot;,col=col[1],main=tit,xlab=NA,ylab=NA,lwd=1.5)
+lines(d$year,d$trend,type=&quot;l&quot;,col=col[2],lwd=1.5)
+legend(&quot;topright&quot;,legend=leg,col=col,lty=1,lwd=1.5)
+dev.off()</pre>
+<p>This plot also shows that regardless of whether I used a 2010-2019 linear trend or 2005-2019 polynomial trend to calculate excess ASMR, my total excess ASMR percentage in 2021-2023 was lower than the total excess mortality percent in 2021-2023 using the new ONS baseline:</p>
+<div class="width8">
+<img src="i/covidstat-onsbase-6.png">
+</div>
+<pre>library(colorspace)
+
+t=as.data.frame(readxl::read_excel(&quot;dataset20240220.xlsx&quot;,skip=4,sheet=5))
+t=t[t$Geography==&quot;England and Wales, including non-residents&quot;,]
+
+dim=list(age=as.numeric(sub(&quot; .*&quot;,&quot;&quot;,sub(&quot;Less.*&quot;,0,t$Age))),year=t$Year)
+a=aggregate(list(dead=t$Death),dim,sum)
+a$pop=c(tapply(t$Pop,dim,mean))*2
+
+std=a$pop[a$year==2020]
+asmr=tapply(a$dead/a$pop*std[factor(a$age)]/sum(std)*1e5,a$year,sum)
+asmr=data.frame(year=unique(a$year),asmr)
+
+trend=predict(lm(asmr~year,subset(asmr,year%in%2010:2019)),asmr)
+trend2=predict(lm(asmr~poly(year,2),subset(asmr,year&lt;2020)),asmr)
+
+d=aggregate(a[,3:4],a[,2,drop=F],sum)
+
+m=data.frame(&quot;ASMR using 2010-2019 linear trend&quot;=(asmr$asmr/trend-1),check.names=F)
+rownames(m)=2005:2023
+m$&quot;ASMR using 2005-2019 polynomial trend&quot;=(asmr$asmr/trend2-1)
+
+ave=c(rep(NA,5),sapply(2010:2023,\(i)mean(tail(d$dead[d$year&lt;i&amp;d$year!=2020],5))))
+m$&quot;Old ONS method (average of past 5 years without 2020)&quot;=d$dead/ave-1
+
+t4=as.data.frame(readxl::read_excel(&quot;dataset20240220.xlsx&quot;,skip=4,sheet=7))
+t4=t4[t4$Country==&quot;England and Wales, including non-residents&quot;&amp;t4$Sex==&quot;Both sexes&quot;&amp;t4$Age==&quot;All ages&quot;,]
+new=tapply(t4$&quot;Expected deaths&quot;,factor(t4$Year,2005:2023),sum)
+m$&quot;New ONS method (5-year quasi-Poisson regression)&quot;=d$dead/new-1
+
+ag=aggregate(list(dead=t$Death,pop=t$Pop),list(age=as.numeric(sub(&quot; .*&quot;,&quot;&quot;,sub(&quot;Less.*&quot;,0,t$Age))),year=t$Year),sum)
+ag$trend=c(t(sapply(split(ag,ag$age),\(x)lm(dead/pop~year,x[x$year%in%2010:2019,])|&gt;predict(list(year=unique(ag$year))))))
+cmrbased=tapply(ag$trend*ag$pop,ag$year,sum)
+m$&quot;Population size times 2010-2019 linear trend in CMR by age&quot;=d$dead/cmrbased-1
+
+owid=predict(lm(dead~year,subset(d,year%in%2015:2019)),d)
+m$&quot;Raw deaths using 2015-2019 linear regression (like OWID)&quot;=d$dead/owid-1
+
+m=t(m*100)[,-(1:5)]
+maxcolor=max(abs(m),na.rm=T)
+pal=hex(HSV(c(210,210,210,210,0,0,0,0,0),c(1,.8,.6,.3,0,.3,.6,.8,1),c(.3,.65,1,1,1,1,1,.65,.3)))
+
+pheatmap::pheatmap(m,filename=&quot;0.png&quot;,display_numbers=T,number_format=&quot;%.1f&quot;,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=20,cellheight=20,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;gray90&quot;,
+  number_color=ifelse(abs(m)&gt;maxcolor*.6,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(-maxcolor,maxcolor,,256),
+  colorRampPalette(pal)(256))
+
+system(&quot;f=0.png;w=`identify -format %w $f`;convert $f -gravity northwest \\( -splice x16 -size $[w-44]x -pointsize 38 caption:&#39;Excess mortality percent in England and Wales (by date of registration, includes non-residents). Source: ONS dataset titled \&quot;Estimating excess deaths in the UK, methodology changes\&quot;.
+      ASMR was calculated using 5-year age groups so that the 2020 population of England and Wales was used as the standard population.
+      On the row labeled \&quot;Population size times 2010-2019 linear trend in CMR by age\&quot;, a linear trend was calculated for crude mortality rate within each 5-year age group in 2010-2019, and then the projected trend was multiplied by the yearly population sizes of each age group, and the expected deaths for all age groups were added together to get the yearly total expected deaths.&#39; -extent $[w-44]x -gravity center \\) +swap -append -bordercolor white -border 6 +repage 1.png&quot;)</pre>
 <p>ONS is not the only organization which has switched away from using a simple average baseline. OWID previously also used a 2015-2019 average to calculate excess deaths, but they later switched to a 2015-2019 linear trend which is usually more accurate. OWID's website says: <span class="quote">&quot;Previously we used a different expected deaths baseline: the average number of deaths over the years 2015–2019.[8] We made this change because using the five-year average has an important limitation - it does not account for year-to-year trends in mortality and thus can misestimate excess mortality.[9] The WMD projection, on the other hand, does not suffer from this limitation because it accounts for these year-to-year trends.&quot;</span> [<a href="https://ourworldindata.org/excess-mortality-covid">https://ourworldindata.org/excess-mortality-covid</a>]</p>
-<p>The Australian Bureau of Statistics previously used a 2015-2019 average to calculate excess deaths during COVID, but in 2023 they switched to a more sophisticated cyclical linear regression method, which reduced the excess deaths during COVID because Australia has an increasing trend in deaths per year similar to most OECD countries. [<a href="https://www.abs.gov.au/articles/measuring-australias-excess-mortality-during-covid-19-pandemic-until-august-2023">https://www.abs.gov.au/articles/measuring-australias-excess-mortality-during-covid-19-pandemic-until-august-2023</a>]</p>
+<p>The Australian Bureau of Statistics previously used a 2015-2019 average to calculate excess deaths during COVID, but in 2023 they switched to a more sophisticated cyclical linear regression method which reduced the excess deaths during COVID, because Australia has an increasing trend in deaths per year similar to most OECD countries. [<a href="https://www.abs.gov.au/articles/measuring-australias-excess-mortality-during-covid-19-pandemic-until-august-2023">https://www.abs.gov.au/articles/measuring-australias-excess-mortality-during-covid-19-pandemic-until-august-2023</a>]</p>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
