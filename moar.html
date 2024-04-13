@@ -4,7 +4,7 @@
 body{background:#222;color:#e8e8e8;margin:6px 6px 6px max(6px, min(50vw - 275px, 100vw - 1200px))}
 body,td,th{font:14px/1.3 Arial,Helvetica,'Liberation Sans',sans-serif}
 p{max-width:520px}
-h1,h2,h3,h2 a,h3 a{font-weight:normal;color:#999!important}
+h1,h2,h3,h2 a,h3 a{font-weight:normal;color:#aaa!important}
 h1{font-size:2em;margin-top:.9em}
 h2{font-size:1.6em}
 h3{font-size:1.23em}
@@ -3830,13 +3830,12 @@ system(&quot;qlmanage -p 1.png&amp;&gt;/dev/null&quot;)</pre>
 <a href=#Excess_mortality_by_age_group_relative_to_reported_mortality id=Excess_mortality_by_age_group_relative_to_reported_mortality>Excess mortality by age group relative to reported mortality</a>
 </h3>
 <p>In the heatmap below which shows the mortality rate in the pay-per dose data compared to the reported mortality rate among the whole NZ population, there's particularly low excess mortality in some of the oldest age groups in August 2022. It might be because the data for deaths I used was by registration date so COVID deaths which occurred in July may have been registered in August. New Zealand had a peak in the daily number of COVID deaths in late July and early August, and the total number of COVID deaths was similar in July and August.</p>
-<p>During the early months of the vaccine rollout, older age groups had greater negative excess mortality than younger age groups, which is yet another indication that the healthy vaccinee effect is stronger in older age groups than younger age groups. In the age groups 90-94 and 95+, the excess mortality in the first half of 2022 was still around -20% to -50%, and it took until 2023 before the excess mortality had returned back to around zero.</p>
-<p>On the last row of the heatmap below which shows all ages aggregated together, the total excess mortality is positive on most months, but that's because vaccinated people are older than the general population, and the people included in the pay-per-dose dataset are even older than average vaccinated people.</p>
-<div class="width0">
-<img src=i/moar-age-1.png height=600><img src=i/moar-age-2.png height=600>
+<p>During the early months of the vaccine rollout, older age groups had greater negative excess mortality than younger age groups, which is yet another indication that the temporal healthy vaccinee effect is stronger in older age groups than younger age groups. In the age groups 90-94 and 95+, the excess mortality in the first half of 2022 was still around -20% to -50%, and it took until 2023 before the excess mortality had returned back to around zero.</p>
+<div class="width8">
+<img src="i/moar-age-1.png">
 </div>
 <p>I got monthly number of deaths by age from here: <a href="https://www.stats.govt.nz/information-releases/births-and-deaths-year-ended-september-2023/">https://www.stats.govt.nz/information-releases/births-and-deaths-year-ended-september-2023/</a>. And I interpolated quarterly population figures from here to monthly figures: <a href="https://infoshare.stats.govt.nz">https://infoshare.stats.govt.nz</a>.</p>
-<pre>espage=c(0,1,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95)
+<pre>espage=c(0,1,seq(5,95,5))
 agelab=c(0,paste0(espage,c(paste0(&quot;-&quot;,espage[-1]-1),&quot;+&quot;))[-1])
 
 death=read.csv(&quot;https://sars2.net/f/nz_monthly_deaths_by_age.csv&quot;)|&gt;subset(ethnicity==&quot;Total&quot;)
@@ -3849,16 +3848,18 @@ me=merge(death,data.frame(year=rep(2021:2023,each=12)[1:33],month=rep(1:12,3)[1:
 monlen=c(31,28,31,30,31,30,31,31,30,31,30,31)
 me$pop=me$pop*monlen[me$month]
 
-buck=read.table(&quot;https://sars2.net/f/month_dose_week_single_age.txt&quot;,header=T)
-buck=subset(buck,dose&gt;0&amp;month&lt;=&quot;2023-09&quot;&amp;month&gt;=&quot;2021-05&quot;,)
-buck=aggregate(buck[,5:6],list(month=buck$month,age=agelab[cut(buck$age,c(espage,Inf),,T,F)]),sum,na.rm=T,drop=F)
+buck=fread(&quot;buckets.gz&quot;,header=T)
+ua=\(x,y,...){u=unique(x);y(u,...)[match(x,u)]}
+buck=buck[,.(alive=sum(alive),dead=sum(dead)),by=.(month=ua(date,substring,1,7),age=cut(age,c(espage,Inf),agelab,T,F))]
+
 d=merge(cbind(month=sprintf(&quot;%d-%02d&quot;,me$year,me$month),me[,-(1:2)]),buck,all=T)
+
 d[is.na(d)]=0
 d=d[d$month&gt;=&quot;2021-05&quot;,]
 
 d$age=factor(d$age,agelab)
 d=rbind(d,cbind(aggregate(d[,3:6],d[,2,drop=F],sum,na.rm=T),month=&quot;Total&quot;))
-d=rbind(d,cbind(aggregate(d[,3:6],d[,1,drop=F],sum,na.rm=T),age=&quot;Total&quot;))
+# d=rbind(d,cbind(aggregate(d[,3:6],d[,1,drop=F],sum,na.rm=T),age=&quot;Total&quot;))
 d$age=droplevels(d$age)
 
 m=with(d,tapply(((dead/alive)/(x/pop)-1),list(age,month),c))
@@ -3869,7 +3870,9 @@ maxcolor=2
 m[is.infinite(m)]=-maxcolor
 
 library(colorspace);pheatmap::pheatmap(m,filename=&quot;i1.png&quot;,display_numbers=disp,
-  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,border_color=NA,na_col=&quot;white&quot;,
+  gaps_col=29,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;white&quot;,
   number_color=ifelse((abs(m)&gt;.55*maxcolor)&amp;!is.na(m),&quot;white&quot;,&quot;black&quot;),
   breaks=seq(-maxcolor,maxcolor,,256),
   colorRampPalette(hex(HSV(c(210,210,210,210,0,0,0,0,0),c(1,.8,.6,.3,0,.3,.6,.8,1),c(.3,.65,1,1,1,1,1,.65,.3))))(256))
@@ -3885,14 +3888,15 @@ kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;x[]=ifelse(ab
 disp2=mpop;disp2[is.na(disp2)]=0;disp2=kimi(disp2)
 
 pheatmap::pheatmap(mpop2,filename=&quot;i2.png&quot;,display_numbers=disp2,
-  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,border_color=NA,na_col=&quot;white&quot;,
+  gaps_col=29,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;white&quot;,
   number_color=ifelse(mpop2&gt;maxcolor2*.45,&quot;white&quot;,&quot;black&quot;),
   breaks=seq(0,maxcolor2,,256),
   sapply(seq(1,0,,256),\(i)rgb(i,i,i)))
 
-system(&quot;mogrify -trim i1.png;convert i1.png -gravity northwest -splice x12 -size `identify -format %w i1.png`x -pointsize 45 caption:&#39;NZ pay-per-dose data: Excess mortality percent by age relative to reported mortality rate in total NZ population&#39; +swap -append -trim -bordercolor white -border 24 +repage 1..png&quot;)
-system(&quot;mogrify -trim i2.png;convert i2.png -gravity northwest -splice x12 -size `identify -format %w i2.png`x -pointsize 45 caption:&#39;NZ pay-per-dose data: Population size by age&#39; +swap -append -trim -bordercolor white -border 24 +repage 2..png&quot;)
-system(&quot;montage -geometry +0+0 -tile 2x [12]..png 1.png&quot;)</pre>
+system(&quot;f=i1.png;w=`identify -format %w $f`;convert -interline-spacing -2 -gravity northwest -font Arial -pointsize 44 -size $[w-76]x \\( -splice 38x14 caption:&#39;NZ pay-per-dose data: Excess mortality percent by age relative to reported mortality rate in general NZ population. Monthly deaths by registration date are from stats.govt.nz/information-releases/births-and-deaths-year-ended-september-2023. Monthly population estimates were interpolated from quarterly resident population estimates from infoshare.stats.govt.nz.&#39; \\) i1.png \\( -splice 38x14 caption:&#39;Population size by age&#39; \\) i2.png -append 1.png&quot;)
+system(&quot;qlmanage -p 1.png&quot;)</pre>
 <h3>
 <a href=#ASMR_by_weeks_after_vaccination_compared_to_reported_ASMR_in_New_Zealand id=ASMR_by_weeks_after_vaccination_compared_to_reported_ASMR_in_New_Zealand>ASMR by weeks after vaccination compared to reported ASMR in New Zealand</a>
 </h3>
