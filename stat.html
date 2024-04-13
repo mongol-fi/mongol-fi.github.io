@@ -4,7 +4,7 @@
 body{background:#222;color:#e8e8e8;margin:6px 6px 6px max(6px, min(50vw - 275px, 100vw - 1200px))}
 body,td,th{font:14px/1.3 Arial,Helvetica,'Liberation Sans',sans-serif}
 p{max-width:520px}
-h1,h2,h3,h2 a,h3 a{font-weight:normal;color:#999!important}
+h1,h2,h3,h2 a,h3 a{font-weight:normal;color:#aaa!important}
 h1{font-size:2em;margin-top:.9em}
 h2{font-size:1.6em}
 h3{font-size:1.23em}
@@ -69,6 +69,7 @@ th{background:#eee;text-align:left;font-weight:bold}
 <li><a href=#Make_a_GIF_map_for_monthly_excess_mortality_by_US_county>Make a GIF map for monthly excess mortality by US county</a></li>
 <li><a href=#Make_a_heatmap_of_monthly_PCR_positivity_rate_by_US_state>Make a heatmap of monthly PCR positivity rate by US state</a></li>
 <li><a href=#US_Census_Bureau_get_monthly_population_estimates_by_single_year_of_age>US Census Bureau: get monthly population estimates by single year of age</a></li>
+<li><a href=#Plot_percentage_of_vaccinated_people_by_age_group>Plot percentage of vaccinated people by age group</a></li>
 </ul></li>
 <li><a href=#UK_Office_for_National_Statistics>UK Office for National Statistics</a>
 <ul>
@@ -1133,6 +1134,71 @@ parallel -j20 curl -s ::: $u/2020-2022/national/asrh/nc-est2022-alldata-r-file0{
 parallel -j20 curl -s ::: $u/2010-2020/national/asrh/NC-EST2020-ALLDATA-R-File{01..24}.csv|awk &#39;NR==1||!/UNIVERSE/&#39; &gt;old
 sed 1d old|cut -d, -f2-5|awk -F, &#39;$2!=2021&amp;&amp;($2!=2020||$1&lt;4)&#39;|cat - &lt;(sed 1d new|cut -d, -f2-5)|awk -F, &#39;$3!=999&amp;&amp;$1!~/4\.[12]/{print$3 FS$2 FS$1 FS$4}&#39;|sort -t, -nk1,1 -nk2,2 -nk3,3|sed s/X//|(echo age,year,month,pop;cat)&gt;usmonthpop.csv</pre>
 <p>The methodology article by the Census Bureau says: <span class="quote">&quot;We then divide these estimates into the following universes: household (HH), civilian (CIV), civilian noninstitutionalized (CNI), and resident plus Armed Forces overseas (RES+AFO).&quot;</span> [<a href="https://www2.census.gov/programs-surveys/popest/technical-documentation/methodology/2020-2022/methods-statement-v2022.pdf">https://www2.census.gov/programs-surveys/popest/technical-documentation/methodology/2020-2022/methods-statement-v2022.pdf</a>] In the filenames of the CSV files, I believe R is resident, C is civilian, H is household, N is noninstitutionalized, and P is RES+AFO.</p>
+<h3>
+<a href=#Plot_percentage_of_vaccinated_people_by_age_group id=Plot_percentage_of_vaccinated_people_by_age_group>Plot percentage of vaccinated people by age group</a>
+</h3>
+<p>Data: <a href="https://data.cdc.gov/Vaccinations/COVID-19-Vaccination-Age-and-Sex-Trends-in-the-Uni/5i5k-6cmh">https://data.cdc.gov/Vaccinations/COVID-19-Vaccination-Age-and-Sex-Trends-in-the-Uni/5i5k-6cmh</a>.</p>
+<pre># install.packages(&quot;BiocManager&quot;)
+# BiocManager::install(&quot;ComplexHeatmap&quot;)
+# install.packages(&quot;circlize&quot;
+# install.packages(&quot;colorspace&quot;)
+
+library(ComplexHeatmap)
+library(colorspace)
+library(circlize)
+
+vax=data.table::fread(&quot;d/cd/COVID-19_Vaccination_Age_and_Sex_Trends_in_the_United_States__National_and_Jurisdictional_20240131.csv&quot;)
+vax=vax[Demographic_Category%in%c(&quot;Female_Ages_18-24_yrs&quot;,&quot;Female_Ages_25-49_yrs&quot;)]
+
+dim=list(date=sub(&quot;(..)/../(....).*&quot;,&quot;\\2-\\1&quot;,vax$Date),state=vax$Location)
+ag=aggregate(list(vax=vax$Administered_Dose1,pop=vax$census),dim,sum)
+
+m=tapply(ag$vax/ag$pop*100,ag[,2:1],c)
+states=read.csv(&quot;https://github.com/cphalpert/census-regions/raw/master/us%20census%20bureau%20regions%20and%20divisions.csv&quot;)
+states=rbind(states,data.frame(State=c(&quot;United States&quot;,&quot;District of Columbia&quot;,&quot;American Samoa&quot;,&quot;Guam&quot;,&quot;Northern Mariana Islands&quot;,&quot;Puerto Rico&quot;,&quot;Virgin Islands&quot;,&quot;FS of Micronesia&quot;,&quot;Marshall Islands&quot;,&quot;Palau&quot;),State.Code=c(&quot;US&quot;,&quot;DC&quot;,&quot;AS&quot;,&quot;GU&quot;,&quot;MP&quot;,&quot;PR&quot;,&quot;VI&quot;,&quot;FM&quot;,&quot;MH&quot;,&quot;PW&quot;),Region=NA,Division=c(&quot;Total&quot;,rep(&quot;Other&quot;,9))))
+states$order=match(states$Division,strsplit(&quot;Total,New England,Middle Atlantic,East North Central,West North Central,South Atlantic,East South Central,West South Central,Mountain,Pacific,Other&quot;,&quot;,&quot;)[[1]])
+
+states$Division=sub(&quot;([WE]).* (South Central)&quot;,&quot;\\1 \\2&quot;,states$Division)
+
+m=m[order(states$ord[match(rownames(m),states$State.Code)]),]
+m=m[,-1]
+rownames(m)=states$State[match(rownames(m),states$State.Code)]
+
+png(&quot;0.png&quot;,w=ncol(m)*30+1000,h=nrow(m)*30+1000,res=72)
+
+ht_opt$COLUMN_ANNO_PADDING=unit(0,&quot;mm&quot;)
+ht_opt$ROW_ANNO_PADDING=unit(0,&quot;mm&quot;)
+
+split=states$Division[match(rownames(m),states$State)]
+
+Heatmap(m,
+  column_split=substring(colnames(m),1,4),
+  row_split=factor(split,unique(split)),
+  column_title=NULL,
+  row_title_gp=gpar(fontsize=16),
+  column_gap=unit(4,&quot;mm&quot;),
+  row_gap=unit(4,&quot;mm&quot;),
+  border=&quot;gray60&quot;,
+  width=unit(ncol(m)*30,&quot;pt&quot;),
+  height=unit(nrow(m)*30,&quot;pt&quot;),
+  show_column_names=F,
+  show_row_names=F,
+  cluster_columns=F,
+  cluster_rows=F,
+  show_heatmap_legend=F,
+  rect_gp=gpar(col=&quot;gray80&quot;,lwd=0),
+  top_annotation=columnAnnotation(text=anno_text(gt_render(colnames(m),padding=unit(c(3,3,3,3),&quot;mm&quot;)),just=&quot;left&quot;,rot=90,location=unit(0,&quot;npc&quot;),gp=gpar(fontsize=17,border=&quot;gray60&quot;,lwd=1))),
+  bottom_annotation=columnAnnotation(text=anno_text(gt_render(colnames(m),padding=unit(c(3,3,3,3),&quot;mm&quot;)),just=&quot;left&quot;,rot=270,gp=gpar(fontsize=17,border=&quot;gray60&quot;,lwd=1))),
+  left_annotation=rowAnnotation(text=anno_text(gt_render(rownames(m),padding=unit(c(3,3,3,3),&quot;mm&quot;)),just=&quot;right&quot;,location=unit(1,&quot;npc&quot;),gp=gpar(fontsize=17,border=&quot;gray60&quot;,lwd=1))),
+  right_annotation=rowAnnotation(text=anno_text(gt_render(rownames(m),padding=unit(c(3,3,3,3),&quot;mm&quot;)),just=&quot;left&quot;,location=unit(0,&quot;npc&quot;),gp=gpar(fontsize=17,border=&quot;gray60&quot;,lwd=1))),
+  col=colorRamp2(seq(0,100,,256),lapply(seq(1,0,,256),(\(x)rgb(x,x,x))),
+  cell_fun=\(j,i,x,y,w,h,fill)grid.text(round(m[i,j]),x,y,gp=gpar(fontsize=16,col=ifelse(m[i,j]&gt;45,&quot;white&quot;,&quot;black&quot;))))
+dev.off()
+
+system(&quot;mogrify -trim 0.png;convert 0.png -gravity northwest -splice x10 -size `identify -format %w 0.png`x -pointsize 25 caption:&#39;Percentage of vaccinated women in ages 18-49 (number of vaccinated people divided by census population estimate). Many months have over 100% vaccinated people, which might be because of people who are missing from the census population estimates, or if some people who were vaccinated in multiple states were counted multiple times. Source: CDC dataset titled \&quot;COVID-19 Vaccination Age and Sex Trends in the United States, National and Jurisdictional\&quot;.&#39; +swap -append -trim -bordercolor white -border 24 +repage 1.png&quot;)</pre>
+<div class="width7">
+<img src="i/ethical-pregnancy-5.png">
+</div>
 <h2>
 <a href=#UK_Office_for_National_Statistics id=UK_Office_for_National_Statistics>UK Office for National Statistics</a>
 </h2>
