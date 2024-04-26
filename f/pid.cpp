@@ -6,19 +6,26 @@
 using namespace std;
 
 int main(int argc,char**argv){
-
   string id,buf;
   vector<string>seq,name;
 
   for(string line;getline(cin,line);){
     if(line.empty())continue;
     if(line[0]=='>'){
-      if(!id.empty()){name.push_back(id);transform(buf.begin(),buf.end(),buf.begin(),::tolower);seq.push_back(buf);}
+      if(!id.empty()){
+        name.push_back(id);
+        transform(buf.begin(),buf.end(),buf.begin(),::tolower);
+        seq.push_back(buf);
+      }
       id=line.substr(1);
       buf.clear();
     }else buf+=line;
   }
-  if(!id.empty()){name.push_back(id);transform(buf.begin(),buf.end(),buf.begin(),::tolower);seq.push_back(buf);}
+  if(!id.empty()){
+    name.push_back(id);
+    transform(buf.begin(),buf.end(),buf.begin(),::tolower);
+    seq.push_back(buf);
+  }
 
   int seqs=seq.size(),positions=seq[0].size();
 
@@ -30,7 +37,10 @@ int main(int argc,char**argv){
     for(int j=i;j<seqs;j++){
       int diff=0,total=0;
       for(int k=0;k<positions;k++)
-        if(seq[i][k]!='-'&&seq[j][k]!='-'){total++;if(seq[i][k]!=seq[j][k])diff++;}
+        if(seq[i][k]!='-'&&seq[j][k]!='-'){
+          total++;
+          if(seq[i][k]!=seq[j][k])diff++;
+        }
       diffs[i][j]=diff;
       totals[i][j]=total;
     }
