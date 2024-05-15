@@ -338,6 +338,10 @@ $ for x in `&lt;kmer`;do grep -m1 $x temp2;done|wc -l
 <div class="width7">
 <img src="i/origin-pradhan-14.jpg">
 </div>
+<p>The insert between inserts 2 and 3 that wasn't highlighted by Pradhan consisted of the amino acids <code>LHR</code>. When I tried searching for the insert and the surrounding amino acids on BLAST, I found that the <code>LHR</code> and the next 4 amino acids were matched by a bacteriophage from the class <em>Caudoviricetes</em> (so it's even better than Pradhan's first two inserts which only matched 6 amino acids):</p>
+<div class="width6">
+<img src="i/origin-pradhan-16.jpg">
+</div>
 <p>Pradhan's fourth insert consisted of <code>QTNS</code> followed by 11 aa with no match in SARS2 followed by <code>PRRA</code>, which was found in some random sequence of HIV in India. But if the designers of SARS2 were inspired to borrow the <code>PRRA</code> motif from HIV, how did they know to look at a random HIV sequence from India out of hundreds of thousands of possible options? Here the Indian sequence is compared to the HXB2 refseq, which contains <code>QVTNS</code> instead of <code>QTNS</code>, but which only matches 1 out of 4 aa of the <code>PRRA</code>:</p>
 <pre>$ curl &#39;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=protein&amp;rettype=fasta&amp;id=AKR75206,NP_057850&#39;|mafft --clustalout -
 [...]
@@ -347,6 +351,31 @@ NP_057850.1 RVLAEAMSQVTNSATIMMQRGNFRNQRKIVKCFNCGKEGHTARNCRAPRKKGCWKCGKEG
                     ^^^^^^^^^^^^^^^^^^^^^
                     Pradhan insert 4
 [...]</pre>
+<p>This shows the colorized amino acid alignments:</p>
+<pre># download whole genome sequences of sarbecoviruses
+curl -sL sars2.net/f/sarbe.fa.xz|xz -dc&gt;sarbe.fa
+
+# efetch multi
+emu()(curl -sd &quot;id=$(paste -sd,)&quot; &quot;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=${1:-nuccore}&amp;rettype=${2:-fasta}&amp;retmode=$3&quot;)
+
+# download spike protein sequences of sarbecoviruses and rename them to have same the defline as full sequences
+seqkit seq -ni sarbe.fa|emu &#39;&#39; fasta_cds_aa|seqkit grep -nrp gene=S,spike,surface|sed &#39;s/_prot_.*//;s/lcl|//&#39;|seqkit fx2tab|awk -F\\t &#39;NR==FNR{a[$1]=$2;next}{print&quot;&gt;&quot;$1&quot; &quot;a[$1]&quot;\n&quot;$2}&#39; &lt;(seqkit seq -n sarbe.fa|sed $&#39;s/ /\t/&#39;) -&gt;spike.aa
+
+# make a TSV matrix for percentage identity between spike protein sequences
+aln()(\mafft --thread 3 --quiet &quot;${@--}&quot;)
+curl -Ls sars2.net/f/pid.cpp&gt;pid.cpp;g++ pid.cpp -O3 -o pid
+aln spike.aa|./pid&gt;spike.pid
+
+# thin out a TSV percentage identity matrix by removing rows with over 99% identity to any previous row
+thin()(awk -F\\t &#39;NR&gt;1{for(i=2;i&lt;NR;i++)if($i&gt;x)next;print$1}&#39; x=&quot;${1-99}&quot; &quot;${@:2}&quot;)
+
+# align text right by spaces
+alir()(awk &#39;{a[NR]=$0;if(length($0)&gt;l)l=length($0)}END{for(i in a)printf&quot;%&quot;l&quot;s\n&quot;,a[i]}&#39; &quot;$@&quot;)
+
+# colorize amino acids
+cola()(sed -f &lt;(awk -F: &#39;{print&quot;s/&quot;$1&quot;/\033[38;2;0;0;0m\033[48;2;&quot;$2&quot;;&quot;$3&quot;;&quot;$4&quot;m&quot;$1&quot;\033[0m/g&quot;}&#39; &lt;(printf %s\\n A:242:121:121 C:242:182:121 D:242:242:121 E:182:242:121 F:121:242:151 G:121:242:222 H:121:182:242 I:121:121:242 K:182:121:242 L:242:121:242 M:255:191:191 N:255:223:191 P:255:255:191 Q:223:255:191 R:191:255:207 S:191:255:244 T:191:223:255 V:191:191:255 W:223:191:255 Y:255:191:255 -:140:140:140)) &quot;$@&quot;)
+
+thin 92 &lt;spike.pid|cut -d\  -f1|seqkit grep -f- spike.aa|seqkit grep -nrvp &#39;SARS coronavirus&#39;|cat - &lt;(seqkit grep -nrip hu-1,tor2,zc45,rp3\\b,rs7896,banal-20-52,ratg,lyra11,btsy2,shc014,wiv1\\b,gx_p2v,gx-p1e spike.aa)|seqkit rmdup -s|aln --reorder -|seqkit subseq -r267:298|cut -d, -f1|sed &#39;s/ ORF.*//;s/ surface .*//;s/Severe acute respiratory syndrome/SARS/;s/Khosta-2 strain //;s/ isolate / /;s/ strain / /;s/Bat SARS-like coronavirus //;s/Betacoronavirus sp. //;s/ RNA$//&#39;|seqkit fx2tab|(x=`cat`;cut -f1&lt;&lt;&lt;&quot;$x&quot;|cut -d\  -f2-|alir|paste -d\  - &lt;(cut -f2&lt;&lt;&lt;&quot;$x&quot;|cola))</pre>
 <h2>
 <a href=#Arkmedics_BLAST_searches_for_Pradhan_et_al_s_inserts id=Arkmedics_BLAST_searches_for_Pradhan_et_al_s_inserts>Arkmedic's BLAST searches for Pradhan et al.'s inserts</a>
 </h2>
