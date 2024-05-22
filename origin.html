@@ -602,7 +602,7 @@ MN908947.3  1         29903   92        4348      14.5403   0.293649   36.7     
 pos    ref  A  C      G  T
 8782   C    0  2[34]  0  0
 28144  T    0  0      0  2[38]</pre>
-<p>I got 4 different mutations with MAPQ over 10. The MAPQ was around 50 in each case, because each mutation was supported by two high-quality reads:</p>
+<p>I got 4 different mutations with MAPQ over 10. The MAPQ of each mutation was around 50, because there were two high-quality reads that supported each mutation:</p>
 <pre>$ x=SRR13152144;samtools index $x.bam;bcftools mpileup -f sars2.fa $x.bam|bcftools call -mv|grep -v ^\#\#|cut -f-6|column -t
 #CHROM      POS    ID  REF  ALT  QUAL
 MN908947.3  3392   .   G    C    3.22451
@@ -695,6 +695,36 @@ MN908947.3  8206  .   A    G    9.88514</pre>
 MN908947.3  1         29903   23        1636      5.47102   0.0934689  37.4       57.8```
 $ samtools mpileup -f sars2.fa SRR13152143.bam 2&gt;/dev/null|ruby -alne&#39;next unless[8782,18060,28144,29095,23403].include?($F[1].to_i);next if$F[3]==0||$F[4]==&quot;*&quot;;s=$F[4].upcase.gsub(/[.,]/,$F[2]).gsub(/\^./,&quot;&quot;);s2=s.dup;s.enum_for(:scan,/[+-]\d+/).each{m=Regexp.last_match;m.begin(0).upto(m.end(0)+s[m.begin(0)+1,m.end(0)].to_i){|i|s2[i]=&quot; &quot;}};puts $F[1]+&quot; &quot;+$F[2]+&quot; &quot;+&quot;ACGT&quot;.chars.map{|x|q=$F[5].chars.values_at(*s2.chars.each_index.select{|i|s2[i]==x}).map{|c|c.ord-33};q.size.to_s+(q.size==0?&quot;&quot;:&quot;[&quot;+&quot;%.0f&quot;%(q.sum*1.0/q.size)+&quot;]&quot;)}*&quot; &quot;&#39;|sed s/^/$x\ /|sort -n|(echo pos ref A C G T;cat)|column -t
 pos  ref  A  C  G  T</pre>
+<p>In the STAT results of the November 2019 sample, the most abundant leaf nodes were mostly human reads, human reads misclassified under monkeys, or bacteria:</p>
+<pre>$ curl &quot;https://trace.ncbi.nlm.nih.gov/Traces/sra-db-be/run_taxonomy?acc=SRR13152144&amp;cluster_name=public&quot;&gt;SRR13152144.stat
+$ stal()(jq -r &#39;[.[]|.tax_table[]|.parent]as$par|[.[]|.tax_table[]|select(.tax_id as$x|$par|index($x)|not)]|sort_by(-.total_count)[]|((.total_count|tostring)+&quot;;&quot;+.org)&#39; &quot;$@&quot;) # STAT leaf nodes
+$ stal SRR13152144.stat|head -n24
+29976;Homo sapiens
+427;Escherichia coli
+257;Gorilla gorilla gorilla
+241;Klebsiella pneumoniae
+185;Clostridioides difficile
+171;Dolosigranulum pigrum (bacterium)
+124;Pan troglodytes
+115;Pongo abelii
+97;unclassified Streptococcus
+57;Salmonella enterica
+53;Aotus nancymaae (monkey)
+53;Pseudomonas aeruginosa (bacteria)
+52;Bordetella bronchiseptica E013 (bacteria)
+44;Nomascus leucogenys (monkey)
+39;Streptococcus pneumoniae
+35;Staphylococcus aureus
+31;Haemophilus
+26;Chlorocebus sabaeus (monkey)
+20;Staphylococcus epidermidis (bacteria)
+15;Veillonella sp. oral taxon 158 str. F0412
+14;Severe acute respiratory syndrome coronavirus 2
+11;Neisseria
+8;Laurasiatheria
+8;Oncorhynchus kisutch</pre>
+<p>The only other viruses in the STAT results were one read for <span class="quote">&quot;Pseudomonas phage tabernarius&quot;</span> and one read for <span class="quote">&quot;Human gammaherpesvirus 4&quot;</span>.</p>
+<p>After I had written this section, I found that babarlelephant posted this tweet in 2021: <span class="quote">&quot;For the Brazil November sewage there is one pair of reads with C14408T (basal in B.1) and another one with A5706G (rare and seen in Santa Catarina in March), otherwise the reads SRR13152144 are quite noisy, so hard to conclude only based on the mutations.&quot;</span> [<a href="https://x.com/babarlelephant/status/1436045380257517568">https://x.com/babarlelephant/status/1436045380257517568</a>] Half of the time when I think I have made some new discovery, it has already been found by Babar or Daoyu or breakfast_dogs.</p>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
