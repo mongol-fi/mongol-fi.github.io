@@ -879,18 +879,20 @@ pos    ref  allele  count  coverage  allele%  average_quality
 </div>
 <p>A8561C is probably a sequencing error, because it's on the sixth-last base of the read and the base quality is 17. That part of the read got trimmed when I used <code>fastp -35</code>, because it removed segments with low-quality bases from the ends of reads. So I got zero coverage for 8651 when I used trimmed reads:</p>
 <pre>$ puptab()(ruby -ane&#39;s=$F[4].upcase.gsub(/[.,]/,$F[2]).gsub(/\^./,&quot;&quot;).gsub(&quot;$&quot;,&quot;&quot;);s2=s.dup;s.enum_for(:scan,/[+-]\d+/).each{m=Regexp.last_match;m.begin(0).upto(m.end(0)+s[m.begin(0)+1,m.end(0)].to_i-1){|i|s2[i]=&quot; &quot;}};s2.gsub!(&quot; &quot;,&quot;&quot;);t=s2.chars.tally;&quot;ACGT&quot;.chars.map{|x|q=$F[5].chars.values_at(*s2.chars.each_index.select{|i|s2[i]==x}).map{|c|c.ord-33};puts [$F[1],$F[2],x,t[x]||0,s2.size,&quot;%.3f&quot;%(100.0*(t[x]||0)/s2.size),q.size==0?&quot;NA&quot;:&quot;%.1f&quot;%(q.sum.to_f/q.size)]*&quot; &quot;}&#39; &quot;$@&quot;)
-$ samtools mpileup -f sars2.fa SRR13152144.bam|puptab|awk &#39;$1~/^(5929|8651|16206)$/&amp;&amp;$4&#39;|column -t
-5929   T  G  1  1  100.000  24.0
-16206  G  A  1  2  50.000   20.0
-16206  G  G  1  2  50.000   16.0</pre>
+$ samtools mpileup -f sars2.fa SRR13152144.bam|puptab|awk &#39;$1~/^(5929|8651|16206)$/&amp;&amp;$4&#39;|(echo pos ref al count depth al% average_quality;cat)|column -t
+pos    ref  al  count  depth  al%      average_quality
+5929   T    G   1      1      100.000  24.0
+16206  G    A   1      2      50.000   20.0
+16206  G    G   1      2      50.000   16.0</pre>
 <p>When I didn't trim the reads, I got one read that had A8651C, but the quality of the base was 17:</p>
 <pre>$ minimap2 -a --sam-hit-only sars2.fa SRR13152144_[12].fastq.gz|samtools sort -&gt;SRR13152144.untrim.bam
 [...]
-$ samtools mpileup -f sars2.fa SRR13152144.untrim.bam|puptab|awk &#39;$1~/^(5929|8651|16206)$/&amp;&amp;$4&#39;|column -t
-5929   T  G  1  1  100.000  24.0
-8651   A  C  1  1  100.000  17.0
-16206  G  A  1  2  50.000   20.0
-16206  G  G  1  2  50.000   16.0</pre>
+$ samtools mpileup -f sars2.fa SRR13152144.untrim.bam|puptab|awk &#39;$1~/^(5929|8651|16206)$/&amp;&amp;$4&#39;|(echo pos ref al count depth al% average_quality;cat)|column -t
+pos    ref  al  count  depth  al%      average_quality
+5929   T    G   1      1      100.000  24.0
+8651   A    C   1      1      100.000  17.0
+16206  G    A   1      2      50.000   20.0
+16206  G    G   1      2      50.000   16.0</pre>
 <p>The output above shows that G16206A is supported by only one read out of two reads that cover the position, and the quality of the base with the mutation is 20. And the 5929 position is covered by only one read, and the quality of the base with the mutation at 5929 is 24.</p>
 <p>So all three of Gadboit's pangolin mutations are likely to be sequencing errors.</p>
 <p>This shows that the base with a mutation at 8651 is also surrounded by other low-quality bases, so it got removed by <code>fastp -35</code> which removes segments with low-quality bases from the ends of reads:</p>
