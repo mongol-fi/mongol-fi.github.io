@@ -62,6 +62,7 @@ th{background:#3a3a3a;text-align:left;font-weight:bold}
 <li><a href=#babarlelephant_had_found_A5706G_earlier>babarlelephant had found A5706G earlier</a></li>
 <li><a href=#Other_two_mutations_in_November_2020_sample>Other two mutations in November 2020 sample</a></li>
 <li><a href=#Another_possible_mutation_found_in_a_B_1_1_33_sample_from_Brazil>Another possible mutation found in a B.1.1.33 sample from Brazil</a></li>
+<li><a href=#Coverage_of_other_B_1_1_33_positions>Coverage of other B.1.1.33 positions</a></li>
 </ul></li>
 </ul>
 
@@ -610,7 +611,7 @@ $ samtools coverage $x.bam|column -t
 #rname      startpos  endpos  numreads  covbases  coverage  meandepth  meanbaseq  meanmapq
 MN908947.3  1         29903   92        4348      14.5403   0.293649   36.7       43.5</pre>
 <p>Gadboit said that he didn't see any other lineage-defining locations except D614G (A23403G) and C8782. However I actually didn't get any read that covered the position of D614G regardless of whether I trimmed reads or not. I got two reads for 8782 and two reads for 28144, but they both had the lineage B allele. But I didn't get any reads that covered the position of the third mutation of WA1 (18060) or the A0 mutation (29095):</p>
-<pre>$ samtools mpileup -f sars2.fa SRR13152144.bam 2&gt;/dev/null|ruby -alne&#39;next unless[8782,18060,28144,29095,23403].include?($F[1].to_i);next if$F[3]==0||$F[4]==&quot;*&quot;;s=$F[4].upcase.gsub(/[.,]/,$F[2]).gsub(/\^./,&quot;&quot;);s2=s.dup;s.enum_for(:scan,/[+-]\d+/).each{m=Regexp.last_match;m.begin(0).upto(m.end(0)+s[m.begin(0)+1,m.end(0)].to_i){|i|s2[i]=&quot; &quot;}};puts $F[1]+&quot; &quot;+$F[2]+&quot; &quot;+&quot;ACGT&quot;.chars.map{|x|q=$F[5].chars.values_at(*s2.chars.each_index.select{|i|s2[i]==x}).map{|c|c.ord-33};q.size.to_s+(q.size==0?&quot;&quot;:&quot;[&quot;+&quot;%.0f&quot;%(q.sum*1.0/q.size)+&quot;]&quot;)}*&quot; &quot;&#39;|sed s/^/$x\ /|sort -n|(echo pos ref A C G T;cat)|column -t
+<pre>$ samtools mpileup -f sars2.fa SRR13152144.bam|ruby -alne&#39;next unless[8782,18060,28144,29095,23403].include?($F[1].to_i);next if$F[3]==0||$F[4]==&quot;*&quot;;s=$F[4].upcase.gsub(/[.,]/,$F[2]).gsub(/\^./,&quot;&quot;);s2=s.dup;s.enum_for(:scan,/[+-]\d+/).each{m=Regexp.last_match;m.begin(0).upto(m.end(0)+s[m.begin(0)+1,m.end(0)].to_i){|i|s2[i]=&quot; &quot;}};puts $F[1]+&quot; &quot;+$F[2]+&quot; &quot;+&quot;ACGT&quot;.chars.map{|x|q=$F[5].chars.values_at(*s2.chars.each_index.select{|i|s2[i]==x}).map{|c|c.ord-33};q.size.to_s+(q.size==0?&quot;&quot;:&quot;[&quot;+&quot;%.0f&quot;%(q.sum*1.0/q.size)+&quot;]&quot;)}*&quot; &quot;&#39;|sed s/^/$x\ /|sort -n|(echo pos ref A C G T;cat)|column -t
 pos    ref  A  C      G  T
 8782   C    0  2[34]  0  0
 28144  T    0  0      0  2[38]</pre>
@@ -709,7 +710,7 @@ EPI_ISL_14291071|hCoV-19/Brazil/BA-FIOCRUZ-PVM6183/2020|2022-08-06|2020-08-03|B.
 <h3>
 <a href=#March_2020_wastewater_sample id=March_2020_wastewater_sample>March 2020 wastewater sample</a>
 </h3>
-<p>The Brazilian study also included a second SRA run, which was labeled <span class="quote">&quot;Sewage metratranscriptome from Florianopolis, SC, Brazil (Mar20)&quot;</span> (instead of Nov19 like the other run). [<a href="https://trace.ncbi.nlm.nih.gov/Traces?run=SRR13152143">https://trace.ncbi.nlm.nih.gov/Traces?run=SRR13152143</a>] It had only 3 mutations but none of them had MAPQ above 10:</p>
+<p>The Brazilian study also included a second SRA run, which was labeled <span class="quote">&quot;Sewage metratranscriptome from Florianopolis, SC, Brazil (Mar20)&quot;</span> (instead of <span class="quote">&quot;Nov19&quot;</span> like the other run). [<a href="https://trace.ncbi.nlm.nih.gov/Traces?run=SRR13152143">https://trace.ncbi.nlm.nih.gov/Traces?run=SRR13152143</a>] The March 2020 sample had only 3 mutations but none of them had a MAPQ above 10:</p>
 <pre>$ enad()(printf %s\\n &quot;${@-$(cat)}&quot;|while IFS= read x;do curl -s &quot;https://www.ebi.ac.uk/ena/portal/api/filereport?accession=$x&amp;result=read_run&amp;fields=fastq_ftp&quot;|sed 1d|cut -f2|tr \; \\n;done|sed s,^,ftp://,|xargs wget -q)
 $ x=SRR13152143;enad $x
 $ fastp -35 -i $x\_1.fastq.gz -I $x\_2.fastq.gz -o $x\_1.fq.gz -O $x\_2.fq.gz
@@ -719,12 +720,12 @@ $ samtools index $x.bam;bcftools mpileup -f sars2.fa $x.bam|bcftools call -mv|gr
 MN908947.3  6192  .   C    T    3.7766
 MN908947.3  8145  .   A    G    9.88514
 MN908947.3  8206  .   A    G    9.88514</pre>
-<p>However all three mutations were rare in the set of GISAID submissions with a collection date in 2020, and I didn't find any sample on GISAID which had even 2 out of the 3 mutations.</p>
-<p>The March 2020 sample only got about 5% coverage for SARS2, and it didn't have any reads which covered the positions of WA1, lineage A0, or D614G:</p>
+<p>However all three mutations were rare in the set of GISAID submissions with a collection date in 2020, and none of the submissions had even 2 out of the 3 mutations.</p>
+<p>The March 2020 sample only got about 5% coverage for SARS2, and it didn't have any reads which covered the positions of WA1 (18060), lineage A0 (29095), or D614G (23403):</p>
 <pre>$ samtools coverage SRR13152143.bam|column -t
 #rname      startpos  endpos  numreads  covbases  coverage  meandepth  meanbaseq  meanmapq
 MN908947.3  1         29903   23        1636      5.47102   0.0934689  37.4       57.8```
-$ samtools mpileup -f sars2.fa SRR13152143.bam 2&gt;/dev/null|ruby -alne&#39;next unless[8782,18060,28144,29095,23403].include?($F[1].to_i);next if$F[3]==0||$F[4]==&quot;*&quot;;s=$F[4].upcase.gsub(/[.,]/,$F[2]).gsub(/\^./,&quot;&quot;);s2=s.dup;s.enum_for(:scan,/[+-]\d+/).each{m=Regexp.last_match;m.begin(0).upto(m.end(0)+s[m.begin(0)+1,m.end(0)].to_i){|i|s2[i]=&quot; &quot;}};puts $F[1]+&quot; &quot;+$F[2]+&quot; &quot;+&quot;ACGT&quot;.chars.map{|x|q=$F[5].chars.values_at(*s2.chars.each_index.select{|i|s2[i]==x}).map{|c|c.ord-33};q.size.to_s+(q.size==0?&quot;&quot;:&quot;[&quot;+&quot;%.0f&quot;%(q.sum*1.0/q.size)+&quot;]&quot;)}*&quot; &quot;&#39;|sed s/^/$x\ /|sort -n|(echo pos ref A C G T;cat)|column -t
+$ samtools mpileup -f sars2.fa SRR13152143.bam|ruby -alne&#39;next unless[8782,18060,28144,29095,23403].include?($F[1].to_i);next if$F[3]==0||$F[4]==&quot;*&quot;;s=$F[4].upcase.gsub(/[.,]/,$F[2]).gsub(/\^./,&quot;&quot;);s2=s.dup;s.enum_for(:scan,/[+-]\d+/).each{m=Regexp.last_match;m.begin(0).upto(m.end(0)+s[m.begin(0)+1,m.end(0)].to_i){|i|s2[i]=&quot; &quot;}};puts $F[1]+&quot; &quot;+$F[2]+&quot; &quot;+&quot;ACGT&quot;.chars.map{|x|q=$F[5].chars.values_at(*s2.chars.each_index.select{|i|s2[i]==x}).map{|c|c.ord-33};q.size.to_s+(q.size==0?&quot;&quot;:&quot;[&quot;+&quot;%.0f&quot;%(q.sum*1.0/q.size)+&quot;]&quot;)}*&quot; &quot;&#39;|sed s/^/$x\ /|sort -n|(echo pos ref A C G T;cat)|column -t
 pos  ref  A  C  G  T</pre>
 <h3>
 <a href=#STAT_results id=STAT_results>STAT results</a>
@@ -766,7 +767,10 @@ $ stal SRR13152144.stat|head -n24
 <h3>
 <a href=#babarlelephant_had_found_A5706G_earlier id=babarlelephant_had_found_A5706G_earlier>babarlelephant had found A5706G earlier</a>
 </h3>
-<p>After I had written the previous sections in this file, I found that babarlelephant posted this tweet in 2021: <span class="quote">&quot;For the Brazil November sewage there is one pair of reads with C14408T (basal in B.1) and another one with A5706G (rare and seen in Santa Catarina in March), otherwise the reads SRR13152144 are quite noisy, so hard to conclude only based on the mutations.&quot;</span> [<a href="https://x.com/babarlelephant/status/1436045380257517568">https://x.com/babarlelephant/status/1436045380257517568</a>]</p>
+<p>After I had written the previous sections in this file, I found that babarlelephant had posted these tweets in 2021: [<a href="https://x.com/babarlelephant/status/1397204321838813199">https://x.com/babarlelephant/status/1397204321838813199</a>]</p>
+<div class="width5">
+<img src="i/origin-brazil-babar.jpg">
+</div>
 <p>Half of the time when I think I have made some new discovery, it has already been found by Babar or Daoyu or breakfast_dogs.</p>
 <h3>
 <a href=#Other_two_mutations_in_November_2020_sample id=Other_two_mutations_in_November_2020_sample>Other two mutations in November 2020 sample</a>
@@ -837,7 +841,7 @@ MN908947.3      aattcacagacttcattaagatgtggtgcttgcatacgtagaccattcttatgttgtaaa
 <p>On GISAID there's only two samples from Brazil which have T16251C. [<a href="https://cov-spectrum.org/explore/Brazil/AllSamples/AllTimes/variants?nucMutations=T16251C">https://cov-spectrum.org/explore/Brazil/AllSamples/AllTimes/variants?nucMutations=T16251C</a>] One sample is from 2021. The other is B.1.1.33 like the samples with A5706G, but its collection date is only in July 2020. A5706G is found in two sets of B.1.1.33 samples from Brazil: there's 3 samples with collection dates in March-April 2020 from Santa Catarina and Para, and there's also 7 samples with a collection date in August to September 2020 from Bahia. However neither set has T16251C.</p>
 <p>The November 2019 run has a total of 25 positions with a mutation relative to Wuhan-Hu-1 if I also include mutations that are only supported by a single low-quality read. Out of 20 mutations that are only supported by a single read, all except 2 have a quality of 20 or below:</p>
 <pre>$ puptab()(ruby -ane&#39;s=$F[4].upcase.gsub(/[.,]/,$F[2]).gsub(/\^./,&quot;&quot;).gsub(&quot;$&quot;,&quot;&quot;);s2=s.dup;s.enum_for(:scan,/[+-]\d+/).each{m=Regexp.last_match;m.begin(0).upto(m.end(0)+s[m.begin(0)+1,m.end(0)].to_i-1){|i|s2[i]=&quot; &quot;}};s2.gsub!(&quot; &quot;,&quot;&quot;);t=s2.chars.tally;&quot;ACGT&quot;.chars.map{|x|q=$F[5].chars.values_at(*s2.chars.each_index.select{|i|s2[i]==x}).map{|c|c.ord-33};puts [$F[1],$F[2],x,t[x]||0,s2.size,&quot;%.3f&quot;%(100.0*(t[x]||0)/s2.size),q.size==0?&quot;NA&quot;:&quot;%.1f&quot;%(q.sum.to_f/q.size)]*&quot; &quot;}&#39; &quot;$@&quot;)
-$ x=SRR13152144;samtools mpileup -f sars2.fa $x.bam 2&gt;/dev/null|puptab|awk &#39;$2!=$3&amp;&amp;$4!=0&#39;|(echo pos ref allele count coverage allele% average_quality;cat)|column -t
+$ x=SRR13152144;samtools mpileup -f sars2.fa $x.bam|puptab|awk &#39;$2!=$3&amp;&amp;$4!=0&#39;|(echo pos ref allele count coverage allele% average_quality;cat)|column -t
 pos    ref  allele  count  coverage  allele%  average_quality
 3392   G    C       2      2         100.000  39.0
 5706   A    G       2      2         100.000  39.0
@@ -865,11 +869,38 @@ pos    ref  allele  count  coverage  allele%  average_quality
 19273  C    G       1      1         100.000  16.0
 20488  T    G       1      3         33.333   37.0</pre>
 <p>However the low-quality mutations listed above didn't include any more mutations which were found in Brazilian B.1.1.33 samples:</p>
-<pre>$ x=SRR13152144;samtools mpileup -f sars2.fa $x.bam 2&gt;/dev/null|puptab|awk &#39;$2!=$3&amp;&amp;$4!=0&#39;|awk &#39;NR==FNR{a[$0];next}$2$1$3 in a&#39; &lt;(grep B.1.1.33 gisaid2020.tsv|grep Brazil|cut -f12|tr , \\n) -|(echo pos ref allele count coverage allele% average_quality;cat)|column -t
+<pre>$ x=SRR13152144;samtools mpileup -f sars2.fa $x.bam|puptab|awk &#39;$2!=$3&amp;&amp;$4!=0&#39;|awk &#39;NR==FNR{a[$0];next}$2$1$3 in a&#39; &lt;(grep B\.1\.1\.33 gisaid2020.tsv|grep Brazil|cut -f12|tr , \\n) -|(echo pos ref allele count coverage allele% average_quality;cat)|column -t
 pos    ref  allele  count  coverage  allele%  average_quality
 5706   A    G       2      2         100.000  39.0
 14408  C    T       2      2         100.000  39.0
 16251  T    C       1      2         50.000   16.0</pre>
+<h3>
+<a href=#Coverage_of_other_B_1_1_33_positions id=Coverage_of_other_B_1_1_33_positions>Coverage of other B.1.1.33 positions</a>
+</h3>
+<p>Positions where B.1.1.33 has mutations had zero depth apart from 14408:</p>
+<pre>$ awk &#39;$5==&quot;B.1.1.33&quot;&#39; gisaid2020.tsv|cut -f12|awk &#39;{split($0,z,&quot;,&quot;);for(i in z)a[z[i]]++}END{for(i in a)if(a[i]&gt;NR/2)print i}&#39;|sed &#39;s/.\(.*\)./\1/&#39;|awk &#39;NR==FNR{a[$0];next}$2 in a&#39; - &lt;(samtools depth -a SRR13152144.bam)|cut -f2-|column -t
+241    0
+3037   0
+14408  2
+23403  0
+27299  0
+28881  0
+28882  0
+28883  0
+29148  0</pre>
+<p>Apart from 5706 and 14408, there was also zero depth for all positions with mutations in the A5706G samples from Santa Catarina:</p>
+<pre>$ grep A5706G gisaid2020.tsv|grep Santa\ Catarina|cut -f12|tr , \\n|sed &#39;s/.\(.*\)./\1/&#39;|awk &#39;NR==FNR{a[$0];next}$2 in a&#39; - &lt;(samtools depth -a SRR13152144.bam)|cut -f2-|column -t
+241    0
+3037   0
+5706   2
+14408  2
+18803  0
+23403  0
+27299  0
+28881  0
+28882  0
+28883  0
+29148  0</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
