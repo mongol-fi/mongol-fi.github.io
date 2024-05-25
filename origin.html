@@ -61,7 +61,7 @@ th{background:#3a3a3a;text-align:left;font-weight:bold}
 <li><a href=#STAT_results>STAT results</a></li>
 <li><a href=#babarlelephant_had_found_A5706G_earlier>babarlelephant had found A5706G earlier</a></li>
 <li><a href=#Other_two_mutations_in_November_2020_sample>Other two mutations in November 2020 sample</a></li>
-<li><a href=#Another_possible_mutation_found_in_a_B_1_1_33_sample_from_Brazil>Another possible mutation found in a B.1.1.33 sample from Brazil</a></li>
+<li><a href=#Another_Braziliian_B_1_1_33_mutation_found_by_alchemytoday>Another Braziliian B.1.1.33 mutation found by alchemytoday</a></li>
 <li><a href=#Coverage_of_other_B_1_1_33_positions>Coverage of other B.1.1.33 positions</a></li>
 <li><a href=#Three_mutations_that_Gadboit_found_in_pangolin_viruses>Three mutations that Gadboit found in pangolin viruses</a></li>
 </ul></li>
@@ -711,23 +711,48 @@ EPI_ISL_14291071|hCoV-19/Brazil/BA-FIOCRUZ-PVM6183/2020|2022-08-06|2020-08-03|B.
 <h3>
 <a href=#March_2020_wastewater_sample id=March_2020_wastewater_sample>March 2020 wastewater sample</a>
 </h3>
-<p>The Brazilian study also included a second SRA run, which was labeled <span class="quote">&quot;Sewage metratranscriptome from Florianopolis, SC, Brazil (Mar20)&quot;</span> (instead of <span class="quote">&quot;Nov19&quot;</span> like the other run). [<a href="https://trace.ncbi.nlm.nih.gov/Traces?run=SRR13152143">https://trace.ncbi.nlm.nih.gov/Traces?run=SRR13152143</a>] The March 2020 sample had only 3 mutations but none of them had a MAPQ above 10:</p>
+<p>The Brazilian study also included a second SRA run, which was labeled <span class="quote">&quot;Sewage metratranscriptome from Florianopolis, SC, Brazil (Mar20)&quot;</span> (instead of <span class="quote">&quot;Nov19&quot;</span> like the other run). [<a href="https://trace.ncbi.nlm.nih.gov/Traces?run=SRR13152143">https://trace.ncbi.nlm.nih.gov/Traces?run=SRR13152143</a>] <code>bcftools call</code> gave only 3 mutations for the March 2020 sample but none of them had a MAPQ above 10:</p>
 <pre>$ enad()(printf %s\\n &quot;${@-$(cat)}&quot;|while IFS= read x;do curl -s &quot;https://www.ebi.ac.uk/ena/portal/api/filereport?accession=$x&amp;result=read_run&amp;fields=fastq_ftp&quot;|sed 1d|cut -f2|tr \; \\n;done|sed s,^,ftp://,|xargs wget -q)
 $ x=SRR13152143;enad $x
 $ fastp -35 -i $x\_1.fastq.gz -I $x\_2.fastq.gz -o $x\_1.fq.gz -O $x\_2.fq.gz
 $ minimap2 -a --sam-hit-only sars2.fa $x\_[12].fastq.gz|samtools sort -&gt;$x.bam
-$ samtools index $x.bam;bcftools mpileup -f sars2.fa $x.bam|bcftools call -mv|grep -v ^\#\#|cut -f-6|column -t
-#CHROM      POS   ID  REF  ALT  QUAL
-MN908947.3  6192  .   C    T    3.7766
-MN908947.3  8145  .   A    G    9.88514
-MN908947.3  8206  .   A    G    9.88514</pre>
-<p>However all three mutations were rare in the set of GISAID submissions with a collection date in 2020, and none of the submissions had even 2 out of the 3 mutations.</p>
-<p>The March 2020 sample only got about 5% coverage for SARS2, and it didn't have any reads which covered the positions of WA1 (18060), lineage A0 (29095), or D614G (23403):</p>
+$ samtools index $x.bam;bcftools mpileup -f sars2.fa $x.bam|bcftools call -mv|grep -v ^\#\#|cut -f2,4-6|column -t
+POS   REF  ALT  QUAL
+6192  C    T    3.7766
+8145  A    G    9.88514
+8206  A    G    9.88514</pre>
+<p>However all three mutations were rare in the set of GISAID submissions with a collection date in 2020, and none of them were found in samples from Brazil, and none of the submissions had even 2 out of the 3 mutations.</p>
+<p>The March 2020 sample only got about 5% coverage for SARS2, and it didn't have any reads which covered the positions of lineage A (8782 and 28144), WA1 (18060), lineage A0 (29095), or D614G (23403):</p>
 <pre>$ samtools coverage SRR13152143.bam|column -t
 #rname      startpos  endpos  numreads  covbases  coverage  meandepth  meanbaseq  meanmapq
 MN908947.3  1         29903   23        1636      5.47102   0.0934689  37.4       57.8
-$ samtools mpileup -f sars2.fa SRR13152143.bam|ruby -alne&#39;next unless[8782,18060,28144,29095,23403].include?($F[1].to_i);next if$F[3]==0||$F[4]==&quot;*&quot;;s=$F[4].upcase.gsub(/[.,]/,$F[2]).gsub(/\^./,&quot;&quot;);s2=s.dup;s.enum_for(:scan,/[+-]\d+/).each{m=Regexp.last_match;m.begin(0).upto(m.end(0)+s[m.begin(0)+1,m.end(0)].to_i){|i|s2[i]=&quot; &quot;}};puts $F[1]+&quot; &quot;+$F[2]+&quot; &quot;+&quot;ACGT&quot;.chars.map{|x|q=$F[5].chars.values_at(*s2.chars.each_index.select{|i|s2[i]==x}).map{|c|c.ord-33};q.size.to_s+(q.size==0?&quot;&quot;:&quot;[&quot;+&quot;%.0f&quot;%(q.sum*1.0/q.size)+&quot;]&quot;)}*&quot; &quot;&#39;|sed s/^/$x\ /|sort -n|(echo pos ref A C G T;cat)|column -t
-pos  ref  A  C  G  T</pre>
+$ samtools depth -a SRR13152143.bam|awk &#39;$2~/^(8782|18060|28144|29095|23403)$/&#39;|cut -f2-
+8782    0
+18060   0
+23403   0
+28144   0
+29095   0</pre>
+<p>If I show all mutations instead of using <code>bcftools call</code>, the March 2020 sample only gets one additional mutation (which is found in 1 out of 2 reads and which has quality 18, so it's probably a sequencing error):</p>
+<pre>$ x=SRR13152143;samtools mpileup -f sars2.fa $x.bam|puptab|awk &#39;$2!=$3&amp;&amp;$4!=0&#39;|(echo pos ref allele count coverage allele% average_quality;cat)|column -t
+pos   ref  allele  count  coverage  allele%  average_quality
+6137  A    C       1      2         50.000   18.0
+6192  C    T       1      1         100.000  31.0
+8145  A    G       1      1         100.000  39.0
+8206  A    G       1      1         100.000  39.0</pre>
+<p>In the set of GISAID submissions with a collection date in 2020, there's a total of 183 submissions where the state is listed as Santa Catarina. They include mutations in a total of 618 different positions, but none of hem are the 4 positions shown in the output above.</p>
+<p>The March 2020 sample has zero depth for all positions where there's mutations in the two A5706G samples from Santa Catarina:</p>
+<pre>$ grep A5706G gisaid2020.tsv|grep Santa\ Catarina|cut -f12|tr , \\n|sed &#39;s/.\(.*\)./\1/&#39;|awk &#39;NR==FNR{a[$0];next}$2 in a&#39; - &lt;(samtools depth -a SRR13152143.bam)|cut -f2-|column -t
+241    0
+3037   0
+5706   0
+14408  0
+18803  0
+23403  0
+27299  0
+28881  0
+28882  0
+28883  0
+29148  0</pre>
 <h3>
 <a href=#STAT_results id=STAT_results>STAT results</a>
 </h3>
@@ -759,33 +784,6 @@ $ stal SRR13152144.stat|head -n24
 11;Neisseria
 8;Laurasiatheria
 8;Oncorhynchus kisutch</pre>
-<p>There's 15 submissions with T14895G at covSPECTRUM. [<a href="https://cov-spectrum.org/explore/World/AllSamples/from%3D2020-01-01%26to%3D2024-12-31/variants?nucMutations=T14895G">https://cov-spectrum.org/explore/World/AllSamples/from%3D2020-01-01%26to%3D2024-12-31/variants?nucMutations=T14895G</a>] In the set of GISAID submissions with a collection date in 2020, the T14895G mutation is found in only one sample that seems to have a lot of errors, because it has over 100 nucleotide changes and many long insertions:</p>
-<pre class=width00>$ grep T14895G gisaid2020.tsv|tr \\t \|
-EPI_ISL_935114|hCoV-19/Italy/CAM-CRGS-133/2020|2021-02-04|2020-11-13|B.1.177|Italy|Campania||30328|Human|118|T3C,A4C,G7T,C241T,T445C,C3037T,C6286T,C7851T,C14408T,T14459C,G14563A,C14564G,G14566A,G14569T,C14571T,C14576A,G14580C,G14584A,C14585T,C14588T,A14597G,T14598A,C14599T,T14603A,T14606G,A14612G,A14613C,C14614A,C14618T,C14625T,T14629A,C14630A,A14631T,G14632T,T14633C,G14635A,T14637A,C14639A,A14644C,G14656C,T14660A,T14661A,C14662G,T14667C,G14668C,C14670T,A14672G,C14675A,G14677A,T14679C,T14682A,T14683G,T14685C,A14687T,C14688A,A14689G,A14693T,C14697T,T14698G,A14699T,G14701A,C14703A,T14704A,G14707A,T14709C,T14711G,C14714T,A14716G,G14718C,G14719A,T14726G,T14727A,G14730A,A14732C,G14734C,A14736T,T14740C,G14746T,T14749C,A14752G,A14753C,C14755A,C14757A,T14762C,G14767A,G14773C,G14776C,T14778G,G14881T,A14882T,G14885T,T14887A,C14889T,G14893C,T14895G,C14898A,G14900A,T14904A,A14905C,T14907C,C14909A,A14912T,C14914T,G21255C,C22227T,G22346T,A23403G,C26801G,C28932T,G29645T,A29869C,C29870T,A29871G,A29874T,A29877G,A29878C,A29880T,A29882T|14590-14592,14647-14654|0:TTTTTTTTAATGATCGGGCGACCACCGACACATACACGAT,6:CACTCTTTCCCTACACGACGCGCTTCCGCTC,14457:AGA,14562:CTCCACCATCGTAACAATCAA,14572:AACAACTTCAACTACAAATAGTAGTTGT,14580:A,14607:TAGTAGTCATAATCGCT,14621:CATCCTGAGCAAAGAAGAA,14661:A,14723:GAAAAGCAACATTGTTAGTAAGTGCAGCTA,14739:GCGTTTATCTAGTAACACATAATCATCAC,14751:GCATTGTATGTTGAGA,14760:ATGAGG,14769:GTATGTGATGT,14774:CAAAATAATCACCAATATTTAATTTGTAAGTTGTTGTACC,14896:CGACCACC,14916:CACTATTTCCCTACACGACGCTCTTCCGATCT,19248:AGAGTGCTATCTAACCTTAACTTGCCTGGTTGTGATGGTGGCAGTTTGTATGTAAATAAACATGCATTCCACACACCAGCTTTTGATAAAAGTGCTTTTGTTAATTTAAAACAATTACCAAG,29866:TT|N:A220V,ORF1a:A2529V,ORF1b:P314L,ORF1b:F331R,S:A222V,S:A262S,S:D614G||20E|Europe|1
-</pre>
-<p>I thought that maybe the two mutations could've been sequencing errors if they were close to the ends of reads. But neither of them was close to the ends of reads. T14895G was close to the middle:</p>
-<pre>$ samtools view SRR13152144.bam|awk &#39;$4+length($10)+20&gt;=x&amp;&amp;$4&lt;=x&#39; x=14895|cut -f1,10|seqkit tab2fx|cat - sars2.fa|mafft --clustalout --globalpair -
-[...]
-SRR13152144.484 ---------------------------------------gactactatcgttataatcta
-SRR13152144.484 ------------------------------------------------------------
-MN908947.3      ttctttgctcaggatggtaatgctgctatcagcgattatgactactatcgttataatcta
-
-
-SRR13152144.484 ccaacaatgtgtgatatcagacaactactatttgtagttgaagttgttgataagtacttt
-SRR13152144.484 --------------------acaactactatttgtagttgaagttgttgataagtacttt
-MN908947.3      ccaacaatgtgtgatatcagacaactactatttgtagttgaagttgttgataagtacttt
-                                    ****************************************
-
-SRR13152144.484 gattgttacgatgggggctgtattaatgctaaccaagtcatcgtcaacaacctagacaaa
-SRR13152144.484 gattgttacgatgggggctgtattaatgctaaccaagtcatcgtcaacaacctagacaaa
-MN908947.3      gattgttacgatggtggctgtattaatgctaaccaagtcatcgtcaacaacctagacaaa
-                ************** *********************************************
-
-SRR13152144.484 tcagctggt---------------------------------------------------
-SRR13152144.484 tcagctggttttccatttaataaatggggtaaggctagactttattatga----------
-MN908947.3      tcagctggttttccatttaataaatggggtaaggctagactttattatgattcaatgagt
-                *********
-[...]</pre>
 <h3>
 <a href=#babarlelephant_had_found_A5706G_earlier id=babarlelephant_had_found_A5706G_earlier>babarlelephant had found A5706G earlier</a>
 </h3>
@@ -836,7 +834,7 @@ MN908947.3      tcagctggttttccatttaataaatggggtaaggctagactttattatgattcaatgagt
                 *********
 [...]</pre>
 <h3>
-<a href=#Another_possible_mutation_found_in_a_B_1_1_33_sample_from_Brazil id=Another_possible_mutation_found_in_a_B_1_1_33_sample_from_Brazil>Another possible mutation found in a B.1.1.33 sample from Brazil</a>
+<a href=#Another_Braziliian_B_1_1_33_mutation_found_by_alchemytoday id=Another_Braziliian_B_1_1_33_mutation_found_by_alchemytoday>Another Braziliian B.1.1.33 mutation found by alchemytoday</a>
 </h3>
 <p>alchemytoday wrote: <span class="quote">&quot;I see that one T-&gt;C is T16251C which, like A5706G, was also found in Brazil in a B.1.1.33 lineage sample in 2020.&quot;</span> [<a href="https://x.com/alchemytoday/status/1793313402657308946">https://x.com/alchemytoday/status/1793313402657308946</a>]</p>
 <p>However T16251C is only supported by 1 out of 2 reads that cover the position and it has low quality (16):</p>
