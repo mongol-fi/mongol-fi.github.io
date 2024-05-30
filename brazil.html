@@ -525,8 +525,8 @@ MN908947.3  28144  T  2  .,  HG</pre>
 4 2020-03-13 Brazil
 1 2020-03-13 Canada</pre>
 <p>There's only 5 B.1.1.33 submissions that have an older or same collection date than the earliest submission with A5706G, but 3 out of 5 of them are from Brazil. There's 289 B.1.1 samples with an older or same collection date but only 2 of them are from Brazil. B.1.1.33 is defined by the mutations T27299C and T29148C, where the second mutation might to have arisen earlier, because in the output below the samples that are intermediate to B.1.1 and B.1.1.33 only have the second mutation but not the first one, and the intermediate samples are only found in Europe:</p>
-<pre>$ reline()(gawk -F\\t &#39;{a[$12][$5]++}END{for(i in a){max=0;for(j in a[i])if(a[i][j]&gt;max){max=a[i][j];out=j FS i}print out}}&#39; &quot;${1-~/gisaid2020.tsv}&quot;) # show most common lineage designation for each mutation set, or the first listed designation for ties
-$ gian()(cut -f12|tr , \\n|awk -F\\t &#39;NR==FNR{a[$0];next}{split($12,b,&quot;,&quot;);for(i in b)if(!(b[i]in a))next}1&#39; - &quot;${1-~/gisaid2020.tsv}&quot;) # keep only possible ancestor sequences whose mutation set is a subset of the list of mutations from STDIN
+<pre>$ reline()(gawk -F\\t &#39;{a[$12][$5]++}END{for(i in a){max=0;for(j in a[i])if(a[i][j]&gt;max){max=a[i][j];out=j FS i}print out}}&#39; ${1-~/gisaid2020.tsv}) # show most common lineage designation for each mutation set, or the first listed designation for ties
+$ gian()(cut -f12|tr , \\n|awk -F\\t &#39;NR==FNR{a[$0];next}{split($12,b,&quot;,&quot;);for(i in b)if(!(b[i]in a))next}1&#39; - ${1-~/gisaid2020.tsv}) # keep only possible ancestor sequences whose mutation set is a subset of the list of mutations from STDIN
 $ grep A5706G gisaid2020.tsv|head -n1|gian|awk -F\\t &#39;$11&gt;=5&amp;&amp;$4&lt;=&quot;2020-03-12&quot;&#39;|awk -F\\t &#39;NR==FNR{a[$1]=$2;next}{b[$11 FS a[$12]FS$6 FS$12]++}END{for(i in b)print b[i]FS i}&#39; &lt;(reline) -|sort -rnk2|csvtk -t pretty -s\ |sed 2d
 1  10 B.1.1.33 Brazil         C241T,C3037T,A5706G,C14408T,A23403G,T27299C,G28881A,G28882A,G28883C,T29148C
 2  9  B.1.1.33 Brazil         C241T,C3037T,C14408T,A23403G,T27299C,G28881A,G28882A,G28883C,T29148C
@@ -573,7 +573,7 @@ $ grep A5706G gisaid2020.tsv|head -n1|gian|awk -F\\t &#39;$11&gt;=5&amp;&amp;$4&
 1  6  B.1.1    Ireland        C3037T,C14408T,A23403G,G28881A,G28882A,G28883C
 1  6  B.1.1    Ireland        C241T,C14408T,A23403G,G28881A,G28882A,G28883C
 1  5  B.1.1    Ireland        C3037T,A23403G,G28881A,G28882A,G28883C</pre>
-<p>However if I wouldn't have excluded samples whose collection date was later than the earliest submission with A5706G, then there would've also been intermediate samples from Brazil that only had the first mutation but not the second one:</p>
+<p>However when I didn't exclude samples whose collection date was later than the earliest submission with A5706G, then there were also intermediate samples from Brazil that only had the first mutation but not the second one:</p>
 <pre>$ grep A5706G gisaid2020.tsv|head -n1|gian|awk -F\\t &#39;$11&gt;=5&#39;|awk -F\\t &#39;NR==FNR{a[$1]=$2;next}{b[$11 FS a[$12]FS$6 FS$12]++}END{for(i in b)print b[i]FS i}&#39; &lt;(reline) -|awk &#39;$2==8&#39;|csvtk -t pretty -s\ |sed 2d
 1  8   USA            C241T,C3037T,C14408T,A23403G,T27299C,G28881A,G28882A,G28883C
 1  8   Italy          C241T,C3037T,C14408T,A23403G,G28881A,G28882A,G28883C,T29148C
@@ -610,7 +610,7 @@ $ grep A5706G gisaid2020.tsv|head -n1|gian|awk -F\\t &#39;$11&gt;=5&amp;&amp;$4&
    1321 C23683T
    1662 C5183T</pre>
 <p>There's one Brazilian submission from July 2020 and another submission from September 2020 which both share 3 out of 6 of the mutations, and there's also a bunch of pangolin viruses which share 3 out of 6 of the mutations (even though 2 mutations are also shared by several RmYN and RsYN bat viruses which are not shown here):</p>
-<pre>$ gisum()(awk -F\\t &#39;NR==FNR{a[$0];next}{split($12,z,&quot;,&quot;);n=0;for(i in z)if(z[i]in a)n++;print n FS$0}&#39; - &quot;${1-~/gisaid2020.tsv}&quot;) # sum of shared mutations
+<pre>$ gisum()(awk -F\\t &#39;NR==FNR{a[$0];next}{split($12,z,&quot;,&quot;);n=0;for(i in z)if(z[i]in a)n++;print n FS$0}&#39; - ${1-~/gisaid2020.tsv}) # sum of shared mutations
 $ printf %s\\n T21066A C6113T C8668T G18756T C23683T C5183T|gisum|awk &#39;$1&gt;1&#39;|sort -rn|cut -f-12|head|tr \\t \|
 6|EPI_ISL_1739298|hCoV-19/Brazil/RJ-IC0102020_158-20/2020|2021-04-26|2020-03-01|B.1.1.33|Brazil|Rio de Janeiro||29796|Human|15
 3|EPI_ISL_5416113|hCoV-19/Brazil/MG-LBIb2964/2020|2021-10-21|2020-07-15|N.4|Brazil|Minas Gerais|Betim|29393|Human|20
@@ -622,6 +622,27 @@ $ printf %s\\n T21066A C6113T C8668T G18756T C23683T C5183T|gisum|awk &#39;$1&gt
 3|EPI_ISL_2557352|hCoV-19/Brazil/MG-FIOCRUZ-34167/2020|2021-06-16|2020-09-01|B.1.1.33|Brazil|Minas Gerais|Itaobim|29719|Human|20
 2|EPI_ISL_848343|hCoV-19/USA/IL-IDPH-I-000137/2020|2021-01-19|2020-10-08|B.1.578|USA|Illinois|Cook County|29782|Human|22
 2|EPI_ISL_848343|hCoV-19/USA/IL-IDPH-I-000137/2020|2021-01-19|2020-10-08|B.1.578|USA|Illinois|Cook County|29782|Human|22</pre>
+<p>B.1.1 is defined by three consecutive nucleotide changes at positions 28881, 28882, and 28883. If samples that likely have an incorrect collection date are excluded, the earliest sample by collection date with all three mutations is from Moscow, the next sample is from China, and the next 3 samples are from UK (so it's difficult to tell where B.1.1 may have originated, or if the samples from China or Moscow have an incorrect collection date). Most of the earliest sequences are from Europe, but there's also two sequences from Brazil with a collection date on February 26th:</p>
+<pre>$ grep G28881A,G28882A,G28883C gisaid2020.tsv|awk &#39;$5==&quot;B.1.1&quot;&amp;&amp;!$NF&#39;|head|cut -f1,3-8,11,12|tr \\t \|
+EPI_ISL_8907761|2022-01-20|2020-02-03|B.1.1|Russia|Moscow|Moscow|6|C241T,C3037T,A23403G,G28881A,G28882A,G28883C
+EPI_ISL_6951092|2021-12-02|2020-02-10|B.1.1|China|Guangxi|Nanning|8|C241T,C3037T,C14408T,T20394C,A23403G,G28881A,G28882A,G28883C
+EPI_ISL_2737704|2021-06-30|2020-02-15|B.1.1|United Kingdom|England||8|C241T,C3037T,C14408T,A23403G,A27938G,G28881A,G28882A,G28883C
+EPI_ISL_2737705|2021-06-30|2020-02-16|B.1.1|United Kingdom|England||8|C241T,C3037T,C14408T,A23403G,A27938G,G28881A,G28882A,G28883C
+EPI_ISL_466615|2020-06-11|2020-02-16|B.1.1|United Kingdom|England||10|C241T,C3037T,C14408T,A23223G,A23403G,C25587T,T26483C,G28881A,G28882A,G28883C
+EPI_ISL_5248212|2021-10-17|2020-02-20|B.1.1|Ireland|Kerry||9|C241T,C313T,C3037T,C14408T,A23403G,G28881A,G28882A,G28883C,C29614T
+EPI_ISL_644823|2020-11-19|2020-02-22|B.1.1|USA|Washington||7|C241T,C3037T,C14408T,A23403G,G28881A,G28882A,G28883C
+EPI_ISL_423662|2020-04-12|2020-02-23|B.1.1|United Kingdom|England||7|C241T,C3037T,C14408T,A23403G,G28881A,G28882A,G28883C
+EPI_ISL_2737710|2021-06-30|2020-02-24|B.1.1|United Kingdom|England||8|C241T,C3037T,G11842A,C14408T,A23403G,G28881A,G28882A,G28883C
+EPI_ISL_437932|2020-05-12|2020-02-24|B.1.1|Austria|Ischgl||7|C241T,C3037T,C14408T,A23403G,G28881A,G28882A,G28883C
+EPI_ISL_460081|2020-06-05|2020-02-24|B.1.1|Italy|Lombardy||7|C241T,C3037T,C14408T,A23403G,G28881A,G28882A,G28883C
+EPI_ISL_412912|2020-02-28|2020-02-25|B.1.1|Germany|Baden-Wurttemberg||8|C241T,C3037T,G10265A,C14408T,A23403G,G28881A,G28882A,G28883C
+EPI_ISL_464184|2020-06-11|2020-02-25|B.1.1|United Kingdom|England||8|C241T,C3037T,C14408T,A23403G,A27938G,G28881A,G28882A,G28883C
+EPI_ISL_542235|2020-09-23|2020-02-25|B.1.1|Italy|Lombardy||7|C241T,C3037T,C14408T,A23403G,G28881A,G28882A,G28883C
+EPI_ISL_542237|2020-09-23|2020-02-25|B.1.1|Italy|Lombardy||7|C241T,C3037T,C14408T,A23403G,G28881A,G28882A,G28883C
+EPI_ISL_542238|2020-09-23|2020-02-25|B.1.1|Italy|Lombardy||7|C241T,C3037T,C14408T,A23403G,G28881A,G28882A,G28883C
+EPI_ISL_542410|2020-09-23|2020-02-25|B.1.1|Italy|Lombardy||7|C241T,C3037T,C14408T,A23403G,G28881A,G28882A,G28883C
+EPI_ISL_2731458|2021-06-30|2020-02-26|B.1.1|Brazil|Parana|Curitiba|7|C241T,C3037T,C14408T,A23403G,G28881A,G28882A,G28883C
+EPI_ISL_2737721|2021-06-30|2020-02-26|B.1.1|United Kingdom|England||7|C241T,C3037T,C14408T,A23403G,G28881A,G28882A,G28883C</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
