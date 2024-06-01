@@ -51,6 +51,7 @@ th{background:#3a3a3a;text-align:left;font-weight:bold}
 <li><a href=#100_amino_acid_identity_of_the_envelope_protein_of_ZC45>100% amino acid identity of the envelope protein of ZC45</a></li>
 <li><a href=#The_novel_HKU3_like_virus_mentioned_in_DRASTICs_HZAU_paper_was_published_in_2023_as_RsGD2014A_RsGD2014B>The novel HKU3-like virus mentioned in DRASTIC's HZAU paper was published in 2023 as RsGD2014A/RsGD2014B</a></li>
 <li><a href=#The_HA_segment_in_WIV07_2_matches_the_2013_refseq_but_other_segments_match_newer_strains_of_H7N9>The HA segment in WIV07-2 matches the 2013 refseq but other segments match newer strains of H7N9</a></li>
+<li><a href=#Is_SARS2_phylogenetically_closer_to_RaTG13_or_BANAL_20_52>Is SARS2 phylogenetically closer to RaTG13 or BANAL-20-52?</a></li>
 </ul>
 
 <h2>
@@ -231,6 +232,98 @@ MW265394  982     2         160       16.2933   1.00  A/chicken/Shanxi/SX0256/20
 MW109507  1027    2         125       12.1714   0.67  A/environment/Jiangxi/2.06_SRGFYF005-E/2017;7;China;2017;02;06;Environment
 MW109475  982     2         226       23.0143   1.00  A/environment/Jiangxi/1.11_NCDZT98F2-E/2017;7;China;2017;01;11;Environment</pre>
 <p>So it could be that the HA plasmid was designed based on the refseq strain from 2013, but the full virus came from a newer strain of H7N9.</p>
+<h2>
+<a href=#Is_SARS2_phylogenetically_closer_to_RaTG13_or_BANAL_20_52 id=Is_SARS2_phylogenetically_closer_to_RaTG13_or_BANAL_20_52>Is SARS2 phylogenetically closer to RaTG13 or BANAL-20-52?</a>
+</h2>
+<p>Steve Massey has been saying that SARS 2 is phylogenetically closer to RaTG13 than to BANAL-52 because it groups together with RaTG13 in maximum likelihood trees: [<a href="https://twitter.com/stevenemassey/status/1494076835902234627">https://twitter.com/stevenemassey/status/1494076835902234627</a>]</p>
+<div class="width4">
+<img src="i/origin-phylo.jpg">
+</div>
+<p>However the same thing can even happen in a distance-based tree. The tree below is based on a percentage distance of the whole genome so that positions where either sequence has a gap are not considered. I used the complete linkage method where the distance between two branches is the distance between the furthest nodes within the branches, so that for example the distance between SARS2 and the branch that contains the three BANAL viruses is the distance between SARS2 and the BANAL virus which is the furthest from SARS2, which happens to be BANAL-236. In my tree first BANAL-103 is joined with BANAL-236, and then their combined branch is joined with BANAL-52. And after that Wuhan-Hu-1 ends up being closer to RaTG13 than to the branch of the three BANAL viruses, so Wuhan-Hu-1 joins RaTG13 earlier:</p>
+<div class="width6">
+<img src="i/origin-phylo-2.png">
+</div>
+<p>The branching pattern remained the same even when I changed the linkage method from <code>complete</code> to <code>ward.D2</code>. But when I removed BANAL-236 and BANAL-103 from the tree, then Wuhan-Hu-1 joined with BANAL-52 before RaTG13:</p>
+<p><img src=i/origin-phylo-3.png style=max-width:556px></p>
+<pre>brew install iqtree mafft seqkit xz
+wget sars2.net/f/sarbe.{pid,fa.xz};xz -d sarbe.fa.xz
+
+# thin out a TSV percentage identity matrix to remove sequences with over n% identity to any previous sequence (default 99%)
+thin()(awk -F\\t &#39;NR&gt;1{for(i=2;i&lt;NR;i++)if($i&gt;x)next;print$1}&#39; x=&quot;${1-99}&quot; &quot;${@:2}&quot;)
+
+# matrix sort grep (sort TSV matrix by column that matches regex and print the column along with the first column)
+masog()(awk -F\\t &#39;NR==1{for(i=2;i&lt;=NF;i++)if($i~x)break;next}{print$i,$1}&#39; x=&quot;$1&quot; &quot;${2--}&quot;|sort -n)
+
+# short name
+shorn()(sed -E $&#39;s/(,| surface| ORF1| orf1| genomic sequence).*//;s/Severe acute respiratory syndrome/SARS/;s/ isolate / /&#39;)
+shorn2()(shorn|sed &#39;s/ RNA$//;s/&gt;.* /&gt;/&#39;)
+
+# select sequences with at least 92% identity to Wuhan-Hu-1; omit sequences with over 99.9% identity to another sequence
+masog Hu-1&lt;sarbe.pid|awk &#39;$1&gt;=90{print$2}&#39;|sort|comm -12 &lt;(thin 99.9 sarbe.pid|cut -d\  -f1|sort) -|seqkit grep -f- sarbe.fa|shorn2|mafft --thread 4 --quiet -&gt;iqtree.fa
+seqkit grep -nvrp &#39;20-(103|236)&#39; iqtree.fa&gt;iqtree2.fa
+
+curl -Ls sars2.net/f/pid.cpp&gt;pid.cpp;g++ pid.cpp -O3 -o pid
+pid&lt;iqtree.fa&gt;iqtree.pid;pid&lt;iqtree2.fa&gt;iqtree2.pid</pre>
+<!-- -->
+<pre>t=100-read.table(&quot;iqtree.pid&quot;,row.names=1,header=T,sep=&quot;\t&quot;,check.names=F)
+m=as.matrix(t)
+
+hc=hclust(as.dist(m)) # complete linkage
+# hc=hclust(as.dist(t),&quot;ward.D2&quot;) # Ward linkage
+hc=as.hclust(reorder(as.dendrogram(hc),cmdscale(m)[,1]))
+
+pheatmap::pheatmap(m,filename=&quot;1.png&quot;,display_numbers=round(m),legend=F,
+  clustering_callback=\(...)hc,
+  cellwidth=17,cellheight=17,fontsize=9,fontsize_number=8,border_color=NA,
+  number_color=ifelse(t&gt;max(t)*.45&amp;!is.na(t),&quot;white&quot;,&quot;black&quot;)[hc$order,hc$order],
+  sapply(255:0,\(i)rgb(i,i,i,maxColorValue=255)))</pre>
+<p>In a world where more RaTG13-like viruses would be published, RaTG13 might join other RaTG13-like viruses earlier than SARS2. So then if the other RaTG13-like viruses would be further from SARS2 than RaTG13 is, it would increase the distance between SARS2 and the branch of RaTG13-like viruses, so then SARS2 might join the BANAL branch before the branch of RaTG13-like viruses. So therefore which branch is joined by SARS2 first might depend on which branch has more published sequences.</p>
+<p>In the output below I used IQTree to generate maximum likelihood trees. On the left side where I included all 5 BANAL viruses, Wuhan-Hu-1 is grouped together with RaTG13. But on the right side where I again removed BANAL-103 and BANAL-236, Wuhan-Hu-1 is grouped together with BANAL-52 and not RaTG13. So a similar phenomenon I demonstrated above using a distance-based tree can also occur in a maximum likelihood tree:</p>
+<pre>$ iqtree -nt AUTO -s iqtree.fa;iqtree -nt AUTO -s iqtree2.fa
+[...]
+$ paste &lt;(echo $&#39;--- All five BANAL viruses included ---\n&#39;;sed &#39;1,/^NOTE:/d&#39; iqtree.fa.iqtree|sed 1d|sed &#39;/^$/q&#39;) &lt;(echo $&#39;--- BANAL-103 and BANAL-236 excluded ---\n&#39;;sed &#39;1,/^NOTE:/d&#39; iqtree2.fa.iqtree|sed 1d|sed &#39;/^$/q&#39;)|column -ts$&#39;\t&#39;
+--- All five BANAL viruses included ---                                   --- BANAL-103 and BANAL-236 excluded ---
++**Ra22QT137                                                              +**Ra22QT137
+|                                                                         |
++**Ra22QT106                                                              +**Ra22QT106
+|                                                                         |
+|  +--Ra22QT135                                                           |  +--Ra22QT135
++**|                                                                      +**|
+   |  +--Ra22QT77                                                            |  +--Ra22QT77
+   +--|                                                                      +--|
+      |                           +--Wuhan-Hu-1                                 |                       +--Wuhan-Hu-1
+      |                        +--|                                             |                    +--|
+      |                        |  +-----RaTG13                                  |                    |  +--BANAL-20-52_Laos_2020
+      |                     +--|                                                |                 +--|
+      |                     |  +--BANAL-20-52_Laos_2020                         |                 |  +-----RaTG13
+      |                  +--|                                                   |              +--|
+      |                  |  |  +--BANAL-20-236_Laos_2020                        |              |  |      +--bat_Yunnan_RpYN06_2020
+      |                  |  +--|                                                |              |  |  +---|
+      |                  |     +--BANAL-20-103_Laos_2020                        |              |  |  |   |               +--PrC31
+      |               +--|                                                      |              |  |  |   +---------------|
+      |               |  |      +--bat_Yunnan_RpYN06_2020                       |              |  |  |                   |   +--YN2021
+      |               |  |  +---|                                               |              |  |  |                   +---|
+      |               |  |  |   |              +--PrC31                         |              |  |  |                       |        +--Rp22DB159
+      |               |  |  |   +--------------|                                |              |  |  |                       +--------|
+      |               |  |  |                  |   +--YN2021                    |              |  |  |                                +--BtSY2
+      |               |  |  |                  +---|                            |              |  +--|
+      |               |  |  |                      |        +--Rp22DB159        |              |     |        +--BANAL-20-247_Laos_2020
+      |               |  |  |                      +--------|                   |              |     |    +---|
+      |               |  |  |                               +--BtSY2            |              |     |    |   +--BANAL-20-116_Laos_2020
+      |               |  +--|                                                   |              |     +----|
+      |               |     |       +--BANAL-20-247_Laos_2020                   |              |          |            +--RacCS271
+      |               |     |    +--|                                           |              |          +------------|
+      |               |     |    |  +--BANAL-20-116_Laos_2020                   |              |                       |  +--RacCS253
+      |               |     +----|                                              |              |                       +--|
+      |               |          |            +--RacCS271                       |              |                          +--RacCS203
+      |               |          +------------|                                 +--------------|
+      |               |                       |  +--RacCS253                                   |                         +--GD_P79-9_2019
+      |               |                       +--|                                             +-------------------------|
+      |               |                          +--RacCS203                                                             +--MP789
+      +---------------|
+                      |                       +--GD_P79-9_2019
+                      +-----------------------|
+                                              +--MP789</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
