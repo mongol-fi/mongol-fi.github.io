@@ -89,6 +89,7 @@ th{background:#3a3a3a;text-align:left;font-weight:bold}
 <li><a href=#Joel_Smalleys_comment_about_my_plot>Joel Smalley's comment about my plot</a></li>
 </ul></li>
 <li><a href=#Clare_Craig_Category_1_ambulance_incidents_in_England>Clare Craig: Category 1 ambulance incidents in England</a></li>
+<li><a href=#TheRustler83_Percentage_of_COVID_deaths_in_unvaccinated_people_in_ONS_dataset_for_mortality_by_vaccination_status>TheRustler83: Percentage of COVID deaths in unvaccinated people in ONS dataset for mortality by vaccination status</a></li>
 </ul>
 
 <h2>
@@ -1850,10 +1851,69 @@ $ grep England vaccinations/2022/cumPeopleVaccinatedFirstDoseByPublishDate_natio
 <div class="width7">
 <img src="i/statistic-craig-ambulance-2.png">
 </div>
-<p>Around mid-2021 when there was a sharp increase in category 1 incidents, there was also a sharp decrease in category 3 incidents. So maybe there was some kind of a change of policy:</p>
+<p>Around mid-2021 when there was a sharp increase in category 1 incidents, there was also a sharp decrease in category 3 incidents. So maybe there was some kind of a change in policy, so that for example they shifted part of C3 to C2 and part of C2 to C1:</p>
 <div class="width7">
 <img src="i/statistic-craig-ambulance-3.png">
 </div>
+<h2>
+<a href=#TheRustler83_Percentage_of_COVID_deaths_in_unvaccinated_people_in_ONS_dataset_for_mortality_by_vaccination_status id=TheRustler83_Percentage_of_COVID_deaths_in_unvaccinated_people_in_ONS_dataset_for_mortality_by_vaccination_status>TheRustler83: Percentage of COVID deaths in unvaccinated people in ONS dataset for mortality by vaccination status</a>
+</h2>
+<p>TheRustler83 posted this tweet: [<a href="https://x.com/TheRustler83/status/1799686665125929212">https://x.com/TheRustler83/status/1799686665125929212</a>]</p>
+<div class="width6">
+<img src="i/statistic-rustler-vaxpct-1.jpg">
+</div>
+<p>However the table at the bottom didn't show the percentage of vaccinated people in the ONS dataset for mortality by vaccination status in England, but in the UKHSA flu and COVID-19 surveillance reports. But unvaccinated people are underrepresented in the ONS dataset, so it had only about 2-2.5% vaccinated people in elderly age groups in 2023:</p>
+<div class="width7">
+<img src="i/statistic-rustler-vaxpct-2.png">
+</div>
+<pre>library(colorspace)
+
+t=read.csv(&quot;http://sars2.net/f/ons-table-2-2023-august.csv&quot;,na.strings=c(&quot;x&quot;,&quot;&lt;3&quot;))
+t=t[t$cause==&quot;Deaths involving COVID-19&quot;,]
+t$date=sprintf(&quot;%d-%02d&quot;,t$year,match(t$month,month.name))
+t$status[t$status!=&quot;Unvaccinated&quot;]=&quot;Vaccinated&quot;
+
+a=aggregate(t[,c(6:7)],t[,c(1,4,5,12)],sum,na.rm=T)
+m1=xtabs(dead~age+date,subset(a,status==&quot;Unvaccinated&quot;))/xtabs(dead~age+date,a)*100
+m2=xtabs(pop~age+date,subset(a,status==&quot;Unvaccinated&quot;))/xtabs(pop~age+date,a)*100
+
+pal=hex(HSV(c(210,210,210,160,110,60,30,0,0,0),c(0,.25,rep(.5,8)),c(rep(1,8),.5,0)))
+
+pheatmap::pheatmap(m1,filename=&quot;i1.png&quot;,display_numbers=ifelse(is.na(m1),&quot;NA&quot;,ifelse(m1&gt;10,round(m1),sprintf(&quot;%.1f&quot;,m1))),
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=17,cellheight=17,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;gray90&quot;,
+  number_color=ifelse(!is.na(m1)&amp;m1&gt;80,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(0,100,,256),
+  main=&quot;Percentage of COVID deaths in unvaccinated people&quot;,
+  colorRampPalette(pal)(256))
+
+pheatmap::pheatmap(m2,filename=&quot;i2.png&quot;,display_numbers=ifelse(is.na(m2),&quot;NA&quot;,ifelse(m2&gt;10,round(m2),sprintf(&quot;%.1f&quot;,m2))),
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=17,cellheight=17,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;gray90&quot;,
+  number_color=ifelse(m2&gt;80,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(0,100,,256),
+  main=&quot;Percentage of person-years in unvaccinated people&quot;,
+  colorRampPalette(pal)(256))
+
+m3=(m1/m2)/((100-m1)/(100-m2))*100|nai|D2
+disp3=ifelse(m3&lt;10,sprintf(&quot;%.1f&quot;,m3),round(m3))
+m3=m3-1
+max3=12
+m3=ifelse(m3&lt;0,1/m3*max3,m3)
+
+pal2=colorRampPalette(hex(HSV(c(210,210,210,210,0,0,0,0,0),c(1,.8,.6,.3,0,.3,.6,.8,1),c(.3,.65,1,1,1,1,1,.65,.3))))(256)
+
+pheatmap::pheatmap(m3,filename=&quot;i3.png&quot;,display_numbers=disp3,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=17,cellheight=17,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;gray90&quot;,
+  number_color=ifelse(!is.na(m3)&amp;abs(m3)&gt;.6*max3,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(-max3,max3,,256),
+  main=&quot;COVID mortality rate in unvaccinated people as multiple of vaccinated people&quot;,
+  colorRampPalette(pal2)(256))
+
+sub=&quot;Source: ONS dataset \&quot;Deaths by vaccination status, England\&quot;, table 2&quot;
+system(&quot;convert i[123].png -append 0.png&quot;)
+system(paste0(&quot;f=0.png;mar=70;w=`identify -format %w $f`;convert \\( $f -gravity northeast -splice x20 \\) \\( -size $[w-mar]x -font Arial -interline-spacing -3 -pointsize 44 caption:&#39;&quot;,sub,&quot;&#39; -extent $[w-mar]x -gravity south -splice x20 \\) -append 1.png&quot;))</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
