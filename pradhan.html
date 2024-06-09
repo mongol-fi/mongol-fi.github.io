@@ -16,9 +16,9 @@ blockquote{margin-left:40px;margin-right:0}
 blockquote p{max-width:480px}
 blockquote blockquote p{max-width:440px}
 blockquote blockquote blockquote p{max-width:400px}
-blockquote,.quote,blockquote h1,blockquote h2,blockquote h3{color:hsl(30,55%,75%)}
-blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(30,48%,60%)}
-blockquote blockquote blockquote,blockquote blockquote .quote,,blockquote .quote .quote,.quote .quote .quote{color:hsl(30,30%,45%)}
+blockquote,.quote,blockquote h1,blockquote h2,blockquote h3{color:hsl(35,55%,75%)}
+blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(35,45%,60%)}
+blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote .quote,.quote .quote .quote{color:hsl(35,30%,40%)}
 blockquote pre,blockquote code{color:black}
 code{padding:1px}
 img{max-width:100%}
@@ -54,7 +54,7 @@ th{background:#3a3a3a;text-align:left;font-weight:bold}
 <h2>
 <a href=#Pradhan_et_al id=Pradhan_et_al>Pradhan et al.</a>
 </h2>
-<p>Pradhan et al. did a pairwise alignment of the spike protein of SARS2 against SARS1, and they identified 4 regions where SARS2 had an insert relative to SARS1:</p>
+<p>Pradhan et al. did a pairwise alignment of the spike protein of SARS2 against SARS1, and they identified 4 regions where SARS2 had an insert relative to SARS1: [<a href="https://www.researchgate.net/publication/338957445_Uncanny_similarity_of_unique_inserts_in_the_2019-nCoV_spike_protein_to_HIV-1_gp120_and_Gag">https://www.researchgate.net/publication/338957445_Uncanny_similarity_of_unique_inserts_in_the_2019-nCoV_spike_protein_to_HIV-1_gp120_and_Gag</a>]</p>
 <div class="width7">
 <img src="i/origin-pradhan-1.png">
 </div>
@@ -148,7 +148,7 @@ $ for x in `&lt;kmer`;do grep -m1 $x temp2;done|wc -l
 <div class="width6">
 <img src="i/origin-pradhan-7.jpg">
 </div>
-<p>Also from my alignment above it looks that relative to SARS1, SARS2 has the deletion <code>SK</code> and the insertion <code>MESEFR</code>. Pradhan et al. should've included more different sequences in their alignment and not just SARS2 and SARS1. Trevor Bedford also pointed out that the <code>YYHK</code> wasn't really even an insert relative to other sarbecoviruses, but from his alignment it looks like SARS2 has the insertion <code>SEFR</code>: [<a href="https://twitter.com/trvrb/status/1223667730911354880">https://twitter.com/trvrb/status/1223667730911354880</a>]</p>
+<p>Also from my alignment above it looks that relative to SARS1, SARS2 has the deletion <code>SK</code> and the insertion <code>MESEFR</code>. So Pradhan et al. would've been able to identify the regions of the indels more accurately if they would've included more sequences in their alignment instead of only doing a pairwise alignment of SARS2 and SARS1. Trevor Bedford also pointed out that the <code>YYHK</code> wasn't really even an insert relative to other sarbecoviruses, but from his alignment it looks like SARS2 has the insertion <code>SEFR</code>: [<a href="https://twitter.com/trvrb/status/1223667730911354880">https://twitter.com/trvrb/status/1223667730911354880</a>]</p>
 <div class="width6">
 <img src="i/origin-pradhan-6.jpg">
 </div>
@@ -169,7 +169,7 @@ NP_057850.1 RVLAEAMSQVTNSATIMMQRGNFRNQRKIVKCFNCGKEGHTARNCRAPRKKGCWKCGKEG
                     ^^^^^^^^^^^^^^^^^^^^^
                     Pradhan insert 4
 [...]</pre>
-<p>This shows the colorized amino acid alignments:</p>
+<p>Here's code for making the colorized amino acid alignments:</p>
 <pre># download whole genome sequences of sarbecoviruses
 curl -sL sars2.net/f/sarbe.fa.xz|xz -dc&gt;sarbe.fa
 
@@ -182,9 +182,9 @@ seqkit seq -ni sarbe.fa|emu &#39;&#39; fasta_cds_aa|seqkit grep -nrp gene=S,spik
 # make a TSV matrix for percentage identity between spike protein sequences
 aln()(\mafft --thread 3 --quiet &quot;${@--}&quot;)
 curl -Ls sars2.net/f/pid.cpp&gt;pid.cpp;g++ pid.cpp -O3 -o pid
-aln spike.aa|./pid&gt;spike.pid
+seqkit replace -isp &#39;[^X]&#39; -r &#39;&#39; spike.aa|seqkit seq -m 5|seqkit seq -ni|seqkit grep -vf- spike.aa|aln|./pid&gt;spike.pid
 
-# thin out a TSV percentage identity matrix by removing rows with over 99% identity to any previous row
+# thin out a TSV percentage identity matrix by removing rows with over n% identity to any previous row (default 99%)
 thin()(awk -F\\t &#39;NR&gt;1{for(i=2;i&lt;NR;i++)if($i&gt;x)next;print$1}&#39; x=&quot;${1-99}&quot; &quot;${@:2}&quot;)
 
 # align text right by spaces
@@ -193,7 +193,7 @@ alir()(awk &#39;{a[NR]=$0;if(length($0)&gt;l)l=length($0)}END{for(i in a)printf&
 # colorize amino acids
 cola()(sed -f &lt;(awk -F: &#39;{print&quot;s/&quot;$1&quot;/\033[38;2;0;0;0m\033[48;2;&quot;$2&quot;;&quot;$3&quot;;&quot;$4&quot;m&quot;$1&quot;\033[0m/g&quot;}&#39; &lt;(printf %s\\n A:242:121:121 C:242:182:121 D:242:242:121 E:182:242:121 F:121:242:151 G:121:242:222 H:121:182:242 I:121:121:242 K:182:121:242 L:242:121:242 M:255:191:191 N:255:223:191 P:255:255:191 Q:223:255:191 R:191:255:207 S:191:255:244 T:191:223:255 V:191:191:255 W:223:191:255 Y:255:191:255 -:140:140:140)) &quot;$@&quot;)
 
-thin 92 &lt;spike.pid|cut -d\  -f1|seqkit grep -f- spike.aa|seqkit grep -nrvp &#39;SARS coronavirus&#39;|cat - &lt;(seqkit grep -nrip hu-1,tor2,zc45,rp3\\b,rs7896,banal-20-52,ratg,lyra11,btsy2,shc014,wiv1\\b,gx_p2v,gx-p1e spike.aa)|seqkit rmdup -s|aln --reorder -|seqkit subseq -r267:298|cut -d, -f1|sed &#39;s/ ORF.*//;s/ surface .*//;s/Severe acute respiratory syndrome/SARS/;s/Khosta-2 strain //;s/ isolate / /;s/ strain / /;s/Bat SARS-like coronavirus //;s/Betacoronavirus sp. //;s/ RNA$//&#39;|seqkit fx2tab|(x=`cat`;cut -f1&lt;&lt;&lt;&quot;$x&quot;|cut -d\  -f2-|alir|paste -d\  - &lt;(cut -f2&lt;&lt;&lt;&quot;$x&quot;|cola))</pre>
+thin 92 &lt;spike.pid|cut -d\  -f1|seqkit grep -f- spike.aa|seqkit grep -nrvp &#39;SARS coronavirus&#39;|cat - &lt;(seqkit grep -nrip db159,hu-1,tor2,zc45,rp3\\b,rs7896,banal-20-52,ratg,lyra11,btsy2,shc014,wiv1\\b,gx_p2v,gx-p1e spike.aa)|seqkit rmdup -s|aln --reorder -|seqkit subseq -r153:186|cut -d, -f1|sed &#39;s/ ORF.*//;s/ surface .*//;s/Severe acute respiratory syndrome/SARS/;s/Khosta-2 strain //;s/ isolate / /;s/ strain / /;s/Bat SARS-like coronavirus //;s/Betacoronavirus sp. //;s/ RNA$//&#39;|seqkit fx2tab|(x=`cat`;cut -f1&lt;&lt;&lt;&quot;$x&quot;|cut -d\  -f2-|alir|paste -d\  - &lt;(cut -f2&lt;&lt;&lt;&quot;$x&quot;|cola))</pre>
 <h2>
 <a href=#Arkmedics_BLAST_searches_for_Pradhan_et_al_s_inserts id=Arkmedics_BLAST_searches_for_Pradhan_et_al_s_inserts>Arkmedic's BLAST searches for Pradhan et al.'s inserts</a>
 </h2>
@@ -201,7 +201,7 @@ thin 92 &lt;spike.pid|cut -d\  -f1|seqkit grep -f- spike.aa|seqkit grep -nrvp &#
 <div class="width14">
 <img src="i/origin-pradhan-9.png">
 </div>
-<p>However his top matches got only 83% query coverage, because they only matched 15 out of 18 bases:</p>
+<p>However his top matches got only 83% query coverage because they only matched 15 out of 18 bases, similar to my matches here:</p>
 <div class="width6">
 <img src="i/origin-pradhan-10.jpg">
 </div>
