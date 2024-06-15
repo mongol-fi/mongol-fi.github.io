@@ -16,9 +16,9 @@ blockquote{margin-left:40px;margin-right:0}
 blockquote p{max-width:480px}
 blockquote blockquote p{max-width:440px}
 blockquote blockquote blockquote p{max-width:400px}
-blockquote,.quote,blockquote h1,blockquote h2,blockquote h3{color:hsl(30,55%,75%)}
-blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(30,48%,60%)}
-blockquote blockquote blockquote,blockquote .quote .quote,.quote .quote .quote{color:hsl(30,30%,45%)}
+blockquote,.quote,blockquote h1,blockquote h2,blockquote h3{color:hsl(35,55%,75%)}
+blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(35,45%,60%)}
+blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote .quote,.quote .quote .quote{color:hsl(35,30%,40%)}
 blockquote pre,blockquote code{color:black}
 code{padding:1px}
 img{max-width:100%}
@@ -102,6 +102,8 @@ th{background:#3a3a3a;text-align:left;font-weight:bold}
 <li><a href=#Make_a_line_plot_of_cumulative_mutations_compared_to_a_target_sequence>Make a line plot of cumulative mutations compared to a target sequence</a></li>
 <li><a href=#Make_a_SNAP_plot_of_cumulative_dN_and_dS_for_concatenated_coding_sequences>Make a SNAP plot of cumulative dN and dS for concatenated coding sequences</a></li>
 <li><a href=#Convert_mpileup_to_table>Convert mpileup to table</a></li>
+<li><a href=#Count_what_proportion_of_arginine_codons_in_sarbecoviruses_are_coded_by_CGG>Count what proportion of arginine codons in sarbecoviruses are coded by CGG</a></li>
+<li><a href=#Make_a_list_of_SNVs_in_a_sarbecovirus_in_Wuhan_Hu_1_coordinates>Make a list of SNVs in a sarbecovirus in Wuhan-Hu-1 coordinates</a></li>
 </ul>
 
 <h2>
@@ -2693,12 +2695,12 @@ curl &#39;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&a
 x=SRR13152143;enad $x
 fastp -35 -i $x\_1.fastq.gz -I $x\_2.fastq.gz -o $x\_1.fq.gz -O $x\_2.fq.gz
 minimap2 -a --sam-hit-only sars2.fa $x\_[12].fastq.gz|samtools sort -&gt;$x.bam</pre>
-<p>This doesn't print average quality at each position:</p>
+<p>This doesn't print the average quality at each position:</p>
 <pre>puptab0()(ruby -ane&#39;next if$F[3]==0||$F[4]==&quot;*&quot;;s=$F[4].upcase.gsub(/[.,]/,$F[2]).gsub(/\^./,&quot;&quot;).gsub(&quot;$&quot;,&quot;&quot;);s2=s.dup;s.enum_for(:scan,/[+-]\d+/).each{m=Regexp.last_match;m.begin(0).upto(m.end(0)+s[m.begin(0)+1,m.end(0)].to_i-1){|i|s2[i]=&quot; &quot;}};s2.gsub!(&quot; &quot;,&quot;&quot;);t=s2.chars.tally;&quot;ACGT&quot;.chars.map{|x|puts [$F[1],$F[2],x,t[x]||0,s2.length,&quot;%.3f&quot;%(100.0*(t[x]||0)/s2.length)]*&quot; &quot;}&#39; &quot;$@&quot;)</pre>
 <p>This also includes average quality:</p>
 <pre>puptab()(ruby -ane&#39;s=$F[4].upcase.gsub(/[.,]/,$F[2]).gsub(/\^./,&quot;&quot;).gsub(&quot;$&quot;,&quot;&quot;);s2=s.dup;s.enum_for(:scan,/[+-]\d+/).each{m=Regexp.last_match;m.begin(0).upto(m.end(0)+s[m.begin(0)+1,m.end(0)].to_i-1){|i|s2[i]=&quot; &quot;}};s2.gsub!(&quot; &quot;,&quot;&quot;);t=s2.chars.tally;&quot;ACGT&quot;.chars.map{|x|q=$F[5].chars.values_at(*s2.chars.each_index.select{|i|s2[i]==x}).map{|c|c.ord-33};puts [$F[1],$F[2],x,t[x]||0,s2.size,&quot;%.3f&quot;%(100.0*(t[x]||0)/s2.size),q.size==0?&quot;NA&quot;:&quot;%.1f&quot;%(q.sum.to_f/q.size)]*&quot; &quot;}&#39; &quot;$@&quot;)</pre>
 <p>Sample output:</p>
-<pre>$ samtools mpileup -f sars2.fa SRR13152144.bam 2&gt;/dev/null|puptab|awk &#39;$4&gt;0&#39;|(echo pos ref al count depth pct qual;cat)|awk &#39;$2!=$3&#39;|head -n5|column -t
+<pre>$ samtools mpileup -f sars2.fa SRR13152144.bam 2&gt;/dev/null|puptab|awk &#39;$2!=$3&#39;|(echo pos ref al count depth pct qual;cat)|head -n5|column -t
 pos   ref  al  count  depth  pct      qual
 3392  G    C   2      2      100.000  39.0
 5706  A    G   2      2      100.000  39.0
@@ -2715,6 +2717,37 @@ $ samtools mpileup -f sars2.fa SRR13152144.bam|cpup -S|head -n3|column -t # -S (
 chr         pos   ref_base  depth,a,c,g,t,n,skip,gap,insert,delete
 MN908947.3  3357  A         2,2,0,0,0,0,0,0,0,0
 MN908947.3  3358  T         2,0,0,0,2,0,0,0,0,0</pre>
+<h2>
+<a href=#Count_what_proportion_of_arginine_codons_in_sarbecoviruses_are_coded_by_CGG id=Count_what_proportion_of_arginine_codons_in_sarbecoviruses_are_coded_by_CGG>Count what proportion of arginine codons in sarbecoviruses are coded by CGG</a>
+</h2>
+<p>This thins out a FASTA file of sarbecoviruses to remove sequences with more than 99% identity to any previous sequence in the file, because otherwise SARS1 sequences would be overrepresented.</p>
+<p>There's six different codons for arginine, but the rarest one is CGG which appears in the FCS insertion:</p>
+<pre>$ curl -sL sars2.net/f/sarbe.fa.xz|gzip -dc&gt;sarbe.fa;wget sars2.net/f/sarbe.pid
+$ thin()(awk -F\\t &#39;NR&gt;1{for(i=2;i&lt;NR;i++)if($i&gt;x)next;print$1}&#39; x=&quot;${1-99}&quot; &quot;${@:2}&quot;)
+$ emu()(curl -sd &quot;id=$(paste -sd,)&quot; &quot;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=${1:-nuccore}&amp;rettype=${2:-fasta}&amp;retmode=$3&quot;)
+$ seqkit seq -ni sarbe.fa|emu &#39;&#39; fasta_cds_na&gt;sarbe.na
+$ thin&lt;sarbe.pid|cut -d\  -f1|awk -F&#39;lcl\\||_cds_&#39; &#39;NR==FNR{a[$0];next}$2 in a&#39; - &lt;(seqkit fx2tab sarbe.na)|cut -f2|grep -o ...|egrep &#39;CG[ACGT]|AG[AG]&#39;|LC_ALL=C sort|uniq -c|sort
+   1414 CGG
+   3560 CGA
+   8316 CGC
+   8649 AGG
+  17019 CGT
+  23149 AGA</pre>
+<h2>
+<a href=#Make_a_list_of_SNVs_in_a_sarbecovirus_in_Wuhan_Hu_1_coordinates id=Make_a_list_of_SNVs_in_a_sarbecovirus_in_Wuhan_Hu_1_coordinates>Make a list of SNVs in a sarbecovirus in Wuhan-Hu-1 coordinates</a>
+</h2>
+<pre>$ (seqkit grep -nrp Hu-1 sarbe.fa;seqkit grep -nrp Khosta-1 sarbe.fa)|mafft --thread 4 --quiet -&gt;temp.fa
+$ seqkit seq -s temp.fa|tr a-z A-Z|gawk -F &#39;&#39; &#39;NR==1{for(i=1;i&lt;=length;i++){ref&lt;a href=i-gaps[i]&gt;i]=$i;if($i==&quot;-&quot;)gaps[i]=++gap}}NR==2{for(i=1;i&lt;=length;i++)if($i!=ref[i])print ref[i&lt;/a&gt;$i}&#39;|grep -v -- -|head
+G90A
+G91T
+C100A
+C106T
+T111C
+T112C
+C119T
+C121T
+A132G
+T133C</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")

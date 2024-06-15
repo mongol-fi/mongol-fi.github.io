@@ -76,6 +76,8 @@ th{background:#3a3a3a;text-align:left;font-weight:bold}
 <li><a href=#Aligning_random_reads_with_BBMap>Aligning random reads with BBMap</a></li>
 <li><a href=#Parameters_used_with_BBMap>Parameters used with BBMap</a></li>
 <li><a href=#Modification_date_at_GenBank_confused_with_publication_date>Modification date at GenBank confused with publication date</a></li>
+<li><a href=#Error_rate_of_reads_that_matched_HIV_in_BBMap_alignment>Error rate of reads that matched HIV in BBMap alignment</a></li>
+<li><a href=#Consensus_sequence_of_reads_that_aligned_against_HIV>Consensus sequence of reads that aligned against HIV</a></li>
 </ul></li>
 <li><a href=#References_to_the_paper_by_the_mathematician_from_Hamburg>References to the paper by the mathematician from Hamburg</a>
 <ul>
@@ -1411,6 +1413,81 @@ $ awk -F\\t &#39;/^[^@]/{l=length($10);sub(/.*NM:i:/,&quot;&quot;);sub(/\t.*/,&q
 <p>Alignment with the nucleotide database on 05/12/2021 showed a high match (98.85%) with <span class="quote">&quot;Homo sapiens RNA, 45S pre-ribosomal N4 (RNA45SN4), ribosomal RNA&quot;</span> (GenBank: NR_146117.1, dated 04/07/2020). This observation contradicts the claim in [1] that ribosomal RNA depletion was performed and human sequence reads were filtered using the human reference genome (human release 32, GRCh38.p13). Of particular note here is the fact that the sequence NR_146117.1 was not published until after the publication of the SRR10971381 sequence library considered here.</p>
 </blockquote>
 <p>But actually the date that is shown in the top right corner at the NCBI's website is the date when the entry was modified, and the original publication date of NR_146117 is in 2017. You can see the original publication date if you click the small <span class="quote">&quot;GenBank&quot;</span> menu in the top left corner and select <span class="quote">&quot;Revision History&quot;</span>. [<a href="https://www.ncbi.nlm.nih.gov/nuccore/NR_146117.1?report=girevhist">https://www.ncbi.nlm.nih.gov/nuccore/NR_146117.1?report=girevhist</a>]</p>
+<h3>
+<a href=#Error_rate_of_reads_that_matched_HIV_in_BBMap_alignment id=Error_rate_of_reads_that_matched_HIV_in_BBMap_alignment>Error rate of reads that matched HIV in BBMap alignment</a>
+</h3>
+<p>When I ran BBMap with the same extremely liberal criteria as the mathematician from Hamburg, I got over 200,000 reads which aligned against HIV but all of them had a high error rate. The lowest error rate was 10% in a read that was 33 bases long, but the first 23 bases were skipped by the aligner (<code>23S</code>), the next base had a mismatch (<code>1X</code>), and only the last 9 bases matched the reference (<code>9=</code>). Such a short match would be ignored with regular alignment criteria:</p>
+<pre>$ brew install fastp
+$ brew install --cask miniconda;conda init ${SHELL##*/};conda install -c bioconda bbmap
+$ curl -s &quot;https://www.ebi.ac.uk/ena/portal/api/filereport?accession=SRR10971381&amp;result=read_run&amp;fields=fastq_ftp&quot;|sed 1d|cut -f1|tr \; \\n|sed s,^,ftp://,|xargs wget
+$ fastp -i SRR10971381_1.fastq.gz -I SRR10971381_2.fastq.gz -o SRR10971381_1.fq.gz -O SRR10971381_2.fq.gz
+$ curl -s &#39;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&amp;rettype=fasta&amp;id=LC312715&#39;&gt;ref.hiv.fa
+$ mapPacBio.sh ref=ref.hiv.fa in=SRR10971381_1.fq.gz in2=SRR10971381_2.fq.gz outm=hiv.mapped.sam vslow k=8 maxindel=0 minratio=0.1
+$ samtools view hiv.mapped.sam|grep NM:i|wc -l # over 200,000 aligned reads that weren&#39;t multimapped so they weren&#39;t missing an NM:i tag
+268534
+$ samtools view hiv.mapped.sam|grep NM:i|cut -f6|ruby -ne&#39;x=$_.scan(/\d+(?=[XID])/).map(&amp;:to_i).sum;y=$_.scan(/\d+(?==)/).map(&amp;:to_i).sum;puts [x*100.0/(x+y),$_]*&quot; &quot;&#39;|sort -n|head -n4
+10.0 23S1X9=
+15.384615384615385 10=2X1=18S
+15.384615384615385 10=2X1=19S
+15.384615384615385 22S1X9=1X2=</pre>
+<p>When I ran minimap2 and Bowtie2 with the default parameters, I got zero reads that aligned against the HIV reference:</p>
+<pre>minimap2 -a --sam-hit-only hiv.fa SRR10971381_[12].fq.gz
+bowtie2-build ref.hiv.fa{,};bowtie2 -x ref.hiv.fa --no-unal -p4 -1 SRR10971381_1.fq.gz -2 SRR10971381_2.fq.gz</pre>
+<p>When I ran BBMap with the default parameters, I got five reads that aligned against HIV, but the reads were only 31 to 36 bases long and each read had 7 to 9 errors:</p>
+<pre>$ bbmap.sh ref=ref.hiv.fa in=SRR10971381_1.fq.gz in2=SRR10971381_2.fq.gz outm=bbdefault.hiv.sam
+[...]
+$ grep NM:i: bbdefault.hiv.sam|cut -f1,6,10,12|sed &#39;s/ [^\t]*//&#39;|column -t
+SRR10971381.3293584   4X2=1X5=1X2=1X11=1X7=1X  GTGGGAGGGAGACGGGGGAGAGAGAGAGAGAGACAG  NM:i:9
+SRR10971381.4837603   2X3=4X2=1X4=1X14=        ATAAGACAGAGATGGACAGAGAGACAGAGAC       NM:i:8
+SRR10971381.10493971  2X3=4X2=1X4=1X14=        ATAAGACAGAGATGGACAGAGAGACAGAGAC       NM:i:8
+SRR10971381.13295070  1X1=2X17=1X1=4X4=        ATTCAGAGAGAGACAGAGACAGAGAGAAACA       NM:i:8
+SRR10971381.17916482  1=3X4=1I2=3X17=          GGCAGAGACAGCCAGAGAGAGAGACAGAGAC       NM:i:7</pre>
+<h3>
+<a href=#Consensus_sequence_of_reads_that_aligned_against_HIV id=Consensus_sequence_of_reads_that_aligned_against_HIV>Consensus sequence of reads that aligned against HIV</a>
+</h3>
+<p>Mike Wallach wrote: <span class="quote">&quot;Eighth, he sought to discover whether one could take the sample and <span class="quote">'find'</span> other claimed viruses in it. He searched for <span class="quote">'Hepatitus'</span> and <span class="quote">'HIV'</span> and found BOTH of them to have lower error rates than <span class="quote">'SARS-CoV-2.'</span>&quot;</span> [<a href="https://theviraldelusion.substack.com/p/revealed-the-sars-cov-2-sequencing">https://theviraldelusion.substack.com/p/revealed-the-sars-cov-2-sequencing</a>] He probably referred to this part of the paper: <span class="quote">&quot;Already in the previous section, a high structural similarity of the published sequences with the reference sequence LC312715.1 [HIV] was shown. The calculated consensus sequence showed relatively lower error rates R1 = 8.60% and R2 = 8.83% compared to e.g. the SARS associated references.&quot;</span> (R1 means reads from the file for forward reads and R2 means reverse reads.)</p>
+<p>Based on the code on page 23 of the paper, I think the mathematician may have first aligned Wu et al.'s reads against an HIV reference, and then he created a consensus sequence of the aligned reads by picking the most common nucleotide value at each position of the reference, he calculated the percentage of mismatched bases when he compared the consensus sequence against his HIV reference:</p>
+<div class="width5">
+<img src="i/hamburgmath-consensus.png">
+</div>
+<p>When I tried running code similar to the code above, I got an error rate of about 9.4% which is close enough to his figures (and there's a couple of different ways to calculate the error rate, and I don't know if he calculated the average of the error rates of individual reads and not total mismatches divided by total bases mapped like me):</p>
+<pre>$ fastp -i SRR10971381_1.fastq.gz -I SRR10971381_2.fastq.gz -o SRR10971381_1.fq.gz -O SRR10971381_2.fq.gz
+$ wget https://raw.githubusercontent.com/lh3/samtools/master/bcftools/vcfutils.pl -P ~/bin
+$ printf %s\\n MN908947.3\ sars2 LC312715.1\ hiv NC_001653.2\ hepatitis AF266291.1\ measles&gt;refs
+$ cat refs|while read l m;do curl -s &quot;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&amp;rettype=fasta&amp;id=$l&quot;|cut -d\  -f1 &gt;ref.$y.fa;done
+$ mapPacBio.sh ref=ref.hiv.fa in=SRR10971381_1.fq.gz in2=SRR10971381_2.fq.gz outm=hiv.mapped.sam
+$ reformat.sh in=hiv.mapped.sam out=hiv.filtered.sam minlength=37 idfilter=60 ow=t
+$ samtools sort -@3 hiv.filtered.sam|bcftools mpileup -f ref.hiv.fa -|bcftools call -c|perl ~/bin/vcfutils.pl vcf2fq|seqtk seq -aQ64 -q20 -n N&gt;hiv.cons.fa
+$ bwa index ref.hiv.fa;bwa mem -t4 ref.hiv.fa hiv.cons.fa|samtools stat|grep error
+[...]
+SN  error rate: 9.446402e-02    # mismatches / bases mapped (cigar)</pre>
+<p>However when I repeated the same procedure for SARS2, my error rate was only about 3e-5. So I don't know what the mathematician meant by <span class="quote">&quot;relatively lower error rates&quot;</span> compared to the SARS-associated references.</p>
+<p>And actually even in the case of HIV, all the errors were just spots where the consensus sequence had an N base. When I removed the <code>seqtk</code> command which replaced bases with quality below 20 with N letters, I now got zero mismatches for the HIV consensus:</p>
+<pre>$ samtools sort -@3 hiv.filtered.sam|bcftools mpileup -f ref.hiv.fa -|bcftools call -c|perl ~/bin/vcfutils.pl vcf2fq&gt;hiv.cons.fq
+$ bwa mem -t4 ref.hiv.fa hiv.cons2.fa|samtools stat|grep error
+[...]
+SN  error rate: 0.000000e+00    # mismatches / bases mapped (cigar)
+$ seqkit subseq -r1:50 hiv.cons.fa # low-quality bases were replaced with N letters in the file produced by the previous code block
+&gt;LC312715.1
+NNNNagNgcgcgcNgcaagaggcgaggggcggcaacNggtgagtacgccg
+$ seqkit subseq -r1:50 hiv.cons.fq # now there&#39;s no N letters when the `seqtk` command was removed
+@LC312715.1
+ctgaagcgcgcgcagcaagaggcgaggggcggcaactggtgagtacgccg
++
+?QSHpvH~V~~~~Do]X~~~~~~~~~~~~~~~Vf~~N~~~~~n~h|k|wb</pre>
+<p>The mathematician from Hamburg also wrote: <span class="quote">&quot;With the sequence data at hand, we were able to compute consensus sequences for the reference genomes LC312715.1 (HIV) and NC_001653.2 (Hepatitis delta virus) with higher goodness than for those reference sequences we considered associated with coronaviruses. This was particularly true for bat-SL-CoVZC45 (GenBank: MG772933.1), which led to the origin hypothesis of SARS-CoV-2. Thus, we were able to substantiate our hypothesis that the claimed viral genome sequences are misinterpretations in the sense that they have been or are being constructed unnoticed from non-viral nucleic acid fragments.&quot;</span> When I repeated the procedure above with ZC45, it actually got an error rate of about 14% when I masked low-quality bases in the consensus with <code>N</code> letters or about 11% when I didn't:</p>
+<pre>$ curl -s &#39;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nucleotide&amp;rettype=fasta&amp;id=MG772933.1&#39;|cut -d\  -f1 &gt;ref.zc45.fa
+[...]
+$ bwa index ref.zc45.fa;bwa mem -t4 ref.zc45.fa zc45.cons.fa|samtools stat|grep error # masked with N letters
+[...]
+SN  error rate: 1.363941e-01    # mismatches / bases mapped (cigar)
+[...]
+$ bwa mem -t4 ref.zc45.fa zc45.cons.fq|samtools stat|grep error # not masked
+SN  error rate: 1.057312e-01    # mismatches / bases mapped (cigar)</pre>
+<p>The ZC45 consensus had <code>N</code> bases but the HIV consensus didn't, which might partially explain why the ZC45 consensus had a higher percentage of mismatches. The reads that aligned against HIV were so short and they didn't actually come from HIV, so the errors in the reads may have been random enough that they ended up canceling each other out in the consensus sequence. But in the case of ZC45 many of the aligned reads actually came from SARS2 so they had mismatches to ZC45, and the ZC45 consensus actually got a lower error rate when I aligned it against the SARS2 reference instead of the ZC45 reference:</p>
+<pre>$ bwa mem -t4 ref.sars2.fa zc45.cons.fq|samtools stat|grep error
+[...]
+SN  error rate: 5.295835e-02    # mismatches / bases mapped (cigar)</pre>
 <h2>
 <a href=#References_to_the_paper_by_the_mathematician_from_Hamburg id=References_to_the_paper_by_the_mathematician_from_Hamburg>References to the paper by the mathematician from Hamburg</a>
 </h2>
