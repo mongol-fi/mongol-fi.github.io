@@ -1475,7 +1475,11 @@ $ seqkit subseq -r1:50 hiv.cons.fq # now there&#39;s no N letters when the `seqt
 ctgaagcgcgcgcagcaagaggcgaggggcggcaactggtgagtacgccg
 +
 ?QSHpvH~V~~~~Do]X~~~~~~~~~~~~~~~Vf~~N~~~~~n~h|k|wb</pre>
-<p>The mathematician from Hamburg also wrote: <span class="quote">&quot;With the sequence data at hand, we were able to compute consensus sequences for the reference genomes LC312715.1 (HIV) and NC_001653.2 (Hepatitis delta virus) with higher goodness than for those reference sequences we considered associated with coronaviruses. This was particularly true for bat-SL-CoVZC45 (GenBank: MG772933.1), which led to the origin hypothesis of SARS-CoV-2. Thus, we were able to substantiate our hypothesis that the claimed viral genome sequences are misinterpretations in the sense that they have been or are being constructed unnoticed from non-viral nucleic acid fragments.&quot;</span> When I repeated the procedure above with ZC45, it actually got an error rate of about 14% when I masked low-quality bases in the consensus with <code>N</code> letters or about 11% when I didn't:</p>
+<p>The mathematician from Hamburg also wrote: <span class="quote">&quot;With the sequence data at hand, we were able to compute consensus sequences for the reference genomes LC312715.1 (HIV) and NC_001653.2 (Hepatitis delta virus) with higher goodness than for those reference sequences we considered associated with coronaviruses. This was particularly true for bat-SL-CoVZC45 (GenBank: MG772933.1), which led to the origin hypothesis of SARS-CoV-2. Thus, we were able to substantiate our hypothesis that the claimed viral genome sequences are misinterpretations in the sense that they have been or are being constructed unnoticed from non-viral nucleic acid fragments.&quot;</span> Table 4 of the supplementary PDF shows that the error rate for ZC45 was 10.2% for both forward and reverse reads: [<a href="https://impfen-nein-danke.de/u/structural_analysis_of_sequence_data_in_virology_tables_and_figures.pdf">https://impfen-nein-danke.de/u/structural_analysis_of_sequence_data_in_virology_tables_and_figures.pdf</a>]</p>
+<div class="width8">
+<img src="i/hamburgmath-consensus-2.png">
+</div>
+<p>When I repeated the procedure above with ZC45, it got an error rate of about 14% when I masked low-quality bases in the consensus with <code>N</code> letters or about 11% when I didn't:</p>
 <pre>$ curl -s &#39;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nucleotide&amp;rettype=fasta&amp;id=MG772933.1&#39;|cut -d\  -f1 &gt;ref.zc45.fa
 [...]
 $ bwa index ref.zc45.fa;bwa mem -t4 ref.zc45.fa zc45.cons.fa|samtools stat|grep error # masked with N letters
@@ -1484,10 +1488,20 @@ SN  error rate: 1.363941e-01    # mismatches / bases mapped (cigar)
 [...]
 $ bwa mem -t4 ref.zc45.fa zc45.cons.fq|samtools stat|grep error # not masked
 SN  error rate: 1.057312e-01    # mismatches / bases mapped (cigar)</pre>
-<p>The ZC45 consensus had <code>N</code> bases but the HIV consensus didn't, which might partially explain why the ZC45 consensus had a higher percentage of mismatches. The reads that aligned against HIV were so short and they didn't actually come from HIV, so the errors in the reads may have been random enough that they ended up canceling each other out in the consensus sequence. But in the case of ZC45 many of the aligned reads actually came from SARS2 so they had mismatches to ZC45, and the ZC45 consensus actually got a lower error rate when I aligned it against the SARS2 reference instead of the ZC45 reference:</p>
+<p>The ZC45 consensus had <code>N</code> bases but the HIV consensus didn't, which might partially explain why the ZC45 consensus had a higher error rate. The reads that aligned against HIV were short and they didn't actually come from HIV, so the errors in the reads may have been random enough that they ended up canceling each other out in the consensus sequence. But in the case of ZC45 many of the aligned reads actually came from SARS2, so they had a systematic profile of mismatches at the spots where SARS2 was different from ZC45 so the mismatches didn't get canceled out. The ZC45 consensus actually got a lower error rate when I aligned it against the SARS2 reference instead of the ZC45 reference:</p>
 <pre>$ bwa mem -t4 ref.sars2.fa zc45.cons.fq|samtools stat|grep error
 [...]
 SN  error rate: 5.295835e-02    # mismatches / bases mapped (cigar)</pre>
+<p>If the soft-clipped parts of reads are removed, then the average length of the reads that aligned against ZC45 was about 144 bases, but the average length of the reads that aligned against HIV was only about 40 bases:</p>
+<pre>$ awk &#39;NR==FNR{if($6!=&quot;*&quot;)a[$1]=$6;next}$6==&quot;*&quot;{$6=a[$1]}1&#39; {O,}FS=\\t zc45.filtered.sam{,}|cut -f6|sed &#39;s/[0-9]*S//&#39;|awk -F&#39;[^0-9]+&#39; &#39;{s=0;for(i=1;i&lt;=NF;i++)s+=$i;x+=s}END{print x/NR}&#39;
+144.244
+$ awk &#39;NR==FNR{if($6!=&quot;*&quot;)a[$1]=$6;next}$6==&quot;*&quot;{$6=a[$1]}1&#39; {O,}FS=\\t hiv.filtered.sam{,}|cut -f6|sed &#39;s/[0-9]*S//&#39;|awk -F&#39;[^0-9]+&#39; &#39;{s=0;for(i=1;i&lt;=NF;i++)s+=$i;x+=s}END{print x/NR}&#39;
+39.8861</pre>
+<p>And if you look at the aligned reads and not the consensus sequence based on the aligned reads, ZC45 has a much lower error rate than HIV:</p>
+<pre>$ samtools sort -@3 zc45.filtered.sam|samtools stats|grep error
+SN  error rate: 1.255912e-01    # mismatches / bases mapped (cigar)
+$ samtools sort -@3 hiv.filtered.sam|samtools stats|grep error
+SN  error rate: 3.881330e-01    # mismatches / bases mapped (cigar)</pre>
 <h2>
 <a href=#References_to_the_paper_by_the_mathematician_from_Hamburg id=References_to_the_paper_by_the_mathematician_from_Hamburg>References to the paper by the mathematician from Hamburg</a>
 </h2>
