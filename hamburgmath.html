@@ -83,6 +83,7 @@ th{background:#3a3a3a;text-align:left;font-weight:bold}
 <ul>
 <li><a href=#Tom_Cowans_claim_that_Wu_et_al_s_contig_was_manually_modified_to_support_the_lab_leak_narrative>Tom Cowan's claim that Wu et al.'s contig was manually modified to support the lab leak narrative</a></li>
 <li><a href=#Video_by_Spacebusters_for_part_two_of_Farewell_to_Virology>Video by Spacebusters for part two of Farewell to Virology</a></li>
+<li><a href=#Substack_post_by_Mike_Wallach>Substack post by Mike Wallach</a></li>
 </ul></li>
 <li><a href=#USMortalitys_Substack_posts>USMortality's Substack posts</a>
 <ul>
@@ -740,7 +741,7 @@ atgtttcatctcgttgactttcaggtt</pre>
 </h3>
 <p>The website of the NCBI's sequence read archive has a tab which shows a breakdown of what percentage of reads are estimated to come from different organisms and different taxonomial nodes. The tab displays the results a program called SRA Taxonomy Analysis Tool (STAT), which searches for 32-base k-mers among the reads which match a set of reference sequences. A database which contains the number of reads which match each taxonomical node for each SRA run is currently about 500 GB in size, but you can search it through BigQuery at the Google Cloud Platform. [<a href="https://www.ncbi.nlm.nih.gov/sra/docs/sra-cloud-based-taxonomy-analysis-table/">https://www.ncbi.nlm.nih.gov/sra/docs/sra-cloud-based-taxonomy-analysis-table/</a>] I tried using BigQuery to search for the oldest sequencing runs which matched over 10,000 reads of SARS2 (taxid2697049):</p>
 <pre>select * from `nih-sra-datastore.sra.metadata` as m, `nih-sra-datastore.sra_tax_analysis_tool.tax_analysis` as tax where m.acc=tax.acc and tax_id=2697049 and total_count&gt;10000 order by releasedate</pre>
-<p>I got 17 results from before 2020 but none of them had a single read which aligned against Wuhan-Hu-1 when I used Bowtie2 with the default settings. The oldest results I found which had reads that aligned against SARS2 were runs for the samples WHU01 and WHU02 which were submitted by Wuhan University and published on January 18th 2020 (in an unknown timezone). [<a href="https://www.ncbi.nlm.nih.gov/sra/?term=SRR10903402">https://www.ncbi.nlm.nih.gov/sra/?term=SRR10903402</a>] When I ran MEGAHIT on the reads of the WHU01 sample that I didn't do any trimming, my longest contig was 17,699 bases long, and it was identical to positions 12197-29895 of Wuhan-Hu-1:</p>
+<p>I got 17 results from before 2020 but all of them had zero reads which aligned against Wuhan-Hu-1 when I used Bowtie2 with the default settings. The oldest results I found which had reads that aligned against SARS2 were runs for the samples WHU01 and WHU02 which were submitted by Wuhan University and published on January 18th 2020 (in an unknown timezone). [<a href="https://www.ncbi.nlm.nih.gov/sra/?term=SRR10903402">https://www.ncbi.nlm.nih.gov/sra/?term=SRR10903402</a>] When I ran MEGAHIT on the reads of the WHU01 sample that I didn't do any trimming, my longest contig was 17,699 bases long, and it was identical to positions 12197-29895 of Wuhan-Hu-1:</p>
 <pre>wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR109/002/SRR10903402/SRR10903402_{1,2}.fastq.gz # download from ENA because downloading from SRA is too slow
 curl &#39;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&amp;rettype=fasta&amp;id=MN908947.3&#39;&gt;sars2.fa
 megahit -1 SRR10903402_1.fastq.gz -2 SRR10903402_2.fastq.gz -o megawuhanjan
@@ -1476,7 +1477,7 @@ ctgaagcgcgcgcagcaagaggcgaggggcggcaactggtgagtacgccg
 +
 ?QSHpvH~V~~~~Do]X~~~~~~~~~~~~~~~Vf~~N~~~~~n~h|k|wb</pre>
 <p>The mathematician from Hamburg also wrote: <span class="quote">&quot;With the sequence data at hand, we were able to compute consensus sequences for the reference genomes LC312715.1 (HIV) and NC_001653.2 (Hepatitis delta virus) with higher goodness than for those reference sequences we considered associated with coronaviruses. This was particularly true for bat-SL-CoVZC45 (GenBank: MG772933.1), which led to the origin hypothesis of SARS-CoV-2. Thus, we were able to substantiate our hypothesis that the claimed viral genome sequences are misinterpretations in the sense that they have been or are being constructed unnoticed from non-viral nucleic acid fragments.&quot;</span> Table 4 of the supplementary PDF shows that the error rate for ZC45 was 10.2% for both forward and reverse reads: [<a href="https://impfen-nein-danke.de/u/structural_analysis_of_sequence_data_in_virology_tables_and_figures.pdf">https://impfen-nein-danke.de/u/structural_analysis_of_sequence_data_in_virology_tables_and_figures.pdf</a>]</p>
-<div class="width8">
+<div class="width9">
 <img src="i/hamburgmath-consensus-2.png">
 </div>
 <p>When I repeated the procedure above with ZC45, it got an error rate of about 14% when I masked low-quality bases in the consensus with <code>N</code> letters or about 11% when I didn't:</p>
@@ -1497,7 +1498,7 @@ SN  error rate: 5.295835e-02    # mismatches / bases mapped (cigar)</pre>
 144.244
 $ awk &#39;NR==FNR{if($6!=&quot;*&quot;)a[$1]=$6;next}$6==&quot;*&quot;{$6=a[$1]}1&#39; {O,}FS=\\t hiv.filtered.sam{,}|cut -f6|sed &#39;s/[0-9]*S//&#39;|awk -F&#39;[^0-9]+&#39; &#39;{s=0;for(i=1;i&lt;=NF;i++)s+=$i;x+=s}END{print x/NR}&#39;
 39.8861</pre>
-<p>And if you look at the aligned reads and not the consensus sequence based on the aligned reads, ZC45 has a much lower error rate than HIV:</p>
+<p>And if you look at the aligned reads and not the consensus sequence based on the aligned reads, ZC45 has an error rate of about 13% but HIV has an error rate of about 39%:</p>
 <pre>$ samtools sort -@3 zc45.filtered.sam|samtools stats|grep error
 SN  error rate: 1.255912e-01    # mismatches / bases mapped (cigar)
 $ samtools sort -@3 hiv.filtered.sam|samtools stats|grep error
@@ -1541,6 +1542,13 @@ $ aldi2 temp.aln
 <div class="width11">
 <img src="i/hamburgmath-contig-table.png">
 </div>
+<h3>
+<a href=#Substack_post_by_Mike_Wallach id=Substack_post_by_Mike_Wallach>Substack post by Mike Wallach</a>
+</h3>
+<p>In June 2024 Mike Wallach published a Substack post about the paper by the mathematician from Hamburg. [<a href="https://theviraldelusion.substack.com/p/revealed-the-sars-cov-2-sequencing">https://theviraldelusion.substack.com/p/revealed-the-sars-cov-2-sequencing</a>]</p>
+<p>Wallach wrote that one part of the sequencing procedure was to <span class="quote">&quot;Submit this mixture to a PCR process to amplify the number of the RNA fragments, including the <span class="quote">'amplification'</span> of any specific RNA fragments the virologists expect to find.&quot;</span> However Wu et al. did metagenomic sequencing where they weren't using PCR to do targeted enrichment for any specific organism or genetic region, but they only did random priming as part of the procedure of converting RNA to cDNA.</p>
+<p>Wallach wrote: <span class="quote">&quot;Fourth, he found that up to 17% of the final sequence was based on RNA contigs specifically targeted and then <span class="quote">'found'</span> by the PCR process at cycle thresholds of ct 35 to 45, cycle counts well known in the literature to <span class="quote">'find'</span> anything you want.&quot;</span> I believe he referred to this sentence: <span class="quote">&quot;While de novo meta-transcriptomic assembly often uses no reference sequences or only downstream reference sequences, whole genome sequencing uses a large number of specific primer sequences, some of which already together cover 4% to 17% of the target genome [1, 17].&quot;</span> However the PCR protocols he wrote about were published after Wu et al. had already done the de-novo assembly of the genome, so it doesn't make sense to say that the contigs Wu et al. assembled would've somehow been based on those PCR primers. And how would you even design PCR primers if you don't first know the sequence of the virus they're supposed to target?</p>
+<p>Wallach wrote: <span class="quote">&quot;Sixth, he found that contigs in the remaining data sample AFTER the Fan Wu paper claims to have filtered it for known human RNA, matched known human RNA.&quot;</span> However the only sentence where Wu et al. wrote about filtering human reads said: <span class="quote">&quot;Non-human reads (23,712,657 reads), generated by filtering host reads using the human genome (human release 32, GRCh38.p13, downloaded from Gencode) by Bowtie2[35], were used for the RSEM abundance assessment.&quot;</span> So they wrote that they filtered out human reads before they did RSEM abundance assessment, but not that they filtered out human reads from the set of reads they uploaded to the Sequence Read Archive. In the reads that were uploaded to the SRA, the vast majority of human reads had been masked with N bases for privacy reasons, but there's a small percentage of human reads that didn't get masked. Wu et al. never claimed that they filtered out all human reads from the reads they uploaded to the SRA.</p>
 <h2>
 <a href=#USMortalitys_Substack_posts id=USMortalitys_Substack_posts>USMortality's Substack posts</a>
 </h2>
