@@ -161,7 +161,7 @@ th{background:#3a3a3a;text-align:left;font-weight:bold}
 <li><a href=#USMortalitys_plot_for_excess_ASMR_with_a_2011_2020_baseline>USMortality's plot for excess ASMR with a 2011-2020 baseline</a></li>
 <li><a href=#Barrys_tweet_about_the_AstraZeneca_vaccine>Barry's tweet about the AstraZeneca vaccine</a></li>
 <li><a href=#Barrys_plot_for_number_of_individuals_by_dose>Barry's plot for number of individuals by dose</a></li>
-<li><a href=#Kirschs_new_smoking_gun_from_June_2024>Kirsch's new smoking gun from June 2024</a></li>
+<li><a href=#Kirschs_new_smoking_gun_for_mortality_rate_in_ages_65_69_after_the_first_dose>Kirsch's new smoking gun for mortality rate in ages 65-69 after the first dose</a></li>
 </ul></li>
 </ul>
 
@@ -7569,7 +7569,7 @@ Time difference of 346.25 days</pre>
       1       2       3       4       5
 2215729 2083140 1539722  824366  370298</pre>
 <h3>
-<a href=#Kirschs_new_smoking_gun_from_June_2024 id=Kirschs_new_smoking_gun_from_June_2024>Kirsch's new smoking gun from June 2024</a>
+<a href=#Kirschs_new_smoking_gun_for_mortality_rate_in_ages_65_69_after_the_first_dose id=Kirschs_new_smoking_gun_for_mortality_rate_in_ages_65_69_after_the_first_dose>Kirsch's new smoking gun for mortality rate in ages 65-69 after the first dose</a>
 </h3>
 <p>Kirsch selected people whose age on the day of their first vaccination was between 65 and 69, and he calculated a mortality rate during the first 366 days from the first dose inclusive of the day of vaccination. [<a href="https://kirschsubstack.com/p/new-zealand-data-leaked-by-barry">https://kirschsubstack.com/p/new-zealand-data-leaked-by-barry</a>] He only included people who got the first dose before October 5th 2022 so they had a year of time to die before the end of the dataset.</p>
 <p>He got a mortality rate of about 1.34%, which was about 27% higher than his baseline of about 1.055%. His baseline was the mortality rate for ages 65-69 in 2022 at InfoShare (<span class="quote">&quot;Population &gt; Death Rates - DMM &gt; Age-specific death rates by sex, December years (total population) (Annual-Dec)&quot;</span>). [<a href="https://infoshare.stats.govt.nz/">https://infoshare.stats.govt.nz/</a>]</p>
@@ -7648,6 +7648,28 @@ Time difference of 346.25 days</pre>
 <div class="width8">
 <img src="i/moar-newsmoking.png">
 </div>
+<p>In the code below I again reproduced Kirsch's calculation for the mortality rate within the first 366 days from vaccination. But when I used the same method to adjust for missing doses as in the heatmap above, my total mortality rate decreased from about 1,334 to about 1,180 (so with a baseline of 1,055, the excess mortality would've decreased from about 26% to about 12%):</p>
+<pre>ua=\(x,y,...){u=unique(x);y(u,...)[match(x,u)]}
+age=\(x,y){x=as.numeric(x);y=as.numeric(y);(y-x-(y-789)%/%1461+(x-789)%/%1461)%/%365}
+
+t=as.data.frame(data.table::fread(&quot;nz-record-level-data-4M-records.csv&quot;))
+for(i in grep(&quot;date&quot;,colnames(t)))t[,i]=ua(t[,i],as.Date,&quot;%m-%d-%Y&quot;)
+t=t[t$dose==1,]
+
+ta=table(ua(t$date_time_of_service,substr,1,7))
+
+t=t[age(t$date_of_birth,t$date_time_of_service)%in%65:69,]
+t=t[t$date_time_of_service&lt;as.Date(&quot;2022-10-5&quot;),]
+dead=!is.na(t$date_of_death)&amp;!t$date_of_death&gt;t$date_time_of_service+365
+a=aggregate(list(rate=dead*1e5),list(month=substr(t$date_time_of_service,1,7)),mean)
+a$pop=table(substr(t$date_time_of_service,1,7))
+
+nz=read.csv(&quot;https://github.com/minhealthnz/nz-covid-data/raw/main/vaccine-data/2023-05-03/doses_by_date.csv&quot;)
+nz=tapply(nz$First.doses,substr(nz$Date,1,7),sum)
+
+weighted.mean(a$rate,a$pop) # 1339.872 (unweighted mortality rate per 100k people)
+weighted.mean(a$rate,nz[a$month]/ta[a$month]*a$pop) # 1190.66 (weighted to account for proportion of missing doses)</pre>
+<p>(I calculated the proportion of missing doses based on the proportion of missing doses in all ages and not only in ages 65-69, because there's a bunch of glitches in the NZ data for the number of vaccine doses given by age group and date.)</p>
 <p>In May 2024 Clare Craig received a dataset from UKHSA which shows the number of deaths grouped by week of vaccination and month of death, so it can be used to calculate a mortality rate by week of vaccination if it's combined with another dataset that shows the number of vaccine doses given each week. The dataset shows a similar <span class="quote">&quot;early vaccinee effect&quot;</span> as Barry's data, so that for each age group in the plot below, during the week when the pink line for the number of new vaccine doses peaks, the blue baseline is above the black line which shows the subsequent mortality rate of people vaccinated that week. And in all age groups except 20-29, there was subsequently a higher mortality rate in people who were vaccinated after the rollout peak had passed: <a href=statistic.html#Mortality_rate_by_week_of_vaccination_up_to_end_of_2022>[statistic.html#Mortality_rate_by_week_of_vaccination_up_to_end_of_2022</a>]</p>
 <div class="width8">
 <img src="i/uk-three-phase-2.png">
