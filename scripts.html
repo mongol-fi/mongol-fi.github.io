@@ -105,6 +105,8 @@ th{background:#3a3a3a;text-align:left;font-weight:bold}
 <li><a href=#Count_what_proportion_of_arginine_codons_in_sarbecoviruses_are_coded_by_CGG>Count what proportion of arginine codons in sarbecoviruses are coded by CGG</a></li>
 <li><a href=#Make_a_list_of_SNVs_in_a_sarbecovirus_in_Wuhan_Hu_1_coordinates>Make a list of SNVs in a sarbecovirus in Wuhan-Hu-1 coordinates</a></li>
 <li><a href=#List_all_SNVs_that_introduce_a_synonymous_mutation_in_Wuhan_Hu_1>List all SNVs that introduce a synonymous mutation in Wuhan-Hu-1</a></li>
+<li><a href=#Find_longest_segment_of_Wuhan_Hu_1_that_matches_the_GRCh38_human_reference_genome>Find longest segment of Wuhan-Hu-1 that matches the GRCh38 human reference genome</a></li>
+<li><a href=#Plot_HIV_subtype_reference_with_year_on_x_axis_and_distance_to_specified_sample_on_y_axis>Plot HIV subtype reference with year on x-axis and distance to specified sample on y-axis</a></li>
 </ul>
 
 <h2>
@@ -2771,6 +2773,103 @@ C280G
 T283A
 T283C</pre>
 <p>(This erroneously treats C13468A as synonymous, because it's synonymous in ORF1a but not ORF1b.)</p>
+<h2>
+<a href=#Find_longest_segment_of_Wuhan_Hu_1_that_matches_the_GRCh38_human_reference_genome id=Find_longest_segment_of_Wuhan_Hu_1_that_matches_the_GRCh38_human_reference_genome>Find longest segment of Wuhan-Hu-1 that matches the GRCh38 human reference genome</a>
+</h2>
+<pre>$ brew install bowtie2 seqkit samtools
+[...]
+$ wget ftp://ftp.ccb.jhu.edu/pub/data/bowtie_indexes/GRCh38_no_alt.zip;unzip GRCh38_no_alt.zip
+[...]
+$ seqkit seq -s sars2.fa|sed &#39;s/A*$//&#39;|awk -F &#39;&#39; &#39;{for(l=18;l&lt;=30;l++)for(i=1;i&lt;=length-l+1;i++)print &quot;&gt;&quot;l&quot;.&quot;i&quot;\n&quot;substr($0,i,l)}&#39;&gt;frag.fa
+$ bowtie2 -p4 --no-unal -x GRCh38_noalt_as/GRCh38_noalt_as --score-min C,0,-1 -fU frag.fa&gt;frag.sam
+$ samtools view frag.sam|awk &#39;{a[length($10)]++}END{for(i in a)print i,a[i]}&#39;
+18 4915
+19 1641
+20 482
+21 135
+22 41
+23 13
+24 6
+25 2
+26 1
+$ samtools view frag.sam|awk &#39;length($10)==26&#39;|cut -f-10|tr \\t &#39; &#39;
+26.7570 16 chr3 124017395 0 26M * 0 0 AGCCTTTACCTCCATTAGCATAGACA</pre>
+<h2>
+<a href=#Plot_HIV_subtype_reference_with_year_on_x_axis_and_distance_to_specified_sample_on_y_axis id=Plot_HIV_subtype_reference_with_year_on_x_axis_and_distance_to_specified_sample_on_y_axis>Plot HIV subtype reference with year on x-axis and distance to specified sample on y-axis</a>
+</h2>
+<p>You can download a FASTA file that contains 2-5 samples from different subtypes of HIV-1 and SIV sequences similar to HIV-1 from here: <a href="https://www.hiv.lanl.gov/content/sequence/NEWALIGN/align.html">https://www.hiv.lanl.gov/content/sequence/NEWALIGN/align.html</a>. Set alignment type to <span class="quote">&quot;Subtype reference&quot;</span>, change the region to <span class="quote">&quot;GENOME&quot;</span>, and click <span class="quote">&quot;Get Alignment&quot;</span>. Or alternatively you can download the file from here: <a href=f/HIV1_REF_2023_genome_DNA.fa.xz>f/HIV1_REF_2023_genome_DNA.fa.xz</a>.</p>
+<pre>curl -Ls sars2.net/f/HIV1_REF_2023_genome_DNA.fa.xz|xz -dc&gt;HIV1_REF_2023_genome_DNA.fa
+seqkit fx2tab ge/HIV1_REF_2023_genome_DNA.fa|shuf|awk -F. &#39;$2!~/^[0-9]/||++b&lt;=50&#39;|seqkit tab2fx&gt;subref.fa
+curl -Ls sars2.net/f/pid.cpp&gt;pid.cpp;g++ pid.cpp -O3 -o pid
+./pid&lt;subref.fa&gt;subref.pid</pre>
+<!-- -->
+<pre>library(ggplot2)
+
+t=100-read.table(&quot;subref.pid&quot;,header=T,row.names=1)
+
+rem=grepl(&quot;Ref......x&quot;,rownames(t))
+t=t[!rem,!rem]
+
+z=strsplit(rownames(t),&quot;\\.&quot;)
+year=as.numeric(sapply(z,&quot;[&quot;,4))
+year=year+ifelse(year&lt;30,2000,1900)
+
+name=paste0(sapply(z,&quot;[&quot;,2),&quot;:&quot;,sapply(z,&quot;[&quot;,3))
+name=paste0(name,ifelse(grepl(&quot;CPZ|GOR&quot;,rownames(t)),paste0(&quot;:&quot;,sapply(z,&quot;[&quot;,5)),&quot;&quot;))
+
+type=sapply(z,&quot;[&quot;,2)
+type[grepl(&quot;^\\d&quot;,type)]=&quot;Numeric subtypes&quot;
+type=sub(&quot;\\d+$&quot;,&quot;&quot;,type)
+type=factor(type,unique(c(&quot;Numeric subtypes&quot;,&quot;CPZ&quot;,&quot;GOR&quot;,names(sort(tapply(year,type,mean))))))
+
+p=data.frame(x=year,y=t[,grep(&quot;HXB2&quot;,rownames(t))])
+
+seg=cbind(p[rep(1:nrow(p),each=2),],p[apply(as.matrix(dist(p)),1,\(x)order(x)[2:3]),])
+colnames(seg)=paste0(&quot;V&quot;,1:4)
+
+ystart=0;yend=max(p$y)*1.05;xstart=min(p$x)-1;xend=max(p$x)+1
+
+hue=c(0,220,120,60,30,300)+15
+color=c(&quot;black&quot;,&quot;gray60&quot;,&quot;gray30&quot;,hcl(hue,100,60),hcl(hue,100,25)[-5],hcl(hue,50,80))
+
+ggplot(p,aes(x,y))+
+geom_segment(data=seg,aes(x=V1,y=V2,xend=V3,yend=V4),color=&quot;gray50&quot;,linewidth=.15)+
+geom_point(aes(color=type),size=.3)+
+## geom_text(aes(color=type),label=name,size=2,vjust=-.7,show.legend=F)+
+ggrepel::geom_text_repel(aes(color=type),label=name,size=1.9,max.overlaps=Inf,segment.size=.1,min.segment.length=.2,box.padding=.07,show.legend=F)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+scale_x_continuous(limits=c(xstart,xend),breaks=seq(1980,2020,5))+
+scale_y_continuous(limits=c(ystart,yend),breaks=seq(0,yend,5),labels=\(x)paste0(x,&quot;%&quot;))+
+labs(x=NULL,y=&quot;Distance to HXB2&quot;,title=&quot;Nucleotide distance percent in whole genome to French subtype B sample HXB2 from 1983&quot;,subtitle=&quot;Positions where either sequence has a gap are ignored. Each sample is connected with a line to its two closest neighbors. Source: hiv.lanl.gov/content/sequence/NEWALIGN/align.html, \&quot;subtype reference\&quot; collection. Only 50 random samples from numeric subtypes displayed.&quot;|&gt;stringr::str_wrap(92))+
+scale_color_manual(values=color)+
+guides(color=guide_legend(nrow=2,override.aes=list(fill=NA)))+
+theme(axis.text=element_text(size=6,color=&quot;black&quot;),
+  axis.ticks=element_line(linewidth=.2,color=&quot;gray50&quot;),
+  axis.ticks.length=unit(.15,&quot;lines&quot;),
+  axis.title=element_text(size=8),
+  legend.background=element_blank(),
+  legend.box.just=&quot;left&quot;,
+  legend.key=element_rect(fill=alpha(&quot;white&quot;,0)),
+  legend.spacing.x=unit(0,&quot;lines&quot;),
+  legend.spacing.y=unit(0,&quot;lines&quot;),
+  legend.key.size=unit(.7,&quot;lines&quot;),
+  legend.key.width=unit(1.1,&quot;lines&quot;),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.position=&quot;bottom&quot;,
+  legend.justification=c(.5,.5),
+  legend.box.background=element_rect(fill=alpha(&quot;white&quot;,.8),color=&quot;gray70&quot;,linewidth=0),
+  legend.margin=margin(.3,0,0,0,&quot;lines&quot;),
+  legend.text=element_text(size=7.5,vjust=.5),
+  legend.title=element_blank(),
+  panel.border=element_rect(color=&quot;gray50&quot;,fill=NA,linewidth=.2),
+  panel.grid=element_blank(),
+  panel.background=element_rect(fill=&quot;white&quot;),
+  plot.title=element_text(size=8.3,margin=margin(0,0,.6,0,&quot;lines&quot;)),
+  plot.subtitle=element_text(size=7.2,margin=margin(0,0,.6,0,&quot;lines&quot;)))
+ggsave(&quot;1.png&quot;,width=5.2,height=3.5,dpi=450)</pre>
+<div class="width9">
+<img src="i/scripts-hiv-yearxy.png">
+</div>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
