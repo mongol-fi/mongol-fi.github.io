@@ -16,9 +16,9 @@ blockquote{margin-left:40px;margin-right:0}
 blockquote p{max-width:480px}
 blockquote blockquote p{max-width:440px}
 blockquote blockquote blockquote p{max-width:400px}
-blockquote,.quote,blockquote h1,blockquote h2,blockquote h3{color:hsl(35,55%,75%)}
-blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(35,45%,60%)}
-blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote .quote,.quote .quote .quote{color:hsl(35,30%,40%)}
+blockquote,.quote,blockquote h1,blockquote h2,blockquote h3{color:hsl(50,57%,77%)}
+blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(50,45%,55%)}
+blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote .quote,.quote .quote .quote{color:hsl(50,40%,40%)}
 blockquote pre,blockquote code{color:black}
 code{padding:1px}
 img{max-width:100%}
@@ -107,6 +107,7 @@ th{background:#3a3a3a;text-align:left;font-weight:bold}
 <li><a href=#List_all_SNVs_that_introduce_a_synonymous_mutation_in_Wuhan_Hu_1>List all SNVs that introduce a synonymous mutation in Wuhan-Hu-1</a></li>
 <li><a href=#Find_longest_segment_of_Wuhan_Hu_1_that_matches_the_GRCh38_human_reference_genome>Find longest segment of Wuhan-Hu-1 that matches the GRCh38 human reference genome</a></li>
 <li><a href=#Plot_HIV_subtype_reference_with_year_on_x_axis_and_distance_to_specified_sample_on_y_axis>Plot HIV subtype reference with year on x-axis and distance to specified sample on y-axis</a></li>
+<li><a href=#Make_an_ML_tree_with_IQ_TREE_and_plot_it_with_ggtree>Make an ML tree with IQ-TREE and plot it with ggtree</a></li>
 </ul>
 
 <h2>
@@ -2832,31 +2833,29 @@ hue=c(0,220,120,60,30,300)+15
 color=c(&quot;black&quot;,&quot;gray60&quot;,&quot;gray30&quot;,hcl(hue,100,60),hcl(hue,100,25)[-5],hcl(hue,50,80))
 
 ggplot(p,aes(x,y))+
-geom_segment(data=seg,aes(x=V1,y=V2,xend=V3,yend=V4),color=&quot;gray50&quot;,linewidth=.15)+
+# geom_segment(data=seg,aes(x=V1,y=V2,xend=V3,yend=V4),color=&quot;gray50&quot;,linewidth=.15)+
+ggforce::geom_mark_hull(aes(color=type,fill=type),concavity=1000,radius=unit(.15,&quot;cm&quot;),expand=unit(.15,&quot;cm&quot;),alpha=.13,size=.15)+
 geom_point(aes(color=type),size=.3)+
-geom_text(aes(color=type),label=name,size=2,vjust=-.7,show.legend=F)+
-## ggrepel::geom_text_repel(aes(color=type),label=name,size=1.9,max.overlaps=Inf,segment.size=.1,min.segment.length=.2,box.padding=.07,show.legend=F)+
+# geom_text(aes(color=type),label=name,size=2,vjust=-.7,show.legend=F)+
+ggrepel::geom_text_repel(aes(color=type),label=name,size=1.9,max.overlaps=Inf,segment.size=.1,min.segment.length=.2,box.padding=.07,show.legend=F)+
 coord_cartesian(clip=&quot;off&quot;,expand=F)+
 scale_x_continuous(limits=c(xstart,xend),breaks=seq(1980,2020,5))+
 scale_y_continuous(limits=c(ystart,yend),breaks=seq(0,yend,5),labels=\(x)paste0(x,&quot;%&quot;))+
-labs(x=NULL,y=&quot;Distance to HXB2&quot;,title=&quot;Nucleotide distance percent in whole genome to French subtype B sample HXB2 from 1983&quot;,subtitle=&quot;Positions where either sequence has a gap are ignored. Each sample is connected with a line to its two closest neighbors. Source: hiv.lanl.gov/content/sequence/NEWALIGN/align.html, \&quot;subtype reference\&quot; collection. Only 50 random samples from numeric subtypes displayed.&quot;|&gt;stringr::str_wrap(92))+
+labs(x=NULL,y=&quot;Distance to SIVcpzMB66&quot;,title=&quot;Nucleotide distance percent in whole genome to to SIVcpzMB66 (closest SIV to early subtype B)&quot;,subtitle=&quot;Positions where either sequence has a gap are ignored. Source: hiv.lanl.gov/content/sequence/NEWALIGN/align.html, \&quot;subtype reference\&quot; collection. Only 50 random samples from numeric subtypes displayed.&quot;|&gt;stringr::str_wrap(92))+
 scale_color_manual(values=color)+
-guides(color=guide_legend(nrow=2,override.aes=list(fill=NA)))+
+scale_fill_manual(values=color)+
+guides(color=guide_legend(nrow=2,override.aes=list(linewidth=0,size=.5,fill=NA)))+
 theme(axis.text=element_text(size=6.5,color=&quot;black&quot;),
   axis.ticks=element_line(linewidth=.2,color=&quot;gray50&quot;),
   axis.ticks.length=unit(.15,&quot;lines&quot;),
   axis.title=element_text(size=8),
-  legend.background=element_blank(),
-  legend.box.just=&quot;left&quot;,
   legend.key=element_rect(fill=alpha(&quot;white&quot;,0)),
-  legend.spacing.x=unit(0,&quot;lines&quot;),
-  legend.spacing.y=unit(0,&quot;lines&quot;),
+  legend.spacing=unit(0,&quot;lines&quot;),
   legend.key.size=unit(.7,&quot;lines&quot;),
   legend.key.width=unit(1.1,&quot;lines&quot;),
   legend.box.spacing=unit(0,&quot;pt&quot;),
   legend.position=&quot;bottom&quot;,
   legend.justification=c(.5,.5),
-  legend.box.background=element_rect(fill=alpha(&quot;white&quot;,.8),color=&quot;gray70&quot;,linewidth=0),
   legend.margin=margin(.3,0,0,0,&quot;lines&quot;),
   legend.text=element_text(size=7.2,vjust=.5),
   legend.title=element_blank(),
@@ -2868,6 +2867,24 @@ theme(axis.text=element_text(size=6.5,color=&quot;black&quot;),
 ggsave(&quot;1.png&quot;,width=5.2,height=3.5,dpi=450)</pre>
 <div class="width9">
 <img src="i/scripts-hiv-yearxy.png">
+</div>
+<h2>
+<a href=#Make_an_ML_tree_with_IQ_TREE_and_plot_it_with_ggtree id=Make_an_ML_tree_with_IQ_TREE_and_plot_it_with_ggtree>Make an ML tree with IQ-TREE and plot it with ggtree</a>
+</h2>
+<pre>brew install iqtree2
+curl -Ls sars2.net/f/HIV1_REF_2023_genome_DNA.fa.xz|xz -dc&gt;HIV1_REF_2023_genome_DNA.fa
+seqkit fx2tab HIV1_REF_2023_genome_DNA.fa|awk -F. &#39;{print ($4&gt;50?1900:2000)+$4,$0}&#39;|sort -n|cut -d\  -f2-|awk -F. &#39;($2~/^[A-Z]$/&amp;&amp;!a[$2]++)||/CPZ|GOR/&#39;|seqkit tab2fx|sed &#39;s/Ref.\(.*\)\.[^.]*/\1/&#39;&gt;small5.fa
+iqtree2 -nt auto -fast -s small5.fa</pre>
+<p><code>-nt</code> auto sets the number of threads automatically, and <code>-fast</code> is faster but less accurate.</p>
+<p>The tree is unrooted but here I rerooted the tree so that I arbitrarily picked one gorilla sample as the outgroup for the root:</p>
+<pre>library(ggtree)
+t=read.tree(&quot;small5.fa.treefile&quot;)
+t=ape::root(t,&quot;GOR.CM.13.SIVgor_BPID15&quot;,resolve.root=T)
+ggtree(t)+geom_tiplab()+xlim(0,2)
+ggsave(&quot;1.png&quot;,height=length(t$tip.label)*.15,width=5)
+system(&quot;mogrify -trim -bordercolor white -border 32 1.png&quot;)</pre>
+<div class="width4">
+<img src="i/scripts-iqtree.png">
 </div>
 <script>
 let q=document.querySelectorAll('a,code,pre')
