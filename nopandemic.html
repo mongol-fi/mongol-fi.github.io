@@ -16,9 +16,9 @@ blockquote{margin-left:40px;margin-right:0}
 blockquote p{max-width:480px}
 blockquote blockquote p{max-width:440px}
 blockquote blockquote blockquote p{max-width:400px}
-blockquote,.quote,blockquote h1,blockquote h2,blockquote h3{color:hsl(35,55%,75%)}
-blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(35,45%,60%)}
-blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote .quote,.quote .quote .quote{color:hsl(35,30%,40%)}
+blockquote,.quote,blockquote h1,blockquote h2,blockquote h3{color:hsl(50,57%,77%)}
+blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(45,38%,57%)}
+blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote .quote,.quote .quote .quote{color:hsl(40,35%,45%)}
 blockquote pre,blockquote code{color:black}
 code{padding:1px}
 img{max-width:100%}
@@ -123,6 +123,8 @@ th{background:#3a3a3a;text-align:left;font-weight:bold}
 <li><a href=#Claim_that_SARS1_was_evolving_at_a_much_faster_rate_than_SARS2>Claim that SARS1 was evolving at a much faster rate than SARS2</a></li>
 <li><a href=#Claim_that_there_were_49_sequences_of_human_coronaviruses_available_on_the_Internet_in_2019>Claim that there were 49 sequences of human coronaviruses available on the Internet in 2019</a></li>
 <li><a href=#Was_SARS2_circulating_in_humans_before_2020_but_not_detected_in_the_same_way_that_HKU1_and_NL63_were_only_discovered_after_SARS1>Was SARS2 circulating in humans before 2020 but not detected in the same way that HKU1 and NL63 were only discovered after SARS1?</a></li>
+<li><a href=#Millions_of_sequences_have_been_recorded_and_can_be_arranged_in_a_phylogenic_tree>Millions of sequences have been recorded and can be arranged in a phylogenic tree</a></li>
+<li><a href=#Claim_that_an_RNA_virus_is_unable_to_sustain_millions_of_infections>Claim that an RNA virus is unable to sustain millions of infections</a></li>
 </ul></li>
 <li><a href=#Housatonic>Housatonic</a>
 <ul>
@@ -2048,6 +2050,14 @@ ggsave(&quot;1.png&quot;,width=4,height=3.5,dpi=450)</pre>
 <div class="width6">
 <img src="i/nopandemic-usmortality-montana-4.png">
 </div>
+<p>USMortality said that he used data from CDC WONDER, but I don't understand how he calculated ASMR for small counties, because they have many age groups with less than 10 deaths per year, and CDC WONDER suppresses the number of deaths on rows with less than 10 deaths. CDC WONDER also has an option to include a column for precalculated ASMR values, but it's not available when the results are grouped by county:</p>
+<div class="width6">
+<img src="i/nopandemic-usmortality-montana-5.jpg">
+</div>
+<p>USMortality also published an appendix at Google Docs which featured additional plots of the data from Montana. [<a href="https://docs.google.com/document/d/1Mc5q6qEvJdV4AHQS3853fq4iLMNnpRdUErMGa7f2sdI">https://docs.google.com/document/d/1Mc5q6qEvJdV4AHQS3853fq4iLMNnpRdUErMGa7f2sdI</a>] However some of his plots have over 5,000 yearly deaths per 1,000 people, so he probably made some error (and even 5,000 deaths per 100,000 people would be too high):</p>
+<div class="width6">
+<img src="i/nopandemic-usmortality-montana-6.jpg">
+</div>
 <h2>
 <a href=#J_J_Couey id=J_J_Couey>J.J. Couey</a>
 </h2>
@@ -2638,6 +2648,77 @@ NC_027984.1  57677   1         58        0.10056    0.00   Stx2 converting phage
 NC_049925.1  61578   1         52        0.0844457  0.00   Stx converting phage vB_EcoS_P27
 NC_050152.1  101660  1         57        0.0560693  1.75   Enterobacteria phage P7</pre>
 <p>So similarly if SARS2 would've been widespread in humans before 2020, you would be able to find reads of SARS2 in random metagenomic sequencing runs of human samples (unless for example the runs would've been removed from SRA, but even then labs also keep their own copies of their past sequencing runs, and there's several projects which have been mirroring the SRA).</p>
+<h3>
+<a href=#Millions_of_sequences_have_been_recorded_and_can_be_arranged_in_a_phylogenic_tree id=Millions_of_sequences_have_been_recorded_and_can_be_arranged_in_a_phylogenic_tree>Millions of sequences have been recorded and can be arranged in a phylogenic tree</a>
+</h3>
+<p>Couey wrote that McKernan is making people accept that <span class="quote">&quot;millions of sequences have been recorded&quot;</span> and that <span class="quote">&quot;these sequences can be arranged in a phylogenic tree&quot;</span>. [<a href="https://gigaohmbiological.substack.com/p/the-working-document-i-told-you-about">https://gigaohmbiological.substack.com/p/the-working-document-i-told-you-about</a>]</p>
+<p>But I don't understand why it would not be possible to arrange the sequences to a phylogenic tree. If you simply have a list of SNVs that each sample has relative to Wuhan-Hu-1, then you can calculate the distance between a pair of samples by counting how many mutations exist only in one of the two samples but not in both. And you can make a distance matrix by repeating the same procedure for each pair of samples. And then you can turn the distance matrix into a phylogenic tree.</p>
+<p>This code downloads the mutation list of about 700,000 GISAID submissions from 2020 and it makes a phylogenetic tree for a random subset of 50 sequences:</p>
+<pre>install.packages(c(&quot;ape&quot;,&quot;data.table&quot;));library(ape)
+
+system(&quot;curl -Ls sars2.net/f/gisaid2020.tsv.xz|xz -dc&gt;gisaid2020.tsv&quot;)
+
+t=as.data.frame(data.table::fread(&quot;gisaid2020.tsv&quot;))
+t=t[sample(nrow(t),50),]
+
+mut=strsplit(t$nuc,&quot;,&quot;)
+m=t(sapply(mut,\(x)table(factor(x,unique(unlist(mut))))))
+rownames(m)=paste(t$pango,t$divergence,t$collection,t$country,t$region,t$gisaid,sep=&quot;|&quot;)
+
+f=&quot;1.png&quot;
+png(f,w=900,h=1100)
+hc=as.hclust(reorder(as.dendrogram(hclust(dist(m))),prcomp(m)$x[,1]))
+plot(as.phylo(hc),cex=1.3,font=1,underscore=T)
+dev.off()
+system(&quot;mogrify -trim -bordercolor white -border 16x16 1.png&quot;)</pre>
+<p>There's one branch for Alpha samples from December and November 2020, one branch for B.1 samples from spring 2020, and so on:</p>
+<div class="width5">
+<img src="i/nopandemic-gisaid-random-50-sequences-tree.png">
+</div>
+<p>You can run the code by copying and pasting it to the R console application after installing R from here: <a href="https://cran.r-project.org">https://cran.r-project.org</a>. If you need more sequences then you can download a similar mutation list of over 4 million US sequences from here (along with FASTA files for the full sequences): <a href="https://vigilance.pervaers.com/i/136194099/downloadable-datasets">https://vigilance.pervaers.com/i/136194099/downloadable-datasets</a>.</p>
+<h3>
+<a href=#Claim_that_an_RNA_virus_is_unable_to_sustain_millions_of_infections id=Claim_that_an_RNA_virus_is_unable_to_sustain_millions_of_infections>Claim that an RNA virus is unable to sustain millions of infections</a>
+</h3>
+<p>Couey tweeted: <span class="quote">&quot;RNA doesn’t possess the chemical or biological attributes required to be accurately copied through thousands nevermind millions of infections, therefore RNA pandemics are impossible irrespective of the particular RNA sequence claimed.&quot;</span> [<a href="https://x.com/jjcouey/status/1808861763556790394">https://x.com/jjcouey/status/1808861763556790394</a>]</p>
+<p>However if there haven't been millions of infections, then why are there over 16 million sequences you can download from GISAID? Most patients have only one sequence at GISAID, and even the patients with multiple sequences sometimes have sequences from multiple different infections, so GISAID probably has sequences for at least 10 million unique cases of a COVID infection.</p>
+<p>The files from here have over 4 million sequences alone: <a href="https://vigilance.pervaers.com/i/136194099/downloadable-datasets">https://vigilance.pervaers.com/i/136194099/downloadable-datasets</a>. Most sequences are even accompanied for metadata about the patient, like age, sex, and location, and there's also metadata for which institution submitted the sequence:</p>
+<pre>$ wget https://substack.pervaers.com/summer_deaths/GISAID.7z
+[...]
+$ 7z e GISAID.7z
+[...]
+$ head -n2 GISAID/GISAID.csv|csvtk -t transpose|csvtk -t pretty -s\ |sed 2d
+strain                hCoV-19/USA/MD-HP27498-PIDLAZVAFJ/2020
+virus                 betacoronavirus
+gisaid_epi_isl        EPI_ISL_10879288
+genbank_accession     ?
+date                  2020-02-26
+region                North America
+country               USA
+division              Maryland
+location
+region_exposure       North America
+country_exposure      USA
+division_exposure     Maryland
+segment               genome
+length                29753
+host                  Human
+age                   40-43
+sex                   Male
+Nextstrain_clade      ?
+pangolin_lineage      B.1
+GISAID_clade          GH
+originating_lab       Johns Hopkins Hospital Department of Pathology
+submitting_lab        Johns Hopkins Hospital Department of Pathology
+authors               C. Paul Morris, Raghda Eldesouki, Amary Fall,  Julie M. Norton, Omar Abdullah, Heba H. Mostafa
+url                   https://www.gisaid.org/
+title                 ?
+paper_url             ?
+date_submitted        2022-03-10
+purpose_of_sequencing ?</pre>
+<p>There's many months with over 10,000 GISAID submissions from a single US state, and most submissions represent unique cases of an infection:</p>
+<div class="width8">
+<img src="i/nopandemic-couey-million.jpg">
+</div>
 <h2>
 <a href=#Housatonic id=Housatonic>Housatonic</a>
 </h2>

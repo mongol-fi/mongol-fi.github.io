@@ -16,9 +16,9 @@ blockquote{margin-left:40px;margin-right:0}
 blockquote p{max-width:480px}
 blockquote blockquote p{max-width:440px}
 blockquote blockquote blockquote p{max-width:400px}
-blockquote,.quote,blockquote h1,blockquote h2,blockquote h3{color:hsl(35,55%,75%)}
-blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(35,45%,60%)}
-blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote .quote,.quote .quote .quote{color:hsl(35,30%,40%)}
+blockquote,.quote,blockquote h1,blockquote h2,blockquote h3{color:hsl(50,57%,77%)}
+blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(45,38%,57%)}
+blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote .quote,.quote .quote .quote{color:hsl(40,35%,45%)}
 blockquote pre,blockquote code{color:black}
 code{padding:1px}
 img{max-width:100%}
@@ -55,8 +55,9 @@ th{background:#3a3a3a;text-align:left;font-weight:bold}
 <li><a href=#Third_insert>Third insert</a></li>
 <li><a href=#Unhighlighted_insert_2_5>Unhighlighted insert 2.5</a></li>
 <li><a href=#Fourth_insert>Fourth insert</a></li>
-<li><a href=#Shell_code_for_making_amino_acid_aligments>Shell code for making amino acid aligments</a></li>
+<li><a href=#Shell_code_for_making_colorized_amino_acid_aligments>Shell code for making colorized amino acid aligments</a></li>
 <li><a href=#Arkmedics_BLAST_searches_for_Pradhan_et_al_s_inserts>Arkmedic's BLAST searches for Pradhan et al.'s inserts</a></li>
+<li><a href=#Matches_to_envelope_proteins_in_LANLs_HIV_subtype_reference>Matches to envelope proteins in LANL's HIV subtype reference</a></li>
 </ul>
 
 <h2>
@@ -208,7 +209,7 @@ NP_057850.1 RVLAEAMSQVTNSATIMMQRGNFRNQRKIVKCFNCGKEGHTARNCRAPRKKGCWKCGKEG
                     Pradhan insert 4
 [...]</pre>
 <h2>
-<a href=#Shell_code_for_making_amino_acid_aligments id=Shell_code_for_making_amino_acid_aligments>Shell code for making amino acid aligments</a>
+<a href=#Shell_code_for_making_colorized_amino_acid_aligments id=Shell_code_for_making_colorized_amino_acid_aligments>Shell code for making colorized amino acid aligments</a>
 </h2>
 <p>Here's code for making the colorized amino acid alignments:</p>
 <pre># download whole genome sequences of sarbecoviruses
@@ -228,13 +229,13 @@ seqkit replace -isp &#39;[^X]&#39; -r &#39;&#39; spike.aa|seqkit seq -m 5|seqkit
 # thin out a TSV percentage identity matrix by removing rows with over n% identity to any previous row (default 99%)
 thin()(awk -F\\t &#39;NR&gt;1{for(i=2;i&lt;NR;i++)if($i&gt;x)next;print$1}&#39; x=&quot;${1-99}&quot; &quot;${@:2}&quot;)
 
-# align text right by spaces
-alir()(awk &#39;{a[NR]=$0;if(length($0)&gt;l)l=length($0)}END{for(i in a)printf&quot;%&quot;l&quot;s\n&quot;,a[i]}&#39; &quot;$@&quot;)
+# print color scheme
+aacolor()(printf %s\\n A:242:121:121 C:242:182:121 D:242:242:121 G:182:242:121 F:121:242:151 E:121:242:222 T:121:182:242 I:121:121:242 K:182:121:242 L:242:121:242 M:255:191:191 N:255:223:191 P:255:255:191 Q:223:255:191 R:191:255:207 S:191:255:244 H:191:223:255 V:191:191:255 W:223:191:255 Y:255:191:255 -:140:140:140 X:255:255:255 \*:255:255:255|tr : \ )
 
-# colorize amino acids
-cola()(sed -f &lt;(awk -F: &#39;{print&quot;s/&quot;$1&quot;/\033[38;2;0;0;0m\033[48;2;&quot;$2&quot;;&quot;$3&quot;;&quot;$4&quot;m&quot;$1&quot;\033[0m/g&quot;}&#39; &lt;(printf %s\\n A:242:121:121 C:242:182:121 D:242:242:121 E:182:242:121 F:121:242:151 G:121:242:222 H:121:182:242 I:121:121:242 K:182:121:242 L:242:121:242 M:255:191:191 N:255:223:191 P:255:255:191 Q:223:255:191 R:191:255:207 S:191:255:244 T:191:223:255 V:191:191:255 W:223:191:255 Y:255:191:255 -:140:140:140)) &quot;$@&quot;)
+# display alignment with colorized amino acids
+seqcol()(seqkit seq -u|seqkit fx2tab|gawk -F\\t &#39;NR==FNR{a[$1]=$2;next}{name[FNR]=$1;split($2,z,&quot;&quot;);for(i in z)seq[FNR][i]=z[i];if(length($1)&gt;max1)max1=length($1);if(length($2)&gt;max2)max2=length($2)}END{for(i=1;i&lt;=max2;i+=width){printf(&quot;%&quot;(max1+1)&quot;s&quot;,&quot;&quot;);for(pos=i;pos&lt;i+width&amp;&amp;pos&lt;=max2;pos+=10)printf(pos-i&gt;width-10?&quot;%s&quot;:&quot;%-10s&quot;,pos);print&quot;&quot;;for(j in seq){printf(&quot;%&quot;max1&quot;s &quot;,name[j]);for(k=i;k&lt;=max2&amp;&amp;k&lt;i+width;k++)printf(&quot;%s&quot;,&quot;\033[38;2;0;0;0m\033[48;2;&quot;a[seq[j][k]]&quot;m&quot;seq[j][k]&quot;\033[0m&quot;);print&quot;&quot;}}}&#39; &quot;width=${1-60}&quot; &lt;(aacolor|sed $&#39;s/ /\t/;s/ /;/g&#39;) -)
 
-thin 92 &lt;spike.pid|cut -d\  -f1|seqkit grep -f- spike.aa|seqkit grep -nrvp &#39;SARS coronavirus&#39;|cat - &lt;(seqkit grep -nrip db159,hu-1,tor2,zc45,rp3\\b,rs7896,banal-20-52,ratg,lyra11,btsy2,shc014,wiv1\\b,gx_p2v,gx-p1e spike.aa)|seqkit rmdup -s|aln --reorder -|seqkit subseq -r153:186|cut -d, -f1|sed &#39;s/ ORF.*//;s/ surface .*//;s/Severe acute respiratory syndrome/SARS/;s/Khosta-2 strain //;s/ isolate / /;s/ strain / /;s/Bat SARS-like coronavirus //;s/Betacoronavirus sp. //;s/ RNA$//&#39;|seqkit fx2tab|(x=`cat`;cut -f1&lt;&lt;&lt;&quot;$x&quot;|cut -d\  -f2-|alir|paste -d\  - &lt;(cut -f2&lt;&lt;&lt;&quot;$x&quot;|cola))</pre>
+thin 92 &lt;spike.pid|cut -d\  -f1|seqkit grep -f- spike.aa|seqkit grep -nrvp &#39;SARS coronavirus&#39;|cat - &lt;(seqkit grep -nrip db159,hu-1,tor2,zc45,rp3\\b,rs7896,banal-20-52,ratg,lyra11,btsy2,shc014,wiv1\\b,gx_p2v,gx-p1e spike.aa)|seqkit rmdup -s|aln --reorder -|cut -d, -f1|sed &#39;s/&gt;[^ ]*/&gt;/;s/ ORF.*//;s/ surface .*//;s/Severe acute respiratory syndrome/SARS/;s/Khosta-2 strain //;s/ isolate / /;s/ strain / /;s/Bat SARS-like coronavirus //;s/Betacoronavirus sp. //;s/ RNA$//&#39;|seqcol</pre>
 <h2>
 <a href=#Arkmedics_BLAST_searches_for_Pradhan_et_al_s_inserts id=Arkmedics_BLAST_searches_for_Pradhan_et_al_s_inserts>Arkmedic's BLAST searches for Pradhan et al.'s inserts</a>
 </h2>
@@ -439,6 +440,49 @@ AGG ACA TAC CTG TTT AAT GAG ACA AGA GGT AAT TCA AGC TCA GGT AAT</pre>
 <div class="width8">
 <img src="i/origin-pradhan-15.jpg">
 </div>
+<h2>
+<a href=#Matches_to_envelope_proteins_in_LANLs_HIV_subtype_reference id=Matches_to_envelope_proteins_in_LANLs_HIV_subtype_reference>Matches to envelope proteins in LANL's HIV subtype reference</a>
+</h2>
+<p>From the HIV sequence database of the Los Alamos National Laboratory, you can download a FASTA file which contains 2-5 sequences from different subtypes of HIV-1 along with 27 chimpanzee and gorilla sequences of SIV that are similar to HIV-1. Set <span class="quote">&quot;Alignment type&quot;</span> to <span class="quote">&quot;Web (all complete sequences)&quot;</span>, set <span class="quote">&quot;DNA/Protein&quot;</span> to <span class="quote">&quot;Protein&quot;</span>, and click <span class="quote">&quot;Get alignment&quot;</span>: <a href="https://www.hiv.lanl.gov/content/sequence/NEWALIGN/align.html">https://www.hiv.lanl.gov/content/sequence/NEWALIGN/align.html</a>. You can keep region as <span class="quote">&quot;env&quot;</span> to download only the envelope protein, which covers about 20% of the genome of HIV-1. Positions 85 to 2571 of env code for gp120 in HXB2 (which are amino acid positions 29 to 857).</p>
+<p>The 2023 edition of LANL's subtype reference has a total of 555 sequences, but zero of them have a perfect match to Pradhan's first motif <code>TNGTKR</code>. Two sequences have one mismatch, 215 have 2 mismatches, and the rest have 3 mismatches:</p>
+<pre>$ wget sars2.net/f/HIV1_REF_2023_env_DNA.fasta
+$ x=TNGTKR;for((i=0;i&lt;=${#x};i++));do seqkit seq -g HIV1_REF_2023_env_PRO.fasta|seqkit replace -sp \# -r X|seqkit locate -iPp $x -m$i|sed 1d|awk &#39;!a[$1]++&#39;|echo &quot;$i `wc -l`&quot;;done
+0 0
+1 2
+2 215
+3 555
+4 555
+5 555
+6 555</pre>
+<p>For the second motif <code>HKNNKS</code>, there's zero perfect matches and only sequence with a single mismatch:</p>
+<pre>$ x=HKNNKS;for((i=0;i&lt;=${#x};i++));do seqkit seq -g HIV1_REF_2023_env_PRO.fasta|seqkit replace -sp \# -r X|seqkit locate -iPp $x -m$i|sed 1d|awk &#39;!a[$1]++&#39;|echo &quot;$i `wc -l`&quot;;done
+0 0
+1 1
+2 41
+3 551
+4 555
+5 555
+6 555</pre>
+<p>All of the matches with one mismatch were located in the first half of gp120:</p>
+<pre>$ seqkit seq -g HIV1_REF_2023_env_PRO.fasta|seqkit replace -sp \# -r X|seqkit locate -ip TNGTKR -m1|cut -f1,3-|column -t
+seqID                               pattern  strand  start  end  matched
+Ref.H.GB.00.00GBAC4001.FJ711703     tngtkr   +       190    195  tngtnr
+Ref.L.CD.01.L_CG_0018a_01.MN271384  tngtkr   +       132    137  tngttr
+$ seqkit seq -g HIV1_REF_2023_env_PRO.fasta|seqkit replace -sp \# -r X|seqkit locate -ip HKNNKS -m1|cut -f1,3-|column -t
+seqID                               pattern  strand  start  end  matched
+Ref.101_01B.CN.13.YNKM250.MK158946  hknnks   +       366    371  hfnnks</pre>
+<p>The two matches to <code>TNGTKR</code> were both located within variable loops but the match to <code>HKNNKS</code> wasn't:</p>
+<pre>seqkit grep -nrp FJ711703,MN271384,YNKM250,HXB2 HIV1_REF_2023_env_PRO.fasta|seqkit replace -p&#39;^Ref\.(.*)\..*?$&#39; -r\$1|mafft --quiet -|seqkit fx2tab|gawk -F\\t &#39;ARGIND==1{a[$1]=$2}ARGIND==2{for(i=$2;i&lt;=$3;i++)loop[i]=$1}ARGIND==3{if($1~/HXB2/){gap=0;split($2,z,&quot;&quot;);for(i in z){if(z[i]==&quot;-&quot;)gap++;gaps[i]=gap}}name[FNR]=$1;split($2,z,&quot;&quot;);for(i in z)seq[FNR][i]=z[i];if(length($1)&gt;max1)max1=length($1);if(length($2)&gt;max2)max2=length($2)}END{width=60;for(i=1;i&lt;=max2;i+=width){print&quot;&quot;;printf(&quot;%*s&quot;,max1+1,&quot;&quot;);for(pos=i;pos&lt;i+width&amp;&amp;pos&lt;=max2;pos+=10)printf(pos-i&gt;width-10?&quot;%s&quot;:&quot;%-10s&quot;,pos-gaps[pos]);print&quot;&quot;;printf(&quot;%*s&quot;,max1+1,&quot;&quot;);for(pos=i;pos&lt;i+width;pos++){l=loop[pos-gaps[pos]];printf&quot;%s&quot;,l?l:&quot; &quot;};print&quot;&quot;;for(j in seq){printf(&quot;%&quot;max1&quot;s &quot;,name[j]);for(k=i;k&lt;=max2&amp;&amp;k&lt;i+width;k++)printf(&quot;%s&quot;,&quot;\033[38;2;0;0;0m\033[48;2;&quot;a[seq[j][k]in a?seq[j][k]:&quot;X&quot;]&quot;m&quot;seq[j][k]&quot;\033[0m&quot;);print&quot;&quot;}}}&#39; &lt;(aacolor|sed $&#39;s/ /\t/;s/ /;/g&#39;) &lt;(printf %s\\n 1:131:157 2:158:196 3:296:331 4:385:418 5:460:469|tr : \\t) -</pre>
+<div class="width7">
+<img src="i/pradhan-subref.png">
+</div>
+<p>The numbers in the image above show the position in HXB2. I used these as the coordinates of the variable loops in the env protein of HXB2:</p>
+<pre>loop start end
+V1   131   157
+V2   158   196
+V3   296   331
+V4   385   418
+V5   460   469</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")

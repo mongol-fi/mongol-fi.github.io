@@ -17,8 +17,8 @@ blockquote p{max-width:480px}
 blockquote blockquote p{max-width:440px}
 blockquote blockquote blockquote p{max-width:400px}
 blockquote,.quote,blockquote h1,blockquote h2,blockquote h3{color:hsl(50,57%,77%)}
-blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(50,45%,55%)}
-blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote .quote,.quote .quote .quote{color:hsl(50,40%,40%)}
+blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(45,38%,57%)}
+blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote .quote,.quote .quote .quote{color:hsl(40,35%,45%)}
 blockquote pre,blockquote code{color:black}
 code{padding:1px}
 img{max-width:100%}
@@ -96,7 +96,8 @@ th{background:#3a3a3a;text-align:left;font-weight:bold}
 <li><a href=#Find_most_common_viruses_in_wastewater_metagenomes>Find most common viruses in wastewater metagenomes</a></li>
 <li><a href=#Get_consensus_set_of_mutations_in_a_variant>Get consensus set of mutations in a variant</a></li>
 <li><a href=#Find_ORFs_with_seqkit>Find ORFs with seqkit</a></li>
-<li><a href=#Highlight_positions_in_an_alignment_which_differ_from_the_consensus_sequence>Highlight positions in an alignment which differ from the consensus sequence</a></li>
+<li><a href=#Display_multiple_sequence_alignment_and_highlight_positions_which_differ_from_the_consensus_sequence>Display multiple sequence alignment and highlight positions which differ from the consensus sequence</a></li>
+<li><a href=#Display_multiple_sequence_alignment_and_highlight_positions_which_differ_from_the_first_sequence>Display multiple sequence alignment and highlight positions which differ from the first sequence</a></li>
 <li><a href=#Show_amino_acid_alignment_next_to_nucleotide_alignment_and_highlight_positions_that_are_different_from_the_consensus>Show amino acid alignment next to nucleotide alignment and highlight positions that are different from the consensus</a></li>
 <li><a href=#Make_a_heatmap_for_the_percentage_of_nucleotide_changes_in_different_blocks_of_the_genome>Make a heatmap for the percentage of nucleotide changes in different blocks of the genome</a></li>
 <li><a href=#Make_a_line_plot_of_cumulative_mutations_compared_to_a_target_sequence>Make a line plot of cumulative mutations compared to a target sequence</a></li>
@@ -107,7 +108,7 @@ th{background:#3a3a3a;text-align:left;font-weight:bold}
 <li><a href=#List_all_SNVs_that_introduce_a_synonymous_mutation_in_Wuhan_Hu_1>List all SNVs that introduce a synonymous mutation in Wuhan-Hu-1</a></li>
 <li><a href=#Find_longest_segment_of_Wuhan_Hu_1_that_matches_the_GRCh38_human_reference_genome>Find longest segment of Wuhan-Hu-1 that matches the GRCh38 human reference genome</a></li>
 <li><a href=#Plot_HIV_subtype_reference_with_year_on_x_axis_and_distance_to_specified_sample_on_y_axis>Plot HIV subtype reference with year on x-axis and distance to specified sample on y-axis</a></li>
-<li><a href=#Make_an_ML_tree_with_IQ_TREE_and_plot_it_with_ggtree>Make an ML tree with IQ-TREE and plot it with ggtree</a></li>
+<li><a href=#Make_a_maximum_likelihood_tree_with_IQ_TREE_and_plot_it_with_ggtree>Make a maximum likelihood tree with IQ-TREE and plot it with ggtree</a></li>
 </ul>
 
 <h2>
@@ -2337,7 +2338,7 @@ start  end    length  matched
 29771  29806  36      ATGCTAGGGAGAGCTGCCTATATGGAAGAGCCCTAA
 29806  29844  39      ATGTGTAAAATTAATTTTAGTAGTGCTATCCCCATGTGA</pre>
 <h2>
-<a href=#Highlight_positions_in_an_alignment_which_differ_from_the_consensus_sequence id=Highlight_positions_in_an_alignment_which_differ_from_the_consensus_sequence>Highlight positions in an alignment which differ from the consensus sequence</a>
+<a href=#Display_multiple_sequence_alignment_and_highlight_positions_which_differ_from_the_consensus_sequence id=Display_multiple_sequence_alignment_and_highlight_positions_which_differ_from_the_consensus_sequence>Display multiple sequence alignment and highlight positions which differ from the consensus sequence</a>
 </h2>
 <pre># efetch multi (download accessions from STDIN from GenBank)
 emu()(curl -sd &quot;id=$(paste -sd,)&quot; &quot;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=${1:-nuccore}&amp;rettype=${2:-fasta}&amp;retmode=$3&quot;)
@@ -2360,6 +2361,30 @@ cohl3()(x=$(seqkit fx2tab);paste -d\   &lt;(cut -f1 &lt;&lt;&lt;&quot;$x&quot;) 
 seqkit fx2tab env.aa|sed $&#39;s/lcl|//;s/_prot_[^\t]*//&#39;|awk -F\\t &#39;NR==FNR{a[$1]=$2;next}{print&quot;&gt;&quot;a[$1]&quot;\n&quot;$2}&#39; &lt;(seqkit seq -n sarbe.fa|sed &#39;s/,.*//;s/ \(ORF\|surface\).*//;s/ .* /\t/&#39;) -|mafft --quiet -|cohl3|column -t</pre>
 <div class="width7">
 <img src="i/scripts-cohl.png">
+</div>
+<h2>
+<a href=#Display_multiple_sequence_alignment_and_highlight_positions_which_differ_from_the_first_sequence id=Display_multiple_sequence_alignment_and_highlight_positions_which_differ_from_the_first_sequence>Display multiple sequence alignment and highlight positions which differ from the first sequence</a>
+</h2>
+<pre>seqdif()(seqkit fx2tab|gawk -F\\t &#39;{name[NR]=$1;split($2,z,&quot;&quot;);for(i in z)seq[NR][i]=z[i];if(length($1)&gt;max1)max1=length($1);if(length($2)&gt;max2)max2=length($2)}END{for(i=1;i&lt;=max2;i+=width){printf(&quot;%&quot;(max1+1)&quot;s&quot;,&quot;&quot;);for(pos=i;pos&lt;i+width&amp;&amp;pos&lt;max2;pos+=10)printf(&quot;%-10s&quot;,pos);print &quot;&quot;;for(j in seq){out=sprintf(&quot;%&quot;max1&quot;s &quot;,name[j]);for(k=i;k&lt;=max2&amp;&amp;k&lt;i+width;k++)out=out (seq[j][k]==seq[1][k]?seq[j][k]:&quot;\033[31m&quot;seq[j][k]&quot;\033[0m&quot;);print out}}}&#39; &quot;width=${1-60}&quot;)
+
+emu()(curl -sd &quot;id=$(paste -sd,)&quot; &quot;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=${1:-nuccore}&amp;rettype=${2:-fasta}&amp;retmode=$3&quot;)
+
+printf %s\\n MN908947.{3..1} MN996532.{2,1}|emu|seqkit replace -p&#39; .* ([^ ]*),.*&#39; -r&#39; $1&#39;|seqkit subseq -r 1:200|mafft --quiet -|seqkit subseq -r 1:120 &gt;temp
+seqdif&lt;temp</pre>
+<div class="width7">
+<img src="i/scripts-seqdif.png">
+</div>
+<p>This uses a different color for each amino acid or nucleotide instead:</p>
+<pre># # generate color palette
+# Rscript --no-init-file -e &#39;library(colorspace);hue=c(0,30,60,90,135,170,210,240,270,300);x=(hex2RGB(c(hex(HSV(hue,.45,.95)),hex(HSV(hue,.3,.85)),hex(HSV(hue,.45,.5)))));write.table(255*attr(x,&quot;coords&quot;),sep=&quot;:&quot;,col.names=F,row.names=F)&#39;
+
+aacolor()(printf %s\\n A:242:121:121 C:242:182:121 D:242:242:121 E:182:242:121 T:121:242:151 I:121:242:222 H:121:182:242 G:121:121:242 K:182:121:242 L:242:121:242 M:255:191:191 N:255:223:191 P:255:255:191 Q:223:255:191 R:191:255:207 S:191:255:244 F:191:223:255 V:191:191:255 W:223:191:255 Y:255:191:255 -:140:140:140|tr : \ )
+
+seqcol()(seqkit seq -u|seqkit fx2tab|gawk -F\\t &#39;NR==FNR{a[$1]=$2;next}{name[FNR]=$1;split($2,z,&quot;&quot;);for(i in z)seq[FNR][i]=z[i];if(length($1)&gt;max1)max1=length($1);if(length($2)&gt;max2)max2=length($2)}END{for(i=1;i&lt;=max2;i+=width){printf(&quot;%&quot;(max1+1)&quot;s&quot;,&quot;&quot;);for(pos=i;pos&lt;i+width&amp;&amp;pos&lt;max2;pos+=10)printf(&quot;%-10s&quot;,pos);print &quot;&quot;;for(j in seq){printf(&quot;%&quot;max1&quot;s &quot;,name[j]);for(k=i;k&lt;=max2&amp;&amp;k&lt;i+width;k++)printf(&quot;%s&quot;,&quot;\033[38;2;0;0;0m\033[48;2;&quot;a[seq[j][k]]&quot;m&quot;seq[j][k]&quot;\033[0m&quot;);print&quot;&quot;}}}&#39; &quot;width=${1-60}&quot; &lt;(aacolor|sed $&#39;s/ /\t/;s/ /;/g&#39;) -)
+
+seqcol&lt;temp</pre>
+<div class="width7">
+<img src="i/scripts-seqdif-2.png">
 </div>
 <h2>
 <a href=#Show_amino_acid_alignment_next_to_nucleotide_alignment_and_highlight_positions_that_are_different_from_the_consensus id=Show_amino_acid_alignment_next_to_nucleotide_alignment_and_highlight_positions_that_are_different_from_the_consensus>Show amino acid alignment next to nucleotide alignment and highlight positions that are different from the consensus</a>
@@ -2869,17 +2894,18 @@ ggsave(&quot;1.png&quot;,width=5.2,height=3.5,dpi=450)</pre>
 <img src="i/scripts-hiv-yearxy.png">
 </div>
 <h2>
-<a href=#Make_an_ML_tree_with_IQ_TREE_and_plot_it_with_ggtree id=Make_an_ML_tree_with_IQ_TREE_and_plot_it_with_ggtree>Make an ML tree with IQ-TREE and plot it with ggtree</a>
+<a href=#Make_a_maximum_likelihood_tree_with_IQ_TREE_and_plot_it_with_ggtree id=Make_a_maximum_likelihood_tree_with_IQ_TREE_and_plot_it_with_ggtree>Make a maximum likelihood tree with IQ-TREE and plot it with ggtree</a>
 </h2>
+<p>I'm using the Los Alamos HIV subtype reference as an example, which also contains HIV-1-like SIV sequences from chimpanzees and gorillas: <a href="https://www.hiv.lanl.gov/content/sequence/NEWALIGN/align.html">https://www.hiv.lanl.gov/content/sequence/NEWALIGN/align.html</a>. I picked only the oldest sample from each single-letter subtype along with all the SIV sequences:</p>
 <pre>brew install iqtree2
 curl -Ls sars2.net/f/HIV1_REF_2023_genome_DNA.fa.xz|xz -dc&gt;HIV1_REF_2023_genome_DNA.fa
-seqkit fx2tab HIV1_REF_2023_genome_DNA.fa|awk -F. &#39;{print ($4&gt;50?1900:2000)+$4,$0}&#39;|sort -n|cut -d\  -f2-|awk -F. &#39;($2~/^[A-Z]$/&amp;&amp;!a[$2]++)||/CPZ|GOR/&#39;|seqkit tab2fx|sed &#39;s/Ref.\(.*\)\.[^.]*/\1/&#39;&gt;small5.fa
+seqkit fx2tab HIV1_REF_2023_genome_DNA.fa|awk -F. &#39;{print ($4&gt;50?1900:2000)+$4,$0}&#39;|sort -n|cut -d\  -f2-|awk -F. &#39;($2~/^[A-Z][0-9]?$/&amp;&amp;!a[$2]++)||/CPZ|GOR|\.[ONP]\./&#39;|seqkit tab2fx|sed &#39;s/Ref.\(.*\)\.[^.]*/\1/&#39;&gt;small5.fa
 iqtree2 -nt auto -fast -s small5.fa</pre>
-<p><code>-nt</code> auto sets the number of threads automatically, and <code>-fast</code> is faster but less accurate.</p>
-<p>The tree is unrooted but here I rerooted the tree so that I arbitrarily picked one gorilla sample as the outgroup for the root:</p>
+<p><code>-nt auto</code> sets the number of threads automatically, and <code>-fast</code> is faster but less accurate.</p>
+<p>The tree is unrooted but here I rerooted the tree so that I picked the sample that was the furthest from HXB2 as the outgroup:</p>
 <pre>library(ggtree)
 t=read.tree(&quot;small5.fa.treefile&quot;)
-t=ape::root(t,&quot;GOR.CM.13.SIVgor_BPID15&quot;,resolve.root=T)
+t=ape::root(t,&quot;CPZ.CD.90.ANT&quot;,resolve.root=T)
 ggtree(t)+geom_tiplab()+xlim(0,2)
 ggsave(&quot;1.png&quot;,height=length(t$tip.label)*.15,width=5)
 system(&quot;mogrify -trim -bordercolor white -border 32 1.png&quot;)</pre>
