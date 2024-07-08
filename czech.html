@@ -49,6 +49,7 @@ th{background:#3a3a3a;text-align:left;font-weight:bold}
 <ul>
 <li><a href=#Were_Pfizer_and_Moderna_vaccines_allocated_randomly>Were Pfizer and Moderna vaccines allocated randomly?</a></li>
 <li><a href=#Bucket_analysis>Bucket analysis</a></li>
+<li><a href=#Deaths_and_population_estimates_by_single_year_of_age_from_Eurostat>Deaths and population estimates by single year of age from Eurostat</a></li>
 <li><a href=#Simple_ASMR_calculations>Simple ASMR calculations</a></li>
 <li><a href=#Plot_for_ASMR_by_dose_and_date>Plot for ASMR by dose and date</a></li>
 </ul>
@@ -124,6 +125,31 @@ for(day in as.list(seq(mindate,maxdate,1))){
 fwrite(buck,&quot;czbuckets&quot;,sep=&quot; &quot;)</pre>
 <p>I uploaded the output here: <a href=f/czbuckets.gz>f/czbuckets.gz</a> (about 2 MB).</p>
 <h2>
+<a href=#Deaths_and_population_estimates_by_single_year_of_age_from_Eurostat id=Deaths_and_population_estimates_by_single_year_of_age_from_Eurostat>Deaths and population estimates by single year of age from Eurostat</a>
+</h2>
+<p>Eurostat has published the yearly number of deaths and population estimates for Czech Republic by single year of age up to age 99. [<a href="https://ec.europa.eu/eurostat/data/database">https://ec.europa.eu/eurostat/data/database</a>] The following code combines the two datasets into a single CSV file with a more convenient format:</p>
+<pre>pop=read.table(&quot;https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/demo_pjan?format=TSV&quot;,sep=&quot;\t&quot;,header=T,na.strings=&quot;:&quot;)
+pop=pop[grep(&quot;^A,NR,(?!(TOTAL|UNK)).*,T,CZ&quot;,pop[,1],perl=T),]
+age=c(as.numeric(head(sub(&quot;.*,Y(.*?),.*&quot;,&quot;\\1&quot;,pop[,1]),-2)),0,100)
+pop2=as.numeric(sub(&quot;:? *\\w?$&quot;,&quot;&quot;,unlist(pop[,-1])))
+d1=data.frame(year=rep(as.numeric(sub(&quot;^X&quot;,&quot;&quot;,colnames(pop)[-1])),each=nrow(pop)),age,pop=pop2)
+
+dead=read.table(&quot;https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/demo_magec?format=TSV&quot;,sep=&quot;\t&quot;,header=T,check.names=F)
+dead=dead[grep(&quot;,T,(?!(TOTAL|UNK)).*,CZ&quot;,dead[,1],perl=T),]
+age=c(as.numeric(head(sub(&quot;.*,Y(.*?),.*&quot;,&quot;\\1&quot;,dead[,1]),-2)),0,100)
+d2=data.frame(year=rep(as.numeric(colnames(dead)[-1]),each=nrow(dead)),age,dead=as.numeric(unlist(dead[,-1])))
+
+me=merge(d1,d2)
+me=me[order(me$year,me$age),]
+write.csv(me,&quot;czpopdead.csv&quot;,quote=F,row.names=F)</pre>
+<p>The generated file looks like this: (<a href=f/czpopdead.csv>f/czpopdead.csv</a>)</p>
+<pre>$ curl -Ls sars2.net/f/czpopdead.csv|head -n4
+year,age,pop,dead
+1960,0,126977,2581
+1960,1,139022,222
+1960,2,151918,136</pre>
+<p>The population estimates are for January 1st and not mid-year estimates.</p>
+<h2>
 <a href=#Simple_ASMR_calculations id=Simple_ASMR_calculations>Simple ASMR calculations</a>
 </h2>
 <p>Eurostat has yearly deaths and population estimates for Czech Repubic by single year of age: <a href="https://ec.europa.eu/eurostat/data/database">https://ec.europa.eu/eurostat/data/database</a>. When I used them to calculate ASMR using the 2021 population as the standard population, my ASMR was about 1333 for 2021 and 1136 for 2022:</p>
@@ -171,11 +197,11 @@ year    0    1    2   3   4    5    6    7
 <a href=#Plot_for_ASMR_by_dose_and_date id=Plot_for_ASMR_by_dose_and_date>Plot for ASMR by dose and date</a>
 </h2>
 <p>In the plot below the ASMR of people with one dose shoots up when the second dose is rolled out, and the ASMR of people with two doses shoots up when the third dose is rolled out. Martin Neil and Norman Fenton speculated that a similar phenomenon in the ONS dataset was explained by the <span class="quote">&quot;cheap trick&quot;</span> where people were categorized under the previous vaccine dose for a certain number of weeks after a new vaccine dose, so that for example people who died soon after the second dose were classified as deaths under the first dose. Jeffrey Morris and the ONS said that the phenomenon was explained by the healthy vaccinee effect instead. However a similar phenomenon can also be seen in the Czech data and in the New Zealand data released by Barry Young, even though the <span class="quote">&quot;cheap trick&quot;</span> is not used in either dataset, which makes it seem even more likely that Morris was right and Neil and Fenton were wrong.</p>
-<p>During a COVID wave in December 2021, unvaccinated people have a big spike in mortality but there is essentially no spike in mortality in people with 3 doses. People with 2 doses do have a big increase in mortality in December 2021, but it's probably because a lot of people got the third dose in December 2021 so the <span class="quote">&quot;unhealthy stragglers&quot;</span> ended up remaining under the second dose.</p>
+<p>From the plot below you can also see that during a COVID wave in December 2021, unvaccinated people have a big spike in mortality but there is essentially no spike in mortality in people with 3 doses, and there is only a small spike in the black line which shows the mortality among all vaccinated people. People with 2 doses do have a big increase in mortality in December 2021, but it's probably because a lot of people got the third dose in December 2021 so the <span class="quote">&quot;unhealthy stragglers&quot;</span> ended up remaining under the second dose.</p>
 <div class="width8">
 <img src="i/czech-asmr.png">
 </div>
-<p>In the plot above the dark gray line shows the mortality rate among both vaccinated and unvaccinated people based on the FOIA data, and the light gray line shows the mortality rate based on the weekly number of deaths reported by the Czech Statistical Office combined with population estimates from Eurostat. I don't know why the dark gray line is much lower than the light gray line.</p>
+<p>In the plot above the dark gray line shows the mortality rate among both vaccinated and unvaccinated people based on the FOIA data, and the light gray line shows the mortality rate based on the weekly number of deaths reported by the Czech Statistical Office combined with population estimates from Eurostat. [<a href="https://csu.gov.cz/produkty/number-of-deaths-weekly-and-monthly-time-series">https://csu.gov.cz/produkty/number-of-deaths-weekly-and-monthly-time-series</a>, <a href="https://ec.europa.eu/eurostat/data/database">https://ec.europa.eu/eurostat/data/database</a>] I don't know why the dark gray line is much lower than the light gray line.</p>
 <pre>library(data.table);library(ggplot2);library(stringr)
 
 cutl=\(x,y)cut(x,c(y,Inf),y,T,F)
