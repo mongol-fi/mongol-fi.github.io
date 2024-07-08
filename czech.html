@@ -43,20 +43,21 @@ th{background:#3a3a3a;text-align:left;font-weight:bold}
 .width00 img,.width0 img{margin:0 -1.5px -1.5px 0;vertical-align:bottom}
 @media print{*{color:black}body{margin:0px;zoom:.75;print-color-adjust:exact;-webkit-print-color-adjust:exact}}
 </style>
-<title>Czech unpublished</title>
-<h1>Czech unpublished - <a href=index.html>sars2.net</a></h1>
+<title>Czech data (unpublished draft)</title>
+<h1>Czech data (unpublished draft) - <a href=index.html>sars2.net</a></h1>
 <h2 id=Contents><a href=#Contents>Contents</a></h2>
 <ul>
 <li><a href=#Were_Pfizer_and_Moderna_vaccines_allocated_randomly>Were Pfizer and Moderna vaccines allocated randomly?</a></li>
 <li><a href=#Bucket_analysis>Bucket analysis</a></li>
-<li><a href=#ASMR_by_dose_and_year>ASMR by dose and year</a></li>
+<li><a href=#Preliminary_ASMR_calculations>Preliminary ASMR calculations</a></li>
+<li><a href=#Plot_for_ASMR_by_dose_and_date>Plot for ASMR by dose and date</a></li>
 </ul>
 
 <h2>
 <a href=#Were_Pfizer_and_Moderna_vaccines_allocated_randomly id=Were_Pfizer_and_Moderna_vaccines_allocated_randomly>Were Pfizer and Moderna vaccines allocated randomly?</a>
 </h2>
 <p>Kirsch wrote: <span class="quote">&quot;Vaccines were randomly distributed for those wishing to get vaxxed. [...] People were not allowed to select which vaccines they got. [...] The randomization of which vaccine someone got created a perfect real-world randomized clinical trial where we could compute the mortality rates for 1 year after Dose 2 for the two most popular vaccines.&quot;</span> [<a href="https://github.com/skirsch/Czech">https://github.com/skirsch/Czech</a>]</p>
-<p>However he didn't cite any source, and I didn't find any source which said that the vaccines were actually allocated randomly in the Czech Republic.</p>
+<p>However I didn't find any source which said that the vaccines were actually allocated randomly in the Czech Republic.</p>
 <p>In the FOIA data the average year of birth is about 1973 for people whose vaccine type for the second dose was <span class="quote">&quot;Comirnaty&quot;</span> (Pfizer) but about 1966 for <span class="quote">&quot;SPIKEVAX&quot;</span> (Moderna), which indicates that the vaccine types were not allocated randomly:</p>
 <pre>&gt; t=data.table::fread(&quot;Czech/data/CR_records.csv&quot;)
 &gt; t[,.(year=mean(Rok_narozeni)),by=.(type=OckovaciLatka_2)][order(year)]|&gt;print(row.names=F)
@@ -87,14 +88,14 @@ th{background:#3a3a3a;text-align:left;font-weight:bold}
 <h2>
 <a href=#Bucket_analysis id=Bucket_analysis>Bucket analysis</a>
 </h2>
-<p>The following code generates a file for deaths and person-days by date, dose number, and vaccine type. It's similar to the <code>buckets.py</code> script provided by Kirsch, but it accounts for the aging of people over time correctly. In <code>buckets.py</code> the age of each person is always either the age on the day of death or the age on the day when the script was ran for people who didn't die. [<a href="https://github.com/skirsch/Czech/blob/main/code/buckets.py">https://github.com/skirsch/Czech/blob/main/code/buckets.py</a>]</p>
+<p>The following code generates a file for deaths and person-days by ongoing month, dose number, and vaccine type. It's similar to the <code>buckets.py</code> script provided by Kirsch, but it accounts for the aging of people over time correctly. In <code>buckets.py</code> the age of each person is always either the age on the day of death or the age on the day when the script was ran for people who didn't die. [<a href="https://github.com/skirsch/Czech/blob/main/code/buckets.py">https://github.com/skirsch/Czech/blob/main/code/buckets.py</a>]</p>
 <p>The FOIA data only has a year of birth for each person but not a date of birth, so here I generated a random date of birth for each person.</p>
 <pre>library(data.table)
 
 # unique apply (faster for long vectors with many repeated values)
 ua=\(x,fun,...){u=unique(x);fun(u,...)[match(x,u)]}
 
-# get age in floored years fast for dates after 1900 and before 2100
+# fast way to get floored number of years between dates after 1900 and before 2100
 age=\(x,y){x=as.numeric(x);y=as.numeric(y);(y-x-(y-789)%/%1461+(x-789)%/%1461)%/%365}
 
 mindate=as.Date(&quot;2020-1-1&quot;);maxdate=as.Date(&quot;2022-12-31&quot;)
@@ -106,40 +107,152 @@ t$birth=ua(ua(t0$Rok_narozeni,paste0,&quot;-1-1&quot;),as.Date)+sample(0:364,nro
 t=t[rep(1:nrow(t),8),]
 t$dose=rep(0:7,each=nrow(t0))
 t$date=c(rep(mindate,nrow(t0)),ua(unlist(lapply(1:7,\(i)t0[[paste0(&quot;Datum_&quot;,i)]])),as.Date,&quot;1970-1-1&quot;))
+k=paste0(&quot;OckovaciLatka_&quot;,1:7);t$type=c(rep(&quot;&quot;,nrow(t0)),unlist(t0[,..k]))
 
 t=t[!is.na(date)][date&lt;=maxdate][order(-date)]
 
 buck=data.table()
 for(day in as.list(seq(mindate,maxdate,1))){
   cat(as.character(day),&quot;\n&quot;)
-  sub=t[date&lt;=day&amp;(is.na(death)|death&gt;=day)&amp;birth&gt;=day]
+  sub=t[date&lt;=day&amp;(is.na(death)|death&gt;=day)&amp;birth&lt;=day]
   sub=unique(sub,by=&quot;id&quot;) # remove this line to keep people included under previous doses after a new dose
-  d=data.table(date=day,dose=sub$dose,week=as.numeric(day-sub$date)%/%7
-  d$age=age(sub$birth,day)
-  d$alive=1
+  d=data.table(date=day,dose=sub$dose,age=age(sub$birth,day),alive=1)
   d$dead=nafill(as.numeric(sub$death==day),,0)
   buck=rbind(buck,d)[,.(alive=sum(alive),dead=sum(dead)),by=.(date,dose,age)]
 }
 
-fwrite(buck,&quot;czbuckets&quot;)</pre>
+fwrite(buck,&quot;czbuckets&quot;,sep=&quot; &quot;)</pre>
+<p>I uploaded the output here: <a href=f/czbuckets.gz>f/czbuckets.gz</a>.</p>
 <h2>
-<a href=#ASMR_by_dose_and_year id=ASMR_by_dose_and_year>ASMR by dose and year</a>
+<a href=#Preliminary_ASMR_calculations id=Preliminary_ASMR_calculations>Preliminary ASMR calculations</a>
 </h2>
 <p>Eurostat has yearly deaths and population estimates for Czech Repubic by single year of age: <a href="https://ec.europa.eu/eurostat/data/database">https://ec.europa.eu/eurostat/data/database</a>. When I used them to calculate ASMR using the 2021 population as the standard population, my ASMR was about 1333 for 2021 and 1136 for 2022:</p>
 <pre>&gt; pop=read.csv(&quot;http://sars2.net/f/czpopdead.csv&quot;)
 &gt; std=pop$pop[pop$year==2021]
-&gt; tapply(pop$dead/pop$pop*std[pop$age+1]/sum(std)*1e5,pop$year,sum)
+&gt; asmr=tapply(pop$dead/pop$pop*std[pop$age+1]/sum(std)*1e5,pop$year,sum)
+&gt; round(tail(asmr))
 2017 2018 2019 2020 2021 2022
 1137 1127 1098 1237 1333 1136</pre>
 <p>In the FOIA data unvaccinated people had an ASMR of about 2064 in 2021 and 1865 in 2022, but it might partially be because of the healthy vaccinee effect:</p>
-<pre>&gt; t=fread(&quot;http://sars2.net/czbuckets.gz&quot;)
+<pre>&gt; t=fread(&quot;http://sars2.net/f/czbuckets.gz&quot;)
 &gt; a=aggregate(t[,4:5],list(year=substr(t$date,1,4),dose=t$dose,age=t$age),sum)
-&gt; round(tapply(a$dead/a$alive*std[pmin(a$age,100)+1]/sum(std)*365e5,a[,1:2],sum,na.rm=T))
+&gt; m=tapply(a$dead/a$alive*std[pmin(a$age,100)+1]/sum(std)*365e5,a[,1:2],sum,na.rm=T)
+&gt; round(m)
       dose
-year      0    1    2   3    4   5  6  7
-  2020 1229    0    0  NA   NA  NA NA NA
-  2021 2064 1058  876 591 3592   0  0 NA
-  2022 1865 2081 1750 871 1399 745  0  0</pre>
+year      0    1    2   3    4    5  6  7
+  2020 1233    0    0  NA   NA   NA NA NA
+  2021 2063 1059  871 593 4889    0  0 NA
+  2022 1864 2079 1753 877  839 2198  0  0</pre>
+<p>This shows excess ASMR as percentage of ASMR among the general population of Czechia:</p>
+<pre>      dose
+year    0    1    2   3   4    5    6    7
+  2020  0 -100 -100  NA  NA   NA   NA   NA
+  2021 55  -21  -35 -56 267 -100 -100   NA
+  2022 64   83   54 -23 -26   94 -100 -100</pre>
+<p>When I calculated ASMR within the first 365 days from the first dose so that I treated the age of each person as 2022 minus their year of birth, I got about 32% higher ASMR for SPIKEVAX than Comirnaty, but they were still both far below the ASMR among the general population of Czechia in 2021 and 2022:</p>
+<pre>&gt; t0=fread(&quot;Czech/data/CR_records.csv&quot;)
+&gt; t2=t0[!is.na(Datum_1)&amp;Datum_1&lt;as.Date(&quot;2022-1-1&quot;)]
+&gt; cmr=t2[,.(cmr=mean(!is.na(DatumUmrti)&amp;DatumUmrti&lt;Datum_1+365)),by=.(age=pmin(100,2022-Rok_narozeni),type=OckovaciLatka_1)]
+&gt; count=t2[,.N,by=.(type=OckovaciLatka_1)]
+&gt; merge(cmr[,.(asmr=sum(cmr*std[age+1]/sum(std)*1e5)),by=type],count)[order(asmr)]
+                        type      asmr       N
+ 1:                  COVAXIN    0.0000       5
+ 2:               Covishield    0.0000     115
+ 3:                  Covovax    0.0000      28
+ 4:                Sinopharm    0.0000      36
+ 5:                  Sinovac    0.0000     178
+ 6:                Sputnik V    0.0000       9
+ 7:                Comirnaty  702.4223 5461526
+ 8:                VAXZEVRIA  882.0568  447437
+ 9:                 SPIKEVAX  926.7242  516562
+10: COVID-19 Vaccine Janssen 1194.5698  404824</pre>
+<h2>
+<a href=#Plot_for_ASMR_by_dose_and_date id=Plot_for_ASMR_by_dose_and_date>Plot for ASMR by dose and date</a>
+</h2>
+<div class="width8">
+<img src="i/czech-asmr.png">
+</div>
+<pre>library(data.table);library(ggplot2);library(stringr)
+
+cutl=\(x,y)cut(x,c(y,Inf),y,T,F)
+isoweek=\(year,week,weekday=1){d=as.Date(paste0(year,&quot;-1-4&quot;));d-(as.integer(format(d,&quot;%w&quot;))+6)%%7-1+7*(week-1)+weekday}
+ma=\(x,b=1,f=b)rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T)
+
+dead=read.csv(&quot;http://sars2.net/f/czweeklydead.csv&quot;)
+xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2022-12-31&quot;)
+dates=seq(xstart,xend,1)
+d=data.frame(date=dates,age=rep(unique(dead$age),each=length(dates)))
+d$dead=c(sapply(split(dead,dead$age),\(x)predict(smooth.spline(isoweek(x$year,x$week,4),x$dead),as.numeric(dates))$y))/7
+
+pop=read.csv(&quot;http://sars2.net/f/czpopdead.csv&quot;)
+pop=aggregate(pop[,3,drop=F],list(year=pop$year,age=cutl(pop$age,unique(d$age))),sum)
+std=pop$pop[pop$year==2022]
+d$pop=c(sapply(split(pop,pop$age),\(x){x$date=as.Date(paste0(x$year,&quot;-1-1&quot;));predict(lm(pop~date,x),list(date=dates))}))
+
+buck=fread(&quot;http://sars2.net/f/czbuckets.gz&quot;)
+buck=buck[,.(alive=sum(alive),dead=sum(dead)),by=.(date,age=cutl(age,unique(d$age)),dose=ifelse(dose==0,&quot;Unvaccinated&quot;,paste0(&quot;Dose &quot;,ifelse(dose&gt;=4,&quot;4+&quot;,dose))))]
+buck=rbind(buck,cbind(expand.grid(date=as.IDate(seq(xstart,xend,1)),age=unique(buck$age),dose=unique(buck$dose)),alive=0,dead=0))
+buck=unique(buck,by=1:3)[order(dose,age,date)]
+
+vax=cbind(buck[dose!=&quot;Unvaccinated&quot;,.(alive=sum(alive),dead=sum(dead)),by=.(age=age,date=date)],dose=&quot;All vaccinated&quot;)
+all=cbind(buck[,.(alive=sum(alive),dead=sum(dead)),by=.(age=age,date=date)],dose=&quot;All people (FOIA)&quot;)
+
+buck=rbind(buck,vax,all)
+buck=buck[,.(date=date,alive=ma(alive,10),dead=ma(dead,10)),by=.(age=age,dose=dose)]
+
+xy=aggregate(list(pop=buck$alive,y=buck$dead/buck$alive*365e5*std[buck$age]/sum(std)),list(x=buck$date,z=buck$dose),sum,na.rm=T)
+
+cz=aggregate(list(y=d$dead/d$pop*365e5*std[factor(d$age)]/sum(std)),data.frame(x=d$date),sum)
+xy=rbind(xy,cbind(cz,pop=NA,z=&quot;All people (Czech Statistical Office)&quot;))
+
+xy$z=factor(xy$z,unique(xy$z))
+
+xy$y[xy$pop&lt;2e3]=NA
+
+xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2023-1-1&quot;)
+cand=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
+ystep=cand[which.min(abs(cand-max(xy$y,na.rm=T)/5))]
+ystart=0
+yend=ystep*ceiling(max(xy$y,na.rm=T)/ystep)
+yend2=100;ystep2=25;secmult=yend/yend2
+
+color=c(hcl(c(210,120,60,0,300)+15,90,50),&quot;black&quot;,&quot;gray45&quot;,&quot;gray70&quot;)
+fill=c(hcl(c(210,120,60,0,300)+15,80,70),&quot;black&quot;,&quot;gray45&quot;,&quot;gray70&quot;)
+
+label=data.frame(x=xstart+.02*(xend-xstart),y=seq(yend,,-yend/15,nlevels(xy$z))-yend/16,label=levels(xy$z))
+
+xy2=xy[grep(&quot;Unvaccinated|Dose&quot;,xy$z),]
+xy2$pct=99.97*xy2$pop/tapply(xy2$pop,xy2$x,sum,na.rm=T)[as.character(xy2$x)]
+
+ggplot(xy2,aes(x,y))+
+geom_area(aes(color=z,fill=z,y=pct*secmult),linewidth=.1,alpha=.22)+
+geom_line(aes(color=z),linewidth=.4)+
+geom_line(data=xy[grep(&quot;All vaccinated&quot;,xy$z),],color=color[6],linewidth=.4)+
+geom_line(data=xy[grep(&quot;FOIA&quot;,xy$z),],color=color[7],linewidth=.4)+
+geom_line(data=xy[grep(&quot;Office&quot;,xy$z),],color=color[8],linewidth=.4)+
+geom_hline(yintercept=c(ystart,yend),color=&quot;black&quot;,linewidth=.3,lineend=&quot;square&quot;)+
+geom_vline(xintercept=c(xstart,xend),color=&quot;black&quot;,linewidth=.3,lineend=&quot;square&quot;)+
+geom_label(data=label,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.7),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.1,&quot;lines&quot;),label.size=0,color=color[1:nrow(label)],size=2.7,hjust=0)+
+coord_cartesian(clip=&quot;off&quot;)+
+scale_x_date(limits=c(xstart,xend),breaks=seq(xstart,xend,&quot;2 month&quot;),expand=expansion(mult=0),date_labels=&quot;%b\n%y&quot;)+
+scale_y_continuous(limits=c(ystart,yend),breaks=seq(ystart,yend,ystep),expand=expansion(mult=c(0,0)),sec.axis=sec_axis(trans=~./secmult,breaks=seq(0,yend2,ystep2),name=&quot;Percentage of people with dose&quot;))+
+labs(title=&quot;Age-standardized mortality rate in Czech FOIA data, ±10-day moving averages&quot;,subtitle=str_wrap(&quot;ASMR is not displayed on days with population size below 2,000. The standard population is the 2022 Czech population by 5-year age groups. People are removed under earlier doses after a new dose. Sources: github.com/PalackyUniversity/uzis-data-analysis, ec.europa.eu/eurostat/data/database,  csu.gov.cz/produkty/number-of-deaths-weekly-and-monthly-time-series.&quot;,100),x=NULL,y=&quot;ASMR per 100k person-years&quot;)+
+scale_color_manual(values=color)+
+scale_fill_manual(values=fill)+
+theme(axis.text=element_text(size=6.5,color=&quot;black&quot;),
+  axis.ticks=element_line(linewidth=.3,color=&quot;black&quot;),
+  axis.ticks.length=unit(.2,&quot;lines&quot;),
+  axis.title=element_text(size=8),
+  axis.title.y.left=element_text(margin=margin(0,2,0,0)),
+  axis.title.y.right=element_text(margin=margin(0,0,0,3)),
+  legend.position=&quot;none&quot;,
+  panel.background=element_rect(fill=&quot;white&quot;),
+  panel.grid=element_blank(),
+  plot.background=element_rect(fill=&quot;white&quot;),
+  plot.margin=margin(.4,.3,.3,.3,&quot;lines&quot;),
+  plot.subtitle=element_text(size=6.8),
+  plot.title=element_text(size=8.2))
+ggsave(&quot;1.png&quot;,width=5,height=3.3,dpi=400)</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
