@@ -47,40 +47,99 @@ th{background:#3a3a3a;text-align:left;font-weight:bold}
 <h1>Czech unpublished - <a href=index.html>sars2.net</a></h1>
 <h2 id=Contents><a href=#Contents>Contents</a></h2>
 <ul>
-<li><a href=#Buckets>Buckets</a></li>
+<li><a href=#Were_Pfizer_and_Moderna_vaccines_allocated_randomly>Were Pfizer and Moderna vaccines allocated randomly?</a></li>
+<li><a href=#Bucket_analysis>Bucket analysis</a></li>
+<li><a href=#ASMR_by_dose_and_year>ASMR by dose and year</a></li>
 </ul>
 
 <h2>
-<a href=#Buckets id=Buckets>Buckets</a>
+<a href=#Were_Pfizer_and_Moderna_vaccines_allocated_randomly id=Were_Pfizer_and_Moderna_vaccines_allocated_randomly>Were Pfizer and Moderna vaccines allocated randomly?</a>
 </h2>
+<p>Kirsch wrote: <span class="quote">&quot;Vaccines were randomly distributed for those wishing to get vaxxed. [...] People were not allowed to select which vaccines they got. [...] The randomization of which vaccine someone got created a perfect real-world randomized clinical trial where we could compute the mortality rates for 1 year after Dose 2 for the two most popular vaccines.&quot;</span> [<a href="https://github.com/skirsch/Czech">https://github.com/skirsch/Czech</a>]</p>
+<p>However he didn't cite any source, and I didn't find any source which said that the vaccines were actually allocated randomly in the Czech Republic.</p>
+<p>In the FOIA data the average year of birth is about 1973 for people whose vaccine type for the second dose was <span class="quote">&quot;Comirnaty&quot;</span> (Pfizer) but about 1966 for <span class="quote">&quot;SPIKEVAX&quot;</span> (Moderna), which indicates that the vaccine types were not allocated randomly:</p>
+<pre>&gt; t=data.table::fread(&quot;Czech/data/CR_records.csv&quot;)
+&gt; t[,.(year=mean(Rok_narozeni)),by=.(type=OckovaciLatka_2)][order(year)]|&gt;print(row.names=F)
+                                      type     year
+                                 VAXZEVRIA 1952.506
+                                   Valneva 1953.500
+                Comirnaty Omicron XBB.1.5. 1960.761
+                         Nuvaxovid XBB 1.5 1964.500
+                                  SPIKEVAX 1965.842
+                  COVID-19 Vaccine Janssen 1969.026
+                                   Covovax 1971.517
+                                 Comirnaty 1972.682
+      Comirnaty Original/Omicron BA.4/BA.5 1973.527
+                                   Sinovac 1974.657
+           Comirnaty Original/Omicron BA.1 1976.048
+                                 Sinopharm 1979.538
+                                 Nuvaxovid 1980.135
+                                 Sputnik V 1981.300
+   Spikevax bivalent Original/Omicron BA.1 1981.375
+                                Covishield 1984.713
+                                           1989.098
+                                   COVAXIN 1990.500
+ SPIKEVAX BIVALENT ORIGINAL/OMICRON BA.4-5 1992.000
+           Comirnaty Omicron XBB.1.5. 5-11 2017.000
+                            Comirnaty 6m-4 2019.902
+            COMIRNATY OMICRON XBB.1.5 6m-4 2020.840
+                                      type     year</pre>
+<h2>
+<a href=#Bucket_analysis id=Bucket_analysis>Bucket analysis</a>
+</h2>
+<p>The following code generates a file for deaths and person-days by date, dose number, and vaccine type. It's similar to the <code>buckets.py</code> script provided by Kirsch, but it accounts for the aging of people over time correctly. In <code>buckets.py</code> the age of each person is always either the age on the day of death or the age on the day when the script was ran for people who didn't die. [<a href="https://github.com/skirsch/Czech/blob/main/code/buckets.py">https://github.com/skirsch/Czech/blob/main/code/buckets.py</a>]</p>
+<p>The FOIA data only has a year of birth for each person but not a date of birth, so here I generated a random date of birth for each person.</p>
 <pre>library(data.table)
 
+# unique apply (faster for long vectors with many repeated values)
 ua=\(x,fun,...){u=unique(x);fun(u,...)[match(x,u)]}
+
+# get age in floored years fast for dates after 1900 and before 2100
 age=\(x,y){x=as.numeric(x);y=as.numeric(y);(y-x-(y-789)%/%1461+(x-789)%/%1461)%/%365}
 
-t0=fread(&quot;Czech/data/CR_records.csv&quot;)
-t=data.table(id=1:nrow(t0),birth=t0$Rok_narozeni,death=t0$DatumUmrti)
-t$birth=ua(ua(t$birth,paste0,&quot;-1-1&quot;),as.Date)+sample(0:364,nrow(t),T)
-t=t[rep(1:nrow(t),7),]
-t$dose=rep(1:7,each=nrow(t0))
-t$date=ua(unlist(lapply(1:7,\(i)t0[[paste0(&quot;Datum_&quot;,i)]])),as.Date,&quot;1970-1-1&quot;)
-t=t[!is.na(date)][order(-date)]
+mindate=as.Date(&quot;2020-1-1&quot;);maxdate=as.Date(&quot;2022-12-31&quot;)
 
-mindate=min(t$date);maxdate=max(t$death,na.rm=T)
+t0=fread(&quot;Czech/data/CR_records.csv&quot;)
+t=data.table(id=1:nrow(t0),death=t0$DatumUmrti)
+set.seed(0)
+t$birth=ua(ua(t0$Rok_narozeni,paste0,&quot;-1-1&quot;),as.Date)+sample(0:364,nrow(t),T)
+t=t[rep(1:nrow(t),8),]
+t$dose=rep(0:7,each=nrow(t0))
+t$date=c(rep(mindate,nrow(t0)),ua(unlist(lapply(1:7,\(i)t0[[paste0(&quot;Datum_&quot;,i)]])),as.Date,&quot;1970-1-1&quot;))
+
+t=t[!is.na(date)][date&lt;=maxdate][order(-date)]
 
 buck=data.table()
 for(day in as.list(seq(mindate,maxdate,1))){
   cat(as.character(day),&quot;\n&quot;)
-  sub=t[date&lt;=day&amp;(is.na(death)|death&gt;=day)]
+  sub=t[date&lt;=day&amp;(is.na(death)|death&gt;=day)&amp;birth&gt;=day]
   sub=unique(sub,by=&quot;id&quot;) # remove this line to keep people included under previous doses after a new dose
-  d=data.table(date=day,dose=sub$dose,week=as.numeric(day-sub$date)%/%7)
+  d=data.table(date=day,dose=sub$dose,week=as.numeric(day-sub$date)%/%7
   d$age=age(sub$birth,day)
   d$alive=1
   d$dead=nafill(as.numeric(sub$death==day),,0)
-  buck=rbind(buck,d)[,.(alive=sum(alive),dead=sum(dead)),by=.(date,dose,week,age)]
+  buck=rbind(buck,d)[,.(alive=sum(alive),dead=sum(dead)),by=.(date,dose,age)]
 }
 
-fwrite(buck,&quot;czbuckets&quot;,sep=&quot; &quot;)</pre>
+fwrite(buck,&quot;czbuckets&quot;)</pre>
+<h2>
+<a href=#ASMR_by_dose_and_year id=ASMR_by_dose_and_year>ASMR by dose and year</a>
+</h2>
+<p>Eurostat has yearly deaths and population estimates for Czech Repubic by single year of age: <a href="https://ec.europa.eu/eurostat/data/database">https://ec.europa.eu/eurostat/data/database</a>. When I used them to calculate ASMR using the 2021 population as the standard population, my ASMR was about 1333 for 2021 and 1136 for 2022:</p>
+<pre>&gt; pop=read.csv(&quot;http://sars2.net/f/czpopdead.csv&quot;)
+&gt; std=pop$pop[pop$year==2021]
+&gt; tapply(pop$dead/pop$pop*std[pop$age+1]/sum(std)*1e5,pop$year,sum)
+2017 2018 2019 2020 2021 2022
+1137 1127 1098 1237 1333 1136</pre>
+<p>In the FOIA data unvaccinated people had an ASMR of about 2064 in 2021 and 1865 in 2022, but it might partially be because of the healthy vaccinee effect:</p>
+<pre>&gt; t=fread(&quot;http://sars2.net/czbuckets.gz&quot;)
+&gt; a=aggregate(t[,4:5],list(year=substr(t$date,1,4),dose=t$dose,age=t$age),sum)
+&gt; round(tapply(a$dead/a$alive*std[pmin(a$age,100)+1]/sum(std)*365e5,a[,1:2],sum,na.rm=T))
+      dose
+year      0    1    2   3    4   5  6  7
+  2020 1229    0    0  NA   NA  NA NA NA
+  2021 2064 1058  876 591 3592   0  0 NA
+  2022 1865 2081 1750 871 1399 745  0  0</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
