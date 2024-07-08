@@ -53,7 +53,7 @@ th{background:#3a3a3a;text-align:left;font-weight:bold}
 <li><a href=#Simple_ASMR_calculations>Simple ASMR calculations</a></li>
 <li><a href=#Plot_for_ASMR_by_dose_and_date>Plot for ASMR by dose and date</a></li>
 <li><a href=#Why_is_there_a_peak_in_mortality_rate_about_30_to_35_weeks_after_the_second_dose>Why is there a peak in mortality rate about 30 to 35 weeks after the second dose?</a></li>
-<li><a href=#Excess_mortality_relative_to_all_people_in_the_dataset_matched_by_age>Excess mortality relative to all people in the dataset matched by age</a></li>
+<li><a href=#Excess_mortality_relative_to_all_people_matched_by_age>Excess mortality relative to all people matched by age</a></li>
 </ul>
 
 <h2>
@@ -257,11 +257,7 @@ xy$z=factor(xy$z,unique(xy$z))
 xy$y[xy$pop&lt;2e3]=NA
 
 xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2023-1-1&quot;)
-cand=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
-ystep=cand[which.min(abs(cand-max(xy$y,na.rm=T)/5))]
-ystart=0
-yend=ystep*ceiling(max(xy$y,na.rm=T)/ystep)
-yend2=100;ystep2=25;secmult=yend/yend2
+yend=4000;ystep=1000;yend2=100;ystep2=25;secmult=yend/yend2
 
 color=c(hcl(c(210,120,60,0,300)+15,90,50),&quot;black&quot;,&quot;gray45&quot;,&quot;gray70&quot;)
 fill=c(hcl(c(210,120,60,0,300)+15,80,70),&quot;black&quot;,&quot;gray45&quot;,&quot;gray70&quot;)
@@ -277,26 +273,22 @@ geom_line(aes(color=z),linewidth=.4)+
 geom_line(data=xy[grep(&quot;All vaccinated&quot;,xy$z),],color=color[6],linewidth=.4)+
 geom_line(data=xy[grep(&quot;FOIA&quot;,xy$z),],color=color[7],linewidth=.4)+
 geom_line(data=xy[grep(&quot;Office&quot;,xy$z),],color=color[8],linewidth=.4)+
-geom_hline(yintercept=c(ystart,yend),color=&quot;black&quot;,linewidth=.3,lineend=&quot;square&quot;)+
-geom_vline(xintercept=c(xstart,xend),color=&quot;black&quot;,linewidth=.3,lineend=&quot;square&quot;)+
+geom_hline(yintercept=c(0,yend),linewidth=.3,lineend=&quot;square&quot;)+
+geom_vline(xintercept=c(xstart,xend),linewidth=.3,lineend=&quot;square&quot;)+
 geom_label(data=label,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.7),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.1,&quot;lines&quot;),label.size=0,color=color[1:nrow(label)],size=2.7,hjust=0)+
-coord_cartesian(clip=&quot;off&quot;)+
-scale_x_date(limits=c(xstart,xend),breaks=seq(xstart,xend,&quot;2 month&quot;),expand=expansion(mult=0),date_labels=&quot;%b\n%y&quot;)+
-scale_y_continuous(limits=c(ystart,yend),breaks=seq(ystart,yend,ystep),expand=expansion(mult=c(0,0)),sec.axis=sec_axis(trans=~./secmult,breaks=seq(0,yend2,ystep2),name=&quot;Percentage of people with dose&quot;))+
-labs(title=&quot;Age-standardized mortality rate in Czech FOIA data, ±10-day moving averages&quot;,subtitle=str_wrap(&quot;ASMR is not displayed on days with population size below 2,000. The standard population is the 2022 Czech population by 5-year age groups. People are removed under earlier doses after a new dose. Sources: github.com/PalackyUniversity/uzis-data-analysis, ec.europa.eu/eurostat/data/database,  csu.gov.cz/produkty/number-of-deaths-weekly-and-monthly-time-series.&quot;,100),x=NULL,y=&quot;ASMR per 100k person-years&quot;)+
+labs(title=&quot;Age-standardized mortality rate in Czech FOIA data (±10-day moving averages)&quot;,subtitle=str_wrap(&quot;People are removed under earlier doses after a new dose. The standard population is the 2022 Czech population by 5-year age groups. ASMR values are not displayed on days with population size below 2,000. Sources: github.com/PalackyUniversity/uzis-data-analysis, ec.europa.eu/eurostat/data/database,  csu.gov.cz/produkty/number-of-deaths-weekly-and-monthly-time-series.&quot;,108),x=NULL,y=&quot;ASMR per 100k person-years&quot;)+
+scale_x_date(limits=c(xstart,xend),breaks=seq(xstart,xend,&quot;2 month&quot;),date_labels=&quot;%b\n%y&quot;)+
+scale_y_continuous(limits=c(0,yend),breaks=seq(0,yend,ystep),labels=\(x)ifelse(x==0,x,paste0(x/1e3,&quot;k&quot;)),sec.axis=sec_axis(trans=~./secmult,breaks=seq(0,yend2,ystep2),name=&quot;Percentage of people with dose&quot;))+
 scale_color_manual(values=color)+
 scale_fill_manual(values=fill)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
 theme(axis.text=element_text(size=6.5,color=&quot;black&quot;),
-  axis.ticks=element_line(linewidth=.3,color=&quot;black&quot;),
-  axis.ticks.length=unit(.2,&quot;lines&quot;),
+  axis.ticks=element_line(linewidth=.3),
+  axis.ticks.length=unit(.18,&quot;lines&quot;),
   axis.title=element_text(size=8),
-  axis.title.y.left=element_text(margin=margin(0,2,0,0)),
-  axis.title.y.right=element_text(margin=margin(0,0,0,3)),
   legend.position=&quot;none&quot;,
   panel.background=element_rect(fill=&quot;white&quot;),
-  panel.grid=element_blank(),
-  plot.background=element_rect(fill=&quot;white&quot;),
-  plot.margin=margin(.4,.3,.3,.3,&quot;lines&quot;),
+  plot.margin=margin(.3,.3,.3,.3,&quot;lines&quot;),
   plot.subtitle=element_text(size=6.8),
   plot.title=element_text(size=8.2))
 ggsave(&quot;1.png&quot;,width=5,height=3.3,dpi=400)</pre>
@@ -325,15 +317,15 @@ ggsave(&quot;1.png&quot;,width=5,height=3.3,dpi=400)</pre>
 &gt; as.Date(mean(rec$Datum_2[is.na(rec$Datum_3)],na.rm=T))
 [1] &quot;2021-08-31&quot;</pre>
 <h2>
-<a href=#Excess_mortality_relative_to_all_people_in_the_dataset_matched_by_age id=Excess_mortality_relative_to_all_people_in_the_dataset_matched_by_age>Excess mortality relative to all people in the dataset matched by age</a>
+<a href=#Excess_mortality_relative_to_all_people_matched_by_age id=Excess_mortality_relative_to_all_people_matched_by_age>Excess mortality relative to all people matched by age</a>
 </h2>
 <p>Here for each combination of month and dose number, the expected number of deaths was derived by multiplying the number of person-days for each single year of age by the mortality rate that month of the same age among all people who are included in the dataset, and the results for each age were added together to get the baseline number of deaths among all ages.</p>
-<p>For example in January 2021 the mortality rate of all people aged 70 in the dataset was about 9.734e-5 deaths per person-days, so the expected number of deaths was about 2.606 from (<code>9.734e-5*26871</code>). So the excess mortality percent was about <code>(2/2.606-1)*100</code> which is about -23%. The expected number of deaths for all ages added together was about 523.6 and the actual number of deaths was 326, so the excess mortality percent was about <code>(326/523.6-1)*100</code> which is about -38%.</p>
+<p>For example in January 2021 the mortality rate of all people aged 70 in the dataset was about 9.734e-5 deaths per person-days, so the expected number of deaths was about 2.606 (from <code>9.734e-5*26871</code>). So the excess mortality percent was about <code>(2/2.606-1)*100</code> which is about -23%. When I repeated the same calculation for all ages, the expected number of deaths for all ages added together was about 523.6. But the actual number of deaths was 326, so the excess mortality percent was about <code>(326/523.6-1)*100</code> which is about -38%.</p>
 <div class="width8">
 <img src="i/czech-composition.png">
 </div>
-<p>In the plot above the excess mortality of unvaccinated people peaks in December 2021 when there was a COVID wave. And conversely in December 2021 the excess mortality of the <span class="quote">&quot;All vaccinated&quot;</span> group is also lower -25% which is lower than in the surrounding months.</p>
-<p>In the plot above I used a different baseline for each month, but in the next plot I'm using the total mortality rate in 2021-2022 as the baseline throughout the plot, which increases the excess mortality percentages during the COVID peak in December 2021:</p>
+<p>In the plot above the excess mortality of unvaccinated people peaks in December 2021 when there was a COVID wave. And conversely in December 2021 the excess mortality of the <span class="quote">&quot;All vaccinated&quot;</span> group is also lower than in the surrounding months.</p>
+<p>In the plot above I used a different baseline for each month, so the excess mortality rates were adjusted for seasonal variation in mortality and the effect of COVID waves. But in the next plot I'm using the total mortality rate in 2021-2022 as the baseline throughout the plot, which increases the excess mortality percentages during the COVID wave in December 2021:</p>
 <div class="width8">
 <img src="i/czech-composition-2.png">
 </div>
