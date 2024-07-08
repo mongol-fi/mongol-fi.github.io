@@ -53,7 +53,7 @@ th{background:#3a3a3a;text-align:left;font-weight:bold}
 <li><a href=#Simple_ASMR_calculations>Simple ASMR calculations</a></li>
 <li><a href=#Plot_for_ASMR_by_dose_and_date>Plot for ASMR by dose and date</a></li>
 <li><a href=#Why_is_there_a_peak_in_mortality_rate_about_30_to_35_weeks_after_the_second_dose>Why is there a peak in mortality rate about 30 to 35 weeks after the second dose?</a></li>
-<li><a href=#Excess_mortality_relative_to_all_people_in_dataset_matched_by_age>Excess mortality relative to all people in dataset matched by age</a></li>
+<li><a href=#Excess_mortality_relative_to_all_people_in_the_dataset_matched_by_age>Excess mortality relative to all people in the dataset matched by age</a></li>
 </ul>
 
 <h2>
@@ -325,24 +325,31 @@ ggsave(&quot;1.png&quot;,width=5,height=3.3,dpi=400)</pre>
 &gt; as.Date(mean(rec$Datum_2[is.na(rec$Datum_3)],na.rm=T))
 [1] &quot;2021-08-31&quot;</pre>
 <h2>
-<a href=#Excess_mortality_relative_to_all_people_in_dataset_matched_by_age id=Excess_mortality_relative_to_all_people_in_dataset_matched_by_age>Excess mortality relative to all people in dataset matched by age</a>
+<a href=#Excess_mortality_relative_to_all_people_in_the_dataset_matched_by_age id=Excess_mortality_relative_to_all_people_in_the_dataset_matched_by_age>Excess mortality relative to all people in the dataset matched by age</a>
 </h2>
 <p>Here for each combination of month and dose number, the expected number of deaths was derived by multiplying the number of person-days for each single year of age by the mortality rate that month of the same age among all people who are included in the dataset, and the results for each age were added together to get the baseline number of deaths among all ages.</p>
 <p>For example in January 2021 the mortality rate of all people aged 70 in the dataset was about 9.734e-5 deaths per person-days, so the expected number of deaths was about 2.606 from (<code>9.734e-5*26871</code>). So the excess mortality percent was about <code>(2/2.606-1)*100</code> which is about -23%. The expected number of deaths for all ages added together was about 523.6 and the actual number of deaths was 326, so the excess mortality percent was about <code>(326/523.6-1)*100</code> which is about -38%.</p>
 <div class="width8">
 <img src="i/czech-composition.png">
 </div>
+<p>In the plot above the excess mortality of unvaccinated people peaks in December 2021 when there was a COVID wave. And conversely in December 2021 the excess mortality of the <span class="quote">&quot;All vaccinated&quot;</span> group is also lower -25% which is lower than in the surrounding months.</p>
+<p>In the plot above I used a different baseline for each month, but in the next plot I'm using the total mortality rate in 2021-2022 as the baseline throughout the plot, which increases the excess mortality percentages during the COVID peak in December 2021:</p>
+<div class="width8">
+<img src="i/czech-composition-2.png">
+</div>
+<p>In the plot above unvaccinated people have 174% excess mortality in December 2021 but 43% in September 2021, so it's an approximately 1.92-fold increase in mortality (from <code>(173.53+100)/(42.68+100)</code>). But vaccinated people only have an approximately 1.54-fold increase in mortality when December 2021 is compared to September 2021 (from <code>(5.46+100)/(-31.64+100)</code>). In the US Medicare data that Kirsch published in 2023, the spikes in deaths during COVID waves were also bigger in unvaccinated people than vaccinated people.</p>
 <pre>library(data.table);library(colorspace)
 
-buck=fread(&quot;s/f/czbuckets.gz&quot;)
+buck=fread(&quot;http://sars2.net/f/czbuckets.gz&quot;)
 buck=buck[,.(alive=sum(alive),dead=sum(dead)),by=.(date=substr(date,1,7),age=age,dose=ifelse(dose==0,&quot;Unvaccinated&quot;,paste0(&quot;Dose &quot;,ifelse(dose&gt;=4,&quot;4+&quot;,dose))))]
 
 buck=buck[date&gt;=&quot;2021-01&quot;]
 buck=rbind(buck,cbind(aggregate(buck[,4:5],buck[,2:3],sum),date=&quot;Total&quot;))
 
-me=merge(buck,buck[,.(rate=sum(dead)/sum(alive)),by=.(age=age,date=date)])
+me=merge(buck,buck[,.(rate=sum(dead)/sum(alive)),by=.(age=age,date=date)]) # different baseline for each month
+# me=merge(buck,buck[,.(rate=sum(dead)/sum(alive)),by=.(age=age)]) # use 2021-2022 total as baseline for each month
 me$base=me$rate*me$alive
-a=aggregate(me[,c(4,5,7)],me[,c(1,3)],sum)
+a=aggregate(me[,c(4,5,7)],me[,c(&quot;date&quot;,&quot;dose&quot;)],sum)
 
 vax=a[a$dose!=&quot;Unvaccinated&quot;,]
 a=rbind(a,cbind(aggregate(vax[,3:5],vax[,1,drop=F],sum),dose=&quot;All vaccinated&quot;))
@@ -353,11 +360,11 @@ excess=100*(a$dead/a$base-1)
 ratio=with(a,(dead-base)/ifelse(dead&gt;=base,base,dead)*100)
 
 mpop=tapply(a$alive,a[,2:1],sum)/365
-m=tapply(ratio,a[,2:1],sum)
-disp=round(tapply(excess,a[,2:1],sum))
+m=tapply(ratio,a[,2:1],c)
+disp=round(tapply(excess,a[,2:1],c))
 hide=!is.na(mpop)&amp;mpop&lt;10;m[hide]=disp[hide]=NA
-exp=.7;m=abs(m)^exp*sign(m)
-maxcolor=max(m,na.rm=T)
+exp=.85;m=abs(m)^exp*sign(m)
+maxcolor=max(m,na.rm=T)*.8
 m[is.infinite(m)]=-maxcolor
 
 pheatmap::pheatmap(m,filename=&quot;i1.png&quot;,display_numbers=disp,
@@ -381,9 +388,7 @@ pheatmap::pheatmap(mpop2,filename=&quot;i2.png&quot;,display_numbers=disp2,
   breaks=seq(0,maxcolor2,,256),
   sapply(seq(1,0,,256),\(i)rgb(i,i,i)))
 
-system(&quot;w=`identify -format %w i1.png`;convert i1.png -gravity northwest \\( -splice x20 -size $[w-40]x -pointsize 40 caption:&#39;Czech record-level data: Excess mortality percent relative to mortality rate of all people included in the dataset the same month matched for age. People are removed under earlier doses after a new dose.&#39; -extent $[w-40]x -gravity center \\) +swap -append -bordercolor white -border 6 +repage l1.png&quot;)
-system(&quot;w=`identify -format %w i2.png`;convert i2.png -gravity northwest \\( -size $[w-40]x -pointsize 40 caption:&#39;Person-years by dose and month of death&#39; -extent $[w-40]x -gravity center \\) +swap -append -bordercolor white -border 6 +repage l2.png&quot;)
-system(&quot;montage -geometry +0+0 -tile 1x l[12].png 1.png&quot;)</pre>
+system(&quot;w=`identify -format %w i1.png`;pad=38;convert -gravity northwest -pointsize 42 -font Arial \\( -splice x24 -size $[w-pad]x caption:&#39;Czech record-level data: Excess mortality percent relative to total mortality rate in 2021-2022 of all people included in the dataset matched for age. People are removed under earlier doses after a new dose.&#39; -extent $[w-pad]x -gravity center \\) i1.png -gravity northwest \\( -size $[w-40]x caption:&#39;Person-years by dose and month of death&#39; -extent $[w-pad]x -gravity center \\) i2.png -append 1.png&quot;)</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
