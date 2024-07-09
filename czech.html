@@ -259,44 +259,42 @@ year    0    1    2   3   4    5    6    7
 3:                Comirnaty 2021-06-08 5586979 # Pfizer
 4: COVID-19 Vaccine Janssen 2021-09-05  412314</pre>
 <p>And this shows that people who got a Pfizer or Moderna vaccine in late 2021 subsequently also had high ASMR over the next 365 days:</p>
-<pre>ua=\(x,y,...){u=unique(x);y(u,...)[match(x,u)]}
-
-rec=fread(&quot;CR_records.csv&quot;)
-
-pop=read.csv(&quot;http://sars2.net/f/czpopdead.csv&quot;)
-std=pop$pop[pop$year==2022]
+<pre>rec=fread(&quot;CR_records.csv&quot;)
+std=fread(&quot;http://sars2.net/f/czpopdead.csv&quot;)[year==2022,pop]
 
 rec2=rec[Datum_1&lt;as.Date(&quot;2022-1-1&quot;)]
 d=rec2[,.(dead=!is.na(DatumUmrti)&amp;DatumUmrti&lt;Datum_1+365,type=OckovaciLatka_1)]
 d$age=pmin(100,2021-rec2$Rok_narozeni)
+
+ua=\(x,fun,...){u=unique(x);fun(u,...)[match(x,u)]}
 d$vaxmonth=ua(rec2$Datum_1,substr,1,7)
 
-d=d[type%in%type[rowid(type)==1e4]]
-d$type[d$type==&quot;Comirnaty&quot;]=&quot;Pfizer&quot;
-d$type[d$type==&quot;SPIKEVAX&quot;]=&quot;Moderna&quot;
-d$type[d$type==&quot;VAXZEVRIA&quot;]=&quot;AstraZeneca&quot;
-d$type[d$type==&quot;COVID-19 Vaccine Janssen&quot;]=&quot;Janssen&quot;
+name1=c(&quot;Comirnaty&quot;,&quot;SPIKEVAX&quot;,&quot;VAXZEVRIA&quot;,&quot;COVID-19 Vaccine Janssen&quot;)
+name2=c(&quot;Pfizer&quot;,&quot;Moderna&quot;,&quot;AstraZeneca&quot;,&quot;Janssen&quot;)
+d$type=ifelse(d$type%in%name1,name2[match(d$type,name1)],&quot;Other&quot;)
+d$type=factor(d$type,names(sort(table(d$type),T)))
 
 rate=d[,.(rate=mean(dead)),by=.(age=age,type=type,vaxmonth=vaxmonth)]
-rate[,sum(rate*std[age+1]/sum(std)*1e5),by=.(vaxmonth,type)]
 round(tapply(rate$rate*std[rate$age+1]/sum(std)*1e5,rate[,2:3],sum))</pre>
 <!-- -->
 <pre>             vaxmonth
 type          2020-12 2021-01 2021-02 2021-03 2021-04 2021-05 2021-06
+  Pfizer         1461    1402    1369     740     868     823    1029
+  Moderna          NA    3369    1952     975     927    1089    1231
   AstraZeneca      NA      NA    1628     904    1061    1184    1676
   Janssen          NA      NA      NA       0     918    1089    1402
-  Moderna          NA    3369    1952     975     927    1089    1231
-  Pfizer         1461    1402    1369     740     868     823    1029
+  Other            NA       0       0       0       0       0       0
              vaxmonth
 type          2021-07 2021-08 2021-09 2021-10 2021-11 2021-12
+  Pfizer         1067    1241    1639    1757    1499    1782
+  Moderna        1134    1204    1995    1647    1552    1882
   AstraZeneca    1992    1985     470      96       0       0
   Janssen        1340    1410    1569    1352    1422    1862
-  Moderna        1134    1204    1995    1647    1552    1882
-  Pfizer         1067    1241    1639    1757    1499    1782</pre>
+  Other             0       0       0       0       0       0</pre>
 <h2>
 <a href=#Plot_for_ASMR_by_dose_and_date id=Plot_for_ASMR_by_dose_and_date>Plot for ASMR by dose and date</a>
 </h2>
-<p>In the plot below the ASMR of people with one dose shoots up when the second dose is rolled out, and the ASMR of people with two doses shoots up when the third dose is rolled out. Martin Neil and Norman Fenton speculated that a similar phenomenon in the ONS dataset was explained by the <span class="quote">&quot;cheap trick&quot;</span> where people were categorized under the previous vaccine dose for a certain number of weeks after a new vaccine dose, so that for example people who died soon after the second dose were classified as deaths under the first dose. Jeffrey Morris and the ONS said that the phenomenon was explained by the healthy vaccinee effect instead. However a similar phenomenon can also be seen in the Czech data and in the New Zealand data released by Barry Young, even though the <span class="quote">&quot;cheap trick&quot;</span> is not used in either dataset, which makes it seem even more likely that Morris was right and Neil and Fenton were wrong.</p>
+<p>In the plot below the ASMR of people with one dose shoots up when the second dose is rolled out, and the ASMR of people with two doses shoots up when the third dose is rolled out. Martin Neil and Norman Fenton speculated that a similar phenomenon in the ONS dataset was explained by the <span class="quote">&quot;cheap trick&quot;</span> where people were categorized under the previous vaccine dose for a certain number of weeks after a new vaccine dose, so that for example people who died soon after the second dose were classified as deaths under the first dose. Jeffrey Morris and the ONS said that the phenomenon was explained by the healthy vaccinee effect instead. However a similar phenomenon can also be seen in the Czech data and in Barry Young's New Zealand data even though neither dataset uses the <span class="quote">&quot;cheap trick&quot;</span>, which makes it seem even more likely that Morris was right and Neil and Fenton were wrong.</p>
 <p>From the plot below you can also see that during a COVID wave in December 2021, unvaccinated people have a big spike in mortality but there is essentially no spike in mortality in people with 3 doses, and there is only a small spike in the black line which shows the mortality among all vaccinated people. People with 2 doses do have a big increase in mortality in December 2021, but it's probably because a lot of people got the third dose in December 2021 so the <span class="quote">&quot;unhealthy stragglers&quot;</span> ended up remaining under the second dose.</p>
 <div class="width8">
 <img src="i/czech-asmr.png">
@@ -480,16 +478,14 @@ me=rbind(me,cbind(aggregate(me[,5:7],me[,2:4],sum),month=&quot;Total&quot;))
 me=rbind(me,cbind(aggregate(me[,5:7],me[,c(1,2,4)],sum),vaxmonth=&quot;Total&quot;))
 a=aggregate(me[,c(5:7)],me[,c(1,3)],sum)
 
-mpop=tapply(a$alive,a[,2:1],c)/365
+mpop=xtabs(alive~vaxmonth+month,a)/365
 disp=tapply((a$dead/a$base-1)*100,a[,2:1],round)
 m=tapply((a$dead-a$base)*100/ifelse(a$dead&gt;a$base,a$base,a$dead),a[,2:1],c)
 
-m[mpop&lt;10]=NA
-disp[is.na(m)]=&quot;NA&quot;
+hide=mpop&lt;10;m[hide]=disp[hide]=NA
 disp[lower.tri(disp)&amp;row(disp)!=nrow(disp)]=&quot;&quot;
 exp=.8;m=abs(m)^exp*sign(m)
-maxcolor=400^exp
-m[is.infinite(m)]=-maxcolor
+maxcolor=300^exp;m[is.infinite(m)]=-maxcolor
 
 pal=HSV(c(210,210,210,210,0,0,0,0,0),c(.9,.75,.6,.3,0,.3,.6,.75,.9),c(.4,.65,1,1,1,1,1,.65,.4))
 
@@ -503,7 +499,7 @@ pheatmap::pheatmap(m,filename=&quot;mort.png&quot;,display_numbers=disp,
 kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1
   x[]=ifelse(abs(x)&lt;10,round(x),paste0(round(x/1e3^(e2-1),ifelse(e%%3==0,1,0)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2]));x}
 
-disp2=kimi(mpop);disp2[is.na(mpop)]=&quot;&quot;
+disp2=kimi(mpop);disp2[lower.tri(disp2)&amp;row(disp2)!=nrow(disp2)]=&quot;&quot;
 exp2=.6;mpop=mpop^exp2
 maxcolor2=max(mpop[1:(nrow(mpop)-1),1:(ncol(mpop)-1)],na.rm=T)
 
@@ -514,9 +510,9 @@ pheatmap::pheatmap(mpop,filename=&quot;pop.png&quot;,display_numbers=disp2,
   number_color=ifelse(!(is.na(mpop))&amp;mpop&gt;maxcolor2*.45,&quot;white&quot;,&quot;black&quot;),
   breaks=seq(0,maxcolor2,,256),sapply(seq(1,0,,256),\(i)rgb(i,i,i)))
 
-system(&quot;w=`identify -format %w mort.png`;pad=44;convert -gravity northwest -pointsize 46 -font Arial \\( -splice x24 -size $[w-pad]x caption:&#39;Czech record-level data, dose 1: Excess mortality percent from day of vaccination until end of 2022&#39; -extent $[w-pad]x -gravity center \\) mort.png -append l1.png;convert -pointsize 46 -font Arial -gravity northwest \\( -splice x24 -size $[w-40]x caption:Person-years -extent $[w-pad]x -gravity center \\) pop.png -append l2.png;convert -gravity south l[12].png +append 0.png&quot;)
+system(&quot;w=`identify -format %w mort.png`;pad=44;convert -gravity northwest -pointsize 46 -font Arial \\( -splice x24 -size $[w-pad]x caption:&#39;Czech record-level data, dose 1: Excess mortality percent from day of vaccination until end of 2022&#39; -extent $[w-pad]x -gravity center \\) mort.png -append l1.png;convert -pointsize 46 -font Arial -gravity northwest \\( -splice x24 -size $[w-40]x caption:&#39;Person-years from day of vaccination until end of 2022&#39; -extent $[w-pad]x -gravity center \\) pop.png -append l2.png;convert -gravity south l[12].png +append 0.png&quot;)
 
-system(&quot;convert 0.png -fill black -gravity southwest -size 900x900 -pointsize 42 -font Arial caption:&#39;The x-axis shows the month of death and the y-axis shows the month of vaccination. People are kept included under the first dose even after they have gotten a second dose. The baseline was calculated separately for each cell of the matrix, so that a vector of mortality rates for all people in the dataset that month was multiplied by a vector of person-days for each age in the cell, and the results were added together to get the expected number of deaths that month for people with the same age composition as the people in the cell. So because each month has its own baseline, the baseline is adjusted for seasonal variation in mortality and for the effect of COVID waves.&#39; -gravity southwest -geometry +50+290 -composite 1.png&quot;)</pre>
+system(&quot;convert 0.png -fill black -gravity southwest -size 900x980 -pointsize 44 -font Arial caption:&#39;The x-axis shows the month of death and the y-axis shows the month of vaccination. People are kept included under the first dose even after they have gotten a second dose. The baseline was calculated separately for each cell of the matrix, so that a vector of mortality rates for all people in the dataset that month was multiplied by a vector of person-days for each age in the cell, and the results were added together to get the expected number of deaths that month for a set of people with the same age composition as the people in the cell. So because each month has its own baseline, the baseline is adjusted for seasonal variation in mortality and for the effect of COVID waves.&#39; -gravity southwest -geometry +50+290 -composite 1.png&quot;)</pre>
 <h2>
 <a href=#Excess_mortality_by_type_of_first_vaccine id=Excess_mortality_by_type_of_first_vaccine>Excess mortality by type of first vaccine</a>
 </h2>
