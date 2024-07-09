@@ -70,14 +70,14 @@ th{background:#3a3a3a;text-align:left;font-weight:bold}
 &gt; rec=data.table::fread(&quot;CR_records.csv&quot;)
 &gt; rec[,.(year=mean(Rok_narozeni),.N),by=.(type=OckovaciLatka_2)][order(year)]|&gt;print(row.names=F)
                                       type     year       N
-                                 VAXZEVRIA 1952.506  439705
+                                 VAXZEVRIA 1952.506  439705 # AstraZeneca
                                    Valneva 1953.500       2
                 Comirnaty Omicron XBB.1.5. 1960.761      67
                          Nuvaxovid XBB 1.5 1964.500       2
-                                  SPIKEVAX 1965.842  517783
+                                  SPIKEVAX 1965.842  517783 # Moderna
                   COVID-19 Vaccine Janssen 1969.026     271
                                    Covovax 1971.517      29
-                                 Comirnaty 1972.682 5519975
+                                 Comirnaty 1972.682 5519975 # Pfizer
       Comirnaty Original/Omicron BA.4/BA.5 1973.527     300
                                    Sinovac 1974.657     178
            Comirnaty Original/Omicron BA.1 1976.048     230
@@ -142,7 +142,7 @@ fwrite(buck,&quot;czbuckets&quot;)</pre>
 <h2>
 <a href=#Deaths_and_population_estimates_by_single_year_of_age_from_Eurostat id=Deaths_and_population_estimates_by_single_year_of_age_from_Eurostat>Deaths and population estimates by single year of age from Eurostat</a>
 </h2>
-<p>Eurostat has published the yearly number of deaths and population estimates for Czech Republic by single year of age up to age 99: <a href="https://ec.europa.eu/eurostat/data/database">https://ec.europa.eu/eurostat/data/database</a>. The following code combines the two datasets into a single CSV file with a more convenient format:</p>
+<p>Eurostat has yearly deaths and population estimates for Czech Republic by single year of age: <a href="https://ec.europa.eu/eurostat/data/database">https://ec.europa.eu/eurostat/data/database</a>. The following code combines the two datasets into a more conveniently formatted single CSV file:</p>
 <pre>api=&quot;https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/&quot;
 
 pop=read.table(paste0(api,&quot;demo_pjan?format=TSV&quot;),sep=&quot;\t&quot;,header=T,check.names=F,na.strings=&quot;:&quot;)
@@ -202,7 +202,7 @@ year    0    1    2   3   4    5    6    7
 <pre>&gt; std=fread(&quot;http://sars2.net/f/czpopdead.csv&quot;)[year==2022,pop]
 &gt; system(&quot;curl -Ls https://github.com/skirsch/Czech/raw/main/data/CR_records.csv.xz|xz -dc&gt;CR_records.csv&quot;)
 &gt; rec=fread(&quot;CR_records.csv&quot;)
-&gt; cmr=rec2[Datum_1&lt;as.Date(&quot;2022-1-1&quot;),.(cmr=mean(!is.na(DatumUmrti)&amp;DatumUmrti&lt;Datum_1+365),.N),by=.(age=pmin(100,2021-Rok_narozeni),type=OckovaciLatka_1)]
+&gt; cmr=rec[Datum_1&lt;as.Date(&quot;2022-1-1&quot;),.(cmr=mean(!is.na(DatumUmrti)&amp;DatumUmrti&lt;Datum_1+365),.N),by=.(age=pmin(100,2021-Rok_narozeni),type=OckovaciLatka_1)]
 &gt; cmr[,.(asmr=sum(cmr*std[age+1]/sum(std)*1e5),N=sum(N)),by=type][order(-N)]
                         type      asmr       N
  1:                Comirnaty  787.3562 5461526 # Pfizer
@@ -416,15 +416,13 @@ ggsave(&quot;1.png&quot;,width=5,height=3.3,dpi=400)</pre>
 <pre>library(data.table);library(colorspace)
 
 buck=fread(&quot;http://sars2.net/f/czbuckets.gz&quot;)
-buck=buck[,.(alive=sum(alive),dead=sum(dead)),by=.(date=substr(date,1,7),age=age,dose=ifelse(dose==0,&quot;Unvaccinated&quot;,paste0(&quot;Dose &quot;,ifelse(dose&gt;=4,&quot;4+&quot;,dose))))]
-
-buck=buck[date&gt;=&quot;2021-01&quot;]
+buck=buck[,.(alive=sum(alive),dead=sum(dead)),by=.(date=substr(date,1,7),age=age,dose=ifelse(dose==0,&quot;Unvaccinated&quot;,paste0(&quot;Dose &quot;,ifelse(dose&gt;=4,&quot;4+&quot;,dose))))][date&gt;=&quot;2020-12&quot;]
 buck=rbind(buck,cbind(aggregate(buck[,4:5],buck[,2:3],sum),date=&quot;Total&quot;))
 
-me=merge(buck,buck[,.(rate=sum(dead)/sum(alive)),by=.(age=age,date=date)]) # different baseline for each month
-# me=merge(buck,buck[,.(rate=sum(dead)/sum(alive)),by=.(age=age)]) # use 2021-2022 total as baseline for each month
-me$base=me$rate*me$alive
-a=aggregate(me[,c(4,5,7)],me[,c(&quot;date&quot;,&quot;dose&quot;)],sum)
+me=merge(buck,buck[,.(base=sum(dead)/sum(alive)),by=.(age=age,date=date)]) # different baseline for each month
+# me=merge(buck,buck[,.(base=sum(dead)/sum(alive)),by=.(age=age)]) # use 2021-2022 total as baseline for each month
+me$base=me$base*me$alive
+a=aggregate(me[,4:6],me[,c(&quot;date&quot;,&quot;dose&quot;)],sum)
 
 vax=a[a$dose!=&quot;Unvaccinated&quot;,]
 a=rbind(a,cbind(aggregate(vax[,3:5],vax[,1,drop=F],sum),dose=&quot;All vaccinated&quot;))
@@ -434,26 +432,26 @@ a$dose=factor(a$dose,c(&quot;Unvaccinated&quot;,paste0(&quot;Dose &quot;,1:3),&q
 excess=100*(a$dead/a$base-1)
 ratio=with(a,(dead-base)/ifelse(dead&gt;=base,base,dead)*100)
 
-mpop=tapply(a$alive,a[,2:1],sum)/365
+mpop=xtabs(alive~dose+date,a)/365
 m=tapply(ratio,a[,2:1],c)
 disp=round(tapply(excess,a[,2:1],c))
-hide=!is.na(mpop)&amp;mpop&lt;10;m[hide]=disp[hide]=NA
-exp=.85;m=abs(m)^exp*sign(m)
-maxcolor=max(m,na.rm=T)*.8
-m[is.infinite(m)]=-maxcolor
+hide=mpop&lt;10;m[hide]=disp[hide]=NA
+exp=.8;m=abs(m)^exp*sign(m)
+maxcolor=300^exp;m[is.infinite(m)]=-maxcolor
 
 pheatmap::pheatmap(m,filename=&quot;i1.png&quot;,display_numbers=disp,
   cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,
   border_color=NA,na_col=&quot;white&quot;,
   number_color=ifelse((abs(m)&gt;.55*maxcolor)&amp;!is.na(m),&quot;white&quot;,&quot;black&quot;),
   breaks=seq(-maxcolor,maxcolor,,256),
-  colorRampPalette(hex(HSV(c(rep(210,4),rep(0,5)),c(1,.8,.6,.3,0,.3,.6,.8,1),c(.3,.65,rep(1,5),.65,.3))))(256))
+  colorRampPalette(hex(HSV(c(210,210,210,210,0,0,0,0,0),c(.9,.75,.6,.3,0,.3,.6,.75,.9),c(.4,.65,1,1,1,1,1,.65,.4))))(256))
 
 exp2=.6;mpop2=mpop^exp2
-mpop2[is.na(mpop2)]=0
 maxcolor2=max(mpop2[-nrow(m),-ncol(m)])
 
-kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;x[]=ifelse(abs(x)&lt;1e3,round(x),paste0(sprintf(paste0(&quot;%.&quot;,ifelse(e%%3==0,1,0),&quot;f&quot;),x/1e3^(e2-1)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2]));x}
+kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;p=!is.na(x)
+  x[p]=paste0(sprintf(paste0(&quot;%.&quot;,ifelse(e[p]%%3==0,1,0),&quot;f&quot;),x[p]/1e3^(e2[p]-1)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2[p]]);x}
+
 disp2=mpop;disp2[is.na(disp2)]=0;disp2=kimi(disp2)
 
 pheatmap::pheatmap(mpop2,filename=&quot;i2.png&quot;,display_numbers=disp2,
@@ -463,7 +461,7 @@ pheatmap::pheatmap(mpop2,filename=&quot;i2.png&quot;,display_numbers=disp2,
   breaks=seq(0,maxcolor2,,256),
   sapply(seq(1,0,,256),\(i)rgb(i,i,i)))
 
-system(&quot;w=`identify -format %w i1.png`;pad=38;convert -gravity northwest -pointsize 42 -font Arial \\( -splice x24 -size $[w-pad]x caption:&#39;Czech record-level data: Excess mortality percent relative to total mortality rate in 2021-2022 of all people included in the dataset matched for age. People are removed under earlier doses after a new dose.&#39; -extent $[w-pad]x -gravity center \\) i1.png -gravity northwest \\( -size $[w-40]x caption:&#39;Person-years by dose and month of death&#39; -extent $[w-pad]x -gravity center \\) i2.png -append 1.png&quot;)</pre>
+system(&quot;w=`identify -format %w i1.png`;pad=38;convert -gravity northwest -pointsize 42 -font Arial \\( -splice x24 -size $[w-pad]x caption:&#39;Czech record-level data: Excess mortality percent relative to all people matched for age, different baseline for each month. People are removed under earlier doses after a new dose.&#39; -extent $[w-pad]x -gravity center \\) i1.png -gravity northwest \\( -size $[w-40]x caption:&#39;Person-years by dose and month of death&#39; -extent $[w-pad]x -gravity center \\) i2.png -append 1.png&quot;)</pre>
 <h2>
 <a href=#Excess_mortality_by_month_of_vaccination_and_month_of_death id=Excess_mortality_by_month_of_vaccination_and_month_of_death>Excess mortality by month of vaccination and month of death</a>
 </h2>
@@ -567,7 +565,7 @@ fwrite(buck,&quot;czbucketsfirstdosetype&quot;)</pre>
 <p>Code for the first plot:</p>
 <pre>library(data.table);library(colorspace)
 
-buck=fread(&quot;s/f/czbucketsfirstdosetype.gz&quot;)[month&gt;=&quot;2021-01&quot;]
+buck=fread(&quot;http://sars2.net/f/czbucketsfirstdosetype.gz&quot;)[month&gt;=&quot;2021-01&quot;]
 buck=buck[,.(alive=sum(alive),dead=sum(dead)),by=.(month,age,type)]
 buck=rbind(buck,cbind(aggregate(buck[,4:5],buck[,2:3],sum),month=&quot;Total&quot;))
 
@@ -579,15 +577,12 @@ vax=a[a$type!=&quot;Unvaccinated&quot;,]
 a=rbind(a,cbind(aggregate(vax[,3:5],vax[,1,drop=F],sum),type=&quot;All vaccinated&quot;))
 a$type=factor(a$type,names(sort(tapply(a$alive,a$type,sum),T))[c(2,1,3:7)])
 
-excess=100*(a$dead/a$base-1)
-ratio=with(a,(dead-base)/ifelse(dead&gt;=base,base,dead)*100)
-
 mpop=xtabs(alive~type+month,a)/365
-m=tapply(ratio,a[,2:1],c)
-m[mpop&lt;10]=NA
-disp=round(tapply(excess,a[,2:1],c))
+m=tapply(with(a,(dead-base)/ifelse(dead&gt;=base,base,dead)*100),a[,2:1],c)
+disp=round(tapply(100*(a$dead/a$base-1),a[,2:1],c))
+m[mpop&lt;10]=disp[mpop&lt;10]=NA
 exp=.8;m=abs(m)^exp*sign(m)
-maxcolor=400^exp;m[is.infinite(m)]=-maxcolor
+maxcolor=300^exp;m[is.infinite(m)]=-maxcolor
 
 pheatmap::pheatmap(m,filename=&quot;i1.png&quot;,display_numbers=disp,
   cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,
