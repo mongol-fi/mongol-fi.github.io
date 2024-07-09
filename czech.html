@@ -57,6 +57,7 @@ th{background:#3a3a3a;text-align:left;font-weight:bold}
 <li><a href=#Why_is_there_a_peak_in_mortality_rate_about_30_to_35_weeks_after_the_second_dose>Why is there a peak in mortality rate about 30 to 35 weeks after the second dose?</a></li>
 <li><a href=#Excess_mortality_relative_to_all_people_matched_by_age>Excess mortality relative to all people matched by age</a></li>
 <li><a href=#Excess_mortality_by_month_of_vaccination_and_month_of_death>Excess mortality by month of vaccination and month of death</a></li>
+<li><a href=#Excess_mortality_by_type_of_first_vaccine>Excess mortality by type of first vaccine</a></li>
 </ul>
 
 <h2>
@@ -136,7 +137,7 @@ for(day in as.list(seq(mindate,maxdate,1))){
   buck=rbind(buck,d)[,.(alive=sum(alive),dead=sum(dead)),by=.(date,dose,age)]
 }
 
-fwrite(buck,&quot;czbuckets&quot;,sep=&quot; &quot;)</pre>
+fwrite(buck,&quot;czbuckets&quot;)</pre>
 <p>I uploaded the output here: <a href=f/czbuckets.gz>f/czbuckets.gz</a> (about 2 MB).</p>
 <h2>
 <a href=#Deaths_and_population_estimates_by_single_year_of_age_from_Eurostat id=Deaths_and_population_estimates_by_single_year_of_age_from_Eurostat>Deaths and population estimates by single year of age from Eurostat</a>
@@ -471,7 +472,6 @@ system(&quot;w=`identify -format %w i1.png`;pad=38;convert -gravity northwest -p
 <div class="width14">
 <img src="i/czech-triangle.png">
 </div>
-<p>In the plot above there's particularly low excess mortality during COVID waves in December 2021, July 2022, and December 2022, but that's because the baseline included unvaccinated people who had high mortality during COVID waves.</p>
 <pre>library(data.table);library(colorspace)
 
 # unique apply (faster for long vectors with many repeated values)
@@ -562,8 +562,145 @@ pheatmap::pheatmap(mpop,filename=paste0(&quot;pop.&quot;,dose,&quot;.png&quot;),
   breaks=seq(0,maxcolor2,,256),sapply(seq(1,0,,256),\(i)rgb(i,i,i)))
 
 system(&quot;w=`identify -format %w mort.1.png`;pad=44;convert -gravity northwest -pointsize 46 -font Arial \\( -splice x24 -size $[w-pad]x caption:&#39;Czech record-level data, dose 1: Excess mortality percent from day of vaccination until end of 2022&#39; -extent $[w-pad]x -gravity center \\) mort.1.png -append l1.png;convert -pointsize 46 -font Arial -gravity northwest \\( -splice x24 -size $[w-40]x caption:Person-years -extent $[w-pad]x -gravity center \\) pop.1.png -append l2.png;convert -gravity south l[12].png +append 0.png&quot;)
+system(&quot;convert 0.png -fill black -gravity southwest -size 900x900 -pointsize 42 -font Arial caption:&#39;The x-axis shows the month of death and the y-axis shows the month of vaccination. People are kept included under the first dose even after they have gotten a second dose. The baseline was calculated separately for each cell of the matrix, so that a vector of mortality rates for all people in the dataset that month was multiplied by a vector of person-days for each age in the cell, and the results were added together to get the expected number of deaths that month for people with the same age composition as the people in the cell. So because each month has its own baseline, the baseline is adjusted for seasonal variation in mortality and for the effect of COVID waves.&#39; -gravity southwest -geometry +50+290 -composite 1.png&quot;)</pre>
+<h2>
+<a href=#Excess_mortality_by_type_of_first_vaccine id=Excess_mortality_by_type_of_first_vaccine>Excess mortality by type of first vaccine</a>
+</h2>
+<p>The plot below shows excess mortality by the type of the first vaccine. People with two or more doses almost always got the second dose from the same vaccine type as the first dose, except Janssen vaccines only had a single dose so people who got a Janssen vaccine for the first dose often got a different type of vaccine for the booster.</p>
+<p>The plot below shows that even in late 2022, people got a Moderna vaccine for the first dose had much higher excess mortality than people who got a Pfizer vaccine for the first dose. If the difference in mortality would be because of vaccine deaths like Kirsch says, you'd expect the difference to be greatest in the first few weeks or months after vaccination and get weaker over time. But because the difference remains in place more than a year after vaccination, it rather seems to be caused by some confounding factors which I didn't adjust for here:</p>
+<div class="width8">
+<img src="i/czech-firstdosetype.png">
+</div>
+<p>In the plot above Janssen vaccines get by far the highest excess mortality percentage, but it's probably because the average date of first vaccination is much later for Janssen vaccines than for the other three vaccine types, so the <span class="quote">&quot;late vaccinees&quot;</span> who got vaccinated in the second half of 2021 are overrepresented among the people who got a Janssen vaccine.</p>
+<p>In the next plot the x-axis shows the month of vaccination and not the month of death, and the number in each cell is the excess mortality up to the end of 2022 and not the excess mortality on the month that is shown on the x-axis. The plot shows that people who got a Pfizer vaccine in late 2021 subsequently also had much higher excess mortality than people who got a Pfizer vaccine in the first half of 2021:</p>
+<div class="width8">
+<img src="i/czech-firstdosetype-2.png">
+</div>
+<p>Generate buckets by type of first vaccine:</p>
+<pre>library(data.table)
 
-system(&quot;convert 0.png -fill black -gravity southwest -size 900x900 -pointsize 42 -font Arial caption:&#39;The x-axis shows the month of death and the y-axis shows the month of vaccination. People are kept included under the first dose even after they have gotten a second dose. The baseline was calculated separately for each cell of the matrix, so that a vector of mortality rates for all people in the dataset that month was multiplied by the number of person-days for each age in the cell, the results were added together to get the expected number of deaths that month for people with the same age composition as the people in the cell. So because each month has its own baseline, the baseline is adjusted for seasonal variation in mortality and for the effect of COVID waves.&#39; -gravity southwest -geometry +50+290 -composite 1.png&quot;)</pre>
+ua=\(x,fun,...){u=unique(x);fun(u,...)[match(x,u)]}
+age=\(x,y){x=as.numeric(x);y=as.numeric(y);(y-x-(y-789)%/%1461+(x-789)%/%1461)%/%365}
+
+mindate=as.Date(&quot;2020-1-1&quot;);maxdate=as.Date(&quot;2022-12-31&quot;)
+
+rec=fread(&quot;CR_records.csv&quot;)
+t=data.table(id=1:nrow(rec),death=rec$DatumUmrti)
+set.seed(0);t$birth=ua(ua(rec$Rok_narozeni,paste0,&quot;-1-1&quot;),as.Date)+sample(0:364,nrow(t),T)
+t=t[rep(1:nrow(t),2),]
+t$date=c(rep(mindate,nrow(rec)),rec$Datum_1)
+t$type=c(rep(&quot;Unvaccinated&quot;,nrow(rec)),rec$OckovaciLatka_1)
+t$vaxmonth=ua(t$date,substr,1,7)
+
+name1=c(&quot;Comirnaty&quot;,&quot;SPIKEVAX&quot;,&quot;VAXZEVRIA&quot;,&quot;COVID-19 Vaccine Janssen&quot;)
+name2=c(&quot;Pfizer&quot;,&quot;Moderna&quot;,&quot;AstraZeneca&quot;,&quot;Janssen&quot;)
+t$type[!t$type%in%c(name1,&quot;Unvaccinated&quot;)]=&quot;Other&quot;
+t$type=ifelse(t$type%in%name1,name2[match(t$type,name1)],t$type)
+
+t=t[!is.na(date)][date&lt;=maxdate][order(-date)]
+
+buck=data.table()
+for(day in as.list(seq(mindate,maxdate,1))){
+  cat(as.character(day),&quot;\n&quot;)
+  d=unique(t[date&lt;=day&amp;(is.na(death)|day&lt;=death)&amp;day&gt;=birth],by=&quot;id&quot;)
+  d=d[,.(month=substr(day,1,7),vaxmonth,age=age(birth,day),alive=1,type,dead=nafill(as.numeric(death==day),,0))]
+  buck=rbind(buck,d)[,.(alive=sum(alive),dead=sum(dead)),by=.(month,vaxmonth,age,type)]
+}
+
+fwrite(buck,&quot;czbucketsfirstdosetype&quot;)</pre>
+<p>Code for first plot:</p>
+<pre>library(data.table);library(colorspace)
+
+buck=fread(&quot;http://sars2.net/f/czbucketsfirstdosetype.gz&quot;)[month&gt;=&quot;2021-01&quot;]
+buck=buck[,.(alive=sum(alive),dead=sum(dead)),by=.(month,age,type)]
+buck=rbind(buck,cbind(aggregate(buck[,4:5],buck[,2:3],sum),month=&quot;Total&quot;))
+
+me=merge(buck,buck[,.(base=sum(dead)/sum(alive)),by=.(age,month)])
+me$base=me$base*me$alive
+a=aggregate(me[,c(4:6)],me[,c(1,3)],sum)
+
+vax=a[a$type!=&quot;Unvaccinated&quot;,]
+a=rbind(a,cbind(aggregate(vax[,3:5],vax[,1,drop=F],sum),type=&quot;All vaccinated&quot;))
+a$type=factor(a$type,names(sort(tapply(a$alive,a$type,sum),T))[c(2,1,3:7)])
+
+excess=100*(a$dead/a$base-1)
+ratio=with(a,(dead-base)/ifelse(dead&gt;=base,base,dead)*100)
+
+mpop=tapply(a$alive,a[,2:1],sum)/365
+m=tapply(ratio,a[,2:1],c)
+disp=round(tapply(excess,a[,2:1],c))
+hide=!is.na(mpop)&amp;mpop&lt;10;m[hide]=disp[hide]=NA
+exp=.85;m=abs(m)^exp*sign(m)
+maxcolor=max(m,na.rm=T)*.8
+maxcolor=272^exp
+m[is.infinite(m)]=-maxcolor
+
+pheatmap::pheatmap(m,filename=&quot;i1.png&quot;,display_numbers=disp,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;white&quot;,
+  number_color=ifelse((abs(m)&gt;.55*maxcolor)&amp;!is.na(m),&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(-maxcolor,maxcolor,,256),
+  colorRampPalette(hex(HSV(c(rep(210,4),rep(0,5)),c(1,.8,.6,.3,0,.3,.6,.8,1),c(.3,.65,rep(1,5),.65,.3))))(256))
+
+exp2=.6;mpop2=mpop^exp2
+mpop2[is.na(mpop2)]=0
+maxcolor2=max(mpop2[-nrow(m),-ncol(m)])
+
+kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;x[]=ifelse(abs(x)&lt;1e3,round(x),paste0(sprintf(paste0(&quot;%.&quot;,ifelse(e%%3==0,1,0),&quot;f&quot;),x/1e3^(e2-1)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2]));x}
+disp2=mpop;disp2[is.na(disp2)]=0;disp2=kimi(disp2)
+
+pheatmap::pheatmap(mpop2,filename=&quot;i2.png&quot;,display_numbers=disp2,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;white&quot;,
+  number_color=ifelse(mpop2&gt;maxcolor2*.45,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(0,maxcolor2,,256),
+  sapply(seq(1,0,,256),\(i)rgb(i,i,i)))
+
+system(&quot;w=`identify -format %w i1.png`;pad=40;convert -gravity northwest -pointsize 40 -font Arial \\( -splice x24 -size $[w-pad]x caption:&#39;Czech record-level data: Excess mortality percent by type of first vaccine. People are kept included under the first dose after they get a second dose. The baseline was calculated separately for each cell of the matrix, so that a vector of mortality rates for all people in the dataset that month was multiplied by a vector of person-days for each age in the cell, and the results were added together to get the expected number of deaths that month for people with the same age composition as the people in the cell.&#39; -extent $[w-pad]x -gravity center \\) i1.png -gravity northwest \\( -size $[w-pad]x caption:&#39;Person-years by dose and month of death&#39; -extent $[w-pad]x -gravity center \\) i2.png -append 1.png&quot;)</pre>
+<p>Code for second plot:</p>
+<pre>library(data.table);library(colorspace)
+
+buck=fread(&quot;s/f/czbucketsfirstdosetype.gz&quot;)[month&gt;=&quot;2020-12&quot;]
+me=merge(buck,buck[,.(base=sum(dead)/sum(alive)),by=.(age=age,month=month)])
+me$base=me$base*me$alive
+me=rbind(me,cbind(aggregate(me[,5:7],me[,c(1,2,4)],sum),vaxmonth=&quot;Total&quot;))
+
+a=aggregate(me[,c(5:7)],me[,3:4],sum)
+
+vax=a[a$type!=&quot;Unvaccinated&quot;,]
+a=rbind(a,cbind(aggregate(vax[,3:5],vax[,1,drop=F],sum),type=&quot;All vaccinated&quot;))
+a$type=factor(a$type,names(sort(tapply(a$alive,a$type,sum),T)))
+a=a[!(a$type==&quot;Unvaccinated&quot;&amp;a$vaxmonth==&quot;2020-01&quot;),]
+
+mpop=xtabs(alive~type+vaxmonth,a)/365
+disp=tapply((a$dead/a$base-1)*100,a[,2:1],round)
+m=tapply((a$dead-a$base)*100/ifelse(a$dead&gt;a$base,a$base,a$dead),a[,2:1],c)
+
+m[mpop&lt;100]=disp[mpop&lt;100]=NA
+exp=.85;m=abs(m)^exp*sign(m)
+maxcolor=400^exp;m[is.infinite(m)]=-maxcolor
+
+pal=HSV(c(210,210,210,210,0,0,0,0,0),c(.9,.75,.6,.3,0,.3,.6,.75,.9),c(.4,.65,1,1,1,1,1,.65,.4))
+
+pheatmap::pheatmap(m,filename=&quot;mort.png&quot;,display_numbers=disp,
+  cluster_rows=F,cluster_cols=F,legend=F,
+  cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,border_color=NA,na_col=&quot;white&quot;,
+  number_color=ifelse(!is.na(m)&amp;abs(m)&gt;.5*maxcolor,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(-maxcolor,maxcolor,,256),colorRampPalette(hex(pal))(256))
+
+kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1
+  x[]=ifelse(abs(x)&lt;10,round(x),paste0(round(x/1e3^(e2-1),ifelse(e%%3==0,1,0)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2]));x}
+
+disp2=kimi(mpop);exp2=.6;mpop=mpop^exp2
+maxcolor2=max(mpop[1:(nrow(mpop)-1),1:(ncol(mpop)-1)],na.rm=T)
+
+pheatmap::pheatmap(mpop,filename=&quot;pop.png&quot;,display_numbers=disp2,
+  cluster_rows=F,cluster_cols=F,legend=F,
+  cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,border_color=NA,na_col=&quot;white&quot;,
+  number_color=ifelse(!(is.na(mpop))&amp;mpop&gt;maxcolor2*.45,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(0,maxcolor2,,256),sapply(seq(1,0,,256),\(i)rgb(i,i,i)))
+
+system(&quot;w=`identify -format %w mort.png`;pad=38;convert -gravity northwest -pointsize 42 -font Arial \\( -splice x24 -size $[w-pad]x caption:&#39;Czech record-level data: Excess mortality percent up to end of 2022 by month of vaccination and type of first vaccine dose&#39; -extent $[w-pad]x -gravity center \\) mort.png -gravity northwest \\( -size $[w-40]x caption:&#39;Person-years from month of vaccination on x-axis up to end of 2022&#39; -extent $[w-pad]x -gravity center \\) pop.png -append 1.png&quot;)</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
