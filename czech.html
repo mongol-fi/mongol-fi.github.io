@@ -468,62 +468,21 @@ system(&quot;w=`identify -format %w i1.png`;pad=38;convert -gravity northwest -p
 <a href=#Excess_mortality_by_month_of_vaccination_and_month_of_death id=Excess_mortality_by_month_of_vaccination_and_month_of_death>Excess mortality by month of vaccination and month of death</a>
 </h2>
 <p>In the New Zealand data released by Barry Young, I noticed an effect where people who got vacinated during the early part of the main vaccine rollout subsequently had lower excess mortality than people who got vaccinated later on, which I called the <span class="quote">&quot;early vaccinee effect&quot;</span>. I later also noticed a similar effect in a May 2024 FOI response to Clare Craig, which showed the number of deaths in England by week of vaccination, month of death, and age group: <a href=statistic.html#Clare_Craig_May_2024_UKHSA_FOI_response_for_deaths_in_vaccinated_people>statistic.html#Clare_Craig_May_2024_UKHSA_FOI_response_for_deaths_in_vaccinated_people</a>.</p>
-<p>A similar <span class="quote">&quot;early vaccinee effect&quot;</span> is also visible in the Czech data, so that for example people who got the first dose in February 2021 subsequently had -46% excess mortality up to the end of 2022, which means that they had almost half as low mortality as the general Czech population matched for age composition. The monthly number of first doses given peaked in May 2021, but people who got vaccinated after the peak subsequently had much higher excess mortality than the early vaccinees:</p>
+<p>A similar early vaccinee effect is also visible in the Czech data. The monthly number of first doses given peaked in May 2021, so people who got the first vaccine dose during February to May 2021 subsequently had the lowest excess mortality, but people who got vaccinated in June 2021 already had close to 0% excess mortality, and the excess mortality gradually increased to over 100% in people who only got the first vaccine dose in 2022:</p>
 <div class="width14">
 <img src="i/czech-triangle.png">
 </div>
 <pre>library(data.table);library(colorspace)
 
-# unique apply (faster for long vectors with many repeated values)
-ua=\(x,fun,...){u=unique(x);fun(u,...)[match(x,u)]}
+buck=fread(&quot;http://sars2.net/f/czbucketsfirstdosetype.gz&quot;)[month&gt;=&quot;2020-12&quot;]
+me=merge(buck,buck[,.(base=sum(dead)/sum(alive)),by=.(age=age,month=month)])
+me=me[me$type!=&quot;Unvaccinated&quot;]
+me$base=me$base*me$alive
+me=rbind(me,cbind(aggregate(me[,5:7],me[,2:4],sum),month=&quot;Total&quot;))
+me=rbind(me,cbind(aggregate(me[,5:7],me[,c(1,2,4)],sum),vaxmonth=&quot;Total&quot;))
+a=aggregate(me[,c(5:7)],me[,c(1,3)],sum)
 
-# factor table (make frequency table using specified factor levels for each dimension)
-fat=\(x,y)table(mapply(factor,x,y,SIMPLIFY=F))
-
-# fast way to get difference in floored years between two dates that are after 1900 and before 2100
-age=\(x,y){d1=as.numeric(x);d2=as.numeric(y);l1=(d1-789)%/%1461+1;l2=(d2-789)%/%1461+1;(d2-d1-(l2-l1))%/%365}
-
-maxdose=4;mindate=as.Date(&quot;2020-1-1&quot;);maxdate=as.Date(&quot;2022-12-31&quot;)
-
-rec=fread(&quot;Czech/data/CR_records.csv&quot;)
-t=data.table(id=1:nrow(rec),death=rec$DatumUmrti)
-set.seed(0);t$birth=ua(ua(rec$Rok_narozeni,paste0,&quot;-1-1&quot;),as.Date)+sample(0:364,nrow(t),T)
-t=t[rep(1:nrow(t),5),]
-t$dose=rep(0:4,each=nrow(rec))
-t$date=c(rep(mindate,nrow(rec)),ua(unlist(lapply(1:4,\(i)rec[[paste0(&quot;Datum_&quot;,i)]])),as.Date,&quot;1970-1-1&quot;))
-t=t[!is.na(date)]
-
-dates=as.character(seq(mindate,maxdate,1));vaxmonth=ua(t$date,format,&quot;%Y-%m&quot;)
-dim=list(date=dates,vaxmonth=substr(seq(mindate,maxdate,&quot;month&quot;),1,7),dose=0:4,age=0:120)
-pop=fat(list(ua(t$date,as.character),vaxmonth,t$dose,age(t$birth,t$date)),dim)
-dob=as.POSIXlt(t$birth)
-
-for(i in 2020:2022){
-  bday=dob;bday$year=rep(i-1900,length(bday));bday=as.Date(bday);newage=age(dob,bday)
-  pick=bday&gt;=t$date&amp;bday&lt;=maxdate
-  ta=fat(list(ua(bday[pick],as.character),vaxmonth[pick],t$dose[pick],newage[pick]),dim)
-  pop=pop+ta;ta2=ta[,,,c(2:121,121)];ta2[,,,121]=0;pop=pop-ta2
-}
-
-pick=!is.na(t$death)
-dead=fat(list(ua(t$death[pick],as.character),vaxmonth[pick],t$dose[pick],age(t$birth[pick],t$death[pick])),dim)
-pop=pop-dead
-
-d=cbind(expand.grid(dim),pop=c(pop),dead=c(dead))
-d$pop=unlist(tapply(d$pop,d[,2:4],cumsum))
-d=d[d$pop&gt;0,]
-
-a=aggregate(d[,5:6],cbind(month=ua(d$date,substr,1,7),d[,2:4]),sum)
-base=a[a$dose==0,];base=aggregate(base[,5:6],base[,c(1,4)],sum)
-a=merge(a,cbind(base=base$dead/base$pop,base[,1:2]))
-a$base=a$base*a$pop
-a$vaxmonth=levels(a$vaxmonth)[a$vaxmonth];a=a[a$vaxmonth&gt;=&quot;2020-12&quot;,]
-a=rbind(a,cbind(aggregate(a[,c(5:7)],a[,2:4],sum),month=&quot;Total&quot;))
-a=rbind(a,cbind(aggregate(a[,c(5:7)],a[,c(1,2,4)],sum),vaxmonth=&quot;Total&quot;))
-a=aggregate(a[,5:7],a[,c(1,3,4)],sum)
-dose=1;a=a[a$dose==dose,]
-
-mpop=tapply(a$pop,a[,2:1],c)/365
+mpop=tapply(a$alive,a[,2:1],c)/365
 disp=tapply((a$dead/a$base-1)*100,a[,2:1],round)
 m=tapply((a$dead-a$base)*100/ifelse(a$dead&gt;a$base,a$base,a$dead),a[,2:1],c)
 
@@ -537,7 +496,7 @@ m[is.infinite(m)]=-maxcolor
 
 pal=HSV(c(210,210,210,210,0,0,0,0,0),c(.9,.75,.6,.3,0,.3,.6,.75,.9),c(.4,.65,1,1,1,1,1,.65,.4))
 
-pheatmap::pheatmap(m,filename=paste0(&quot;mort.&quot;,dose,&quot;.png&quot;),display_numbers=disp,
+pheatmap::pheatmap(m,filename=&quot;mort.png&quot;,display_numbers=disp,
   gaps_col=ncol(m)-1,gaps_row=nrow(m)-1,
   cluster_rows=F,cluster_cols=F,legend=F,
   cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,border_color=NA,na_col=&quot;white&quot;,
@@ -554,14 +513,15 @@ exp2=.6
 mpop=mpop^exp2
 maxcolor2=max(mpop[1:(nrow(mpop)-1),1:(ncol(mpop)-1)],na.rm=T)
 
-pheatmap::pheatmap(mpop,filename=paste0(&quot;pop.&quot;,dose,&quot;.png&quot;),display_numbers=disp2,
+pheatmap::pheatmap(mpop,filename=&quot;pop.png&quot;,display_numbers=disp2,
   gaps_col=ncol(m)-1,gaps_row=nrow(m)-1,
   cluster_rows=F,cluster_cols=F,legend=F,
   cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,border_color=NA,na_col=&quot;white&quot;,
   number_color=ifelse(!(is.na(mpop))&amp;mpop&gt;maxcolor2*.45,&quot;white&quot;,&quot;black&quot;),
   breaks=seq(0,maxcolor2,,256),sapply(seq(1,0,,256),\(i)rgb(i,i,i)))
 
-system(&quot;w=`identify -format %w mort.1.png`;pad=44;convert -gravity northwest -pointsize 46 -font Arial \\( -splice x24 -size $[w-pad]x caption:&#39;Czech record-level data, dose 1: Excess mortality percent from day of vaccination until end of 2022&#39; -extent $[w-pad]x -gravity center \\) mort.1.png -append l1.png;convert -pointsize 46 -font Arial -gravity northwest \\( -splice x24 -size $[w-40]x caption:Person-years -extent $[w-pad]x -gravity center \\) pop.1.png -append l2.png;convert -gravity south l[12].png +append 0.png&quot;)
+system(&quot;w=`identify -format %w mort.png`;pad=44;convert -gravity northwest -pointsize 46 -font Arial \\( -splice x24 -size $[w-pad]x caption:&#39;Czech record-level data, dose 1: Excess mortality percent from day of vaccination until end of 2022&#39; -extent $[w-pad]x -gravity center \\) mort.png -append l1.png;convert -pointsize 46 -font Arial -gravity northwest \\( -splice x24 -size $[w-40]x caption:Person-years -extent $[w-pad]x -gravity center \\) pop.png -append l2.png;convert -gravity south l[12].png +append 0.png&quot;)
+
 system(&quot;convert 0.png -fill black -gravity southwest -size 900x900 -pointsize 42 -font Arial caption:&#39;The x-axis shows the month of death and the y-axis shows the month of vaccination. People are kept included under the first dose even after they have gotten a second dose. The baseline was calculated separately for each cell of the matrix, so that a vector of mortality rates for all people in the dataset that month was multiplied by a vector of person-days for each age in the cell, and the results were added together to get the expected number of deaths that month for people with the same age composition as the people in the cell. So because each month has its own baseline, the baseline is adjusted for seasonal variation in mortality and for the effect of COVID waves.&#39; -gravity southwest -geometry +50+290 -composite 1.png&quot;)</pre>
 <h2>
 <a href=#Excess_mortality_by_type_of_first_vaccine id=Excess_mortality_by_type_of_first_vaccine>Excess mortality by type of first vaccine</a>
@@ -608,7 +568,7 @@ for(day in as.list(seq(mindate,maxdate,1))){
 }
 
 fwrite(buck,&quot;czbucketsfirstdosetype&quot;)</pre>
-<p>Code for first plot:</p>
+<p>Code for the first plot:</p>
 <pre>library(data.table);library(colorspace)
 
 buck=fread(&quot;http://sars2.net/f/czbucketsfirstdosetype.gz&quot;)[month&gt;=&quot;2021-01&quot;]
@@ -657,14 +617,13 @@ pheatmap::pheatmap(mpop2,filename=&quot;i2.png&quot;,display_numbers=disp2,
   sapply(seq(1,0,,256),\(i)rgb(i,i,i)))
 
 system(&quot;w=`identify -format %w i1.png`;pad=40;convert -gravity northwest -pointsize 40 -font Arial \\( -splice x24 -size $[w-pad]x caption:&#39;Czech record-level data: Excess mortality percent by type of first vaccine. People are kept included under the first dose after they get a second dose. The baseline was calculated separately for each cell of the matrix, so that a vector of mortality rates for all people in the dataset that month was multiplied by a vector of person-days for each age in the cell, and the results were added together to get the expected number of deaths that month for people with the same age composition as the people in the cell.&#39; -extent $[w-pad]x -gravity center \\) i1.png -gravity northwest \\( -size $[w-pad]x caption:&#39;Person-years by dose and month of death&#39; -extent $[w-pad]x -gravity center \\) i2.png -append 1.png&quot;)</pre>
-<p>Code for second plot:</p>
+<p>Code for the second plot:</p>
 <pre>library(data.table);library(colorspace)
 
-buck=fread(&quot;s/f/czbucketsfirstdosetype.gz&quot;)[month&gt;=&quot;2020-12&quot;]
+buck=fread(&quot;http://sars2.net/f/czbucketsfirstdosetype.gz&quot;)[month&gt;=&quot;2020-12&quot;]
 me=merge(buck,buck[,.(base=sum(dead)/sum(alive)),by=.(age=age,month=month)])
 me$base=me$base*me$alive
 me=rbind(me,cbind(aggregate(me[,5:7],me[,c(1,2,4)],sum),vaxmonth=&quot;Total&quot;))
-
 a=aggregate(me[,c(5:7)],me[,3:4],sum)
 
 vax=a[a$type!=&quot;Unvaccinated&quot;,]
@@ -692,7 +651,7 @@ kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1
   x[]=ifelse(abs(x)&lt;10,round(x),paste0(round(x/1e3^(e2-1),ifelse(e%%3==0,1,0)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2]));x}
 
 disp2=kimi(mpop);exp2=.6;mpop=mpop^exp2
-maxcolor2=max(mpop[1:(nrow(mpop)-1),1:(ncol(mpop)-1)],na.rm=T)
+maxcolor2=max(mpop[,1:(ncol(mpop)-1)],na.rm=T)
 
 pheatmap::pheatmap(mpop,filename=&quot;pop.png&quot;,display_numbers=disp2,
   cluster_rows=F,cluster_cols=F,legend=F,
