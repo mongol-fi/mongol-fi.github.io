@@ -61,6 +61,7 @@ th{background:#3a3a3a;text-align:left;font-weight:bold}
 <li><a href=#Deaths_by_weeks_after_first_dose>Deaths by weeks after first dose</a></li>
 <li><a href=#Projected_mortality_rates_by_age_group_based_on_a_2010_2019_trend>Projected mortality rates by age group based on a 2010-2019 trend</a></li>
 <li><a href=#Excess_mortality_by_weeks_after_vaccination_and_age_group>Excess mortality by weeks after vaccination and age group</a></li>
+<li><a href=#People_who_got_the_second_vaccine_from_a_different_manufacturer_than_the_first_vaccine>People who got the second vaccine from a different manufacturer than the first vaccine</a></li>
 </ul>
 
 <h2>
@@ -800,7 +801,7 @@ ggsave(&quot;1.png&quot;,width=5,height=3.4,dpi=400)</pre>
 <a href=#Projected_mortality_rates_by_age_group_based_on_a_2010_2019_trend id=Projected_mortality_rates_by_age_group_based_on_a_2010_2019_trend>Projected mortality rates by age group based on a 2010-2019 trend</a>
 </h2>
 <p>The Czech Statistical Office has published weekly data for deaths by 5-year age groups: <a href="https://vdb.czso.cz/vdbvo2/faces/en/index.jsf?page=vystup-objekt-parametry&pvo=DEMD007KR-R2024&sp=A&skupId=3629&katalog=30845&z=T">https://vdb.czso.cz/vdbvo2/faces/en/index.jsf?page=vystup-objekt-parametry&amp;pvo=DEMD007KR-R2024&amp;sp=A&amp;skupId=3629&amp;katalog=30845&amp;z=T</a>.</p>
-<p>The following code calculates daily mortality rates in 2010-2019 by interpolating the weekly deaths to daily deaths, and it interpolates Eurostat's yearly population sizes to daily population sizes. Then it projects a seasonality-adjusted linear trend of the mortality rate in each 5-year age group to 2020-2022:</p>
+<p>The following code calculates daily mortality rates in 2010-2019 by interpolating the weekly deaths to daily deaths, and it interpolates Eurostat's yearly population sizes to daily population sizes. And then it calculates a seasonality-adjusted linear trend of the mortality rate in each 5-year age group and projects the trend to 2020-2022:</p>
 <pre>isoweek=\(year,week,weekday=1){d=as.Date(paste0(year,&quot;-1-4&quot;));d-(as.integer(format(d,&quot;%w&quot;))+6)%%7-1+7*(week-1)+weekday}
 
 dates=as.Date(&quot;2010-1-1&quot;):as.Date(&quot;2019-12-31&quot;)
@@ -839,26 +840,13 @@ head(rate,2)
 <div class="width7">
 <img src="i/czech-ageweek.png">
 </div>
-<p>In the plot above the total excess mortality was only about -4% for ages 90+ but about -30% for ages 50-59, which might partially be because my baseline was calculated based on the mortality rate among both vaccinated and unvaccinated people in the total Czech population, but ages 90+ have less unvaccinated people than ages 50-59 so unvaccinated people have less impact on the baseline in ages 90+. If ages 90+ would have 99% vaccinated people, then even if the 1% of unvaccinated people would have very high mortality, the excess mortality of vaccinated people would still be close to zero using my method of calculating the baseline.</p>
-<p>If the age of each person is treated as 2022 minus the year of birth, then the percentage of people in the Czech data who have a first dose listed is about 61% in ages 90+ but only about 38% in ages 40-49 (if people who died in 2020 are excluded, since they generally didn't have time to get vaccinated before they died):</p>
-<pre>&gt; rec=fread(&quot;CR_records.csv&quot;)
-&gt; rec[!DatumUmrti&lt;&quot;2021-01-01&quot;,.(vaxpct=mean(!is.na(Datum_1))*100),by=.(age=pmax(0,pmin(90,(2021-Rok_narozeni)%/%10*10)))][order(age)]|&gt;round(1)
-    age vaxpct
- 1:   0    0.1
- 2:  10   30.8
- 3:  20   38.5
- 4:  30   33.4
- 5:  40   38.5
- 6:  50   41.3
- 7:  60   46.7
- 8:  70   56.2
- 9:  80   62.5
-10:  90   61.0</pre>
 <p>In the next plot I calculated the baseline relative to crude mortality rates by five-year age groups in 2010-2019. However now my excess mortality on weeks 0-4 was about -49% for ages 50-59 but only about -24% for ages 90+, even though by weeks 10-14 the excess mortality in ages 90+ was already similar to ages 50-59. So it indicates that the temporal healthy vaccinee effect might in fact be less strong in the oldest age groups:</p>
 <div class="width7">
 <img src="i/czech-ageweek-2.png">
 </div>
-<pre>bin=5;agebin=10;maxage=90
+<pre>library(data.table);library(colorspace)
+
+bin=5;agebin=10;maxage=90
 
 t=fread(&quot;http://sars2.net/f/czbucketsfirstdosetype.gz&quot;)
 t=t[,.(dead=sum(dead),alive=sum(alive)),by=.(month,age,type,week)]
@@ -892,6 +880,99 @@ pheatmap::pheatmap(m,filename=&quot;1.png&quot;,display_numbers=disp,
   cellwidth=18,cellheight=18,fontsize=9,fontsize_number=8,border_color=NA,na_col=&quot;white&quot;,
   number_color=ifelse(!is.na(m)&amp;abs(m)&gt;.5*maxcolor,&quot;white&quot;,&quot;black&quot;),
   breaks=seq(-maxcolor,maxcolor,,256),colorRampPalette(hex(pal))(256))</pre>
+<h2>
+<a href=#People_who_got_the_second_vaccine_from_a_different_manufacturer_than_the_first_vaccine id=People_who_got_the_second_vaccine_from_a_different_manufacturer_than_the_first_vaccine>People who got the second vaccine from a different manufacturer than the first vaccine</a>
+</h2>
+<p>Kirsch included these comments in the file <code>Full analysis - All vaccines.xlsx</code>:</p>
+<blockquote>
+<p>This is the pivot table analysis for Study #1 which enrolled any who got their first COVID shot anytime in 2021.</p>
+<p>Note that if you didn't get a second shot, it's highly likely that it is because you died.</p>
+<p>However the mortality rate ratio (MRR) which is MR(Moderna)/MR(Pfizer) is also high for those people when it should be 1 if both vaccines are safe.</p>
+<p>See the Detail 1 tab which shows that the MRR ratio is &gt;1 for each and every 5 year age group examined which eliminates the Simpson's paradox.</p>
+<h4>Additional note</h4>
+<p>Those who mixed vaccines between dose 1 vs. dose 2 had the highest increase in ACM.</p>
+<p>The high MR line items for the second vaccine being None is likely because those people died before their second vaccine so this should not be misinterpreted as you must get two vaccines or you'll die.</p>
+<p>Note that if you Moderna then Pfizer vs. Pfizer and then Moderna, the MRS were nearly identical around 2175) so the order of shots did not matter!!!</p>
+<p>However, the MR of a mixed dose did NOT give you an MR between the two pure vaccines. It was higher than pure Pfizer or pure Moderna.</p>
+<p>Note that MOST people did not mix brands between dose 1 and dose 2.</p>
+</blockquote>
+<p>In the code below I calculated ASMR during the first year from the first dose using the same simple but inaccurate method as earlier, where I treated the age of each person as their year of birth subtracted from 2021. However I actually got very low ASMR for people who got Pfizer for the first dose and Moderna for the second dose (even though they consisted of only 279 people so the confidence interval is huge):</p>
+<pre>retype=\(x){name1=c(&quot;&quot;,&quot;Comirnaty&quot;,&quot;SPIKEVAX&quot;,&quot;VAXZEVRIA&quot;,&quot;COVID-19 Vaccine Janssen&quot;);name2=c(&quot;None&quot;,&quot;Pfizer&quot;,&quot;Moderna&quot;,&quot;AstraZeneca&quot;,&quot;Janssen&quot;);ifelse(x%in%name1,name2[match(x,name1)],&quot;Other&quot;)}
+
+std=fread(&quot;http://sars2.net/f/czpopdead.csv&quot;)[year==2022,pop]
+rec=fread(&quot;CR_records.csv&quot;)
+
+t=rec[Datum_1&lt;as.Date(&quot;2022-1-1&quot;),.(dead=sum(!is.na(DatumUmrti)&amp;DatumUmrti&lt;Datum_1+365),pop=.N),by=.(age=pmin(100,2021-Rok_narozeni),type1=retype(OckovaciLatka_1),type2=retype(OckovaciLatka_2))]
+t[,.(asmr=round(sum(dead/pop*std[age+1]/sum(std)*1e5)),dead=sum(dead),pop=sum(pop),meanage=round(weighted.mean(age,pop))),by=.(type1,type2)][order(-pop)]|&gt;print(row.names=F)</pre>
+<!-- -->
+<pre>       type1       type2  asmr  dead     pop meanage
+      Pfizer      Pfizer   705 45595 5411522      49
+     Moderna     Moderna   918  8778  509704      55
+ AstraZeneca AstraZeneca   781 10639  439648      68
+     Janssen        None  1325  4418  404824      46
+      Pfizer        None 11599  5914   49445      43
+     Moderna        None 11274  1200    6224      52
+ AstraZeneca        None 17457  3091    5522      75
+ AstraZeneca      Pfizer   938    46    1795      61
+     Moderna      Pfizer  1507    13     569      48
+       Other       Other     0     0     348      43
+ AstraZeneca     Moderna   973    10     329      62
+      Pfizer     Moderna   421     6     279      50
+      Pfizer       Other     0     0     130      49
+      Pfizer     Janssen   253     1     126      43
+ AstraZeneca     Janssen  1653     7     109      64
+ AstraZeneca       Other     0     0      34      72
+     Moderna     Janssen   989     2      33      47
+     Moderna       Other     0     0      25      62
+      Pfizer AstraZeneca     0     0      24      51
+       Other AstraZeneca     0     0      21      48
+     Moderna AstraZeneca   630     1       7      59
+       Other        None     0     0       1      47
+       Other      Pfizer     0     0       1      80
+       type1       type2  asmr  dead     pop meanage</pre>
+<p>But actually ASMR is unreliable in cases like this where there's only a small number of people and the people can be unevenly distributed across age groups. In the following code I calculated the expected number of deaths by multiplying the Czech mortality rate for each age in 2021-2022 with the number of people for each age. I looked at all 6 pairs of crossovers between Pfizer, Moderna, and AstraZeneca vaccines, but the total excess mortality between them was only about -18%:</p>
+<pre>retype=\(x){name1=c(&quot;&quot;,&quot;Comirnaty&quot;,&quot;SPIKEVAX&quot;,&quot;VAXZEVRIA&quot;,&quot;COVID-19 Vaccine Janssen&quot;);name2=c(&quot;None&quot;,&quot;Pfizer&quot;,&quot;Moderna&quot;,&quot;AstraZeneca&quot;,&quot;Janssen&quot;);ifelse(x%in%name1,name2[match(x,name1)],&quot;Other&quot;)}
+
+base=fread(&quot;http://sars2.net/f/czpopdead.csv&quot;)[year%in%2021:2022,.(sum(dead)/sum(pop)),by=age][[2]]
+rec=fread(&quot;CR_records.csv&quot;)
+
+t=rec[Datum_1&lt;as.Date(&quot;2022-1-1&quot;),.(dead=sum(!is.na(DatumUmrti)&amp;DatumUmrti&lt;Datum_1+365),pop=.N),by=.(age=pmin(100,2021-Rok_narozeni),type1=retype(OckovaciLatka_1),type2=retype(OckovaciLatka_2))]
+pick=c(&quot;Pfizer&quot;,&quot;Moderna&quot;,&quot;AstraZeneca&quot;)
+t=t[type1%in%pick&amp;type2%in%pick&amp;type1!=type2]
+
+t=rbind(t,t[,.(dead=sum(dead),pop=sum(pop),type1=&quot;Total&quot;),by=.(age,type2)])
+t=rbind(t,t[,.(dead=sum(dead),pop=sum(pop),type2=&quot;Total&quot;),by=.(age,type1)])
+
+t[,.(excesspct=round((sum(dead)/sum(pop*base[pmin(age,100)+1])-1)*100),dead=sum(dead),pop=sum(pop),meanage=round(weighted.mean(age,pop))),by=.(type1,type2)][order(type1,type2)]|&gt;print(row.names=F)</pre>
+<!-- -->
+<pre>       type1       type2 excesspct dead  pop meanage
+ AstraZeneca     Moderna       -20   10  329      62
+ AstraZeneca      Pfizer       -24   46 1795      61
+ AstraZeneca       Total       -23   56 2124      62
+     Moderna AstraZeneca       982    1    7      59
+     Moderna      Pfizer         6   13  569      48
+     Moderna       Total        13   14  576      48
+      Pfizer AstraZeneca      -100    0   24      51
+      Pfizer     Moderna       -11    6  279      50
+      Pfizer       Total       -18    6  303      50
+       Total AstraZeneca        51    1   31      53
+       Total     Moderna       -17   16  608      56
+       Total      Pfizer       -19   59 2364      58
+       Total       Total       -18   76 3003      58</pre>
+<p>In the output above Pfizer-Moderna has a similar excess mortality percent as Moderna-Pfizer, even though in the block of output before it Moderna-Pfizer got over 3 times higher ASMR than Pfizer-Moderna. However that's because the Moderna-Pfizer group had one death in ages 10-19 and one death in ages 40-49, which together added over 500 to the total ASMR value. With ASMR, the mortality rates of younger age groups that make up a large percent of the standard population are given more weight than the mortality rates of the oldest age groups that make up a small percent of the standard population:</p>
+<pre>std=fread(&quot;http://sars2.net/f/czpopdead.csv&quot;)[year==2022,pop]
+t[type1==&quot;Moderna&quot;&amp;type2==&quot;Pfizer&quot;,.(asmr=sum(dead/pop*std[age+1]/sum(std)*1e5),dead=sum(dead),pop=sum(pop),stdpoppct=100*sum(std[age+1]/sum(std))),by=.(agegroup=age%/%10*10)][order(agegroup)]|&gt;transform(asmrperdead=asmr/dead)|&gt;mutate_if(is.double,round)|&gt;print(row.names=F)</pre>
+<!-- -->
+<pre> agegroup asmr dead pop stdpoppct asmrperdead
+       10  282    1  33         8         282
+       20    0    0 107        10         NaN
+       30    0    0 105        13         NaN
+       40  258    1  73        16         258
+       50    0    0  67        13         NaN
+       60    0    0  64        12         NaN
+       70  671    4  72        10         168
+       80  179    3  33         3          60
+       90  117    4  15         0          29 # for ages 90-99 the contribution to ASMR per death was about one tenth of the contribution in ages 10-19</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
