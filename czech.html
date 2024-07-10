@@ -58,6 +58,7 @@ th{background:#3a3a3a;text-align:left;font-weight:bold}
 <li><a href=#Excess_mortality_relative_to_all_people_matched_by_age>Excess mortality relative to all people matched by age</a></li>
 <li><a href=#Excess_mortality_by_month_of_vaccination_and_month_of_death>Excess mortality by month of vaccination and month of death</a></li>
 <li><a href=#Excess_mortality_by_type_of_first_vaccine>Excess mortality by type of first vaccine</a></li>
+<li><a href=#Deaths_and_mortality_rate_by_weeks_after_first_dose>Deaths and mortality rate by weeks after first dose</a></li>
 </ul>
 
 <h2>
@@ -65,7 +66,7 @@ th{background:#3a3a3a;text-align:left;font-weight:bold}
 </h2>
 <p>Kirsch wrote: <span class="quote">&quot;Vaccines were randomly distributed for those wishing to get vaxxed. [...] People were not allowed to select which vaccines they got. [...] The randomization of which vaccine someone got created a perfect real-world randomized clinical trial where we could compute the mortality rates for 1 year after Dose 2 for the two most popular vaccines.&quot;</span> [<a href="https://github.com/skirsch/Czech">https://github.com/skirsch/Czech</a>]</p>
 <p>However I didn't find any source which said that the vaccines were actually allocated randomly in the Czech Republic.</p>
-<p>In the FOIA data the average year of birth is about 1973 for people whose vaccine type for the second dose was <span class="quote">&quot;Comirnaty&quot;</span> (Pfizer) but about 1966 for <span class="quote">&quot;SPIKEVAX&quot;</span> (Moderna), which indicates that the vaccine types were not allocated randomly. And there's also about 6 million people whose second vaccine type was Comirnaty but only about 500,000 people whose second vaccine type was Spikevax:</p>
+<p>In the FOIA record-level the average year of birth is about 1973 for people whose vaccine type for the second dose was <span class="quote">&quot;Comirnaty&quot;</span> (Pfizer) but about 1966 for <span class="quote">&quot;SPIKEVAX&quot;</span> (Moderna), which indicates that the vaccine types were not allocated randomly. And there's also about 6 million people whose second vaccine type was Comirnaty but only about 500,000 people whose second vaccine type was Spikevax:</p>
 <pre>&gt; system(&quot;curl -Ls https://github.com/skirsch/Czech/raw/main/data/CR_records.csv.xz|xz -dc&gt;CR_records.csv&quot;)
 &gt; rec=data.table::fread(&quot;CR_records.csv&quot;)
 &gt; rec[,.(year=mean(Rok_narozeni),.N),by=.(type=OckovaciLatka_2)][order(year)]|&gt;print(row.names=F)
@@ -105,7 +106,7 @@ th{background:#3a3a3a;text-align:left;font-weight:bold}
 <a href=#Bucket_analysis id=Bucket_analysis>Bucket analysis</a>
 </h2>
 <p>The following code generates a file for deaths and person-days by ongoing month and dose number. It's similar to the <code>buckets.py</code> script provided by Kirsch, but it accounts for the aging of people over time correctly. In <code>buckets.py</code> the age of each person is always either the age on the day of death or the age on the day when the script was ran for people who didn't die. [<a href="https://github.com/skirsch/Czech/blob/main/code/buckets.py">https://github.com/skirsch/Czech/blob/main/code/buckets.py</a>]</p>
-<p>The FOIA data only has a year of birth for each person but not a date of birth, so here I generated a random date of birth for each person.</p>
+<p>The record-level data only has a year of birth for each person but not a date of birth, so here I generated a random date of birth for each person.</p>
 <pre>library(data.table)
 
 # unique apply (faster for long vectors with many repeated values)
@@ -170,14 +171,14 @@ year,age,pop,dead
 <h2>
 <a href=#Simple_yearly_ASMR_calculation id=Simple_yearly_ASMR_calculation>Simple yearly ASMR calculation</a>
 </h2>
-<p>When I used Eurostat's data for yearly deaths and population estimates to calculate the yearly ASMR among the total population of the Czech Republic, it was about 1343 for 2021 and 1143 for 2022. My standard population was Eurostat's Czech population estimates for January 1st 2022:</p>
+<p>When I used Eurostat's data to calculate the yearly ASMR among the total population of the Czech Republic, it was about 1343 for 2021 and 1143 for 2022. My standard population was Eurostat's Czech population estimates for January 1st 2022:</p>
 <pre>&gt; pop=read.csv(&quot;http://sars2.net/f/czpopdead.csv&quot;)
 &gt; std=pop$pop[pop$year==2022]
 &gt; asmr=tapply(pop$dead/pop$pop*std[pop$age+1]/sum(std)*1e5,pop$year,sum)
 &gt; round(tail(asmr))
 2017 2018 2019 2020 2021 2022
 1143 1134 1104 1244 1343 1143</pre>
-<p>In the FOIA data unvaccinated people had an ASMR of about 2064 in 2021 and 1865 in 2022, but it might partially be because of the healthy vaccinee effect:</p>
+<p>In the record-level data unvaccinated people had an ASMR of about 2064 in 2021 and 1865 in 2022, but it might partially be because of the healthy vaccinee effect because people with 1 or 2 doses also had high ASMR in 2022:</p>
 <pre>&gt; buck=fread(&quot;http://sars2.net/f/czbuckets.gz&quot;)
 &gt; a=aggregate(buck[,4:5],list(year=substr(buck$date,1,4),dose=buck$dose,age=buck$age),sum)
 &gt; m=tapply(a$dead/a$alive*std[pmin(a$age,100)+1]/sum(std)*365e5,a[,1:2],sum,na.rm=T)
@@ -187,7 +188,7 @@ year      0    1    2   3    4    5  6  7
   2020 1245    0    0  NA   NA   NA NA NA
   2021 2078 1068  885 610 4837    0  0 NA
   2022 1875 2099 1773 889  866 2206  0  0</pre>
-<p>This shows the excess ASMR as percentage of the ASMR among the general population of Czechia:</p>
+<p>This shows the excess ASMR as percentage of ASMR the same year among the total Czech population:</p>
 <pre>&gt; round((m/c(tail(asmr,4))-1)*100)
       dose
 year    0    1    2   3   4    5    6    7
@@ -198,7 +199,7 @@ year    0    1    2   3   4    5    6    7
 <a href=#Simple_ASMR_by_vaccine_type_during_the_first_year_after_the_first_dose id=Simple_ASMR_by_vaccine_type_during_the_first_year_after_the_first_dose>Simple ASMR by vaccine type during the first year after the first dose</a>
 </h2>
 <p>In the code below I used a simplified but somewhat inaccurate method to calculate ASMR within the first 365 days from the first dose, so that I treated the age of each person as their year of birth subtracted from 2021, and I didn't remove people from the population size after they died. I only included people who got the first dose before 2022 so all people had at least 365 days of follow-up time to die after vaccination, since the record-level data only includes deaths up to the end of 2022.</p>
-<p>I got about 32% higher ASMR for Moderna than Pfizer, but they were still both far below the ASMR among the total population of Czechia in 2021 and 2022:</p>
+<p>I got about 32% higher ASMR for Moderna than Pfizer, but they were still both far below the ASMR of the total Czech population in 2021 and 2022:</p>
 <pre>&gt; std=fread(&quot;http://sars2.net/f/czpopdead.csv&quot;)[year==2022,pop]
 &gt; system(&quot;curl -Ls https://github.com/skirsch/Czech/raw/main/data/CR_records.csv.xz|xz -dc&gt;CR_records.csv&quot;)
 &gt; rec=fread(&quot;CR_records.csv&quot;)
@@ -251,7 +252,7 @@ year    0    1    2   3   4    5    6    7
 11: COVID-19 Vaccine Janssen                 Comirnaty Omicron XBB.1.5. 5-11      6
 12: COVID-19 Vaccine Janssen       SPIKEVAX BIVALENT ORIGINAL/OMICRON BA.4-5      4
 13: COVID-19 Vaccine Janssen                               Nuvaxovid XBB 1.5      1</pre>
-<p>However the date of first vaccination was much later for Janssen vaccines than for the other three most popular vaccine types:</p>
+<p>However the average date of first vaccination was much later for Janssen vaccines than for the other three most popular vaccine types:</p>
 <pre>&gt; rec[,.(date=rec$Datum_1,type=rec$OckovaciLatka_1)][type!=&quot;&quot;&amp;type%in%type[rowid(type)==1e4]][,.(date=mean(date),.N),by=type][order(date)]
                        type       date       N
 1:                VAXZEVRIA 2021-04-02  447450 # AstraZeneca
@@ -644,6 +645,17 @@ pheatmap::pheatmap(mpop,filename=&quot;pop.png&quot;,display_numbers=disp2,
   breaks=seq(0,maxcolor2,,256),sapply(seq(1,0,,256),\(i)rgb(i,i,i)))
 
 system(&quot;w=`identify -format %w mort.png`;pad=38;convert -gravity northwest -pointsize 42 -font Arial \\( -splice x24 -size $[w-pad]x caption:&#39;Czech record-level data: Excess mortality percent up to end of 2022 by month of vaccination and type of first vaccine dose&#39; -extent $[w-pad]x -gravity center \\) mort.png -gravity northwest \\( -size $[w-40]x caption:&#39;Person-years from month of vaccination on x-axis up to end of 2022&#39; -extent $[w-pad]x -gravity center \\) pop.png -append 1.png&quot;)</pre>
+<h2>
+<a href=#Deaths_and_mortality_rate_by_weeks_after_first_dose id=Deaths_and_mortality_rate_by_weeks_after_first_dose>Deaths and mortality rate by weeks after first dose</a>
+</h2>
+<p>In 2023 Kirsch published data from Medicare which showed the number of deaths by days since vaccination (which was the first vaccination listed in the database which was generally the first dose). It seems to have a bump in mortality rate about 3-4 weeks after vaccination, which I speculated might have been because of people who died soon after the second dose, because the second dose was often given about 3-4 weeks after the first dose (<a href="https://kirschsubstack.com/p/game-over-medicare-data-shows-the#%C2%A7the-medicare-data-that-i-received">https://kirschsubstack.com/p/game-over-medicare-data-shows-the#%C2%A7the-medicare-data-that-i-received</a>):</p>
+<div class="width6">
+<img src="i/czech-weekafter-2.jpg">
+</div>
+<p>However in the Czech data there also seems to be a bump in deaths around weeks 2-4 after vaccination (where week 0 consists of the day of vaccination and the next 6 days):</p>
+<div class="width7">
+<img src="i/czech-weekafter.png">
+</div>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
