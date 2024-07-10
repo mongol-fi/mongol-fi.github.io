@@ -59,7 +59,7 @@ th{background:#3a3a3a;text-align:left;font-weight:bold}
 <li><a href=#Excess_mortality_by_month_of_vaccination_and_month_of_death>Excess mortality by month of vaccination and month of death</a></li>
 <li><a href=#Excess_mortality_by_type_of_first_vaccine>Excess mortality by type of first vaccine</a></li>
 <li><a href=#Deaths_by_weeks_after_first_dose>Deaths by weeks after first dose</a></li>
-<li><a href=#Projected_monthly_mortality_rates_by_age_group_based_on_a_2010_2019_trend>Projected monthly mortality rates by age group based on a 2010-2019 trend</a></li>
+<li><a href=#Projected_mortality_rates_by_age_group_based_on_a_2010_2019_trend>Projected mortality rates by age group based on a 2010-2019 trend</a></li>
 <li><a href=#Excess_mortality_by_weeks_after_vaccination_and_age_group>Excess mortality by weeks after vaccination and age group</a></li>
 </ul>
 
@@ -648,6 +648,10 @@ for(day in as.list(seq(mindate,maxdate,1))){
 
 setorder(buck,month,vaxmonth,type,age,week)
 fwrite(buck,&quot;czbucketsfirstdosetype&quot;)</pre>
+<p>The plot below is otherwise similar to the first plot except the baseline is the mortality among only unvaccinated people instead of both unvaccinated and vaccinated people. It shows that during the COVID wave in December 2021, people with a first dose from a Moderna vaccine had about 65% lower deaths than unvaccinated people matched by age (even though Kirsch was making it seem like people with a Moderna vaccine were dropping like flies):</p>
+<div class="width8">
+<img src="i/czech-firstdosetype-3.png">
+</div>
 <h2>
 <a href=#Deaths_by_weeks_after_first_dose id=Deaths_by_weeks_after_first_dose>Deaths by weeks after first dose</a>
 </h2>
@@ -793,7 +797,7 @@ theme(axis.text=element_text(size=8,color=&quot;black&quot;),
   plot.title=element_text(size=9,margin=margin(.2,0,.4,0,&quot;lines&quot;)))
 ggsave(&quot;1.png&quot;,width=5,height=3.4,dpi=400)</pre>
 <h2>
-<a href=#Projected_monthly_mortality_rates_by_age_group_based_on_a_2010_2019_trend id=Projected_monthly_mortality_rates_by_age_group_based_on_a_2010_2019_trend>Projected monthly mortality rates by age group based on a 2010-2019 trend</a>
+<a href=#Projected_mortality_rates_by_age_group_based_on_a_2010_2019_trend id=Projected_mortality_rates_by_age_group_based_on_a_2010_2019_trend>Projected mortality rates by age group based on a 2010-2019 trend</a>
 </h2>
 <p>The Czech Statistical Office has published weekly data for deaths by 5-year age groups: <a href="https://vdb.czso.cz/vdbvo2/faces/en/index.jsf?page=vystup-objekt-parametry&pvo=DEMD007KR-R2024&sp=A&skupId=3629&katalog=30845&z=T">https://vdb.czso.cz/vdbvo2/faces/en/index.jsf?page=vystup-objekt-parametry&amp;pvo=DEMD007KR-R2024&amp;sp=A&amp;skupId=3629&amp;katalog=30845&amp;z=T</a>.</p>
 <p>The following code calculates daily mortality rates in 2010-2019 by interpolating the weekly deaths to daily deaths, and it interpolates Eurostat's yearly population sizes to daily population sizes. Then it projects a seasonality-adjusted linear trend of the mortality rate in each 5-year age group to 2020-2022:</p>
@@ -835,8 +839,8 @@ head(rate,2)
 <div class="width7">
 <img src="i/czech-ageweek.png">
 </div>
-<p>In the plot above the total excess mortality was only about -4% for ages 90+ but about -31% for ages 40-49, which might partially be because my baseline was calculated based on the mortality rate among both vaccinated and unvaccinated people in the total Czech population, but because ages 90+ have a small percentage of unvaccinated people, the mortality rate of both unvaccinated and vaccinated people in ages 90+ is similar to the mortality rate of vaccinated people only.</p>
-<p>If the age of each person is treated as 2022 minus the year of birth, then the percentage of people in the Czech data who have a first dose listed is about 61% in ages 90+ but only about 38% in ages 40-49. (I excluded people who died in 2020, because they made up a fairly large fraction of people in ages 90+ with no vaccine dose listed.)</p>
+<p>In the plot above the total excess mortality was only about -4% for ages 90+ but about -30% for ages 50-59, which might partially be because my baseline was calculated based on the mortality rate among both vaccinated and unvaccinated people in the total Czech population, but ages 90+ have less unvaccinated people than ages 50-59 so unvaccinated people have less impact on the baseline in ages 90+. If ages 90+ would have 99% vaccinated people, then even if the 1% of unvaccinated people would have very high mortality, the excess mortality of vaccinated people would still be close to zero using my method of calculating the baseline.</p>
+<p>If the age of each person is treated as 2022 minus the year of birth, then the percentage of people in the Czech data who have a first dose listed is about 61% in ages 90+ but only about 38% in ages 40-49 (if people who died in 2020 are excluded, since they generally didn't have time to get vaccinated before they died):</p>
 <pre>&gt; rec=fread(&quot;CR_records.csv&quot;)
 &gt; rec[!DatumUmrti&lt;&quot;2021-01-01&quot;,.(vaxpct=mean(!is.na(Datum_1))*100),by=.(age=pmax(0,pmin(90,(2021-Rok_narozeni)%/%10*10)))][order(age)]|&gt;round(1)
     age vaxpct
