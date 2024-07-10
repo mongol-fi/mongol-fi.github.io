@@ -535,7 +535,7 @@ age=\(x,y){x=as.numeric(x);y=as.numeric(y);(y-x-(y-789)%/%1461+(x-789)%/%1461)%/
 
 mindate=as.Date(&quot;2020-1-1&quot;);maxdate=as.Date(&quot;2022-12-31&quot;)
 
-rec=fread(&quot;CR_records.csv&quot;)
+rec=fread(&quot;Czech/data/CR_records.csv&quot;)
 t=data.table(id=1:nrow(rec),death=rec$DatumUmrti)
 set.seed(0);t$birth=ua(ua(rec$Rok_narozeni,paste0,&quot;-1-1&quot;),as.Date)+sample(0:364,nrow(t),T)
 t=t[rep(1:nrow(t),2),]
@@ -554,8 +554,9 @@ buck=data.table()
 for(day in as.list(seq(mindate,maxdate,1))){
   cat(as.character(day),&quot;\n&quot;)
   d=unique(t[date&lt;=day&amp;(is.na(death)|day&lt;=death)&amp;day&gt;=birth],by=&quot;id&quot;)
-  d=d[,.(month=substr(day,1,7),vaxmonth,age=age(birth,day),alive=1,type,dead=nafill(as.numeric(death==day),,0))]
-  buck=rbind(buck,d)[,.(alive=sum(alive),dead=sum(dead)),by=.(month,vaxmonth,age,type)]
+  d=d[,.(month=substr(day,1,7),vaxmonth,age=age(birth,day),alive=1,type,
+    dead=nafill(as.numeric(death==day),,0),week=as.numeric(day-date)%/%7)]
+  buck=rbind(buck,d)[,.(alive=sum(alive),dead=sum(dead)),by=.(month,vaxmonth,age,type,week)]
 }
 
 fwrite(buck,&quot;czbucketsfirstdosetype&quot;)</pre>
@@ -648,14 +649,148 @@ system(&quot;w=`identify -format %w mort.png`;pad=38;convert -gravity northwest 
 <h2>
 <a href=#Deaths_and_mortality_rate_by_weeks_after_first_dose id=Deaths_and_mortality_rate_by_weeks_after_first_dose>Deaths and mortality rate by weeks after first dose</a>
 </h2>
-<p>In 2023 Kirsch published data from Medicare which showed the number of deaths by days since vaccination (which was the first vaccination listed in the database which was generally the first dose). It seems to have a bump in mortality rate about 3-4 weeks after vaccination, which I speculated might have been because of people who died soon after the second dose, because the second dose was often given about 3-4 weeks after the first dose (<a href="https://kirschsubstack.com/p/game-over-medicare-data-shows-the#%C2%A7the-medicare-data-that-i-received">https://kirschsubstack.com/p/game-over-medicare-data-shows-the#%C2%A7the-medicare-data-that-i-received</a>):</p>
+<p>In 2023 Kirsch published data from Medicare which showed the number of deaths by days since a COVID vaccine given in 2021 (which was the first vaccine dose listed in the Medicare database which was generally the first dose). It seems to have a bump in mortality rate about 20-30 days after vaccination, which I speculated might have been because of people who died soon after the second dose, because the second dose was often given about 3-4 weeks after the first dose: [<a href="https://kirschsubstack.com/p/game-over-medicare-data-shows-the#%C2%A7the-medicare-data-that-i-received">https://kirschsubstack.com/p/game-over-medicare-data-shows-the#%C2%A7the-medicare-data-that-i-received</a>]</p>
 <div class="width6">
 <img src="i/czech-weekafter-2.jpg">
 </div>
-<p>However in the Czech data there also seems to be a bump in deaths around weeks 2-4 after vaccination (where week 0 consists of the day of vaccination and the next 6 days):</p>
+<p>I noticed that the Czech data also seems to be a bump in deaths around weeks 2-4 after vaccination (where week 0 consists of the day of vaccination and the next 6 days):</p>
 <div class="width7">
 <img src="i/czech-weekafter.png">
 </div>
+<p>However in the plot above my baseline was not adjusted for seasonal variation in mortality, because I calculated the baseline based on the total mortality rate in 2021-2022 among all people who are included in the record-level data. In the plot below the dark gray baseline was calculated the same way as in the plot above. But if you look at the light gray baseline which is adjusted for seasonal variation in mortality and for the impact of COVID waves, there's a big decrease in the baseline during the first 10 weeks after vaccination, which is because many people got vaccinated in the first quarter of 2021 when there was a large number of COVID deaths and there was also higher mortality due to the winter:</p>
+<div class="width5">
+<img src="i/czech-weekafter-3.png">
+</div>
+<p>In the plot above if you compare the black for actual deaths against the dark gray baseline that is not adjusted for seasonality, the period after vaccination that has clearly reduced mortality seems to last only about 2 weeks, which is surprisingly short compared to other datasets like the New Zealand data released by Barry Young. But the period with reduced mortality is actually longer if you compare the black line against the light gray line instead, as you can see from this plot which shows the excess percentage of deaths relative to the baseline:</p>
+<div class="width5">
+<img src="i/czech-weekafter-4.png">
+</div>
+<p>So I suspect the reason why the Medicare data had a spike in deaths around days 20-30 might similarly be because many people received the first dose in January to February 2021 when there was a sharp spike in excess mortality in the United States, but the excess mortality had fallen near zero by March 2021.</p>
+<p>Here's code for the second plot:</p>
+<pre>buck=fread(&quot;http://sars2.net/f/czbucketsfirstdosetype.gz&quot;)
+buck=buck[,.(dead=sum(dead),alive=sum(alive)),by=.(month,age,type,week)]
+
+rate1=buck[,.(rate1=sum(dead)/sum(alive)),by=age]
+rate2=buck[,.(rate2=sum(dead)/sum(alive)),by=.(month,age)]
+me=merge(merge(buck,rate1),rate2,by=c(&quot;age&quot;,&quot;month&quot;))[type!=&quot;Unvaccinated&quot;]
+xy=me[,.(dead=sum(dead),base1=sum(rate1*alive),base2=sum(rate2*alive)),by=week][order(week)]
+
+png(&quot;1.png&quot;,1200,800,res=198)
+par(mar=c(2.3,2.3,2.1,.8),mgp=c(0,.6,0))
+tit=&quot;Czech record-level data: Deaths by weeks after first dose&quot;
+leg=c(&quot;Actual deaths&quot;,&quot;Same baseline for each month&quot;,&quot;Different baseline for each month&quot;)
+col=c(&quot;black&quot;,&quot;gray50&quot;,&quot;gray80&quot;)
+plot(xy$week,xy$base2,type=&quot;l&quot;,col=col[3],main=tit,xlab=NA,ylab=NA,lwd=1.5)
+lines(xy$week,xy$base1,type=&quot;l&quot;,col=col[2],lwd=1.5)
+lines(xy$week,xy$dead,type=&quot;l&quot;,col=col[1],lwd=1.5)
+legend(&quot;bottom&quot;,legend=leg,col=col,lty=1,lwd=1.5)
+dev.off()</pre>
+<p>And here's code for the first plot:</p>
+<pre>library(ggplot2);library(data.table)
+
+ua=\(x,y,...){u=unique(x);y(u,...)[match(x,u)]}
+
+bin=7;maxdate=as.Date(&quot;2022-12-31&quot;)
+
+rec=fread(&quot;CR_records.csv&quot;,showProgress=F)
+
+t=rec[,.(id=1:.N,death=DatumUmrti,date=Datum_1,type=OckovaciLatka_1,birth=Rok_narozeni)][!is.na(date)]
+set.seed(0);t$birth=ua(ua(t$birth,paste0,&quot;-1-1&quot;),as.Date)+sample(0:364,nrow(t),T)
+
+name1=c(&quot;Comirnaty&quot;,&quot;SPIKEVAX&quot;,&quot;VAXZEVRIA&quot;,&quot;COVID-19 Vaccine Janssen&quot;)
+name2=c(&quot;Pfizer&quot;,&quot;Moderna&quot;,&quot;AstraZeneca&quot;,&quot;Janssen&quot;)
+t=t[!is.na(date)&amp;type%in%name1][,type:=name2[match(type,name1)]]
+
+age=as.numeric(t$date-t$birth)/365.25
+dead=t[!is.na(t$death)]
+deadbin=(as.numeric(dead$death)-as.numeric(dead$date))%/%bin
+endbin=(as.numeric(maxdate)-as.numeric(t$date))%/%bin
+
+cmr=fread(&quot;http://sars2.net/f/czpopdead.csv&quot;)[year%in%2021:2022,.(sum(dead)/sum(pop)*1e5),by=age][[2]]
+
+bins=0:max(endbin)
+pop=rev(cumsum(rev(table(factor(endbin,bins)))))*bin
+baseline=sapply(bins,\(i)mean(cmr[pmin(100,floor(age[i&lt;=endbin]+i*bin/365))+1]))
+
+xy=data.frame(bin=bins,baseline,pop)
+xy$dead=as.numeric(table(factor(deadbin,xy$bin)))
+xy$cmr=xy$dead/xy$pop*1e5*365
+xy$age=sapply(bins,\(i)mean(age[i&lt;=endbin]))+xy$bin*bin/365
+deadage=(as.numeric(dead$death)-as.numeric(dead$birth))/365.25
+xy$deadage=tapply(deadage,factor(deadbin,xy$bin),mean)+xy$bin*bin/365
+xy$deadbase=xy$baseline*xy$pop/1e5/365
+
+xy$cmr[xy$pop&lt;3e4]=NA
+
+lab=read.csv(row.names=1,text=&quot;name,title
+cmr,\&quot;Mortality rate per 1,000 person-years\&quot;
+baseline,Baseline for mortality rate
+dead,Deaths
+deadbase,Baseline for deaths
+age,Average age of population
+deadage,Average age at death
+pop,Population in 100k people&quot;)
+lab$color=c(hcl(255,120,40),hcl(255,60,70),&quot;black&quot;,&quot;gray50&quot;,hcl(60,90,60),hcl(60,110,40),hcl(135,80,50))
+
+lab1=strsplit(&quot;cmr,baseline,age,deadage,pop&quot;,&quot;,&quot;)[[1]]
+lab2=strsplit(&quot;dead,deadbase&quot;,&quot;,&quot;)[[1]]
+
+lab$mult=1
+lab[&quot;pop&quot;,]$mult=1/1e5/7
+lab[&quot;baseline&quot;,]$mult=lab[&quot;cmr&quot;,]$mult=1/100
+
+cand=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
+ymax=max(t(t(xy[,lab1])*lab[lab1,]$mult),na.rm=T)
+ystep=cand[which.min(abs(cand-ymax/6))]
+yend=ystep*ceiling(ymax/ystep)
+xstep=cand[which.min(abs(cand-max(xy$bin)/9))]
+xend=xstep*ceiling(max(xy$bin)/xstep)
+xbreak=seq(0,xend,xstep);ybreak=seq(0,yend,ystep)
+ymax2=max(t(t(xy[,lab2])*lab[lab2,]$mult),na.rm=T)
+ystep2=cand[which.min(abs(cand-ymax2/6))]
+yend2=ceiling(ymax2/ystep2)*ystep2
+secmult=yend/yend2*.9999
+
+legh=.38;legstep=15
+legy1=rev(seq(0,,yend/legstep,length(lab1)))+(legh-length(lab1)/legstep/2)*yend
+legy2=rev(seq(0,,yend/legstep,length(lab2)))+(legh-length(lab2)/legstep/2)*yend
+leg1=data.frame(x=.02*xend,y=legy1,label=lab[lab1,]$title,color=lab[lab1,]$color)
+leg2=data.frame(x=.98*xend,y=legy2,label=lab[lab2,]$title,color=lab[lab2,]$color)
+
+lab$mult=lab$mult*ifelse(rownames(lab)%in%lab2,secmult,1)
+xy2=as.data.frame(t(t(xy)*c(1,lab[names(xy)[-1],]$mult)))
+
+kimi=\(x)ifelse(abs(x)&gt;=1e6,paste0(x/1e6,&quot;M&quot;),ifelse(abs(x)&gt;=1e3,paste0(x/1e3,&quot;k&quot;),x))
+
+ggplot(xy2,aes(x=bin))+
+geom_hline(yintercept=0,linewidth=.35,lineend=&quot;square&quot;)+
+geom_vline(xintercept=c(0,xend),linewidth=.35,lineend=&quot;square&quot;)+
+geom_line(aes(y=dead),linewidth=.4,color=lab[&quot;dead&quot;,]$color)+
+geom_line(aes(y=deadbase),linewidth=.4,color=lab[&quot;deadbase&quot;,]$color)+
+geom_line(aes(y=cmr),linewidth=.4,color=lab[&quot;cmr&quot;,]$color)+
+geom_line(aes(y=baseline),linewidth=.4,color=lab[&quot;baseline&quot;,]$color)+
+geom_line(aes(y=pop),linewidth=.4,color=lab[&quot;pop&quot;,]$color)+
+geom_point(aes(y=age),size=.4,color=lab[&quot;age&quot;,]$color)+
+geom_point(aes(y=deadage),size=.4,color=lab[&quot;deadage&quot;,]$color)+
+geom_label(data=leg1,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.8),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.04,&quot;lines&quot;),label.size=0,size=3.2,hjust=0,vjust=.5,color=leg1$color)+
+geom_label(data=leg2,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.8),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.04,&quot;lines&quot;),label.size=0,size=3.2,hjust=1,vjust=.5,color=leg2$color)+
+labs(x=NULL,y=&quot;&quot;,title=&quot;Czech record-level data: Deaths by weeks after first vaccine dose&quot;,subtitle=&quot;People are kept under the first dose after they get a second dose. The baseline was calculated by multiplying a vector of Czech mortality rates for each age in 2021-2022 by a vector for the number of person-days for each age, so the baseline is not adjusted for seasonal variation in mortality.&quot;|&gt;stringr::str_wrap(90))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+scale_x_continuous(limits=c(0,xend),breaks=xbreak)+
+scale_y_continuous(limits=c(0,yend),breaks=ybreak,label=kimi,sec.axis=sec_axis(trans=~./secmult,breaks=seq(0,yend2,ystep2),label=kimi))+
+theme(axis.text=element_text(size=8,color=&quot;black&quot;),
+  axis.ticks=element_line(linewidth=.35,color=&quot;black&quot;),
+  axis.ticks.length=unit(.2,&quot;lines&quot;),
+  axis.title=element_blank(),
+  axis.title.y.right=element_text(margin=margin(0,0,0,5)),
+  legend.position=&quot;none&quot;,
+  panel.background=element_rect(fill=&quot;white&quot;),
+  panel.grid=element_blank(),
+  plot.margin=margin(.3,.3,.3,.3,&quot;lines&quot;),
+  plot.subtitle=element_text(size=7.8,margin=margin(0,0,.6,0,&quot;lines&quot;)),
+  plot.title=element_text(size=9,margin=margin(.2,0,.4,0,&quot;lines&quot;)))
+ggsave(&quot;1.png&quot;,width=5,height=3.4,dpi=400)
+system(&quot;qlmanage -p 1.png&amp;&gt;/dev/null&quot;)</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
