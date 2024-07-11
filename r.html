@@ -1216,7 +1216,55 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=comment># the top right cell is the number of white balls not drawn and the bottom right cell is the number of black balls not drawn</span>
 <span class=output>[1] 0.0760389</span>
 <span class=output>
-<span class=title># pull column from data.table as vector</span></span>
-<span class=prompt>&gt;</span> <span class=code>d=data.table(x=1:2,y=10:11);d[[&quot;y&quot;]]</span>
-<span class=output>[1] 10 11</span>
+<span class=title># convert integer to date</span></span>
+<span class=prompt>&gt;</span> <span class=code>v=c(12345,23456)</span>
+<span class=prompt>&gt;</span> <span class=code>`class&lt;-`(v,&quot;Date&quot;)</span>
+<span class=output>[1] &quot;2003-10-20&quot; &quot;2034-03-22&quot;</span>
+<span class=prompt>&gt;</span> <span class=code>as.Date(v,&quot;1970-1-1&quot;)</span>
+<span class=output>[1] &quot;2003-10-20&quot; &quot;2034-03-22&quot;</span>
+<span class=prompt>&gt;</span> <span class=code>library(zoo);as.Date(v)</span><span class=comment> # `zoo` overrides `as.Date` with a version that doesn&apos;t require specifying the origin</span>
+<span class=output>[1] &quot;2003-10-20&quot; &quot;2034-03-22&quot;</span>
+<span class=output>
+<span class=title># specify variable name for `with`</span></span>
+<span class=prompt>&gt;</span> <span class=code>with(list(x=3),x+1)</span>
+<span class=output>[1] 4</span>
+<span class=output>
+<span class=title># convert dataframe to vector efficiently</span></span>
+<span class=prompt>&gt;</span> <span class=code>summary(microbenchmark(times=100,unlist(mtcars),unlist(mtcars,use.names=F)))[,c(1,5)]</span>
+<span class=output>                           expr     mean</span>
+<span class=output>1                unlist(mtcars) 59.31585</span>
+<span class=output>2 unlist(mtcars, use.names = F)  2.98307</span>
+<span class=output>
+<span class=title># add a row for colsums to data.table but ignore non-numeric column</span></span>
+<span class=prompt>&gt;</span> <span class=code>t=data.table(sex=c(&quot;M&quot;,&quot;F&quot;),col1=4:5,col2=6:7)</span>
+<span class=prompt>&gt;</span> <span class=code>rbind(t,t[,-1][,lapply(.SD,sum)][,sex:=&quot;Total&quot;])</span>
+<span class=output>     sex col1 col2</span>
+<span class=output>1:     M    4    6</span>
+<span class=output>2:     F    5    7</span>
+<span class=output>3: Total    9   13</span>
+<span class=output>
+<span class=title># add totals grouped by each variable in data.table</span></span>
+<span class=prompt>&gt;</span> <span class=code>d=data.table(month=month.abb[c(1,1,2,2)],state=state.name[1:2],col1=1:4,col2=10:13)</span>
+<span class=prompt>&gt;</span> <span class=code>d=rbind(d,d[,lapply(.SD,sum),by=month,.SDcols=3:4][,state:=&quot;Total&quot;])</span>
+<span class=prompt>&gt;</span> <span class=code>d=rbind(d,d[,lapply(.SD,sum),by=state,.SDcols=3:4][,month:=&quot;Total&quot;])</span>
+<span class=prompt>&gt;</span> <span class=code>d</span>
+<span class=output>   month   state col1 col2</span>
+<span class=output>1:   Jan Alabama    1   10</span>
+<span class=output>2:   Jan  Alaska    2   11</span>
+<span class=output>3:   Feb Alabama    3   12</span>
+<span class=output>4:   Feb  Alaska    4   13</span>
+<span class=output>5:   Jan   Total    3   21</span>
+<span class=output>6:   Feb   Total    7   25</span>
+<span class=output>7: Total Alabama    4   22</span>
+<span class=output>8: Total  Alaska    6   24</span>
+<span class=output>9: Total   Total   10   46</span>
+<span class=output>
+<span class=title># auto-aggregate numeric columns by non-numeric columns</span></span>
+<span class=prompt>&gt;</span> <span class=code>sum0=\(...)sum(...,na.rm=T)</span>
+<span class=prompt>&gt;</span> <span class=code>aua=\(x,fun=sum0,...){n=sapply(x,is.numeric);aggregate(x[,n,drop=F],x[,!n,drop=F],fun,...)}</span>
+<span class=prompt>&gt;</span> <span class=code>aua(iris,mean)</span>
+<span class=output>     Species Sepal.Length Sepal.Width Petal.Length Petal.Width</span>
+<span class=output>1     setosa        5.006       3.428        1.462       0.246</span>
+<span class=output>2 versicolor        5.936       2.770        4.260       1.326</span>
+<span class=output>3  virginica        6.588       2.974        5.552       2.026</span>
 </pre>

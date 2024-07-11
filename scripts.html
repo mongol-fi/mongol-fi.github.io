@@ -8,9 +8,10 @@ h1,h2,h3,h2 a,h3 a,h2 a:visited,h3 a:visited{font-weight:normal;color:#b5b5b5}
 h1{font-size:2.1em;margin-top:.9em}
 h2{font-size:1.7em}
 h3{font-size:1.3em}
+h4{font-size:1.1em}
 a{color:hsl(220,100%,75%)}
 a:visited{color:hsl(270,100%,75%)}
-pre,code{white-space:pre-wrap;word-wrap:break-word;font:13px Menlo,'DejaVu Sans Mono','Liberation Mono',Consolas,monospace;background:#373737;color:#f2f2f2}
+pre,code{white-space:pre-wrap;word-wrap:break-word;font:13px Menlo,'DejaVu Sans Mono','Liberation Mono',Consolas,monospace;background:#404040;color:#f2f2f2}
 pre{padding:4px}
 blockquote{margin-left:40px;margin-right:0}
 blockquote p{max-width:480px}
@@ -97,8 +98,8 @@ th{background:#3a3a3a;text-align:left;font-weight:bold}
 <li><a href=#Get_consensus_set_of_mutations_in_a_variant>Get consensus set of mutations in a variant</a></li>
 <li><a href=#Find_ORFs_with_seqkit>Find ORFs with seqkit</a></li>
 <li><a href=#Display_multiple_sequence_alignment_and_highlight_positions_which_differ_from_the_consensus_sequence>Display multiple sequence alignment and highlight positions which differ from the consensus sequence</a></li>
-<li><a href=#Display_multiple_sequence_alignment_and_highlight_positions_which_differ_from_the_first_sequence>Display multiple sequence alignment and highlight positions which differ from the first sequence</a></li>
 <li><a href=#Show_amino_acid_alignment_next_to_nucleotide_alignment_and_highlight_positions_that_are_different_from_the_consensus>Show amino acid alignment next to nucleotide alignment and highlight positions that are different from the consensus</a></li>
+<li><a href=#Display_multiple_sequence_alignment_and_highlight_positions_which_differ_from_the_first_sequence>Display multiple sequence alignment and highlight positions which differ from the first sequence</a></li>
 <li><a href=#Make_a_heatmap_for_the_percentage_of_nucleotide_changes_in_different_blocks_of_the_genome>Make a heatmap for the percentage of nucleotide changes in different blocks of the genome</a></li>
 <li><a href=#Make_a_line_plot_of_cumulative_mutations_compared_to_a_target_sequence>Make a line plot of cumulative mutations compared to a target sequence</a></li>
 <li><a href=#Make_a_SNAP_plot_of_cumulative_syn_and_nonsyn_mutations_for_concatenated_coding_sequences>Make a SNAP plot of cumulative syn and nonsyn mutations for concatenated coding sequences</a></li>
@@ -2363,6 +2364,29 @@ seqkit fx2tab env.aa|sed $&#39;s/lcl|//;s/_prot_[^\t]*//&#39;|awk -F\\t &#39;NR=
 <img src="i/scripts-cohl.png">
 </div>
 <h2>
+<a href=#Show_amino_acid_alignment_next_to_nucleotide_alignment_and_highlight_positions_that_are_different_from_the_consensus id=Show_amino_acid_alignment_next_to_nucleotide_alignment_and_highlight_positions_that_are_different_from_the_consensus>Show amino acid alignment next to nucleotide alignment and highlight positions that are different from the consensus</a>
+</h2>
+<pre># awk consensus
+acons()(gawk -F &#39;&#39; &#39;{for(i=1;i&lt;=NF;i++)a[i][$i]++}END{for(i in a){max=0;for(j in a[i])if(a[i][j]&gt;max){max=a[i][j];o=j}printf&quot;%s&quot;,o};print&quot;&quot;}&#39;)
+
+# highlight positions that are different from the first row
+cohl()(awk &#39;NR==1{split($0,a,&quot;&quot;);next}{split($0,b,&quot;&quot;);for(i=1;i&lt;=length;i++)printf&quot;%s&quot;,b[i]==a[i]?b[i]:&quot;\033[31m&quot;b[i]&quot;\033[0m&quot;;print&quot;&quot;}&#39; &quot;$@&quot;)
+
+# highlight positions that are different from the consensus using input with one sequence per line
+cohl2()(x=$(cat);acons&lt;&lt;&lt;&quot;$x&quot;|cohl - &lt;(printf %s\\n &quot;$x&quot;))
+
+brew install seqkit bowtie2
+curl -sL sars2.net/f/sarbe.fa.xz|gzip -dc&gt;sarbe.fa;seqkit seq -g sarbe.fa&gt;sarbe.ungap
+curl &#39;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&amp;rettype=fasta_cds_na&amp;id=NC_045512&#39;&gt;sars2.na
+bow()([[ -e $1.1.bt2 ]]||bowtie2-build --threads 3 &quot;$1&quot; &quot;$1&quot;;bowtie2 --no-unal -p3 -x &quot;$@&quot;)
+
+seqkit grep -nrp =S sars2.na|seqkit subseq -r $[438*3-2]:$[508*3]|bow sarbe.ungap -fU- -a --score-min L,-1,-1|grep -v ^@|ruby -ane&#39;puts [$F[2],$F[3],$F[3].to_i+$F[5].scan(/\d+(?=[MD])/).map(&amp;:to_i).sum-1]*&quot; &quot;&#39;|while read l m n;do seqkit grep -p $l sarbe.ungap|seqkit subseq -r $m:$n;done|seqkit grep -nrvp &#39;MP789 genomic sequence&#39;|sed -E $&#39;s/(,| surface| ORF1| genomic sequence).*//;s/.* /&gt;/&#39;&gt;rbm.fa
+
+seqkit translate rbm.fa|seqkit seq -s|sed &#39;s/./ &amp; /g&#39;|cohl2|sed s/31m/35m/g|paste -d\\n - &lt;(seqkit seq -s rbm.fa|cohl2)|paste -d\  - &lt;(seqkit seq -n rbm.fa|sed &#39;x;p;x&#39;)</pre>
+<div class="width14">
+<img src="i/scripts-rbm.png">
+</div>
+<h2>
 <a href=#Display_multiple_sequence_alignment_and_highlight_positions_which_differ_from_the_first_sequence id=Display_multiple_sequence_alignment_and_highlight_positions_which_differ_from_the_first_sequence>Display multiple sequence alignment and highlight positions which differ from the first sequence</a>
 </h2>
 <pre>seqdif()(seqkit fx2tab|gawk -F\\t &#39;{name[NR]=$1;split($2,z,&quot;&quot;);for(i in z)seq[NR][i]=z[i];if(length($1)&gt;max1)max1=length($1);if(length($2)&gt;max2)max2=length($2)}END{for(i=1;i&lt;=max2;i+=width){printf(&quot;%&quot;(max1+1)&quot;s&quot;,&quot;&quot;);for(pos=i;pos&lt;i+width&amp;&amp;pos&lt;=max2;pos+=10)printf(pos-i&gt;width-10?&quot;%s&quot;:&quot;%-10s&quot;,pos);print &quot;&quot;;for(j in seq){out=sprintf(&quot;%&quot;max1&quot;s &quot;,name[j]);for(k=i;k&lt;=max2&amp;&amp;k&lt;i+width;k++)out=out (seq[j][k]==seq[1][k]?seq[j][k]:&quot;\033[31m&quot;seq[j][k]&quot;\033[0m&quot;);print out}}}&#39; &quot;width=${1-60}&quot;)
@@ -2385,29 +2409,6 @@ seqcol()(seqkit seq -u|seqkit fx2tab|gawk -F\\t &#39;NR==FNR{a[$1]=$2;next}{name
 seqcol&lt;temp</pre>
 <div class="width7">
 <img src="i/scripts-seqdif-2.png">
-</div>
-<h2>
-<a href=#Show_amino_acid_alignment_next_to_nucleotide_alignment_and_highlight_positions_that_are_different_from_the_consensus id=Show_amino_acid_alignment_next_to_nucleotide_alignment_and_highlight_positions_that_are_different_from_the_consensus>Show amino acid alignment next to nucleotide alignment and highlight positions that are different from the consensus</a>
-</h2>
-<pre># awk consensus
-acons()(gawk -F &#39;&#39; &#39;{for(i=1;i&lt;=NF;i++)a[i][$i]++}END{for(i in a){max=0;for(j in a[i])if(a[i][j]&gt;max){max=a[i][j];o=j}printf&quot;%s&quot;,o};print&quot;&quot;}&#39;)
-
-# highlight positions that are different from the first row
-cohl()(awk &#39;NR==1{split($0,a,&quot;&quot;);next}{split($0,b,&quot;&quot;);for(i=1;i&lt;=length;i++)printf&quot;%s&quot;,b[i]==a[i]?b[i]:&quot;\033[31m&quot;b[i]&quot;\033[0m&quot;;print&quot;&quot;}&#39; &quot;$@&quot;)
-
-# highlight positions that are different from the consensus using input with one sequence per line
-cohl2()(x=$(cat);acons&lt;&lt;&lt;&quot;$x&quot;|cohl - &lt;(printf %s\\n &quot;$x&quot;))
-
-brew install seqkit bowtie2
-curl -sL sars2.net/f/sarbe.fa.xz|gzip -dc&gt;sarbe.fa;seqkit seq -g sarbe.fa&gt;sarbe.ungap
-curl &#39;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&amp;rettype=fasta_cds_na&amp;id=NC_045512&#39;&gt;sars2.na
-bow()([[ -e $1.1.bt2 ]]||bowtie2-build --threads 3 &quot;$1&quot; &quot;$1&quot;;bowtie2 --no-unal -p3 -x &quot;$@&quot;)
-
-seqkit grep -nrp =S sars2.na|seqkit subseq -r $[438*3-2]:$[508*3]|bow sarbe.ungap -fU- -a --score-min L,-1,-1|grep -v ^@|ruby -ane&#39;puts [$F[2],$F[3],$F[3].to_i+$F[5].scan(/\d+(?=[MD])/).map(&amp;:to_i).sum-1]*&quot; &quot;&#39;|while read l m n;do seqkit grep -p $l sarbe.ungap|seqkit subseq -r $m:$n;done|seqkit grep -nrvp &#39;MP789 genomic sequence&#39;|sed -E $&#39;s/(,| surface| ORF1| genomic sequence).*//;s/.* /&gt;/&#39;&gt;rbm.fa
-
-seqkit translate rbm.fa|seqkit seq -s|sed &#39;s/./ &amp; /g&#39;|cohl2|sed s/31m/35m/g|paste -d\\n - &lt;(seqkit seq -s rbm.fa|cohl2)|paste -d\  - &lt;(seqkit seq -n rbm.fa|sed &#39;x;p;x&#39;)</pre>
-<div class="width14">
-<img src="i/scripts-rbm.png">
 </div>
 <h2>
 <a href=#Make_a_heatmap_for_the_percentage_of_nucleotide_changes_in_different_blocks_of_the_genome id=Make_a_heatmap_for_the_percentage_of_nucleotide_changes_in_different_blocks_of_the_genome>Make a heatmap for the percentage of nucleotide changes in different blocks of the genome</a>

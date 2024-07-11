@@ -67,6 +67,7 @@ th{background:#3a3a3a;text-align:left;font-weight:bold}
 <li><a href=#Simple_calculation_for_monthly_ratio_of_unvaccinated_ASMR_to_vaccinated_ASMR>Simple calculation for monthly ratio of unvaccinated ASMR to vaccinated ASMR</a></li>
 <li><a href=#Ratio_between_monthly_ASMR_for_Moderna_and_Pfizer_vaccines>Ratio between monthly ASMR for Moderna and Pfizer vaccines</a></li>
 <li><a href=#Monthly_excess_mortality_in_both_vaccinated_and_unvaccinated_people_relative_to_a_2010_2019_trend>Monthly excess mortality in both vaccinated and unvaccinated people relative to a 2010-2019 trend</a></li>
+<li><a href=#Moderna_Pfizer_ratio_by_age_group_and_month_of_vaccination>Moderna-Pfizer ratio by age group and month of vaccination</a></li>
 </ul>
 
 <h2>
@@ -669,7 +670,7 @@ fwrite(buck,&quot;czbucketsfirstdosetype&quot;)</pre>
 <div class="width7">
 <img src="i/czech-weekafter.png">
 </div>
-<p>However in the plot above my baseline was not adjusted for seasonal variation in mortality, because I calculated the baseline based on the total mortality rate in 2021-2022 among all people who are included in the record-level data. In the plot below the dark gray baseline was calculated the same way as in the plot above. But if you look at the light gray baseline which is adjusted for seasonal variation in mortality and for the impact of COVID waves, there's a big decrease in the baseline during the first 10 weeks after vaccination, which is because many people got vaccinated in the first quarter of 2021 when there was a large number of COVID deaths and there was also higher mortality because it was winter:</p>
+<p>However in the plot above my baseline was not adjusted for seasonal variation in mortality, because I calculated the baseline based on the total mortality rate in 2021-2022 among all people who are included in the record-level data. In the plot below the dark gray baseline was calculated the same way as in the plot above. But if you look at the light gray baseline which is adjusted for seasonal variation in mortality and for the impact of COVID waves, there's a big fall in the baseline during the first 10 weeks after vaccination, which is because many people got vaccinated in the first quarter of 2021 when there was a large number of COVID deaths and there was also higher mortality because it was winter:</p>
 <div class="width5">
 <img src="i/czech-weekafter-3.png">
 </div>
@@ -817,7 +818,7 @@ pop=read.csv(&quot;http://sars2.net/f/czpopdead.csv&quot;)|&gt;subset(year&gt;=2
 pop=sapply(split(pop,pop$age),\(x)predict(smooth.spline(an(as.Date(paste0(x$year,&quot;-1-1&quot;))),x$pop),as.numeric(dates))$y)
 pop=t(rowsum(t(pop),pmin(0:100%/%5*5,90)))
 
-seapre=\(x,y,x2=x,spar=.5){
+seapre=\(x,y,x2=x,spar=.5){ # seasonal prediction
   x=as.Date(x,&quot;1970-1-1&quot;);x2=as.Date(x2,&quot;1970-1-1&quot;)
   d=data.frame(x,y);lm=lm(y~x,d)
   daily=tapply(y-predict(lm,list(x)),substr(x,6,10),mean)
@@ -877,14 +878,14 @@ t=merge(t,t[,.(rate=sum(dead)/sum(alive)),.(month,age)])[type!=&quot;Unvaccinate
 
 # # second plot
 # t2=t[type!=&quot;Unvaccinated&quot;];t2$age=pmin(90,t2$age%/%5*5)
-# base=fread(&quot;s/f/czdeadproj.csv&quot;)[,.(dead=sum(dead),pop=sum(pop)),by=.(month=substr(date,1,7),age)]
+# base=fread(&quot;s/f/czdeadproj.csv&quot;)[,.(dead=sum(dead),pop=sum(pop)),.(month=substr(date,1,7),age)]
 # t=merge(t2,base[,.(month,age,rate=dead/pop)])
 
 t=t[,.(dead=sum(dead),alive=sum(alive),base=sum(rate*alive)),.(week%/%bin*bin,age=pmin(90,age%/%agebin*agebin))][order(week)]
 
 t$age=`levels&lt;-`(factor(t$age),paste0(seq(0,maxage,agebin),c(paste0(&quot;-&quot;,seq(agebin-1,maxage,agebin)),&quot;+&quot;)))
 t$week=`levels&lt;-`(factor(t$week),sapply(sort(unique(t$week)),\(i)paste0(i,&quot;-&quot;,i+bin-1)))
-t=rbind(t,t[,.(dead=sum(dead),alive=sum(alive),base=sum(base),week=&quot;Total&quot;),by=age])
+t=rbind(t,t[,.(dead=sum(dead),alive=sum(alive),base=sum(base),week=&quot;Total&quot;),age])
 
 m=tapply(with(t,(dead-base)/ifelse(dead&gt;base,base,dead)*100),t[,2:1],c)
 disp=round(tapply((t$dead/t$base-1)*100,t[,2:1],c))
@@ -981,7 +982,7 @@ t[,.(excesspct=round((sum(dead)/sum(pop*base[pmin(age,100)+1])-1)*100),dead=sum(
        Total     Moderna       -17   16  608      56
        Total      Pfizer       -19   59 2364      58
        Total       Total       -18   76 3003      58</pre>
-<p>In the output above Pfizer-Moderna has a similar excess mortality percent as Moderna-Pfizer, even though in the block of output before it Moderna-Pfizer got over 3 times higher ASMR than Pfizer-Moderna. However that's because the Moderna-Pfizer group had one death in ages 10-19 and one death in ages 40-49, which together added over 500 to the total ASMR value. With ASMR, the mortality rates of younger age groups that make up a large percent of the standard population are given more weight than the mortality rates of the oldest age groups that make up a small percent of the standard population:</p>
+<p>In the output above Pfizer-Moderna has a similar excess mortality percent as Moderna-Pfizer, even though in the block of output before it Moderna-Pfizer got over 3 times higher ASMR than Pfizer-Moderna. However that's because the Moderna-Pfizer group had one death in ages 10-19 and one death in ages 40-49, which together added over 500 units to the total ASMR value. With ASMR, the mortality rates of younger age groups that make up a large percent of the standard population are given more weight than the mortality rates of the oldest age groups that make up a small percent of the standard population:</p>
 <pre>std=fread(&quot;http://sars2.net/f/czpopdead.csv&quot;)[year==2022,pop]
 t[type1==&quot;Moderna&quot;&amp;type2==&quot;Pfizer&quot;,.(asmr=sum(dead/pop*std[age+1]/sum(std)*1e5),dead=sum(dead),pop=sum(pop),stdpoppct=100*sum(std[age+1]/sum(std))),.(agegroup=age%/%10*10)][order(agegroup)]|&gt;transform(asmrperdead=asmr/dead)|&gt;mutate_if(is.double,round)|&gt;print(row.names=F)</pre>
 <!-- -->
@@ -999,7 +1000,7 @@ t[type1==&quot;Moderna&quot;&amp;type2==&quot;Pfizer&quot;,.(asmr=sum(dead/pop*s
 <a href=#Plot_of_multiple_variables_from_OWID id=Plot_of_multiple_variables_from_OWID>Plot of multiple variables from OWID</a>
 </h2>
 <p>In the Czech Republic spikes in excess mortality coincide with spikes in PCR positivity like in other countries, except that after Omicron there seems to be high PCR positivity coupled with low excess mortality, which is also similiar to many other countries. In winter 2020-2021 there's a weird three-hump pattern where there's three different spikes in excess deaths, but each of them also coincides with a spike in PCR positivity. And around mid-2021 when the number of new vaccine doses given peaked, there was low excess mortality.</p>
-<p>Within the period of the record-level data that is after vaccination started and that has mortality data available, the period that has the lowest prevalence of COVID is approximately July to August 2021.</p>
+<p>During the two-year period in the record-level data that has data for deaths available and that is after vaccination started, the period that has the lowest COVID deaths seems to be approximately in July to August 2021.</p>
 <div class="width7">
 <img src="i/czech-owid.png">
 </div>
@@ -1159,7 +1160,7 @@ type              0   10   20   30   40   50   60   70   80   90
 <a href=#Monthly_excess_mortality_in_both_vaccinated_and_unvaccinated_people_relative_to_a_2010_2019_trend id=Monthly_excess_mortality_in_both_vaccinated_and_unvaccinated_people_relative_to_a_2010_2019_trend>Monthly excess mortality in both vaccinated and unvaccinated people relative to a 2010-2019 trend</a>
 </h2>
 <p>Here during the period from October 2020 to April 2021 which had high excess mortality because of COVID, the excess mortality seems to have fallen back down earlier in older age groups, so it first fell close to zero in January in ages 90+, in April in ages 80-89, in May in ages 70-79, and in June in ages 60-69. It might be because older age groups got vaccinated earlier than younger age groups:</p>
-<div class="width12">
+<div class="width11">
 <img src="i/czech-allpop.png">
 </div>
 <p>This shows that the percentage of vaccinated person-days out of all person-days first reached above 50% in March in ages 90+ and 80-89, in April in ages 70-79, in May in ages 60-69, and in June in ages 50-59:</p>
@@ -1180,13 +1181,14 @@ month      0 10 20 30 40 50 60 70 80 90
   2021-10  0 33 54 54 65 71 79 85 84 71
   2021-11  0 37 60 58 69 74 81 86 85 72
   2021-12  0 41 65 62 71 76 82 88 86 74</pre>
+<p>The reason why ages 90+ have such low total excess mortality could partially be because I calculated the baseline using the weekly mortality data by the Czech Statistical Office where there's only one age group for ages 90 and above, so the bin size is too wide because the deaths are concentrated in the upper end of the age group but the population size is concentrated in the lower end. So maybe I should try to interpolate the data to more fine-grained age groups.</p>
 <p>Here's code for making the heatmap:</p>
 <pre>library(data.table);library(colorspace)
 
 t=fread(&quot;http://sars2.net/f/czbucketsfirstdosetype.gz&quot;)
 t=t[,.(dead=sum(dead),alive=sum(alive)),.(month,age=pmin(90,age%/%5*5))]
 
-proj=fread(&quot;http://sars2.net/f/czdeadproj.csv&quot;)[,.(projdead=sum(projdead),pop=sum(pop)),by=.(month=substr(date,1,7),age)]
+proj=fread(&quot;http://sars2.net/f/czdeadproj.csv&quot;)[,.(projdead=sum(projdead),pop=sum(pop)),.(month=substr(date,1,7),age)]
 t=merge(t,proj[,.(month,age,rate=projdead/pop)])
 
 t=t[,.(dead=sum(dead),alive=as.numeric(sum(alive)),base=sum(rate*alive)),.(month,age=pmin(90,age%/%10*10))][order(month)]
@@ -1212,6 +1214,68 @@ pheatmap::pheatmap(m,filename=&quot;0.png&quot;,display_numbers=disp,legend=F,
   breaks=seq(-maxcolor,maxcolor,,256),colorRampPalette(hex(pal))(256))
 
 system(&quot;w=`identify -format %w 0.png`;pad=48;convert \\( -pointsize 42 -font Arial-Bold -size $[w-pad]x caption:&#39;Czech record-level data: Excess mortality percent among both unvaccinated and vaccinated people relative to 2010-2019 trend&#39; \\( -gravity northwest -splice x12 -pointsize 40 -font Arial -interline-spacing -2 caption:&#39;The baseline was calculated based on the historical trend in crude mortality rate within 5-year age groups, so that a seasonality-adjusted linear trend in CMR in 2010-2019 was projected to 2020-2022 and the projected CMR was multiplied by population size to get the expected monthly number of deaths.&#39; \\) -extent $[w-pad]x -gravity center \\) \\( -gravity north 0.png -shave x6 \\) -append -gravity north -splice x20 1.png&quot;)</pre>
+<h2>
+<a href=#Moderna_Pfizer_ratio_by_age_group_and_month_of_vaccination id=Moderna_Pfizer_ratio_by_age_group_and_month_of_vaccination>Moderna-Pfizer ratio by age group and month of vaccination</a>
+</h2>
+<p>The README file in Kirsch's GitHub repository includes this table:</p>
+<div class="width4">
+<img src="i/czech-mrr.png">
+</div>
+<p>I thought the difference might have partially been if people who got vaccinated later had a higher Moderna-Pfizer ratio and younger people got vaccinated later than older people, so I made the heatmap below. I didn't calculate CMR for each age group like Kirsch, but I calculated the ASMR for each single year of age within an age group and then aggregated together the results to get the total ASMR for the ten-year age groups.</p>
+<p>But anyway my heatmap below shows that the Moderna-Pfizer ratio was actually the highest in ages 90+, even though it was fairly low in ages 70-79 and 80-89.</p>
+<p>For some reason people who got vaccinated in April 2021 subsequently had a low Moderna-Pfizer ratio of only about 1.1 (which is shown as 10 in my heatmap below). But ages 70-79 received a large number of first doses in April 2021, which might partially explain their low Moderna-Pfizer ratio.</p>
+<p>In October 2021, November 2021, and February 2022, Pfizer had higher total ASMR than Moderna and two other months where the difference wasn't far above zero. So there seem to be some confounding factors which cause the ratio to shift dramatically over time:</p>
+<div class="width8">
+<img src="i/czech-mrr-2.png">
+</div>
+<pre>library(data.table);library(colorspace)
+
+buck=fread(&quot;http://sars2.net/f/czbucketsfirstdosetype.gz&quot;)
+std=read.csv(&quot;http://sars2.net/f/czcensus2021pop.csv&quot;)[,2]
+
+t=buck[type!=&quot;Unvaccinated&quot;,.(dead=sum(dead),alive=sum(alive)),.(vaxmonth,type,age)]
+
+t=rbind(t,t[,.(dead=sum(dead),alive=sum(alive),vaxmonth=&quot;Total&quot;),.(type,age)])
+totage=t[,.(age=&quot;Total&quot;,alive=as.double(sum(alive)),asmr=sum(dead/alive*std[pmin(age,100)+1]/sum(std)*365e5)),.(vaxmonth,type)]
+t=t[,.(alive=sum(alive),asmr=sum(dead/alive*std[pmin(age,100)+1]/sum(std)*365e5)),.(vaxmonth,type,age=pmin(age%/%10*10,90))]
+t=rbind(t,totage)
+
+t$age=`levels&lt;-`(factor(t$age),c(paste0(seq(0,80,10),&quot;-&quot;,seq(9,89,10)),&quot;90+&quot;,&quot;Total&quot;))
+t[,vaxmonth:=factor(vaxmonth)]
+m1=t[type==&quot;Pfizer&quot;,tapply(asmr,list(age,vaxmonth),c)]
+m2=t[type==&quot;Moderna&quot;,tapply(asmr,list(age,vaxmonth),c)]
+
+mpop=xtabs(alive~age+vaxmonth,t[type%in%c(&quot;Moderna&quot;,&quot;Pfizer&quot;)])/365
+m=(m2-m1)/ifelse(m1&gt;m2,m2,m1)*100
+disp=ifelse(is.nan(m),&quot;Inf&quot;,round(m))
+exp=.8;m=abs(m)^exp*sign(m)
+maxcolor=300^exp;m[is.infinite(m)]=-maxcolor;m[is.nan(m)]=maxcolor
+
+pheatmap::pheatmap(m,filename=&quot;i1.png&quot;,display_numbers=disp,
+  gaps_row=nrow(m)-1,gaps_col=ncol(m)-1,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;white&quot;,
+  number_color=ifelse((abs(m)&gt;.55*maxcolor)&amp;!is.na(m),&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(-maxcolor,maxcolor,,256),
+  colorRampPalette(hex(HSV(c(210,210,210,210,0,0,0,0,0),c(.9,.75,.6,.3,0,.3,.6,.75,.9),c(.4,.65,1,1,1,1,1,.65,.4))))(256))
+
+exp2=.6;mpop2=mpop^exp2
+maxcolor2=max(mpop2[-nrow(m),-ncol(m)])
+
+kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;p=!is.na(x)
+  x[p]=paste0(sprintf(paste0(&quot;%.&quot;,ifelse(e[p]%%3==0,1,0),&quot;f&quot;),x[p]/1e3^(e2[p]-1)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2[p]]);x}
+
+disp2=mpop;disp2[is.na(disp2)]=0;disp2=kimi(disp2)
+
+pheatmap::pheatmap(mpop2,filename=&quot;i2.png&quot;,display_numbers=disp2,
+  gaps_row=nrow(m)-1,gaps_col=ncol(m)-1,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;white&quot;,
+  number_color=ifelse(mpop2&gt;maxcolor2*.45,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(0,maxcolor2,,256),
+  sapply(seq(1,0,,256),\(i)rgb(i,i,i)))
+
+system(&quot;w=`identify -format %w i1.png`;pad=38;convert -gravity northwest -pointsize 42 -font Arial \\( -splice x24 -size $[w-pad]x caption:&#39;Czech record-level data: Ratio between Moderna and Pfizer ASMR by month of vaccination and age group. For example 50 means that people who received a Moderna vaccine for their first dose had 50% higher ASMR than people who received a Moderna vaccine for their first dose, and -120% means that people who received a Pfizer vaccine had 120% higher ASMR than people who received a Moderna vaccine. The ASMR is calculated from the day of vaccination up to the end of 2022. The standard population is the 2021 census population by single year of age.&#39; -extent $[w-pad]x -gravity center \\) i1.png -gravity northwest \\( -size $[w-40]x caption:&#39;Person-years from day of first dose until end of 2022 for people who received a Pfizer or Moderna vaccine for their first dose.&#39; -extent $[w-pad]x -gravity center \\) i2.png -append 1.png&quot;)</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
