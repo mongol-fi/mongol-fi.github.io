@@ -61,7 +61,9 @@ th{background:#3a3a3a;text-align:left;font-weight:bold}
 <li><a href=#Deaths_by_weeks_after_first_dose>Deaths by weeks after first dose</a></li>
 <li><a href=#Projected_mortality_rates_by_age_group_based_on_a_2010_2019_trend>Projected mortality rates by age group based on a 2010-2019 trend</a></li>
 <li><a href=#Excess_mortality_by_weeks_after_vaccination_and_age_group>Excess mortality by weeks after vaccination and age group</a></li>
-<li><a href=#People_who_got_the_second_vaccine_from_a_different_manufacturer_than_the_first_vaccine>People who got the second vaccine from a different manufacturer than the first vaccine</a></li>
+<li><a href=#People_who_got_the_second_dose_from_a_different_vaccine_type_than_the_first_dose>People who got the second dose from a different vaccine type than the first dose</a></li>
+<li><a href=#Plot_of_multiple_variables_from_OWID>Plot of multiple variables from OWID</a></li>
+<li><a href=#Representation_of_age_groups_compared_to_2021_census_and_Eurostat>Representation of age groups compared to 2021 census and Eurostat</a></li>
 </ul>
 
 <h2>
@@ -836,11 +838,26 @@ head(rate,2)
 <h2>
 <a href=#Excess_mortality_by_weeks_after_vaccination_and_age_group id=Excess_mortality_by_weeks_after_vaccination_and_age_group>Excess mortality by weeks after vaccination and age group</a>
 </h2>
-<p>The plot below shows that the reduction in mortality during first weeks of vaccination seems to be the strongest around ages 50-79, but it's much weaker in ages 90+ and in younger age groups:</p>
+<p>Jeffrey Morris has coined the term <span class="quote">&quot;temporal healthy vaccinee effect&quot;</span> to describe the phenomenon where mortality rate is temporarily reduced for the first weeks or months after vaccination. The plot below shows that the temporal HVE seems to be the strongest around ages 50-79, but it's much weaker in ages 90+ and in younger age groups:</p>
 <div class="width7">
 <img src="i/czech-ageweek.png">
 </div>
-<p>In the next plot I calculated the baseline relative to crude mortality rates by five-year age groups in 2010-2019. However now my excess mortality on weeks 0-4 was about -49% for ages 50-59 but only about -24% for ages 90+, even though by weeks 10-14 the excess mortality in ages 90+ was already similar to ages 50-59. So it indicates that the temporal healthy vaccinee effect might in fact be less strong in the oldest age groups:</p>
+<p>In the plot above my baseline was the total mortality rate among both vaccinated and unvaccinated people, which results in a bias where age groups with a higher percentage of vaccinated people tend to have excess mortality closer to zero. If for example there is one age group where there's 90% vaccinated people, and vaccinated people have a mortality rate of 123 and unvaccinated people have a mortality rate of 246, then it would result in only about -9% excess mortality for vaccinated people (from <code>123/(123*.90+246*.1)-1</code>). But if 60% of people are vaccinated then vaccinated people would be about -29% excess mortality with the same mortality rates.of 123 and 246.</p>
+<p>However the bias doesn't probably explain why ages 90+ don't have as low excess mortality during the first weeks of vaccination as younger age groups, because the Czech data actually has a lower percentage of vaccinated people in ages 90+ than in ages 50-79:</p>
+<pre>&gt; rec=fread(&quot;CR_records.csv&quot;)
+&gt; rec[!(!is.na(DatumUmrti)&amp;DatumUmrti&lt;&quot;2021-01-01&quot;),.(vaxpct=mean(!is.na(Datum_1))*100),by=.(age=pmax(0,pmin(90,(2021-Rok_narozeni)%/%10*10)))][order(age)]|&gt;round()|&gt;print(row.names=F)
+ age vaxpct
+   0      3
+  10     47
+  20     68
+  30     65
+  40     73
+  50     76
+  60     82
+  70     86
+  80     84
+  90     70</pre>
+<p>In order to avoid the bias, in the next plot I calculated the baseline, based on the trend in mortality rates within five-year age groups in 2010-2019. However now my excess mortality on weeks 0-4 was about -49% for ages 50-59 but only about -24% for ages 90+, even though by weeks 10-14 the excess mortality in ages 90+ was already similar to ages 50-59. So it indicates that the temporal healthy vaccinee effect might in fact be less strong in the oldest age groups:</p>
 <div class="width7">
 <img src="i/czech-ageweek-2.png">
 </div>
@@ -881,7 +898,7 @@ pheatmap::pheatmap(m,filename=&quot;1.png&quot;,display_numbers=disp,
   number_color=ifelse(!is.na(m)&amp;abs(m)&gt;.5*maxcolor,&quot;white&quot;,&quot;black&quot;),
   breaks=seq(-maxcolor,maxcolor,,256),colorRampPalette(hex(pal))(256))</pre>
 <h2>
-<a href=#People_who_got_the_second_vaccine_from_a_different_manufacturer_than_the_first_vaccine id=People_who_got_the_second_vaccine_from_a_different_manufacturer_than_the_first_vaccine>People who got the second vaccine from a different manufacturer than the first vaccine</a>
+<a href=#People_who_got_the_second_dose_from_a_different_vaccine_type_than_the_first_dose id=People_who_got_the_second_dose_from_a_different_vaccine_type_than_the_first_dose>People who got the second dose from a different vaccine type than the first dose</a>
 </h2>
 <p>Kirsch included these comments in the file <code>Full analysis - All vaccines.xlsx</code>:</p>
 <blockquote>
@@ -973,6 +990,73 @@ t[type1==&quot;Moderna&quot;&amp;type2==&quot;Pfizer&quot;,.(asmr=sum(dead/pop*s
        70  671    4  72        10         168
        80  179    3  33         3          60
        90  117    4  15         0          29 # for ages 90-99 the contribution to ASMR per death was about one tenth of the contribution in ages 10-19</pre>
+<h2>
+<a href=#Plot_of_multiple_variables_from_OWID id=Plot_of_multiple_variables_from_OWID>Plot of multiple variables from OWID</a>
+</h2>
+<p>In the Czech Republic spikes in excess mortality coincide with spikes in PCR positivity like in other countries, except that after Omicron there seems to be high PCR positivity coupled with low excess mortality, which is also similiar to many other countries. In winter 2020-2021 there's a weird three-hump pattern where there's three different spikes in excess deaths, but each of them also coincides with a spike in PCR positivity. And around mid-2021 when the number of new vaccine doses given peaked, there was low excess mortality.</p>
+<p>Within the period of the record-level data that is after vaccination started and that has mortality data available, the period that has the lowest prevalence of COVID is approximately July to August 2021.</p>
+<div class="width7">
+<img src="i/czech-owid.png">
+</div>
+<p>At OWID weekly excess deaths peaked at about 104% in November 2020 and 58% in December 2021:</p>
+<pre>$ wget covid.ourworldindata.org/data/owid-covid-data.csv
+$ sed &#39;1n;/Czechia/!d&#39; owid-covid-data.csv|csvtk cut -flocation,date,excess_mortality|awk -F, &#39;$3&gt;50&#39;
+location,date,excess_mortality
+Czechia,2020-10-25,71.85
+Czechia,2020-11-01,101.35
+Czechia,2020-11-08,103.79
+Czechia,2020-11-15,80.85
+Czechia,2020-11-22,60.63
+Czechia,2021-01-03,53.57
+Czechia,2021-01-10,58.77
+Czechia,2021-01-17,56.32
+Czechia,2021-03-07,55.34
+Czechia,2021-03-14,63.21
+Czechia,2021-03-21,60.61
+Czechia,2021-04-04,50.22
+Czechia,2021-11-28,50.76
+Czechia,2021-12-05,57.82
+Czechia,2021-12-12,54.9</pre>
+<p>After mid-2021 when new vaccine doses peaked, there were only two relatively brief periods when the mortality was clearly elevated above the baseline. The first was during the COVID spike around December 2021. The second was around December 2022 when many European countries had a spike in all-cause deaths but not COVID deaths, which was probably caused by influenza A since it coincided with a peak in the number of positive tests for influenza A: [<a href="https://app.powerbi.com/view?r=eyJrIjoiYWU4YjUyN2YtMDBkOC00MGI1LTlhN2UtZGE5NThjY2E1ZThhIiwidCI6ImY2MTBjMGI3LWJkMjQtNGIzOS04MTBiLTNkYzI4MGFmYjU5MCIsImMiOjh9">https://app.powerbi.com/view?r=eyJrIjoiYWU4YjUyN2YtMDBkOC00MGI1LTlhN2UtZGE5NThjY2E1ZThhIiwidCI6ImY2MTBjMGI3LWJkMjQtNGIzOS04MTBiLTNkYzI4MGFmYjU5MCIsImMiOjh9</a>]</p>
+<div class="width10">
+<img src="i/czech-influenza.png">
+</div>
+<p>In December 2022 Germany also had high excess deaths, a high incidence of influenza-like illness, and a high incidence of acute respiratory illness, but there was a low number of COVID deaths compared to the two previous winters: [<a href="https://github.com/robert-koch-institut/GrippeWeb_Daten_des_Wochenberichts">https://github.com/robert-koch-institut/GrippeWeb_Daten_des_Wochenberichts</a>]</p>
+<div class="width7">
+<img src="i/czech-influenza-germany.png">
+</div>
+<p>So if a large part of the excess mortality after vaccination can be attributed to the vaccines like Kirsch seems to suggest, then why was the excess mortality concentrated into two relatively sharp spikes around December 2021 and December 2022? And if vaccines killed a particularly high number of people in December 2021, then why was the ratio of unvaccinated to vaccinated ASMR elevated in December 2021?</p>
+<h2>
+<a href=#Representation_of_age_groups_compared_to_2021_census_and_Eurostat id=Representation_of_age_groups_compared_to_2021_census_and_Eurostat>Representation of age groups compared to 2021 census and Eurostat</a>
+</h2>
+<p>The resident population estimates at Eurostat are for January 1st of each year. In the record-level data you can get the age on each person on December 31st 2020 if you subtract the year of birth from 2020, so it's only one day off from the date of the population estimates at Eurostat.</p>
+<p>The resident population estimates in the 2021 Czech census are for March 26th 2021: <a href="https://scitani.gov.cz/age-structure#skupina-282345">https://scitani.gov.cz/age-structure#skupina-282345</a>.</p>
+<p>In most 10-year age groups the record-level data contains about 98-104% of the people in the 2021 census, but in ages 90-99 it's about 107% and in ages 100+ it's about 209%.</p>
+<pre>rec=fread(&quot;Czech/data/CR_records.csv&quot;)
+t=rec[Rok_narozeni&lt;2021&amp;!(!is.na(DatumUmrti)&amp;DatumUmrti&lt;&quot;2021-01-01&quot;),list(recordlevel=.N),.(age=pmin(2020-Rok_narozeni,100)%/%10*10)][order(age)]
+t=merge(t,fread(&quot;http://sars2.net/f/czcensus2021pop.csv&quot;)[,.(census2021=sum(pop)),.(age=age%/%10*10)])
+t=merge(t,fread(&quot;http://sars2.net/f/czpopdead.csv&quot;)[year==2021,.(eurostat=sum(pop)),.(age=age%/%10*10)])
+
+t=rbind(t,t[,lapply(.SD,sum)][,age:=&quot;Total&quot;])
+
+t[,censuspct:=recordlevel/census2021*100]
+t[,eurostatpct:=recordlevel/eurostat*100]
+print(mutate_if(t,is.double,round,1),row.names=F)</pre>
+<!-- -->
+<pre>   age recordlevel census2021 eurostat censuspct eurostatpct
+     0     1122110    1110656  1106350     101.0       101.4
+    10     1083970    1070940  1064611     101.2       101.8
+    20     1091962    1078231  1074387     101.3       101.6
+    30     1465653    1409650  1398642     104.0       104.8
+    40     1773632    1735533  1731067     102.2       102.5
+    50     1361789    1354501  1345943     100.5       101.2
+    60     1298397    1284689  1293120     101.1       100.4
+    70     1038356    1037997  1035782     100.0       100.2
+    80      382614     378684   380997     101.0       100.4
+    90       65762      62639    63318     105.0       103.9
+   100         957        647      619     147.9       154.6
+ Total    10685202   10524167 10494836     101.5       101.8</pre>
+<p>In the code above I excluded people who were born in 2021 or later or who had died before 2021. But the total population size in the record-level data was still about 1-2% higher than the resident population estimates in the 2021 census and Eurostat. Both of them only included the resident population, so I don't know if the record-level data also includes non-residents.</p>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
