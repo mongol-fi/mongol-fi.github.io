@@ -323,7 +323,7 @@ type          2021-07 2021-08 2021-09 2021-10 2021-11 2021-12
 <div class="width8">
 <img src="i/czech-asmr.png">
 </div>
-<p>In the plot above the dark gray line shows the mortality rate among both vaccinated and unvaccinated people in the record-level data, and the light gray line shows the mortality rate based on the weekly number of deaths reported by the Czech Statistical Office combined with population estimates from Eurostat. [<a href="https://csu.gov.cz/produkty/number-of-deaths-weekly-and-monthly-time-series">https://csu.gov.cz/produkty/number-of-deaths-weekly-and-monthly-time-series</a>, <a href="https://ec.europa.eu/eurostat/data/database">https://ec.europa.eu/eurostat/data/database</a>] I don't know why the dark gray line is much lower than the light gray line.</p>
+<p>In the plot above the dark gray line shows the mortality rate among both vaccinated and unvaccinated people in the record-level data, and the light gray line shows the mortality rate based on the weekly number of deaths in 5-year age groups reported by the Czech Statistical Office combined with population estimates from Eurostat. [<a href="https://csu.gov.cz/produkty/number-of-deaths-weekly-and-monthly-time-series">https://csu.gov.cz/produkty/number-of-deaths-weekly-and-monthly-time-series</a>, <a href="https://ec.europa.eu/eurostat/data/database">https://ec.europa.eu/eurostat/data/database</a>] The slight discrepancy between the lines might partially be because I calculated the dark gray line using single-year age groups but the light gray line using 5-year age groups.</p>
 <pre>library(data.table);library(ggplot2);library(stringr)
 
 cutl=\(x,y)cut(x,c(y,Inf),y,T,F)
@@ -334,27 +334,29 @@ dead=read.csv(&quot;http://sars2.net/f/czweeklydead.csv&quot;)
 xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2022-12-31&quot;)
 dates=seq(xstart,xend,1)
 d=data.frame(date=dates,age=rep(unique(dead$age),each=length(dates)))
-d$dead=c(sapply(split(dead,dead$age),\(x)predict(smooth.spline(isoweek(x$year,x$week,4),x$dead),as.numeric(dates))$y))/7
+d$dead=c(sapply(split(dead,dead$age),\(x)approx(isoweek(x$year,x$week,4),x$dead/7,dates,rule=2)$y))
 
-pop=read.csv(&quot;http://sars2.net/f/czpopdead.csv&quot;)
+std=read.csv(&quot;http://sars2.net/f/czcensus2021pop.csv&quot;)[,2]
+std2=tapply(std,pmin(0:100%/%5*5,90),sum)
+
+pop=fread(&quot;http://sars2.net/f/czpopdead.csv&quot;)[year&gt;=2010]
 pop=aggregate(pop[,3,drop=F],list(year=pop$year,age=cutl(pop$age,unique(d$age))),sum)
-std=pop$pop[pop$year==2022]
-d$pop=c(sapply(split(pop,pop$age),\(x){x$date=as.Date(paste0(x$year,&quot;-1-1&quot;));predict(lm(pop~date,x),list(date=dates))}))
+d$pop=c(sapply(split(pop,pop$age),\(x)predict(smooth.spline(as.Date(paste0(x$year,&quot;-1-1&quot;)),x$pop,spar=.1),as.numeric(dates))$y))
 
 buck=fread(&quot;http://sars2.net/f/czbuckets.csv.gz&quot;)
-buck=buck[,.(alive=sum(alive),dead=sum(dead)),.(date,age=cutl(age,unique(d$age)),dose=ifelse(dose==0,&quot;Unvaccinated&quot;,paste0(&quot;Dose &quot;,ifelse(dose&gt;=4,&quot;4+&quot;,dose))))]
-buck=rbind(buck,cbind(expand.grid(date=as.IDate(seq(xstart,xend,1)),age=unique(buck$age),dose=unique(buck$dose)),alive=0,dead=0))
+buck=buck[,.(alive=sum(alive),dead=sum(dead)),.(date,age=pmin(age,100),dose=ifelse(dose==0,&quot;Unvaccinated&quot;,paste0(&quot;Dose &quot;,ifelse(dose&gt;=4,&quot;4+&quot;,dose))))]
+buck=rbind(buck,cbind(expand.grid(date=as.IDate(seq(xstart,xend,1)),age=0:100,dose=unique(buck$dose)),alive=0,dead=0))
 buck=unique(buck,by=1:3)[order(dose,age,date)]
 
-vax=cbind(buck[dose!=&quot;Unvaccinated&quot;,.(alive=sum(alive),dead=sum(dead)),.(age=age,date=date)],dose=&quot;All vaccinated&quot;)
-all=cbind(buck[,.(alive=sum(alive),dead=sum(dead)),.(age=age,date=date)],dose=&quot;All people (FOIA)&quot;)
+vax=cbind(buck[dose!=&quot;Unvaccinated&quot;,.(alive=sum(alive),dead=sum(dead)),.(age,date)],dose=&quot;All vaccinated&quot;)
+all=cbind(buck[,.(alive=sum(alive),dead=sum(dead)),.(age,date)],dose=&quot;All people (record-level data)&quot;)
 
 buck=rbind(buck,vax,all)
-buck=buck[,.(date=date,alive=ma(alive,10),dead=ma(dead,10)),.(age=age,dose=dose)]
+buck=buck[,.(date=date,alive=ma(alive,10),dead=ma(dead,10)),.(age,dose)]
 
-xy=aggregate(list(pop=buck$alive,y=buck$dead/buck$alive*365e5*std[buck$age]/sum(std)),list(x=buck$date,z=buck$dose),sum,na.rm=T)
+xy=with(buck,aggregate(list(pop=alive,y=dead/alive*365e5*std[age+1]/sum(std)),list(x=date,z=dose),sum,na.rm=T))
 
-cz=aggregate(list(y=d$dead/d$pop*365e5*std[factor(d$age)]/sum(std)),data.frame(x=d$date),sum)
+cz=aggregate(list(y=d$dead/d$pop*365e5*std2[factor(d$age)]/sum(std2)),data.frame(x=d$date),sum)
 xy=rbind(xy,cbind(cz,pop=NA,z=&quot;All people (Czech Statistical Office)&quot;))
 
 xy$z=factor(xy$z,unique(xy$z))
@@ -370,18 +372,18 @@ fill=c(hcl(c(210,120,60,0,300)+15,80,70),&quot;black&quot;,&quot;gray45&quot;,&q
 label=data.frame(x=xstart+.02*(xend-xstart),y=seq(yend,,-yend/15,nlevels(xy$z))-yend/16,label=levels(xy$z))
 
 xy2=xy[grep(&quot;Unvaccinated|Dose&quot;,xy$z),]
-xy2$pct=99.97*xy2$pop/tapply(xy2$pop,xy2$x,sum,na.rm=T)[as.character(xy2$x)]
+xy2$pct=99.99*xy2$pop/tapply(xy2$pop,xy2$x,sum,na.rm=T)[as.character(xy2$x)]
 
 ggplot(xy2,aes(x,y))+
 geom_area(aes(color=z,fill=z,y=pct*secmult),linewidth=.1,alpha=.22)+
 geom_line(aes(color=z),linewidth=.4)+
 geom_line(data=xy[grep(&quot;All vaccinated&quot;,xy$z),],color=color[6],linewidth=.4)+
-geom_line(data=xy[grep(&quot;FOIA&quot;,xy$z),],color=color[7],linewidth=.4)+
+geom_line(data=xy[grep(&quot;record-level&quot;,xy$z),],color=color[7],linewidth=.4)+
 geom_line(data=xy[grep(&quot;Office&quot;,xy$z),],color=color[8],linewidth=.4)+
 geom_hline(yintercept=c(0,yend),linewidth=.3,lineend=&quot;square&quot;)+
 geom_vline(xintercept=c(xstart,xend),linewidth=.3,lineend=&quot;square&quot;)+
 geom_label(data=label,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.7),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.1,&quot;lines&quot;),label.size=0,color=color[1:nrow(label)],size=2.7,hjust=0)+
-labs(title=&quot;Age-standardized mortality rate in Czech FOIA data (±10-day moving averages)&quot;,subtitle=str_wrap(&quot;People are removed under earlier doses after a new dose. The standard population is the 2022 Czech population by 5-year age groups. ASMR values are not displayed on days with population size below 2,000. Sources: github.com/PalackyUniversity/uzis-data-analysis, ec.europa.eu/eurostat/data/database,  csu.gov.cz/produkty/number-of-deaths-weekly-and-monthly-time-series.&quot;,108),x=NULL,y=&quot;ASMR per 100k person-years&quot;)+
+labs(title=&quot;Age-standardized mortality rate in Czech record data (±10-day moving averages)&quot;,subtitle=str_wrap(&quot;People are removed under earlier doses after a new dose. The standard population is the estimated resident population in the 2021 census. ASMR values are not displayed on days with population size below 2,000. Sources: github.com/PalackyUniversity/uzis-data-analysis, scitani.gov.cz/age-structure, ec.europa.eu/eurostat/data/database,  csu.gov.cz/produkty/number-of-deaths-weekly-and-monthly-time-series.&quot;,108),x=NULL,y=&quot;ASMR per 100k person-years&quot;)+
 scale_x_date(limits=c(xstart,xend),breaks=seq(xstart,xend,&quot;2 month&quot;),date_labels=&quot;%b\n%y&quot;)+
 scale_y_continuous(limits=c(0,yend),breaks=seq(0,yend,ystep),labels=\(x)ifelse(x==0,x,paste0(x/1e3,&quot;k&quot;)),sec.axis=sec_axis(trans=~./secmult,breaks=seq(0,yend2,ystep2),name=&quot;Percentage of people with dose&quot;))+
 scale_color_manual(values=color)+
@@ -396,7 +398,8 @@ theme(axis.text=element_text(size=6.5,color=&quot;black&quot;),
   plot.margin=margin(.3,.3,.3,.3,&quot;lines&quot;),
   plot.subtitle=element_text(size=6.8),
   plot.title=element_text(size=8.2))
-ggsave(&quot;1.png&quot;,width=5,height=3.3,dpi=400)</pre>
+ggsave(&quot;1.png&quot;,width=5,height=3.3,dpi=400)
+system(&quot;qlmanage -p 1.png &amp;&gt;/dev/null&quot;)</pre>
 <h2>
 <a href=#Why_is_there_a_peak_in_mortality_rate_about_30_to_35_weeks_after_the_second_dose id=Why_is_there_a_peak_in_mortality_rate_about_30_to_35_weeks_after_the_second_dose>Why is there a peak in mortality rate about 30 to 35 weeks after the second dose?</a>
 </h2>
@@ -690,7 +693,7 @@ fwrite(buck,&quot;czbucketsfirstdose.csv&quot;)</pre>
 <div class="width7">
 <img src="i/czech-weekafter.png">
 </div>
-<p>However in the plot above my baseline was not adjusted for seasonal variation in mortality, because I calculated the baseline based on the total mortality rate in 2021-2022 among all people who are included in the record-level data. In the plot below the dark gray baseline was calculated the same way as in the plot above. But if you look at the light gray baseline which is adjusted for seasonal variation in deaths and for the impact of COVID waves, there's a big fall in the baseline during the first 10 weeks after vaccination, which is because many people got vaccinated in the first quarter of 2021 when there was a large number of COVID deaths and there was also higher mortality because it was winter:</p>
+<p>However in the plot above my baseline was not adjusted for seasonal variation in mortality, because I calculated the baseline based on the total mortality rate in 2021-2022 among all people who are included in the record-level data. In the plot below the dark gray baseline was calculated the same way as in the plot above. But if you look at the light gray baseline which is adjusted for seasonal variation in deaths and for the impact of COVID waves, there's a big fall in the baseline during the first 10 weeks after vaccination, which is because many people got vaccinated in the first quarter of 2021 when there was a large number of COVID deaths and there was also elevated mortality because it was winter:</p>
 <div class="width5">
 <img src="i/czech-weekafter-3.png">
 </div>
@@ -1020,7 +1023,6 @@ t[type1==&quot;Moderna&quot;&amp;type2==&quot;Pfizer&quot;,.(asmr=sum(dead/pop*s
 <a href=#Plot_of_multiple_variables_from_OWID id=Plot_of_multiple_variables_from_OWID>Plot of multiple variables from OWID</a>
 </h2>
 <p>In the Czech Republic spikes in excess mortality coincide with spikes in PCR positivity like in other countries, except that after Omicron there seems to be high PCR positivity coupled with low excess mortality, which is also similiar to many other countries. In winter 2020-2021 there's a weird three-hump pattern where there's three different spikes in excess deaths, but each of them also coincides with a spike in PCR positivity. And around mid-2021 when the number of new vaccine doses given peaked, there was low excess mortality.</p>
-<p>During the two-year period in the record-level data that has data for deaths available and that is after vaccination started, the period that has the lowest COVID deaths seems to be approximately in July to August 2021.</p>
 <div class="width7">
 <img src="i/czech-owid.png">
 </div>
@@ -1086,7 +1088,7 @@ print(mutate_if(t,is.double,round,1),row.names=F)</pre>
 <h2>
 <a href=#Simple_calculation_for_monthly_ratio_of_unvaccinated_ASMR_to_vaccinated_ASMR id=Simple_calculation_for_monthly_ratio_of_unvaccinated_ASMR_to_vaccinated_ASMR>Simple calculation for monthly ratio of unvaccinated ASMR to vaccinated ASMR</a>
 </h2>
-<p>In October 2021 unvaccinated people had about 2.1 times higher ASMR than vaccinated people, but over the next two months when there was a spike in excess deaths caused by COVID, the ratio increased to about 2.8 in November and about 3.1 in December. But by May 2022 when COVID deaths had fallen close to zero, the ratio had fallen to about 1.7:</p>
+<p>In October 2021 unvaccinated people had about 2.1 times higher ASMR than vaccinated people, but over the next two months when there was a spike in excess deaths caused by COVID, the ratio increased first to about 2.8 in November and then about 3.1 in December. But by May 2022 when COVID deaths had fallen close to zero, the ratio had fallen back down to about 1.7:</p>
 <pre>&gt; buck=fread(&quot;http://sars2.net/f/czbucketsfirstdose.csv.gz&quot;)[month&gt;=&quot;2020-12&quot;]
 &gt; std=fread(&quot;http://sars2.net/f/czcensus2021pop.csv&quot;)[[2]]
 &gt; buck[,.(dead=sum(dead),alive=sum(alive)),.(month,vax=type!=&quot;Unvaccinated&quot;,age=pmin(age,100))][,.(asmr=sum(dead/alive*std[age+1]/sum(std)*365e5)),.(month,vax)][,.(ratio=round(asmr[!vax]/asmr[vax],1)),month]|&gt;print(row.names=F)
@@ -1300,7 +1302,7 @@ system(&quot;w=`identify -format %w i1.png`;pad=44;convert -gravity northwest -p
 &gt; totage=t[,.(age=&quot;Total&quot;,alive=as.double(sum(alive)),asmr=sum(dead/alive*std[pmin(age,100)+1]/sum(std)*365e5)),.(type)]
 &gt; t=t[,.(alive=sum(alive),asmr=sum(dead/alive*std[pmin(age,100)+1]/sum(std)*365e5)),.(type,age=pmin(age%/%10*10,90))]
 &gt; t=rbind(t,totage)
-&gt; t[,.(ratio=asmr[type==&quot;Moderna&quot;]/asmr[type==&quot;Pfizer&quot;]),.(age)][order(age)]|&gt;print(row.names=F)
+&gt; t[,.(ratio=asmr[type==&quot;Moderna&quot;]/asmr[type==&quot;Pfizer&quot;]),age][order(age)]|&gt;print(row.names=F)
    age     ratio
     10 1.5526322
     20 1.3476644
