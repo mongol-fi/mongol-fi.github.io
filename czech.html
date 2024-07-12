@@ -74,17 +74,17 @@ th{background:#3a3a3a;text-align:left;font-weight:bold}
 <h2>
 <a href=#Files_used_in_my_analysis id=Files_used_in_my_analysis>Files used in my analysis</a>
 </h2>
-<p>Bucket analysis:</p>
+<p>Bucket files:</p>
 <ul>
-<li><a href=f/czbuckets.csv.gz>f/czbuckets.csv.gz</a> - deaths and person-days grouped by ongoing day and dose number (people are removed under earlier doses after a new dose)</li>
-<li><a href=f/czbucketsfirstdosetype.csv.gz>f/czbucketsfirstdosetype.csv.gz</a> - deaths and person-days grouped by ongoing month, month of vaccination, weeks since first dose, age, and manufacturer of first dose (unvaccinated and first dose only, so people are kept under the first dose after subsequent doses)</li>
+<li><a href=f/czbuckets.csv.gz>f/czbuckets.csv.gz</a> - deaths and person-days grouped by ongoing day, age, and dose number (people are removed under earlier doses after a new dose)</li>
+<li><a href=f/czbucketsfirstdose.csv.gz>f/czbucketsfirstdose.csv.gz</a> - deaths and person-days grouped by ongoing month, month of vaccination, weeks since first dose, age, and manufacturer of first dose (unvaccinated and first dose only, so people are kept under the first dose after subsequent doses, but people are only counted as unvaccinated until the first dose)</li>
 </ul>
 <p>Population and deaths:</p>
 <ul>
 <li><a href=f/czcensus2021pop.csv>f/czcensus2021pop.csv</a> - estimated resident population on March 26th 2021 from the <a href=https://scitani.gov.cz/age-structure>2021 Czech census</a></li>
 <li><a href=f/czpopdead.csv>f/czpopdead.csv</a> - <a href=https://ec.europa.eu/eurostat/data/database>data from Eurostat</a> for yearly deaths in Czech Republic by single year of age, and for yearly resident population estimates on January 1st by single year of age</li>
 <li><a href=f/czweeklydead.csv>f/czweeklydead.csv</a> - weekly number of deaths by 5-year age groups <a href=https://vdb.czso.cz/vdbvo2/faces/en/index.jsf?page=vystup-objekt-parametry&pvo=DEMD007KR-R2024&sp=A&skupId=3629&pvokc=&katalog=30845&z=T>published by the Czech Statistical Bureau</a></li>
-<li><a href=f/czdeadproj.csv>f/czdeadproj.csv</a> - daily deaths by 5-year age groups interpolated from <a href=https://vdb.czso.cz/vdbvo2/faces/en/index.jsf?page=vystup-objekt-parametry&pvo=DEMD007KR-R2024&sp=A&skupId=3629&pvokc=&katalog=30845&z=T>weekly deaths by 5-year age groups</a>, and daily population estimates by 5-year age groups interpolated from Eurostat's yearly population estimates, and daily projected deaths by 5-year age groups based on a seasonality-adjusted linear trend in CMR in 2010-2019 multiplied by population size</li>
+<li><a href=f/czdeadproj.csv>f/czdeadproj.csv</a> - daily deaths by 5-year age groups interpolated from <a href=https://vdb.czso.cz/vdbvo2/faces/en/index.jsf?page=vystup-objekt-parametry&pvo=DEMD007KR-R2024&sp=A&skupId=3629&pvokc=&katalog=30845&z=T>weekly deaths by 5-year age groups</a>, daily population estimates by 5-year age groups interpolated from Eurostat's yearly population estimates, and daily projected deaths by 5-year age groups based on a seasonality-adjusted linear trend in CMR in 2010-2019 multiplied by population size</li>
 </ul>
 <h2>
 <a href=#Were_Pfizer_and_Moderna_vaccines_allocated_randomly id=Were_Pfizer_and_Moderna_vaccines_allocated_randomly>Were Pfizer and Moderna vaccines allocated randomly?</a>
@@ -494,7 +494,7 @@ system(&quot;w=`identify -format %w i1.png`;pad=38;convert -gravity northwest -p
 </div>
 <pre>library(data.table);library(colorspace)
 
-buck=fread(&quot;http://sars2.net/f/czbucketsfirstdosetype.csv.gz&quot;)[month&gt;=&quot;2020-12&quot;]
+buck=fread(&quot;http://sars2.net/f/czbucketsfirstdose.csv.gz&quot;)[month&gt;=&quot;2020-12&quot;]
 me=merge(buck,buck[,.(base=sum(dead)/sum(alive)),.(age=age,month=month)])
 me=me[me$type!=&quot;Unvaccinated&quot;]
 me$base=me$base*me$alive
@@ -543,17 +543,17 @@ system(&quot;convert 0.png -fill black -gravity southwest -size 900x980 -pointsi
 <p>The plot below shows excess mortality by the type of the first vaccine. People with two or more doses almost always got the second dose from the same vaccine type as the first dose, except Janssen vaccines only had a single dose so people who got a Janssen vaccine for the first dose often got a different type of vaccine for the booster.</p>
 <p>The plot below shows that even in late 2022, people got a Moderna vaccine for the first dose had much higher excess mortality than people who got a Pfizer vaccine for the first dose. If the difference in mortality would be because of vaccine deaths like Kirsch says, you'd expect the difference to be greatest in the first few weeks or months after vaccination and get weaker over time. But because the difference remains in place more than a year after vaccination, it rather seems to be caused by some confounding factors which I didn't adjust for here:</p>
 <div class="width8">
-<img src="i/czech-firstdosetype.png">
+<img src="i/czech-firstdose.png">
 </div>
 <p>In the plot above Janssen vaccines get by far the highest excess mortality percentage, but it's probably because the average date of first vaccination is much later for Janssen vaccines than for the other three vaccine types, so the <span class="quote">&quot;late vaccinees&quot;</span> who got vaccinated in the second half of 2021 are overrepresented among the people who got a Janssen vaccine.</p>
 <p>In the next plot the x-axis shows the month of vaccination and not the month of death, and the number in each cell is the excess mortality up to the end of 2022 and not the excess mortality on the month that is shown on the x-axis. The plot shows that people who got a Pfizer vaccine in late 2021 subsequently also had much higher excess mortality than people who got a Pfizer vaccine in the first half of 2021:</p>
 <div class="width8">
-<img src="i/czech-firstdosetype-2.png">
+<img src="i/czech-firstdose-2.png">
 </div>
 <p>Here's code for the first plot:</p>
 <pre>library(data.table);library(colorspace)
 
-buck=fread(&quot;http://sars2.net/f/czbucketsfirstdosetype.csv.gz&quot;)[month&gt;=&quot;2021-01&quot;]
+buck=fread(&quot;http://sars2.net/f/czbucketsfirstdose.csv.gz&quot;)[month&gt;=&quot;2021-01&quot;]
 buck=buck[,.(alive=sum(alive),dead=sum(dead)),.(month,age,type)]
 buck=rbind(buck,cbind(aggregate(buck[,4:5],buck[,2:3],sum),month=&quot;Total&quot;))
 
@@ -596,7 +596,7 @@ system(&quot;w=`identify -format %w i1.png`;pad=40;convert -gravity northwest -p
 <p>And here's code for the second plot:</p>
 <pre>library(data.table);library(colorspace)
 
-buck=fread(&quot;http://sars2.net/f/czbucketsfirstdosetype.csv.gz&quot;)[month&gt;=&quot;2020-12&quot;]
+buck=fread(&quot;http://sars2.net/f/czbucketsfirstdose.csv.gz&quot;)[month&gt;=&quot;2020-12&quot;]
 me=merge(buck,buck[,.(base=sum(dead)/sum(alive)),.(age=age,month=month)])
 me$base=me$base*me$alive
 me=rbind(me,cbind(aggregate(me[,5:7],me[,c(1,2,4)],sum),vaxmonth=&quot;Total&quot;))
@@ -670,10 +670,10 @@ for(day in as.list(seq(mindate,maxdate,1))){
 }
 
 setorder(buck,month,vaxmonth,type,age,week)
-fwrite(buck,&quot;czbucketsfirstdosetype.csv&quot;)</pre>
+fwrite(buck,&quot;czbucketsfirstdose.csv&quot;)</pre>
 <p>The plot below is otherwise similar to the first plot except the baseline is the mortality among only unvaccinated people instead of both unvaccinated and vaccinated people. It shows that during the COVID wave in December 2021, people with a first dose from a Moderna vaccine had about 65% lower deaths than unvaccinated people matched by age (even though Kirsch was making it seem like people with a Moderna vaccine were dropping like flies):</p>
 <div class="width8">
-<img src="i/czech-firstdosetype-3.png">
+<img src="i/czech-firstdose-3.png">
 </div>
 <h2>
 <a href=#Deaths_by_weeks_after_first_dose id=Deaths_by_weeks_after_first_dose>Deaths by weeks after first dose</a>
@@ -682,7 +682,7 @@ fwrite(buck,&quot;czbucketsfirstdosetype.csv&quot;)</pre>
 <div class="width6">
 <img src="i/czech-weekafter-2.jpg">
 </div>
-<p>In this plot the dark green line for the year 2021 shows the same data as the screenshot above. It seems to have a bump where it's temporarily elevated around day 25 from vaccination, but the red line for deaths in the year 2022 is more smooth. I though it might have been because most of the doses given in 2022 were booster doses, and people didn't get a second booster dose right after the first booster, so the red line wouldn't have had a bump in deaths about 3-4 weeks after vaccination in the scenario where a lot of people died soon after the second dose:</p>
+<p>In the plot below the dark green line for the year 2021 shows the same data as the screenshot above. The dark green line seems to have a bump where it's temporarily elevated around day 25 from vaccination, but the red line for deaths in the year 2022 has a more smooth curve with no clear increase around day 25. I though it might have been because most of the doses given in 2022 were booster doses, and people didn't get a second booster dose right after the first booster, so in the scenario where the bump in the dark green line was caused by people dying from the second dose, the bump could've been missing from the red line because people didn't get the second booster soon after the first booster:</p>
 <div class="width6">
 <img src="i/moar-medicare-15.png">
 </div>
@@ -694,13 +694,13 @@ fwrite(buck,&quot;czbucketsfirstdosetype.csv&quot;)</pre>
 <div class="width5">
 <img src="i/czech-weekafter-3.png">
 </div>
-<p>In the plot above if you compare the black line for deaths against the dark gray baseline that is not adjusted for seasonality, the period after vaccination that has clearly reduced mortality seems to last only about 2 weeks, which is surprisingly short compared to other datasets like the New Zealand data released by Barry Young. But the period with reduced mortality is actually longer if you compare the black line against the light gray line instead, as you can see from this plot which shows the excess percentage of deaths relative to the baseline:</p>
+<p>In the plot above if you compare the black line for deaths against the dark gray baseline that is not adjusted for seasonality, the period after vaccination that has clearly reduced mortality seems to last only about 2 weeks, which is surprisingly short compared to other datasets like Barry Young's data from New Zealand. But the period with reduced mortality is actually longer if you compare the black line against the light gray line instead, as you can see from this plot which shows the excess percentage of deaths relative to the baseline:</p>
 <div class="width5">
 <img src="i/czech-weekafter-4.png">
 </div>
 <p>So I suspect the reason why the US Medicare data had a spike in deaths around days 20-30 might similarly be because many people received the first dose in January to February 2021 when there was a sharp spike in excess mortality in the United States, but by March 2021 the excess mortality had fallen close to zero.</p>
 <p>Here's code for the second plot:</p>
-<pre>buck=fread(&quot;http://sars2.net/f/czbucketsfirstdosetype.csv.gz&quot;)
+<pre>buck=fread(&quot;http://sars2.net/f/czbucketsfirstdose.csv.gz&quot;)
 buck=buck[,.(dead=sum(dead),alive=sum(alive)),.(month,age,type,week)]
 
 rate1=buck[,.(rate1=sum(dead)/sum(alive)),age]
@@ -890,7 +890,7 @@ date,age,pop,dead,projdead
 
 bin=5;agebin=10;maxage=90
 
-t=fread(&quot;http://sars2.net/f/czbucketsfirstdosetype.csv.gz&quot;)
+t=fread(&quot;http://sars2.net/f/czbucketsfirstdose.csv.gz&quot;)
 t=t[,.(dead=sum(dead),alive=sum(alive)),.(month,age,type,week)]
 
 # first plot
@@ -1087,7 +1087,7 @@ print(mutate_if(t,is.double,round,1),row.names=F)</pre>
 <a href=#Simple_calculation_for_monthly_ratio_of_unvaccinated_ASMR_to_vaccinated_ASMR id=Simple_calculation_for_monthly_ratio_of_unvaccinated_ASMR_to_vaccinated_ASMR>Simple calculation for monthly ratio of unvaccinated ASMR to vaccinated ASMR</a>
 </h2>
 <p>In October 2021 unvaccinated people had about 2.1 times higher ASMR than vaccinated people, but over the next two months when there was a spike in excess deaths caused by COVID, the ratio increased to about 2.8 in November and about 3.1 in December. But by May 2022 when COVID deaths had fallen close to zero, the ratio had fallen to about 1.7:</p>
-<pre>&gt; buck=fread(&quot;http://sars2.net/f/czbucketsfirstdosetype.csv.gz&quot;)[month&gt;=&quot;2020-12&quot;]
+<pre>&gt; buck=fread(&quot;http://sars2.net/f/czbucketsfirstdose.csv.gz&quot;)[month&gt;=&quot;2020-12&quot;]
 &gt; std=fread(&quot;http://sars2.net/f/czcensus2021pop.csv&quot;)[[2]]
 &gt; buck[,.(dead=sum(dead),alive=sum(alive)),.(month,vax=type!=&quot;Unvaccinated&quot;,age=pmin(age,100))][,.(asmr=sum(dead/alive*std[age+1]/sum(std)*365e5)),.(month,vax)][,.(ratio=round(asmr[!vax]/asmr[vax],1)),month]|&gt;print(row.names=F)
    month ratio
@@ -1127,7 +1127,7 @@ print(mutate_if(t,is.double,round,1),row.names=F)</pre>
 <a href=#Ratio_between_monthly_ASMR_for_Moderna_and_Pfizer_vaccines id=Ratio_between_monthly_ASMR_for_Moderna_and_Pfizer_vaccines>Ratio between monthly ASMR for Moderna and Pfizer vaccines</a>
 </h2>
 <p>The ratio column below shows the ASMR in people whose first dose was Moderna divided by the ASMR in people whose first dose was Pfizer. The ratio is actually lower than usual during the COVID wave in November to December 2021. It might possibly indicate that Moderna vaccines were more effective in preventing COVID deaths than Pfizer vaccines, even though it might also indicate that there's some confounding factors which caused people who got a Moderna vaccine to be less likely to die from COVID:</p>
-<pre>&gt; buck=fread(&quot;http://sars2.net/f/czbucketsfirstdosetype.csv.gz&quot;)[month&gt;=&quot;2020-12&quot;]
+<pre>&gt; buck=fread(&quot;http://sars2.net/f/czbucketsfirstdose.csv.gz&quot;)[month&gt;=&quot;2020-12&quot;]
 &gt; std=fread(&quot;http://sars2.net/f/czcensus2021pop.csv&quot;)[[2]]
 &gt; buck[,.(dead=sum(dead),alive=sum(alive)),.(month,type,age=pmin(age,100))][,.(asmr=sum(dead/alive*std[age+1]/sum(std)*365e5)),.(month,type)][,.(ratio=round(asmr[type==&quot;Moderna&quot;]/asmr[type==&quot;Pfizer&quot;],2),Moderna=round(asmr[type==&quot;Moderna&quot;]),Pfizer=round(asmr[type==&quot;Pfizer&quot;]),unvax=round(asmr[type==&quot;Unvaccinated&quot;])),month]|&gt;print(row.names=F)
    month ratio Moderna Pfizer unvax
@@ -1163,7 +1163,7 @@ print(mutate_if(t,is.double,round,1),row.names=F)</pre>
   0   5  10  15  20  25  30  35  40  45  50  55  60  65  70  75  80  85  90
  -6   6   8   2  25 -10   8  10  19  11  22  23  27  27  24  25  20  15  16</pre>
 <p>And Moderna had a higher percentage of people in the oldest age groups than Pfizer:</p>
-<pre>&gt; t=fread(&quot;http://sars2.net/f/czbucketsfirstdosetype.csv.gz&quot;)
+<pre>&gt; t=fread(&quot;http://sars2.net/f/czbucketsfirstdose.csv.gz&quot;)
 &gt; type=factor(t$type,names(sort(tapply(t$alive,t$type,sum),T)))
 &gt; age=pmin(t$age%/%10*10,90)
 &gt; m=xtabs(t$alive~age+type)
@@ -1184,7 +1184,7 @@ type              0   10   20   30   40   50   60   70   80   90
 <img src="i/czech-allpop.png">
 </div>
 <p>This shows that the percentage of vaccinated person-days out of all person-days first reached above 50% in March in ages 90+ and 80-89, in April in ages 70-79, in May in ages 60-69, and in June in ages 50-59:</p>
-<pre>&gt; t=fread(&quot;http://sars2.net/f/czbucketsfirstdosetype.csv.gz&quot;)
+<pre>&gt; t=fread(&quot;http://sars2.net/f/czbucketsfirstdose.csv.gz&quot;)
 &gt; t[,.(vaxpct=sum(alive[type!=&quot;Unvaccinated&quot;])/sum(alive)*100),.(month,age=pmin(age%/%10*10,90))]|&gt;with(round(xtabs(vaxpct~month+age)[12:24,]))
          age
 month      0 10 20 30 40 50 60 70 80 90
@@ -1204,7 +1204,7 @@ month      0 10 20 30 40 50 60 70 80 90
 <p>Here's code for making the heatmap:</p>
 <pre>library(data.table);library(colorspace)
 
-t=fread(&quot;http://sars2.net/f/czbucketsfirstdosetype.csv.gz&quot;)
+t=fread(&quot;http://sars2.net/f/czbucketsfirstdose.csv.gz&quot;)
 t=t[,.(dead=sum(dead),alive=sum(alive)),.(month,age=pmin(90,age%/%5*5))]
 
 proj=fread(&quot;http://sars2.net/f/czdeadproj.csv&quot;)[,.(projdead=sum(projdead),pop=sum(pop)),.(month=substr(date,1,7),age)]
@@ -1249,7 +1249,7 @@ system(&quot;w=`identify -format %w 0.png`;pad=48;convert \\( -pointsize 42 -fon
 </div>
 <pre>library(data.table);library(colorspace)
 
-buck=fread(&quot;http://sars2.net/f/czbucketsfirstdosetype.csv.gz&quot;)
+buck=fread(&quot;http://sars2.net/f/czbucketsfirstdose.csv.gz&quot;)
 std=read.csv(&quot;http://sars2.net/f/czcensus2021pop.csv&quot;)[,2]
 
 t=buck[type!=&quot;Unvaccinated&quot;,.(dead=sum(dead),alive=sum(alive)),.(vaxmonth,type,age)]
@@ -1265,26 +1265,24 @@ m1=t[type==&quot;Pfizer&quot;,tapply(asmr,list(age,vaxmonth),c)]
 m2=t[type==&quot;Moderna&quot;,tapply(asmr,list(age,vaxmonth),c)]
 
 mpop=xtabs(alive~age+vaxmonth,t[type%in%c(&quot;Moderna&quot;,&quot;Pfizer&quot;)])/365
-m=(m2-m1)/ifelse(m1&gt;m2,m2,m1)*100
-disp=ifelse(is.nan(m),&quot;Inf&quot;,round(m))
-exp=.8;m=abs(m)^exp*sign(m)
-maxcolor=300^exp;m[is.infinite(m)]=-maxcolor;m[is.nan(m)]=maxcolor
+m=(m2-m1)/ifelse(m1&gt;m2,m2,m1)
+disp=matrix(sprintf(ifelse(m2/m1&gt;10,&quot;%.1f&quot;,&quot;%.2f&quot;),m2/m1),nrow(m))
+hide=pmin(m1,m2)==0;m[hide]=NA;disp[hide]=&quot;&quot;;disp[is.na(m)]=&quot;&quot;
+exp=.8;m=abs(m)^exp*sign(m);maxcolor=10^exp
 
 pheatmap::pheatmap(m,filename=&quot;i1.png&quot;,display_numbers=disp,
   gaps_row=nrow(m)-1,gaps_col=ncol(m)-1,
   cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,
-  border_color=NA,na_col=&quot;white&quot;,
+  border_color=NA,na_col=&quot;gray90&quot;,
   number_color=ifelse((abs(m)&gt;.55*maxcolor)&amp;!is.na(m),&quot;white&quot;,&quot;black&quot;),
   breaks=seq(-maxcolor,maxcolor,,256),
-  colorRampPalette(hex(HSV(c(210,210,210,210,0,0,0,0,0),c(.9,.75,.6,.3,0,.3,.6,.75,.9),c(.4,.65,1,1,1,1,1,.65,.4))))(256))
-
-exp2=.6;mpop2=mpop^exp2
-maxcolor2=max(mpop2[-nrow(m),-ncol(m)])
+  colorRampPalette(hex(HSV(rep(c(210,0),c(5,4)),c(.9,.75,.6,.3,0,.3,.6,.75,.9),c(.4,.65,rep(1,5),.65,.4))))(256))
 
 kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;p=!is.na(x)
   x[p]=paste0(sprintf(paste0(&quot;%.&quot;,ifelse(e[p]%%3==0,1,0),&quot;f&quot;),x[p]/1e3^(e2[p]-1)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2[p]]);x}
 
-disp2=mpop;disp2[is.na(disp2)]=0;disp2=kimi(disp2)
+exp2=.6;mpop2=mpop^exp2;maxcolor2=max(mpop2[-nrow(m),-ncol(m)])
+disp2=kimi(ifelse(mpop==0,0,mpop))
 
 pheatmap::pheatmap(mpop2,filename=&quot;i2.png&quot;,display_numbers=disp2,
   gaps_row=nrow(m)-1,gaps_col=ncol(m)-1,
@@ -1294,7 +1292,27 @@ pheatmap::pheatmap(mpop2,filename=&quot;i2.png&quot;,display_numbers=disp2,
   breaks=seq(0,maxcolor2,,256),
   sapply(seq(1,0,,256),\(i)rgb(i,i,i)))
 
-system(&quot;w=`identify -format %w i1.png`;pad=38;convert -gravity northwest -pointsize 42 -font Arial \\( -splice x24 -size $[w-pad]x caption:&#39;Czech record-level data: Ratio between Moderna and Pfizer ASMR by month of vaccination and age group. For example 50 means that people who received a Moderna vaccine for their first dose had 50% higher ASMR than people who received a Moderna vaccine for their first dose, and -120% means that people who received a Pfizer vaccine had 120% higher ASMR than people who received a Moderna vaccine. The ASMR is calculated from the day of vaccination up to the end of 2022. The standard population is the 2021 census population by single year of age.&#39; -extent $[w-pad]x -gravity center \\) i1.png -gravity northwest \\( -size $[w-40]x caption:&#39;Person-years from day of first dose until end of 2022 for people who received a Pfizer or Moderna vaccine for their first dose.&#39; -extent $[w-pad]x -gravity center \\) i2.png -append 1.png&quot;)</pre>
+system(&quot;w=`identify -format %w i1.png`;pad=44;convert -gravity northwest -pointsize 42 -font Arial \\( -splice x24 -size $[w-pad]x caption:&#39;Czech record-level data: Moderna ASMR divided by Pfizer ASMR, grouped by month of vaccination and age group. For example 1.5 means that people who received a Pfizer vaccine for their first dose had 1.5 times higher ASMR than people who received a Moderna vaccine for their first dose. The ASMR is calculated from the day of vaccination up to the end of 2022. The ratio is not displayed in cells where there are zero deaths for either Pfizer or Moderna vaccines. The standard population is the 2021 census population by single year of age.&#39; -extent $[w-pad]x -gravity center \\) i1.png -gravity northwest \\( -size $[w-40]x caption:&#39;Person-years from day of first dose until end of 2022 for people who received a Pfizer or Moderna vaccine for their first dose.&#39; -extent $[w-pad]x -gravity center \\) i2.png -append 1.png&quot;)</pre>
+<p>The total Moderna-Pfizer ratio was slightly below 1 for people who got vaccinated in October 2021 or later:</p>
+<pre>&gt; library(data.table)
+&gt; buck=fread(&quot;http://sars2.net/f/czbucketsfirstdose.csv.gz&quot;)
+&gt; std=fread(&quot;http://sars2.net/f/czcensus2021pop.csv&quot;)[[2]]
+&gt; t=buck[type!=&quot;Unvaccinated&quot;&amp;vaxmonth&gt;=&quot;2021-10&quot;,.(dead=sum(dead),alive=sum(alive)),.(type,age)]
+&gt; totage=t[,.(age=&quot;Total&quot;,alive=as.double(sum(alive)),asmr=sum(dead/alive*std[pmin(age,100)+1]/sum(std)*365e5)),.(type)]
+&gt; t=t[,.(alive=sum(alive),asmr=sum(dead/alive*std[pmin(age,100)+1]/sum(std)*365e5)),.(type,age=pmin(age%/%10*10,90))]
+&gt; t=rbind(t,totage)
+&gt; t[,.(ratio=asmr[type==&quot;Moderna&quot;]/asmr[type==&quot;Pfizer&quot;]),.(age)][order(age)]|&gt;print(row.names=F)
+   age     ratio
+    10 1.5526322
+    20 1.3476644
+    30 1.0297858
+    40 0.7615319
+    50 0.8760022
+    60 0.9265285
+    70 1.1035120
+    80 1.0133492
+    90 0.7233335
+ Total 0.9955395</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
