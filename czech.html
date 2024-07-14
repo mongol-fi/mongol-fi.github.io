@@ -1624,12 +1624,12 @@ system(&quot;w=`identify -format %w i1.png`;pad=44;convert -gravity northwest -p
 <pre>&gt; b=fread(&quot;http://sars2.net/f/czbucketskeep.csv.gz&quot;)[dose&lt;=1]
 &gt; b[,vaxq:=paste0(substr(vaxmonth,1,4),&quot;Q&quot;,(as.numeric(substr(b$vaxmonth,6,7))-1)%/%3+1)]
 &gt; b=b[,.(dead=sum(dead),alive=sum(alive)),.(vaxq,month,type,age=pmin(age,100))]
-&gt; b=merge(b,b[,.(base=sum(dead)/sum(alive)),.(month,age)])[,base:=base*alive]
-&gt; b=b[,.(dead=sum(dead),base=sum(base)),.(vaxq,type,age=factor(pmin(age,90)%/%10*10))]
+&gt; b=merge(b[type!=&quot;&quot;],b[,.(base=sum(dead)/sum(alive)),.(month,age)])[,base:=base*alive]
+&gt; b=b[,.(dead=sum(dead),base=sum(base)),.(type,vaxq,age=factor(pmin(age,90)%/%10*10))]
 &gt; b=rbind(b,b[,.(dead=sum(dead),base=sum(base),age=&quot;Total&quot;),.(vaxq,type)])
 &gt; b=rbind(b,b[,.(dead=sum(dead),base=sum(base),vaxq=&quot;Total&quot;),.(age,type)])
-&gt; b=b[,.(rel=sum(dead)/sum(base),dead=sum(dead)),.(vaxq,type,age)]
-&gt; b[,.(rat=rel[type==&quot;Moderna&quot;]/rel[type==&quot;Pfizer&quot;]),.(vaxq,age)][,tapply(rat,list(vaxq,age),round,2)]
+&gt; ar=tapply(b$dead/b$base,b[,1:3],c)
+&gt; round(ar[&quot;Moderna&quot;,,]/ar[&quot;Pfizer&quot;,,],2)
         0   10   20   30   40   50   60   70   80    90 Total
 2021Q1 NA 0.80 3.41 1.10 1.75 1.55 1.65 1.25 1.34  1.19  1.29
 2021Q2 NA 0.00 0.88 1.63 1.64 1.77 1.56 1.25 1.19  1.10  1.43
