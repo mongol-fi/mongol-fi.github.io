@@ -137,7 +137,8 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=output>4 3 5 6</span>
 <span class=prompt>&gt;</span> <span class=code>v=1:6;structure(v,class=&quot;dist&quot;,Size=Re(polyroot(c(-2*length(v),-1,1))[1]))</span>
 <span class=comment># `polyroot` returns `4+0i` which has an imaginary part but `Re` extracts only the real part</span>
-<span class=comment># the coefficients for `polyroot` are in increasing order, and `-2*6-4+4^2` is zero</span>
+<span class=comment># `polyroot solves the equation `-2*6-1*x+1*x^2=0` (so the coefficients are in increasing order and not decreasing order)</span>
+<span class=comment># the solution to the equation is `-2*6-1*4+1*4^2=0`</span>
 <span class=comment># `2*6` is the size of the lower and upper triangles, 4 is the size of the diagonal, and `4^2` the size of the full matrix</span>
 <span class=output>  1 2 3</span>
 <span class=output>  1 2 3</span>
@@ -1125,6 +1126,9 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=prompt>&gt;</span> <span class=code>for(i in as.list(d))print(i)</span>
 <span class=output>[1] &quot;2024-01-12&quot;</span>
 <span class=output>[1] &quot;2024-01-11&quot;</span>
+<span class=prompt>&gt;</span> <span class=code>for(i in d)print(`class&lt;-`(i,&quot;Date&quot;))</span><span class=comment> # convert back to date</span>
+<span class=output>[1] &quot;2024-01-12&quot;</span>
+<span class=output>[1] &quot;2024-01-11&quot;</span>
 <span class=output>
 <span class=title># convert data in long format to wide format</span></span>
 <span class=prompt>&gt;</span> <span class=code>d=data.frame(row=paste0(&quot;row&quot;,sample(1e5)),col=paste0(&quot;col&quot;,sample(10,1e5,T)),val=sample(100,1e5,T))</span>
@@ -1220,7 +1224,7 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=prompt>&gt;</span> <span class=code>v=c(12345,23456)</span>
 <span class=prompt>&gt;</span> <span class=code>`class&lt;-`(v,&quot;Date&quot;)</span>
 <span class=output>[1] &quot;2003-10-20&quot; &quot;2034-03-22&quot;</span>
-<span class=prompt>&gt;</span> <span class=code>as.Date(v,&quot;1970-1-1&quot;)</span>
+<span class=prompt>&gt;</span> <span class=code>as.Date(v,&quot;1970-1-1&quot;)</span><span class=comment> # base R requires specifying the origin</span>
 <span class=output>[1] &quot;2003-10-20&quot; &quot;2034-03-22&quot;</span>
 <span class=prompt>&gt;</span> <span class=code>library(zoo);as.Date(v)</span><span class=comment> # `zoo` overrides `as.Date` with a version that doesn&apos;t require specifying the origin</span>
 <span class=output>[1] &quot;2003-10-20&quot; &quot;2034-03-22&quot;</span>
@@ -1243,7 +1247,7 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=output>2:     F    5    7</span>
 <span class=output>3: Total    9   13</span>
 <span class=output>
-<span class=title># add totals grouped by each variable in data.table</span></span>
+<span class=title># add totals grouped by each variable to data.table</span></span>
 <span class=prompt>&gt;</span> <span class=code>d=data.table(month=month.abb[c(1,1,2,2)],state=state.name[1:2],col1=1:4,col2=10:13)</span>
 <span class=prompt>&gt;</span> <span class=code>d=rbind(d,d[,lapply(.SD,sum),by=month,.SDcols=3:4][,state:=&quot;Total&quot;])</span>
 <span class=prompt>&gt;</span> <span class=code>d=rbind(d,d[,lapply(.SD,sum),by=state,.SDcols=3:4][,month:=&quot;Total&quot;])</span>
@@ -1259,12 +1263,48 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=output>8: Total  Alaska    6   24</span>
 <span class=output>9: Total   Total   10   46</span>
 <span class=output>
-<span class=title># auto-aggregate numeric columns by non-numeric columns</span></span>
+<span class=title># aggregate numeric columns by non-numeric columns</span></span>
 <span class=prompt>&gt;</span> <span class=code>sum0=\(...)sum(...,na.rm=T)</span>
 <span class=prompt>&gt;</span> <span class=code>aua=\(x,fun=sum0,...){n=sapply(x,is.numeric);aggregate(x[,n,drop=F],x[,!n,drop=F],fun,...)}</span>
-<span class=prompt>&gt;</span> <span class=code>aua(iris,mean)</span>
+<span class=prompt>&gt;</span> <span class=code>aua(iris,mean)</span><span class=comment> # auto-aggregate</span>
 <span class=output>     Species Sepal.Length Sepal.Width Petal.Length Petal.Width</span>
 <span class=output>1     setosa        5.006       3.428        1.462       0.246</span>
 <span class=output>2 versicolor        5.936       2.770        4.260       1.326</span>
 <span class=output>3  virginica        6.588       2.974        5.552       2.026</span>
+<span class=output>
+<span class=title># do a linear interpolation of weekly data to daily</span></span>
+<span class=prompt>&gt;</span> <span class=code>d=data.frame(x=seq(as.Date(&quot;2024-1-1&quot;),,7,3),y=c(7.2,2.8,4.4))</span>
+<span class=prompt>&gt;</span> <span class=code>d</span>
+<span class=output>           x   y</span>
+<span class=output>1 2024-01-01 7.2</span>
+<span class=output>2 2024-01-08 2.8</span>
+<span class=output>3 2024-01-15 4.4</span>
+<span class=prompt>&gt;</span> <span class=code>newx=as.Date(&quot;2024-1-1&quot;)+0:14</span>
+<span class=prompt>&gt;</span> <span class=code>as.data.frame(approx(x,y,newx))</span>
+<span class=output>            x        y</span>
+<span class=output>1  2024-01-01 7.200000</span>
+<span class=output>2  2024-01-02 6.571429</span>
+<span class=output>3  2024-01-03 5.942857</span>
+<span class=output>4  2024-01-04 5.314286</span>
+<span class=output>5  2024-01-05 4.685714</span>
+<span class=output>6  2024-01-06 4.057143</span>
+<span class=output>7  2024-01-07 3.428571</span>
+<span class=output>8  2024-01-08 2.800000</span>
+<span class=output>9  2024-01-09 3.028571</span>
+<span class=output>10 2024-01-10 3.257143</span>
+<span class=output>11 2024-01-11 3.485714</span>
+<span class=output>12 2024-01-12 3.714286</span>
+<span class=output>13 2024-01-13 3.942857</span>
+<span class=output>14 2024-01-14 4.171429</span>
+<span class=output>15 2024-01-15 4.400000</span>
+<span class=output>
+<span class=title># delete a single column by name in data.table</span></span>
+<span class=prompt>&gt;</span> <span class=code>data.table(iris)[,Sepal.Width:=NULL][1:2]</span>
+<span class=output>   Sepal.Length Petal.Length Petal.Width Species</span>
+<span class=output>1:          5.1          1.4         0.2  setosa</span>
+<span class=output>2:          4.9          1.4         0.2  setosa</span>
+<span class=output>
+<span class=title># show ratio between pt and line units in ggplot</span></span>
+<span class=prompt>&gt;</span> <span class=code>grid::convertUnit(unit(1,&quot;pt&quot;),&quot;lines&quot;)</span><span class=comment> # 1 pt is about 0.07 lines</span>
+<span class=output>[1] 0.06918500069185lines</span>
 </pre>
