@@ -85,7 +85,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Moderna_Pfizer_ratio_in_ages_70_79_in_the_fourth_quarter_of_2021>Moderna-Pfizer ratio in ages 70-79 in the fourth quarter of 2021</a></li>
 <li><a href=#Triangle_plot_of_Moderna_Pfizer_ratio>Triangle plot of Moderna-Pfizer ratio</a></li>
 <li><a href=#Stacked_plot_of_multiple_variables_from_record_level_data_and_Czech_MoH_data>Stacked plot of multiple variables from record-level data and Czech MoH data</a></li>
-<li><a href=#Correlation_coefficients_between_variables_from_record_level_data_and_Czech_MoH_data>Correlation coefficients between variables from record-level data and Czech MoH data</a></li>
+<li><a href=#Correlation_between_variables_from_record_level_data_and_Czech_MoH_data>Correlation between variables from record-level data and Czech MoH data</a></li>
 <li><a href=#Excess_mortality_by_weeks_after_vaccination>Excess mortality by weeks after vaccination</a></li>
 <li><a href=#Excess_CMR_percent_in_vaccinated_people_relative_to_unvaccinated_people>Excess CMR percent in vaccinated people relative to unvaccinated people</a></li>
 <li><a href=#Statistics_by_batch>Statistics by batch</a></li>
@@ -1322,7 +1322,7 @@ ma=\(x,b=1,f=b)setNames(rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T),
 ua=\(x,y,...){u=unique(x);y(u,...)[match(x,u)]}
 age=\(x,y){x=as.numeric(x);y=as.numeric(y);(y-x-(y-789)%/%1461+(x-789)%/%1461)%/%365}
 
-agecut=\(x,ages=seq(0,90,10))cut(pmax(x,0),c(ages,Inf),paste0(ages,c(paste0(&quot;-&quot;,ages[-1]-1),&quot;+&quot;)),T,F)
+agecut=\(x,y)cut(pmax(x,0),c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
 # ages=c(0,12,18,30,40,60,85)
 ages=0:4*20
 agelev=agecut(0:120,ages)
@@ -1564,7 +1564,7 @@ month      0 10 20 30 40 50 60 70 80 90 100 Total
 </div>
 <p>In January 2022 the percentage of vaccinated people was about 3% in ages 0-11 and about 43% in ages 12-15:</p>
 <pre>&gt; b=fread(&quot;http://sars2.net/f/czbucketskeep.csv.gz&quot;)[dose&lt;=1]
-&gt; agecut=\(x,ages=0:9*10)cut(pmax(x,0),c(ages,Inf),paste0(ages,c(paste0(&quot;-&quot;,ages[-1]-1),&quot;+&quot;)),T,F)
+&gt; agecut=\(x,y)cut(pmax(x,0),c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
 &gt; ages=c(0,12,16,18,30,40,60,85)
 &gt; b[month==&quot;2022-01&quot;,.(alive=sum(alive)),.(age=agecut(age,ages),dose)][,.(vaxpct=round(sum(alive[dose==1])/sum(alive)*100)),age]|&gt;print(r=F)
    age vaxpct
@@ -1831,14 +1831,14 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   strip.text=element_blank())
 ggsave(&quot;1.png&quot;,width=3.3,height=4.7,dpi=450)</pre>
 <h2>
-<a href=#Correlation_coefficients_between_variables_from_record_level_data_and_Czech_MoH_data id=Correlation_coefficients_between_variables_from_record_level_data_and_Czech_MoH_data>Correlation coefficients between variables from record-level data and Czech MoH data</a>
+<a href=#Correlation_between_variables_from_record_level_data_and_Czech_MoH_data id=Correlation_between_variables_from_record_level_data_and_Czech_MoH_data>Correlation between variables from record-level data and Czech MoH data</a>
 </h2>
 <p>The plot below shows a daily correlation of the ±10-day moving averages for different daily variables in 2021 to 2022. The correlation between new vaccine doses and deaths is around zero. But the correlation between COVID hospitalizations and all-cause deaths is about 0.94. So if a large part of the excess deaths were caused by vaccines, then why were the deaths concentrated during distinct periods of time that also had a high number of hospitalizations for COVID?</p>
-<div class="width6">
+<div class="width5">
 <img src="i/czech-cor.png">
 </div>
-<p>In the plot above PCR positivity rate gets an unusually poor correlation with all-cause deaths, but it's because half of the data is in 2022 when there's high PCR positivity but low mortality (which is the typical pattern in the Omicron era all over the world). However the correlation between PCR positivity and total deaths increased from about 0.30 to about 0.45 when I looked at data from 2020-2022 instead, and it further increased to about 0.94 when I looked at data from 2020-2021:</p>
-<div class="width12">
+<p>In the plot above PCR positivity rate gets an unusually poor correlation with all-cause deaths, but it's because half of the data is from 2022, and in 2022 there was high PCR positivity but low mortality (which is the typical pattern in the Omicron era all over the world). However the correlation between PCR positivity and total deaths increased from about 0.30 to about 0.45 when I looked at data from 2020-2022 instead, and it further increased to about 0.94 when I looked at data from 2020-2021:</p>
+<div class="width10">
 <img src="i/czech-cor-2.png">
 </div>
 <pre>download.file(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/nakazeni-hospitalizace-testy.csv&quot;,&quot;nakazeni-hospitalizace-testy.csv&quot;)
@@ -2045,40 +2045,42 @@ for(day in as.list(seq(mindate,maxdate,1))){
 setorder(buck,month,vaxmonth,week,age,dose,type,batch)
 fwrite(buck,&quot;czbucketsbatchkeep.csv&quot;,quote=F)</pre>
 <p>I uploaded the output here: <a href=f/czbucketsbatchkeep.csv.xz>f/czbucketsbatchkeep.csv.xz</a> (about 40 MiB). In the output people are kept under earlier doses even after a new dose. Batches with less than 100 doses are shown under the batch name <span class="quote">&quot;Other&quot;</span>. Vaccines from manufacturers with less than 1000 total doses are shown under <span class="quote">&quot;Other&quot;</span>. In the earlier buckets files I classified Pfizer's Omicron vaccines under the <span class="quote">&quot;Other&quot;</span> type but now I'm classifying them under Pfizer instead.</p>
-<p>The plot below shows statistics for people who got a first dose from a Pfizer vaccine. Generally batches that have a later mean day of vaccination seem to have higher excess mortality. On the row for the mean date of vaccination, January 1st 2021 is day zero. The only batch with a negative mean date is EJ6796, which has a mean date of -3 which means December 29th 2020 (but that batch also has fairly high excess deaths of about 24%, which might be if vulnerable groups of people were priorized to be vaccinated earliest). There's 15 batches with more than 15 doses given but all of the batches got below -10% excess mortality:</p>
+<p>The plot below shows statistics for people who got a first dose from a Pfizer vaccine. Generally batches that have a later mean day of vaccination seem to have higher excess mortality. On the row for the mean date of vaccination, January 1st 2021 is day zero. The only batch with a negative mean date is EJ6796, which has a mean date of -3 which means December 29th 2020 (but that batch also has fairly high excess deaths of about 24%, which might be if vulnerable groups of people were priorized to be vaccinated earliest). There's 15 batches with more than 100,000 doses given but all of the batches got below -10% excess mortality:</p>
 <div class="width11">
 <img src="i/czech-batch.png">
 </div>
 <p>In the plot above when I calculated ASMR by single year of age, the batch FA7082 got an ASMR of about 18,000 deaths per 100,000 person-years. However that's because the age 89 had one death but only 4 person-days in the batch, and age 89 made up about 0.19% of my standard population, so the single death added about 18,000 units to the total ASMR value (from <code>1/4*.0019*365e5</code>):</p>
 <pre>&gt; std=fread(&quot;http://sars2.net/f/czcensus2021pop.csv&quot;)[,pop/sum(pop)]
 &gt; system(&quot;curl -LsO sars2.net/f/czbucketsbatchkeep.csv.xz&quot;)
-&gt; b=fread(&quot;xz -dc czbucketsbatchkeep.csv.xz&quot;)[dose==1]
+&gt; b=fread(&quot;xz -dc s/f/czbucketsbatchkeep.csv.xz&quot;)[dose==1]
 &gt; d=b[batch==&quot;FA7082&quot;,.(dead=sum(dead),alive=sum(alive)),.(age=pmin(age,100))][,asmr:=dead/alive*std[age+1]*365e5]
-&gt; print(round(d[dead&gt;0]),r=F) # show all ages with nonzero deaths
- age dead alive  asmr
-  44    1 26242    24
-  63    1  9983    46
-  67    1  7239    63
-  71    1  5326    80
-  77    1  4457    69
-  79    1  2326   102
-  82    1  2407    68
-  83    1  1701    85
-  86    1  1685    62
-  89    1     4 17790</pre>
+&gt; print(d[dead&gt;0],r=F) # show all ages with nonzero deaths
+ age dead alive        asmr
+  44    1 26242    24.08040
+  63    1  9983    46.04660
+  67    1  7239    63.44008
+  71    1  5326    80.26433
+  77    1  4457    69.38750
+  79    1  2326   101.98112
+  82    1  2407    67.61925
+  83    1  1701    84.76822
+  86    1  1685    62.20545
+  89    1     4 17790.17285</pre>
 <p>But when I calculated the ASMR by 5-year age groups instead, ages 85-89 now had 2 deaths and 5,000 person-days, so ages 85-89 added only about 188 units to the total ASMR value:</p>
-<pre>&gt; std2=tapply(std,0:100%/%5*5,sum)
-&gt; d2=b[batch==&quot;FA7082&quot;,.(dead=sum(dead),alive=sum(alive)),.(age=pmin(age,100)%/%5*5)][,asmr:=dead/alive*std2[age/5+1]*365e5]
-&gt; print(round(d2[dead&gt;0]),r=F)
- age dead  alive asmr
-  40    1 108333   27
-  60    1  42891   50
-  65    1  30224   77
-  70    1  25299   85
-  75    2  20774  140
-  80    2  11081  152
-  85    2   5000  188</pre>
-<p>However even if you calculate ASMR using 5-year age groups instead of single year of age, there can still occasionally be one age group which has nonzero deaths and a tiny population size, which can artificially inflate the total ASMR value. ASMR is suitable for populations where all age groups always have a large number of people, like the total population of an entire nation. But in cases like these batch statistics where some age groups can have a small population size, the method I used to calculate the excess percentage of deaths in my plot above is more reliable than ASMR.</p>
+<pre>&gt; agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
+&gt; ages=0:19*5
+&gt; std2=tapply(std,agecut(0:100,ages),sum)
+&gt; d2=b[batch==&quot;FA7082&quot;,.(dead=sum(dead),alive=sum(alive)),.(age=agecut(age,ages))][,asmr:=dead/alive*std2[age]*365e5]
+&gt; print(d2[dead&gt;0],r=F) # show all ages with nonzero deaths
+   age dead  alive      asmr
+ 40-44    1 108333  27.46563
+ 60-64    1  42891  49.85952
+ 65-69    1  30224  76.66238
+ 70-74    1  25299  84.80707
+ 75-79    2  20774 140.02652
+ 80-84    2  11081 152.34513
+ 85-89    2   5000 187.71468</pre>
+<p>However even if you calculate ASMR using 5-year age groups instead of single year of age, there can still occasionally be one age group which has nonzero deaths and a tiny population size, which can artificially inflate the total ASMR value. ASMR is suitable for populations where all age groups always have a large number of people, like the total population of an entire nation. But in cases like these batch statistics where some age groups can have a small population size, the method I used to calculate the excess percentage of deaths in my plot above is often more reliable than ASMR.</p>
 <p>Here's code for making the heatmap:</p>
 <pre>download.file(&quot;http://sars2.net/f/czbucketsbatchkeep.csv.xz&quot;,&quot;czbucketsbatchkeep.csv.xz&quot;)
 
