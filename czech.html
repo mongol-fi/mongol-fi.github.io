@@ -87,7 +87,8 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Triangle_plot_of_Moderna_Pfizer_ratio>Triangle plot of Moderna-Pfizer ratio</a></li>
 <li><a href=#Stacked_plot_of_multiple_variables_from_record_level_data_and_Czech_MoH_data>Stacked plot of multiple variables from record-level data and Czech MoH data</a></li>
 <li><a href=#Excess_mortality_by_weeks_after_vaccination>Excess mortality by weeks after vaccination</a></li>
-<li><a href=#Excess_CMR_in_vaccinated_people_as_percentage_of_unvaccinated_people>Excess CMR in vaccinated people as percentage of unvaccinated people</a></li>
+<li><a href=#Excess_CMR_percent_in_vaccinated_people_relative_to_unvaccinated_people>Excess CMR percent in vaccinated people relative to unvaccinated people</a></li>
+<li><a href=#Statistics_by_batch>Statistics by batch</a></li>
 </ul>
 
 <h2>
@@ -108,6 +109,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=f/czbuckets.csv.gz>f/czbuckets.csv.gz</a> (6 MiB): Deaths and person-days grouped by ongoing month, month of vaccination, weeks since vaccination, age, dose number, and vaccine type. People are removed under earlier doses after a new dose.</li>
 <li><a href=f/czbucketskeep.csv.gz>f/czbucketskeep.csv.gz</a> (8 MiB): Deaths and person-days grouped by ongoing month, month of vaccination, weeks since vaccination, age, dose number, and vaccine type. People are kept under earlier doses after a new dose.</li>
 <li><a href=f/czbucketsdaily.csv.gz>f/czbucketsdaily.csv.gz</a> (2 MiB): Deaths and person-days grouped by ongoing day, age, and dose number. People are removed under earlier doses after a new dose.</li>
+<li><a href=f/czbucketsbatchkeep.csv.xz>f/czbucketsbatchkeep.csv.xz</a> (40 MiB): Deaths and person-days grouped by ongoing month, month of vaccination, weeks since vaccination, age, dose number, vaccine type, and batch identifier. People are kept under earlier doses after a new dose.</li>
 </ul>
 <p>Population and deaths:</p>
 <ul>
@@ -1898,7 +1900,7 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   plot.title=element_text(size=7.5,face=&quot;bold&quot;,margin=margin(2,0,4,0)))
 ggsave(&quot;1.png&quot;,width=4.5,height=2.6,dpi=400)</pre>
 <h2>
-<a href=#Excess_CMR_in_vaccinated_people_as_percentage_of_unvaccinated_people id=Excess_CMR_in_vaccinated_people_as_percentage_of_unvaccinated_people>Excess CMR in vaccinated people as percentage of unvaccinated people</a>
+<a href=#Excess_CMR_percent_in_vaccinated_people_relative_to_unvaccinated_people id=Excess_CMR_percent_in_vaccinated_people_relative_to_unvaccinated_people>Excess CMR percent in vaccinated people relative to unvaccinated people</a>
 </h2>
 <p>In the plot below you can see that during the COVID wave in November to December 2021, there was a temporary dent in unvaccinated CMR divided by vaccinated CMR, so that it fell below -70% in many age groups.</p>
 <p>In ages 60-89 in February 2021 to July 2021, there is a diagonally shifting pattern where the period with the lowest ratio is earlier in older age groups and later in younger age groups, but that's because older age groups got vaccinated earlier so the period when they were subject to the greatest temporal HVE passed earlier. And before the main rollout to younger age groups had started, the people in younger age groups who had been vaccinated early included vulnerable and immunocompromised people who had an elevated mortality risk.</p>
@@ -1925,6 +1927,151 @@ pheatmap::pheatmap(m,filename=&quot;0.png&quot;,display_numbers=disp,
   colorRampPalette(hsv(rep(c(7/12,0),5:4),c(.9,.75,.6,.3,0,.3,.6,.75,.9),c(.4,.65,1,1,1,1,1,.65,.4)))(256))
 
 system(&quot;w=`identify -format %w 0.png`;pad=48;convert \\( -pointsize 44 -font Arial-Bold -size $[w-pad]x caption:&#39;Czech record-level data: CMR in vaccinated people as percentage of CMR in unvaccinated people&#39; \\) \\( -gravity north 0.png -shave x6 \\) -append -gravity north -splice x20 1.png&quot;)</pre>
+<h2>
+<a href=#Statistics_by_batch id=Statistics_by_batch>Statistics by batch</a>
+</h2>
+<p>This generates a buckets file with an additional column for batch ID:</p>
+<pre>library(data.table)
+
+ua=\(x,fun,...){u=unique(x);fun(u,...)[match(x,u)]}
+age=\(x,y){x=as.numeric(x);y=as.numeric(y);(y-x-(y-789)%/%1461+(x-789)%/%1461)%/%365}
+
+mindate=as.Date(&quot;2020-1-1&quot;);maxdate=as.Date(&quot;2022-12-31&quot;)
+
+rec=fread(&quot;Czech/data/CR_records.csv&quot;)
+t=rec[,.(id=1:.N,death=DatumUmrti)]
+set.seed(0);t$birth=ua(paste0(rec$Rok_narozeni,&quot;-1-1&quot;),as.Date)+sample(0:364,nrow(t),T)
+t=t[rep(1:nrow(t),8),]
+t$dose=rep(0:7,each=nrow(rec))
+t$date=c(rep(mindate,nrow(rec)),rec[,`class&lt;-`(unlist(.SD,use.names=F),&quot;Date&quot;),.SDcols=paste0(&quot;Datum_&quot;,1:7)])
+
+t$type=c(rep(&quot;&quot;,nrow(rec)),rec[,unlist(.SD,use.names=F),.SDcols=paste0(&quot;OckovaciLatka_&quot;,1:7)])
+name1=unique(t$type);name2=rep(&quot;Other&quot;,length(name1))
+name2[name1==&quot;&quot;]=&quot;&quot;
+name2[grep(&quot;comirnaty&quot;,ignore.case=T,name1)]=&quot;Pfizer&quot;
+name2[grep(&quot;spikevax&quot;,ignore.case=T,name1)]=&quot;Moderna&quot;
+name2[grep(&quot;nuvaxovid&quot;,ignore.case=T,name1)]=&quot;Novavax&quot;
+name2[name1==&quot;COVID-19 Vaccine Janssen&quot;]=&quot;Janssen&quot;
+name2[name1==&quot;VAXZEVRIA&quot;]=&quot;AstraZeneca&quot;
+t$type=name2[match(t$type,name1)]
+
+t$batch=c(rep(&quot;&quot;,nrow(rec)),rec[,unlist(.SD,use.names=F),.SDcols=paste0(&quot;Sarze_&quot;,1:7)])
+t$batch=ua(ua(t$batch,trimws),toupper)
+t$batch[!t$batch%in%t$batch[rowid(t$batch)==100]]=&quot;Other&quot;
+
+t=t[!is.na(date)][date&lt;=maxdate][order(-date)]
+t$vaxmonth=ua(t$date,substr,1,7)
+
+rm(rec)
+
+buck=data.table()
+for(day in as.list(seq(mindate,maxdate,1))){
+  cat(as.character(day),&quot;\n&quot;)
+  buck=rbind(buck,t[date&lt;=day&amp;(is.na(death)|day&lt;=death)&amp;day&gt;=birth][!(dose==0&amp;id%in%id[dose&gt;0])][,.( # keep under earlier doses
+  buck=rbind(buck,unique(t[date&lt;=day&amp;(is.na(death)|day&lt;=death)&amp;day&gt;=birth],by=&quot;id&quot;)[ # remove under earlier doses
+    month=substr(day,1,7),vaxmonth,week=ifelse(type==&quot;&quot;,0,as.numeric(day-date)%/%7),
+    age=age(birth,day),dose,type,batch,alive=1,dead=death==day)])[,.(
+    alive=sum(alive),dead=sum(dead,na.rm=T)),by=.(month,vaxmonth,week,age,dose,type,batch)]
+}
+
+setorder(buck,month,vaxmonth,week,age,dose,type,batch)
+fwrite(buck,&quot;czbucketsbatchkeep.csv&quot;,quote=F)</pre>
+<p>I uploaded the output here: <a href=f/czbucketsbatchkeep.csv.xz>f/czbucketsbatchkeep.csv.xz</a> (about 40 MiB). People are kept under earlier doses after a new dose.</p>
+<p>Batches with less than 100 doses are shown under the code <span class="quote">&quot;Other&quot;</span>. Vaccines from manufacturers with less than 1000 total doses are shown under <span class="quote">&quot;Other&quot;</span>. In the earlier buckets files I classified Pfizer's Omicron vaccines under the <span class="quote">&quot;Other&quot;</span> type but now I'm classifying them under Pfizer instead.</p>
+<p>The plot below shows statistics for people who got a first dose from a Pfizer vaccine. Generally batches that have a later average day of vaccination seem to have higher excess mortality. On the row for the mean date of vaccination, January 1st 2021 is day zero. The only batch with a negative mean date is EJ6796, which has a mean day of -3 which means December 29th 2020, but that batch also has fairly high excess deaths of about 24%, which might be if vulnerable groups of people were priorized to be vaccinated earliest:</p>
+<div class="width11">
+<img src="i/czech-batch.png">
+</div>
+<p>In the plot above when I calculated ASMR by single year of age, the batch FA7082 got an ASMR of about 18,000 deaths per 100,000 person-years. However that's because the batch had one death but only 4 person-days for age 89, and age 89 made up about 0.19% of my standard population, so the single death added about 18,000 units to the total ASMR value (from <code>1/4*.0019*365e5</code>):</p>
+<pre>&gt; std=fread(&quot;http://sars2.net/f/czcensus2021pop.csv&quot;)[,pop/sum(pop)]
+&gt; system(&quot;curl -LsO sars2.net/f/czbucketsbatchkeep.csv.gz&quot;)
+&gt; b=fread(&quot;xz -dc s/f/czbucketsbatchkeep.csv.xz&quot;)[dose==1&amp;batch==&quot;FA7082&quot;]
+&gt; d=b[,.(dead=sum(dead),alive=sum(alive)),.(age=pmin(age,100))][,asmr:=dead/alive*std[age+1]*365e5]
+&gt; d[dead&gt;0]
+    age dead alive        asmr
+ 1:  44    1 26242    24.08040
+ 2:  63    1  9983    46.04660
+ 3:  67    1  7239    63.44008
+ 4:  71    1  5326    80.26433
+ 5:  77    1  4457    69.38750
+ 6:  79    1  2326   101.98112
+ 7:  82    1  2407    67.61925
+ 8:  83    1  1701    84.76822
+ 9:  86    1  1685    62.20545
+10:  89    1     4 17790.17285</pre>
+<p>In my plot above the method I used to calculate the excess percentage of deaths is more reliable than ASMR in cases like these batch statistics when there is an uneven distribution of people across age groups or when some age group can occasionally have an extremely low number of person-days.</p>
+<p>Here's code for making the heatmap:</p>
+<pre>kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;x[]=ifelse(abs(x)&lt;1e3,round(x),paste0(sprintf(paste0(&quot;%.&quot;,ifelse(e%%3==0,1,0),&quot;f&quot;),x/1e3^(e2-1)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2]));x}
+
+mima=\(x)(x-min(x,na.rm=T))/(max(x,na.rm=T)-min(x,na.rm=T))
+
+std=fread(&quot;http://sars2.net/czcensus2021pop.csv&quot;)[,pop/sum(pop)]
+
+buck=fread(&quot;curl -Ls sars2.net/f/czbucketsbatchkeep.csv.xz|xz -dc&quot;)[dose&lt;=1][,age:=pmin(age,100)]
+me=merge(buck[dose==1&amp;type==&quot;Pfizer&quot;&amp;batch!=&quot;&quot;],buck[,.(base=sum(dead)/sum(alive)),.(age,month)])[,base:=base*alive]
+me=me[batch%in%me[,.(alive=sum(alive)/365),batch][alive&gt;1e3,batch]]
+
+a=me[,.(alive=sum(alive),dead=sum(dead),base=sum(base)),.(batch,age)]
+a=rbind(a,a[,.(alive=sum(alive),dead=sum(dead),base=sum(base),batch=&quot;Total&quot;),age])
+
+o=a[,.(excess=(sum(dead)/sum(base)-1)*100,
+  asmr=sum(dead/alive*std[age+1]*365e5),
+  pop=sum(alive)/365,
+  dead=sum(dead),age=weighted.mean(age,alive)),batch]
+
+asmr2=a[,age2:=age%/%5*5][,.(dead=sum(dead),alive=sum(alive)),.(batch,age2)]
+std2=tapply(std,0:100%/%5*5,sum)
+o=merge(o,asmr2[,.(asmr2=sum(dead/alive*std2[factor(age2)]*365e5)),batch])
+
+o=data.frame(o[order(excess)],row.names=1,check.names=F)
+o=rbind(o[rownames(o)!=&quot;Total&quot;,],o[&quot;Total&quot;,])
+
+rec=fread(&quot;CR_records.csv&quot;)
+
+vaxdate=rec[,mean(as.double(Datum_1)),Sarze_1][,setNames(V1,Sarze_1)]
+vaxdate[&quot;Total&quot;]=rec[,mean(Datum_1,na.rm=T)]
+o$vaxdate=(vaxdate-as.double(as.Date(&quot;2021-1-1&quot;)))[rownames(o)]
+
+disp0=round(o)
+disp0$pop=kimi(o$pop)
+disp0$dead=kimi(o$dead)
+disp0$asmr=kimi(o$asmr)
+disp0$asmr2=kimi(o$asmr2)
+max=apply(head(o,-1),2,max)
+max[&quot;asmr&quot;]=max[&quot;asmr2&quot;]=7e3
+
+m0=o/max[col(o)]
+
+names=read.csv(text=&quot;id,name
+excess,Excess percentage of deaths
+asmr,ASMR by single year of age
+asmr2,ASMR by five-year age groups
+pop,Person-years
+age,Mean age
+vaxdate,Mean day of vaccination
+dead,Deaths&quot;)
+m0=m0[,names$id];disp0=disp0[,names$id];colnames(m0)=names$name
+
+slices=2;cols=ceiling(nrow(m0)/slices)
+for(i in 1:slices){
+  ran=((i-1)*cols+1):min(nrow(m0),i*cols)
+  m=t(m0[ran,]);disp=t(disp0[ran,])
+
+  pheatmap::pheatmap(m,filename=paste0(&quot;i&quot;,i,&quot;.png&quot;),display_numbers=disp,
+    cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,
+    number_color=ifelse((abs(m)&gt;.55)&amp;!is.na(m),&quot;white&quot;,&quot;black&quot;),border_color=NA,na_col=&quot;gray90&quot;,
+    breaks=seq(-1,1,,256),
+    colorRampPalette(hsv(rep(c(7/12,0),5:4),c(.9,.75,.6,.3,0,.3,.6,.75,.9),c(.4,.65,1,1,1,1,1,.65,.4)))(256))
+}
+
+system(paste0(&quot;convert i{&quot;,paste(1:slices,collapse=&quot;,&quot;),&quot;}.png -shave x6 -gravity east -append 0.png&quot;))
+
+sub=&quot;\u00a0     Only batches with at least a thousand person-years are included. This plot only includes first doses, and people remain included under the first dose even after they get a second dose. This plot doesn&#39;\\&#39;&#39;t include only vaccines with the type string \&quot;Comirnaty\&quot; like some of my earlier plots, but it also includes Pfizer&#39;\\&#39;&#39;s Omicron vaccines and pediatric vaccines (even though only a small number of people got an Omicron vaccine for their first dose).
+      On the row for the average day of vaccination, day zero is January 1st 2021.
+      On the row for the excess percentage of deaths, the baseline number of deaths was derived by multiplying the number of person-days for each combination of age and month with the mortality rate for the same combination of age and month among all people who are included in the record-level data.
+      ASMR is unreliable for groups of people that have an uneven age distribution or where some age groups have a small sample size, as is demonstrated by the huge difference between the ASMR values that were calculated by 5-year age groups and the ASMR values that were calculated by single year of age.&quot;
+
+system(paste0(&quot;w=`identify -format %w 0.png`;pad=50;convert \\( -pointsize 44 -font Arial-Bold -size $[w-pad]x caption:&#39;Czech record-level data: Batch statistics for people whose first dose was a Pfizer vaccine&#39; \\( -gravity northwest -splice x12 -pointsize 42 -font Arial -interline-spacing -2 caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\&#39;&#39;&quot;,sub),&quot;&#39; \\) -extent $[w-pad]x -gravity center \\) \\( -gravity north 0.png -splice 0x6 \\) -append -gravity north -splice x20 1.png&quot;))</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
