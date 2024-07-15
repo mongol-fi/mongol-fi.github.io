@@ -78,7 +78,6 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Monthly_excess_mortality_in_both_vaccinated_and_unvaccinated_people_relative_to_a_2010_2019_trend>Monthly excess mortality in both vaccinated and unvaccinated people relative to a 2010-2019 trend</a></li>
 <li><a href=#Moderna_Pfizer_ratio_by_age_group_and_month_of_vaccination>Moderna-Pfizer ratio by age group and month of vaccination</a></li>
 <li><a href=#Daily_deaths_and_vaccine_doses_by_age_group>Daily deaths and vaccine doses by age group</a></li>
-<li><a href=#The_CSV_file_published_by_Kirsch_is_identical_to_the_CSV_file_published_by_the_Czech_university>The CSV file published by Kirsch is identical to the CSV file published by the Czech university</a></li>
 <li><a href=#Paper_about_two_subsets_of_Czech_record_level_data_from_insurance_companies>Paper about two subsets of Czech record-level data from insurance companies</a></li>
 <li><a href=#Table_for_percentage_of_different_vaccine_types_given_each_month>Table for percentage of different vaccine types given each month</a></li>
 <li><a href=#Kirschs_calculation_for_increase_in_all_cause_mortality>Kirsch's calculation for increase in all-cause mortality</a></li>
@@ -1422,17 +1421,6 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   strip.text=element_blank())
 ggsave(&quot;1.png&quot;,width=3.5,height=4,dpi=450)</pre>
 <h2>
-<a href=#The_CSV_file_published_by_Kirsch_is_identical_to_the_CSV_file_published_by_the_Czech_university id=The_CSV_file_published_by_Kirsch_is_identical_to_the_CSV_file_published_by_the_Czech_university>The CSV file published by Kirsch is identical to the CSV file published by the Czech university</a>
-</h2>
-<p>I wanted to make sure that the CSV file for the record-level data from Kirsch's GitHub repository was identical to the file that was originally published on the GitHub account of the Czech Palacký University: <a href="https://github.com/skirsch/Czech/tree/main/data">https://github.com/skirsch/Czech/tree/main/data</a>, <a href="https://github.com/PalackyUniversity/uzis-data-analysis/blob/main/data/Vesely_106_202403141131.tar.xz">https://github.com/PalackyUniversity/uzis-data-analysis/blob/main/data/Vesely_106_202403141131.tar.xz</a>. However the files are in fact identical:</p>
-<pre>$ wget -q https://github.com/skirsch/Czech/raw/main/data/CR_records.csv.xz
-$ wget -q https://github.com/PalackyUniversity/uzis-data-analysis/raw/main/data/Vesely_106_202403141131.tar.xz
-$ xz -k CR_records.csv.xz
-$ tar -xf Vesely_106_202403141131.tar.xz
-$ md5 CR_records.csv Vesely_106_202403141131.csv
-MD5 (CR_records.csv) = c42ead8cf4685910068d0c7d4cc4c720
-MD5 (Vesely_106_202403141131.csv) = c42ead8cf4685910068d0c7d4cc4c720</pre>
-<h2>
 <a href=#Paper_about_two_subsets_of_Czech_record_level_data_from_insurance_companies id=Paper_about_two_subsets_of_Czech_record_level_data_from_insurance_companies>Paper about two subsets of Czech record-level data from insurance companies</a>
 </h2>
 <p>The CSV file for the record-level data was committed to GitHub by Tadeáš Fryčák, but he was also one of the authors of a paper published in May 2024 titled <span class="quote">&quot;Does the healthy vaccinee bias rule them all? Association of COVID-19 vaccination status and all-cause mortality from an analysis of data from 2.2 million individual health records&quot;</span>: <a href="https://www.sciencedirect.com/science/article/pii/S1201971224000468">https://www.sciencedirect.com/science/article/pii/S1201971224000468</a>. The authors of the paper described two sets of record-level data which only included about 2 million people in total, and not over 11 million people like the new dataset:</p>
@@ -2048,7 +2036,7 @@ buck=data.table()
 for(day in as.list(seq(mindate,maxdate,1))){
   cat(as.character(day),&quot;\n&quot;)
   buck=rbind(buck,t[date&lt;=day&amp;(is.na(death)|day&lt;=death)&amp;day&gt;=birth][!(dose==0&amp;id%in%id[dose&gt;0])][,.( # keep under earlier doses
-  buck=rbind(buck,unique(t[date&lt;=day&amp;(is.na(death)|day&lt;=death)&amp;day&gt;=birth],by=&quot;id&quot;)[ # remove under earlier doses
+  buck=rbind(buck,unique(t[date&lt;=day&amp;(is.na(death)|day&lt;=death)&amp;day&gt;=birth],by=&quot;id&quot;)[,.( # remove under earlier doses
     month=substr(day,1,7),vaxmonth,week=ifelse(type==&quot;&quot;,0,as.numeric(day-date)%/%7),
     age=age(birth,day),dose,type,batch,alive=1,dead=death==day)])[,.(
     alive=sum(alive),dead=sum(dead,na.rm=T)),by=.(month,vaxmonth,week,age,dose,type,batch)]
@@ -2080,16 +2068,16 @@ fwrite(buck,&quot;czbucketsbatchkeep.csv&quot;,quote=F)</pre>
   89    1     4 17790</pre>
 <p>But when I calculated the ASMR by 5-year age groups instead, ages 85-89 now had 2 deaths and 5,000 person-days, so ages 85-89 added only about 858 units to the total ASMR value:</p>
 <pre>&gt; std2=tapply(std,0:100%/%5*5,sum)
-&gt; d2=b[batch==&quot;FA7082&quot;,.(dead=sum(dead),alive=sum(alive)),.(age=pmin(age,100)%/%5*5)][,asmr:=dead/alive*std2[factor(age)]*365e5]
+&gt; d2=b[batch==&quot;FA7082&quot;,.(dead=sum(dead),alive=sum(alive)),.(age=pmin(age,100)%/%5*5)][,asmr:=dead/alive*std2[age/5+1]*365e5]
 &gt; print(round(d2[dead&gt;0]),r=F)
  age dead  alive asmr
-  40    1 108333   19
-  60    1  42891   71
-  65    1  30224   79
-  70    1  25299   91
-  75    2  20774  206
-  80    2  11081  418
-  85    2   5000  858</pre>
+  40    1 108333   27
+  60    1  42891   50
+  65    1  30224   77
+  70    1  25299   85
+  75    2  20774  140
+  80    2  11081  152
+  85    2   5000  188</pre>
 <p>In my plot above the method I used to calculate the excess percentage of deaths is more reliable than ASMR. ASMR is suitable for calculating a total mortality rate among a population that has a large number of people from each age group, like the population of an entire nation, but it's not as useful in cases like these batch statistics where some age group can occasionally have an extremely low number of person-days.</p>
 <p>Here's code for making the heatmap:</p>
 <pre>download.file(&quot;http://sars2.net/f/czbucketsbatchkeep.csv.xz&quot;,&quot;czbucketsbatchkeep.csv.xz&quot;)
@@ -2097,6 +2085,8 @@ fwrite(buck,&quot;czbucketsbatchkeep.csv&quot;,quote=F)</pre>
 library(data.table)
 
 kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;x[]=ifelse(abs(x)&lt;1e3,round(x),paste0(sprintf(paste0(&quot;%.&quot;,ifelse(e%%3==0,1,0),&quot;f&quot;),x/1e3^(e2-1)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2]));x}
+
+mima=\(x)(x-min(x,na.rm=T))/(max(x,na.rm=T)-min(x,na.rm=T))
 
 std=fread(&quot;czcensus2021pop.csv&quot;)[,pop/sum(pop)]
 
@@ -2112,7 +2102,7 @@ o=a[,.(excess=(sum(dead)/sum(base)-1)*100,asmr=sum(dead/alive*std[age+1]*365e5),
 
 asmr2=a[,age2:=age%/%5*5][,.(dead=sum(dead),alive=sum(alive)),.(batch,age2)]
 std2=tapply(std,0:100%/%5*5,sum)
-o=merge(o,asmr2[,.(asmr2=sum(dead/alive*std2[factor(age2)]*365e5)),batch])
+o=merge(o,asmr2[,.(asmr2=sum(dead/alive*std2[age2/5+1]*365e5)),batch])
 
 o=data.frame(o[order(excess)],row.names=1,check.names=F)
 o=rbind(o[rownames(o)!=&quot;Total&quot;,],o[&quot;Total&quot;,])
@@ -2158,8 +2148,7 @@ system(paste0(&quot;convert i{&quot;,paste(1:slices,collapse=&quot;,&quot;),&quo
 
 sub=&quot;\u00a0     Only batches with at least a thousand person-years are included. This plot only includes first doses, and people remain included under the first dose even after they get a second dose. This plot doesn&#39;t include only vaccines with the type string \&quot;Comirnaty\&quot; like some of my earlier plots, but it also includes Pfizer&#39;s Omicron vaccines and pediatric vaccines (even though only a small number of people got an Omicron vaccine for their first dose).
       On the row for the average day of vaccination, day zero is January 1st 2021.
-      On the row for the excess percentage of deaths, the baseline number of deaths was derived by multiplying the number of person-days for each combination of age and month with the mortality rate for the same combination of age and month among all people who are included in the record-level data.
-      ASMR is unreliable for groups of people that have an uneven age distribution or where some age groups have a small sample size, as is demonstrated by the huge difference between the ASMR values that were calculated by 5-year age groups and the ASMR values that were calculated by single year of age.&quot;
+      On the row for the excess percentage of deaths, the baseline number of deaths was derived by multiplying the number of person-days for each combination of age and month with the mortality rate for the same combination of age and month among all people who are included in the record-level data.&quot;
 
 system(paste0(&quot;w=`identify -format %w 0.png`;pad=50;convert \\( -pointsize 44 -font Arial-Bold -size $[w-pad]x caption:&#39;Czech record-level data: Batch statistics for people whose first dose was a Pfizer vaccine&#39; \\( -gravity northwest -splice x12 -pointsize 40 -font Arial -interline-spacing -2 caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&#39;&quot;,sub),&quot;&#39; \\) -extent $[w-pad]x -gravity center \\) \\( -gravity north 0.png -splice 0x6 \\) -append -gravity north -splice x20 1.png&quot;))</pre>
 <script>
