@@ -90,6 +90,8 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Excess_CMR_percent_in_vaccinated_people_relative_to_unvaccinated_people>Excess CMR percent in vaccinated people relative to unvaccinated people</a></li>
 <li><a href=#Statistics_by_batch>Statistics by batch</a></li>
 <li><a href=#Excess_mortality_normalized_by_month_of_vaccination_and_dose_number>Excess mortality normalized by month of vaccination and dose number</a></li>
+<li><a href=#Survival_analysis>Survival analysis</a></li>
+<li><a href=#ASMR_by_month_and_vaccine_type>ASMR by month and vaccine type</a></li>
 </ul>
 
 <h2>
@@ -2289,16 +2291,21 @@ ggsave(&quot;1.png&quot;,width=7,height=4.8,dpi=340)</pre>
 &gt; a=me[,.(dead=sum(dead),base=sum(base)),.(age=age%/%10*10,type)]
 &gt; a=rbind(a,a[,.(dead=sum(dead),base=sum(base),type=&quot;Total&quot;),age])
 &gt; a=rbind(a,a[,.(dead=sum(dead),base=sum(base),age=&quot;Total&quot;),type])
-&gt; a[,tapply(round((dead/base-1)*100),a[,2:1],c)]
-             age
-type             0   10  20   30  40  50  60  70  80  90 Total
-  AstraZeneca   NA  768  15   45  39  31  11   1   5   6     4
-  Janssen       NA -100  -4   39  44  41  44  42  38  22    38
-  Moderna     -100    3   9   -4  11  10  14   3  11   9     8
-  Novavax       NA -100 205 -100 -59  -6  10 -60 -18 -32   -26
-  Pfizer       -52  -19 -18  -25 -26 -25 -22 -16 -14  -6   -16
-  Total        -52  -18 -15  -20 -20 -19 -15 -11  -9  -3   -10</pre>
-<p>However earlier on this page I pointed out that first doses from Janssen vaccines were given much later on average than first doses from Moderna and Pfizer vaccines, and other vaccine manufacturers also had high excess mortality among the late vaccinees who were late to get the first dose. Janssen vaccines also had the largest percentage of first doses out of all doses (unlike earlier I'm now also counting Pfizer's Omicron vaccines under Pfizer, which reduces the percentage of first doses among Pfizer vaccines):</p>
+&gt; a[,tapply(round((dead/base-1)*100),a[,1:2],c)]
+       type
+age     AstraZeneca Janssen Moderna Novavax Pfizer Total
+  0              NA      NA    -100      NA    -52   -52
+  10            768    -100       3    -100    -19   -18
+  20             15      -4       9     205    -18   -15
+  30             45      39      -4    -100    -25   -20
+  40             39      44      11     -59    -26   -20
+  50             31      41      10      -6    -25   -19
+  60             11      44      14      10    -22   -15
+  70              1      42       3     -60    -16   -11
+  80              5      38      11     -18    -14    -9
+  90              6      22       9     -32     -6    -3
+  Total           4      38       8     -26    -16   -10</pre>
+<p>However earlier on this page I pointed out that first doses from Janssen vaccines were given much later on average than first doses from Moderna and Pfizer vaccines, but hte late vaccinees who were late to get the first dose also had high excess mortality for Moderna and Pfizer vaccines. Janssen vaccines also had the largest percentage of first doses out of all doses:</p>
 <pre>&gt; m=buck[type!=&quot;&quot;,.N,.(dose,type)][,xtabs(N~dose+type)]
 &gt; round(t(m)/colSums(m)*100) # percentage of dose number by vaccine type
              dose
@@ -2309,9 +2316,10 @@ type           1  2  3  4  5  6  7
   Novavax     43 41  8  7  0  0  0
   Other       52 45  3  0  0  0  0
   Pfizer      37 36 23  3  0  0  0</pre>
+<p>(Unlike earlier I'm now also counting Pfizer's Omicron vaccines under the Pfizer type, which reduces the percentage of first doses among Pfizer vaccines.)</p>
 <p>But anyway, now I tried to calculate excess mortality relative to the mortality rate of people who got the same dose number the same month, and not relative to the mortality rate during the ongoing month. So for each combination of the three variables of vaccination month, dose number, and 5-year age group, I calculated the expected deaths for the group by multiplying the person-days of the group with the mortality rate among all people in the record-level data who had the same combination of the three variables.</p>
-<p>For example people who got vaccinated in May 2021 generally spent a similar amount of time during different months up to the end of 2022, because only a small percentage of people in the dataset died, so I think it's not necessary to perform any additional adjustment for seasonal variation in mortality.</p>
-<p>I used 5-year age groups instead of single years of age to calculate the baseline mortality rate, because for example there were only a small number of people who got the first dose in early 2022, so using single-year age groups would've resulted in large fluctuations in the baseline mortality rate during some vaccination months.</p>
+<p>For example people who got vaccinated in May 2021 generally spent a similar amount of time during different months up to the end of 2022, because only a small percentage of people in the dataset died. So adjusting for the month of vaccination already adjusts for seasonal variation in mortality, so don't think it's necessary to perform any additional adjustment for seasonality.</p>
+<p>I used 5-year age groups instead of single years of age to calculate the baseline mortality rate, because for example there were only a small number of people who got the first dose in January 2022, so using single-year age groups would've resulted in large fluctuations in the baseline mortality rate for people who got the first dose in January 2022 (even though actually that is also a problem with the 5-year age groups).</p>
 <p>However now with my new method of adjusting the baseline for the month of vaccination, Janssen vaccines actually got a lower total percentage of excess deaths than Moderna vaccines:</p>
 <pre>&gt; b=buck[,age:=pmin(age%/%5*5,95)]
 &gt; me=merge(b[type!=&quot;&quot;&amp;type!=&quot;Other&quot;],b[,.(base=sum(dead)/sum(alive)),.(vaxmonth,dose,age)])[,base:=base*alive]
@@ -2319,14 +2327,164 @@ type           1  2  3  4  5  6  7
 &gt; a=rbind(a,a[,.(dead=sum(dead),base=sum(base),type=&quot;Total&quot;),age])
 &gt; a=rbind(a,a[,.(dead=sum(dead),base=sum(base),age=&quot;Total&quot;),type])
 &gt; a[,tapply(round((dead/base-1)*100),a[,1:2],c)]
-             age
-type             0   10  20   30  40  50  60  70  80  90 Total
-  AstraZeneca   NA   54 -22   20  51  47  27  13   6   3    10
-  Janssen       NA -100  18   44  22  14  19   9   6   0    11
-  Moderna     -100  -12  18   14  33  27  27  17  21  13    19
-  Novavax       NA -100  83 -100 -80 -40 -23 -80 -58 -37   -57
-  Pfizer         0    1  -2   -4  -6  -6  -7  -6  -4  -3    -5
-  Total          0    0   0    0   0   0   0   0   0   0     0</pre>
+       type
+age     AstraZeneca Janssen Moderna Novavax Pfizer Total
+  0              NA      NA    -100      NA      0     0
+  10             54    -100     -12    -100      1     0
+  20            -22      18      18      83     -2     0
+  30             20      44      14    -100     -4     0
+  40             51      22      33     -80     -6     0
+  50             47      14      27     -40     -6     0
+  60             27      19      27     -23     -7     0
+  70             13       9      17     -80     -6     0
+  80              6       6      21     -58     -4     0
+  90              3       0      13     -37     -3     0
+  Total          10      11      19     -57     -5     0</pre>
+<h2>
+<a href=#Survival_analysis id=Survival_analysis>Survival analysis</a>
+</h2>
+<div class="width6">
+<img src="i/czech-survival-2.png">
+</div>
+<pre>library(data.table);library(ggplot2)
+
+ua=\(x,y,...){u=unique(x);y(u,...)[match(x,u)]}
+age=\(x,y){class(x)=class(y)=NULL;(y-x-(y-789)%/%1461+(x-789)%/%1461)%/%365}
+
+rec=fread(&quot;Czech/data/CR_records.csv&quot;,showProgress=F)
+
+d=data.table(dose=rep(1:7,each=nrow(rec)),death=rec$DatumUmrti)
+set.seed(0);d$birth=ua(paste0(rec$Rok_narozeni,&quot;-1-1&quot;),as.Date)+sample(0:364,nrow(d),T)
+d$date=rec[,unlist(.SD,,F),.SDcols=patterns(&quot;Datum_&quot;)]
+d$type=rec[,unlist(.SD,,F),.SDcols=patterns(&quot;Latka_&quot;)]
+d=d[!is.na(date)]
+
+name1=unique(d$type);name2=rep(&quot;Other&quot;,length(name1))
+name2[name1==&quot;&quot;]=&quot;&quot;
+name2[grep(&quot;comirnaty&quot;,ignore.case=T,name1)]=&quot;Pfizer&quot;
+name2[grep(&quot;spikevax&quot;,ignore.case=T,name1)]=&quot;Moderna&quot;
+name2[grep(&quot;nuvaxovid&quot;,ignore.case=T,name1)]=&quot;Novavax&quot;
+name2[name1==&quot;COVID-19 Vaccine Janssen&quot;]=&quot;Janssen&quot;
+name2[name1==&quot;VAXZEVRIA&quot;]=&quot;AstraZeneca&quot;
+d$type=name2[match(d$type,name1)]
+
+p=d[dose&lt;=4&amp;type!=&quot;Novavax&quot;&amp;type!=&quot;Other&quot;&amp;type!=&quot;&quot;,.(pop=.N,dead=sum(!is.na(death))),.(age=age(birth,date),type,dose)]
+p[,survival:=(1-(dead/pop))*100]
+
+xstart=0;xend=max(p$age);xstep=10;ystart=0;yend=100;ystep=10
+
+p$type=factor(p$type,p[,sum(as.double(pop)),type][order(-V1)]$type)
+color=hsv(c(240,355,330,204,36)/360,c(.94,.75,.8,.67,.64),c(.76,.82,.5,.87,.95))
+pointsize=c(1e4,3e4,1e5,3e5)
+
+sub=&quot;People remain included under p dose after subsequent doses. The age at vaccination was calculated by assigning a random day of birth to each person in the dataset.&quot;|&gt;stringr::str_wrap(73)
+
+ggplot(p,aes(x=age,y=survival))+
+facet_wrap(~dose,ncol=1,scales=&quot;free_x&quot;,strip.position=&quot;top&quot;)+
+geom_vline(xintercept=c(xstart,xend),linewidth=.3,lineend=&quot;square&quot;)+
+geom_hline(yintercept=c(ystart,yend),linewidth=.3,lineend=&quot;square&quot;)+
+geom_point(aes(color=type),size=1.5,stroke=0)+
+geom_line(aes(color=type),linewidth=.4)+
+geom_label(data=data.frame(dose=unique(p$dose)),aes(label=paste0(&quot;\n    Dose &quot;,dose,&quot;    \n&quot;)),x=xstart,y=0,lineheight=.7,hjust=0,vjust=0,size=2.5,fill=alpha(&quot;white&quot;,1),label.r=unit(0,&quot;lines&quot;),label.padding=unit(0,&quot;lines&quot;),label.size=.25)+
+labs(title=&quot;Czech record-level data: Probability of survival up to end of 2022&quot;,x=&quot;Age at vaccination&quot;,y=&quot;Probability of survival up to end of 2022&quot;,subtitle=sub)+
+scale_x_continuous(limits=c(xstart,xend),breaks=seq(xstart,xend,xstep))+
+scale_y_continuous(labels=\(x)paste0(x,&quot;%&quot;))+
+scale_color_manual(values=color,name=&quot;Type&quot;)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=8,color=&quot;black&quot;),
+  axis.ticks=element_line(linewidth=.3),
+  axis.ticks.length=unit(3,&quot;pt&quot;),
+  axis.title=element_text(size=8,face=&quot;bold&quot;),
+  axis.title.x=element_text(margin=margin(4)),
+  axis.title.y=element_text(margin=margin(,2,,1)),
+  legend.background=element_rect(fill=alpha(&quot;white&quot;,0)),
+  legend.key.height=unit(10,&quot;pt&quot;),
+  legend.key.width=unit(20,&quot;pt&quot;),
+  legend.key=element_rect(fill=&quot;white&quot;),
+  legend.margin=margin(0,0,7,0),
+  legend.direction=&quot;horizontal&quot;,
+  legend.box.just=&quot;right&quot;,
+  legend.justification=c(1,.5),
+  legend.position=&quot;top&quot;,
+  legend.box.margin=margin(),
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.spacing=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=8),
+  # legend.title=element_text(size=8,face=&quot;bold&quot;,margin=margin(0,2,0,0)),
+  legend.title=element_blank(),
+  panel.background=element_rect(fill=&quot;white&quot;),
+  panel.grid.major=element_line(linewidth=.3,color=&quot;gray90&quot;),
+  panel.spacing=unit(3,&quot;pt&quot;),
+  strip.background=element_blank(),
+  strip.text=element_blank(),
+  plot.margin=margin(5,9,5,5),
+  plot.subtitle=element_text(size=8,margin=margin(,,5)),
+  plot.title=element_text(size=8.8,face=&quot;bold&quot;,margin=margin(2,,4)))
+ggsave(&quot;1.png&quot;,width=4.5,height=6,dpi=380)</pre>
+<h2>
+<a href=#ASMR_by_month_and_vaccine_type id=ASMR_by_month_and_vaccine_type>ASMR by month and vaccine type</a>
+</h2>
+<p>I figured out one way to compare the efficacy of different vaccine types, which is to look at how big the spike in ASMR is during the COVID wave in November to December 2021. However the spike seems to be lower for Pfizer and Moderna but higher for AstraZeneca and Janssen:</p>
+<div class="width6">
+<img src="i/czech-asmrtype.png">
+</div>
+<pre>std=fread(&quot;http://sars2.net/f/czcensus2021pop.csv&quot;)[,.(pop=sum(pop)),.(age=pmin(age,95)%/%5*5)][,pop/sum(pop)]
+
+b=fread(&quot;http://sars2.net/f/czbucketskeep.csv.gz&quot;)[dose&lt;=1&amp;type!=&quot;Other&quot;][,age:=pmin(age,95)%/%5*5]
+b[dose==0,type:=&quot;Unvaccinated&quot;]
+a=b[,.(dead=sum(dead),alive=sum(alive)),.(type,month,age)]
+p=a[,.(pop=sum(alive),asmr=sum(dead/alive*std[age/5+1]*365e5)),.(month,type)]
+
+p[,month:=as.Date(paste0(month,&quot;-1-15&quot;))]
+xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2023-1-1&quot;)
+xbreak=seq(xstart,xend,&quot;2 month&quot;)
+
+p$type=factor(p$type,c(&quot;Unvaccinated&quot;,&quot;Pfizer&quot;,&quot;Moderna&quot;,&quot;AstraZeneca&quot;,&quot;Janssen&quot;))
+# hidelim=1e3;p[pop&lt;hidelim/365,asmr:=NA]
+
+cand=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
+ymax=max(p$asmr,na.rm=T)
+ystep=cand[which.min(abs(cand-ymax/6))]
+yend=ystep*ceiling(ymax/ystep)
+yend=max(p$asmr)
+ystart=0;ybreak=seq(ystart,yend,ystep)
+
+color=c(&quot;black&quot;,hsv(c(240,355,330,204)/360,c(.94,.75,.8,.67),c(.76,.82,.5,.87)))
+
+ggplot(p,aes(x=month+15,y=asmr))+
+geom_vline(xintercept=seq(xstart,xend,&quot;3 month&quot;),color=&quot;gray85&quot;,linewidth=.3,lineend=&quot;square&quot;)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray65&quot;,linewidth=.3,lineend=&quot;square&quot;)+
+geom_vline(xintercept=c(xstart,xend),linewidth=.3,lineend=&quot;square&quot;)+
+geom_hline(yintercept=c(ystart,0,yend),linewidth=.3,lineend=&quot;square&quot;)+
+geom_line(aes(color=type),linewidth=.4)+
+labs(title=&quot;Czech record-level data: ASMR by month and type of first vaccine dose&quot;,subtitle=paste0(&quot;People are kept included under the first dose after subsequent doses. The standard population is the estimated resident population in the 2021 census by 5-year age groups.&quot;)|&gt;stringr::str_wrap(90),x=NULL,y=NULL)+
+scale_x_date(limits=c(xstart,xend),breaks=seq(xstart,xend,&quot;6 month&quot;),labels=c(rbind(&quot;&quot;,2020:2022),&quot;&quot;))+
+scale_y_continuous(limits=c(ystart,yend),breaks=seq(ystart,yend,ystep),labels=\(x)paste0(x/1e3,&quot;k&quot;))+
+scale_color_manual(values=color)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.ticks=element_line(linewidth=.3),
+  axis.ticks.x=element_line(color=alpha(&quot;black&quot;,c(1,0))),
+  axis.ticks.length=unit(3,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.background=element_rect(fill=&quot;white&quot;,color=&quot;black&quot;,linewidth=.3),
+  legend.key.height=unit(11,&quot;pt&quot;),
+  legend.key.width=unit(15,&quot;pt&quot;),
+  legend.key=element_rect(fill=&quot;white&quot;),
+  legend.margin=margin(0,6,4,4.5),
+  legend.justification=c(0,1),
+  legend.position=c(0,1),
+  legend.spacing.x=unit(1.5,&quot;pt&quot;),
+  legend.text=element_text(size=7),
+  legend.title=element_blank(),
+  panel.grid.major=element_blank(),
+  panel.background=element_rect(fill=&quot;white&quot;),
+  plot.margin=margin(4,10,4,4),
+  plot.subtitle=element_text(size=7,margin=margin(0,0,4,0)),
+  plot.title=element_text(size=7.5,face=&quot;bold&quot;,margin=margin(2,0,4,0)))
+ggsave(&quot;1.png&quot;,width=4.5,height=2.6,dpi=400)
+qp()</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
