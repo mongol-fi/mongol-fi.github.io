@@ -81,7 +81,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Paper_about_two_subsets_of_Czech_record_level_data_from_insurance_companies>Paper about two subsets of Czech record-level data from insurance companies</a></li>
 <li><a href=#Table_for_percentage_of_different_vaccine_types_given_each_month>Table for percentage of different vaccine types given each month</a></li>
 <li><a href=#Kirschs_calculation_for_increase_in_all_cause_mortality>Kirsch's calculation for increase in all-cause mortality</a></li>
-<li><a href=#Hospitalizations_peaked_in_2022_in_youngest_age_groups>Hospitalizations peaked in 2022 in youngest age groups</a></li>
+<li><a href=#Hospitalizations_peaked_in_2022_in_the_youngest_age_groups>Hospitalizations peaked in 2022 in the youngest age groups</a></li>
 <li><a href=#Moderna_Pfizer_ratio_in_ages_70_79_in_the_fourth_quarter_of_2021>Moderna-Pfizer ratio in ages 70-79 in the fourth quarter of 2021</a></li>
 <li><a href=#Triangle_plot_of_Moderna_Pfizer_ratio>Triangle plot of Moderna-Pfizer ratio</a></li>
 <li><a href=#Stacked_plot_of_multiple_variables_from_record_level_data_and_Czech_MoH_data>Stacked plot of multiple variables from record-level data and Czech MoH data</a></li>
@@ -1556,7 +1556,7 @@ month      0 10 20 30 40 50 60 70 80 90 100 Total
   2022-12  2 41 69 64 72 77 83 88 88 78  36    64
   Total    1 28 47 46 54 59 65 73 75 66  33    49</pre>
 <h2>
-<a href=#Hospitalizations_peaked_in_2022_in_youngest_age_groups id=Hospitalizations_peaked_in_2022_in_youngest_age_groups>Hospitalizations peaked in 2022 in youngest age groups</a>
+<a href=#Hospitalizations_peaked_in_2022_in_the_youngest_age_groups id=Hospitalizations_peaked_in_2022_in_the_youngest_age_groups>Hospitalizations peaked in 2022 in the youngest age groups</a>
 </h2>
 <p>The Czech Ministry of Health has published data for hospitalizations by age: <a href="https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19">https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19</a>. In ages 0-11, 12-17, and 18-29, the highest peak in COVID hospitalizations was in early 2022, which might be because people the youngest age groups were less likely to be vaccinated in 2022 than older age groups:</p>
 <div class="width6">
@@ -2052,7 +2052,7 @@ fwrite(buck,&quot;czbucketsbatchkeep.csv&quot;,quote=F)</pre>
 <p>In the plot above when I calculated ASMR by single year of age, the batch FA7082 got an ASMR of about 18,000 deaths per 100,000 person-years. However that's because the age 89 had one death but only 4 person-days in the batch, and age 89 made up about 0.19% of my standard population, so the single death added about 18,000 units to the total ASMR value (from <code>1/4*.0019*365e5</code>):</p>
 <pre>&gt; std=fread(&quot;http://sars2.net/f/czcensus2021pop.csv&quot;)[,pop/sum(pop)]
 &gt; system(&quot;curl -LsO sars2.net/f/czbucketsbatchkeep.csv.xz&quot;)
-&gt; b=fread(&quot;xz -dc s/f/czbucketsbatchkeep.csv.xz&quot;)[dose==1]
+&gt; b=fread(&quot;xz -dc czbucketsbatchkeep.csv.xz&quot;)[dose==1]
 &gt; d=b[batch==&quot;FA7082&quot;,.(dead=sum(dead),alive=sum(alive)),.(age=pmin(age,100))][,asmr:=dead/alive*std[age+1]*365e5]
 &gt; print(d[dead&gt;0],r=F) # show all ages with nonzero deaths
  age dead alive        asmr
@@ -2081,7 +2081,33 @@ fwrite(buck,&quot;czbucketsbatchkeep.csv&quot;,quote=F)</pre>
  80-84    2  11081 152.34513
  85-89    2   5000 187.71468</pre>
 <p>However even if you calculate ASMR using 5-year age groups instead of single year of age, there can still occasionally be one age group which has nonzero deaths and a tiny population size, which can artificially inflate the total ASMR value. ASMR is suitable for populations where all age groups always have a large number of people, like the total population of an entire nation. But in cases like these batch statistics where some age groups can have a small population size, the method I used to calculate the excess percentage of deaths in my plot above is often more reliable than ASMR.</p>
-<p>Here's code for making the heatmap:</p>
+<p>For Moderna vaccines, the batches with a later mean day of vaccination similarly got a higher percentage of excess deaths than the batches with an earlier mean day of vaccination, and the biggest batches generally got a low percentage of excess deaths. But the batch with the very lowest mean date of vaccination was 30042698 which got 106% excess deaths:</p>
+<div class="width10">
+<img src="i/czech-batch-2.png">
+</div>
+<p>In the next plot I only included first doses like in the two previous plots. It also shows that batches with a later mean date of vaccination have much higher excess mortality than batches with an earlier mean date of vaccination:</p>
+<div class="width7">
+<img src="i/czech-batch-3.png">
+</div>
+<p>In the plot above the batch with the highest excess deaths is FM7533, which has about 80% excess deaths. The average date of first doses in the batch is in December 2021, so the batch includes many late vaccinees who got the first dose late. However in the plot below where I included all doses instead of only first doses, the same batch now got about -14% excess deaths. The batch has over 20 times as many third doses as first doses, so the small number of late vaccinees who got the first dose late from the batch don't have that much impact on the total mortality of the batch:</p>
+<div class="width9">
+<img src="i/czech-batch-4.png">
+</div>
+<p>This also shows that most doses from the batch FM7533 were third doses:</p>
+<pre>&gt; buck=fread(&quot;curl -Ls sars2.net/f/czbucketsbatchkeep.csv.xz|xz -dc&quot;)[,age:=pmin(age,95)]
+&gt; me=merge(buck[batch==&quot;FM7533&quot;],buck[dose&lt;=1,.(base=sum(dead)/sum(alive)),.(age,month)])[,base:=base*alive]
+&gt; a=me[,.(alive=sum(alive),dead=sum(dead),base=sum(base)),dose]
+&gt; a=rbind(a,a[,lapply(.SD,sum)][,dose:=&quot;Total&quot;])
+&gt; a[,.(excess=(sum(dead)/sum(base)-1)*100,pop=sum(alive)),dose]|&gt;print(r=F)
+  dose     excess       pop
+     1   79.62555  11972333
+     2   54.63342  22580427
+     3  -21.07481 248860907
+     4  -24.48992   3037335
+     5  258.23700     11337
+     6 -100.00000       966
+ Total  -14.04048 286463305</pre>
+<p>Here's code for making the heatmaps:</p>
 <pre>download.file(&quot;http://sars2.net/f/czbucketsbatchkeep.csv.xz&quot;,&quot;czbucketsbatchkeep.csv.xz&quot;)
 
 library(data.table)
@@ -2153,6 +2179,91 @@ sub=&quot;\u00a0     Only batches with at least a thousand person-years are incl
       On the row for the excess percentage of deaths, the baseline number of deaths was derived by multiplying the number of person-days for each combination of age and month with the mortality rate for the same combination of age and month among all people who are included in the record-level data.&quot;
 
 system(paste0(&quot;w=`identify -format %w 0.png`;pad=50;convert \\( -pointsize 44 -font Arial-Bold -size $[w-pad]x caption:&#39;Czech record-level data: Batch statistics for people whose first dose was a Pfizer vaccine&#39; \\( -gravity northwest -splice x12 -pointsize 40 -font Arial -interline-spacing -2 caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&#39;&quot;,sub),&quot;&#39; \\) -extent $[w-pad]x -gravity center \\) \\( -gravity north 0.png -splice 0x6 \\) -append -gravity north -splice x20 1.png&quot;))</pre>
+<p>And here's code for the scatterplot:</p>
+<pre>library(ggplot2);library(data.table)
+
+buck=fread(&quot;curl -Ls sars2.net/f/czbucketsbatchkeep.csv.xz|xz -dc&quot;)[,age:=pmin(age,95)]
+me=merge(buck[dose&gt;0&amp;batch!=&quot;&quot;&amp;type!=&quot;&quot;&amp;type!=&quot;Other&quot;],buck[dose&lt;=1,.(base=sum(dead)/sum(alive)),.(age,month)])[,base:=base*alive]
+
+# me=me[dose==1] # keep only first doses
+
+a=me[,.(alive=sum(alive),dead=sum(dead),base=sum(base)),.(batch,age,type)]
+
+mostcommon=a[,max(alive),.(batch,type)][order(-V1)][rowid(batch)==1][,setNames(type,batch)]
+a=a[mostcommon[batch]==type]
+
+p=a[,.(excess=(sum(dead)/sum(base)-1)*100),.(batch,type)]
+
+rec=fread(&quot;Czech/data/CR_records.csv&quot;)
+batches=data.table(dose=rep(1:7,each=nrow(rec)),
+  date=rec[,unlist(.SD,,F),.SDcols=patterns(&quot;Datum_&quot;)],
+  type=rec[,unlist(.SD,,F),.SDcols=patterns(&quot;Latka_&quot;)],
+  batch=rec[,unlist(.SD,,F),.SDcols=patterns(&quot;Sarze_&quot;)])
+# batches=batches[dose==1] # keep only first doses
+p=merge(p,batches[,dose:=NULL][,.(doses=.N,date=`class&lt;-`(round(mean(date)),&quot;Date&quot;)),batch])[doses&gt;=1e4]
+
+xstart=as.Date(&quot;2021-1-1&quot;);xend=as.Date(&quot;2023-1-1&quot;)
+xbreak=seq(xstart,xend,&quot;1 month&quot;)
+xlab=c(rbind(&quot;&quot;,format(head(xbreak,-1),&quot;%b\n%y&quot;)),&quot;&quot;)
+xbreak=sort(c(xbreak,(xbreak-15)[-1]))
+
+cand=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
+ystep=cand[which.min(abs(cand-(max(p$excess)-min(p$excess))/6))]
+ystart=ystep*floor(min(p$excess)/ystep)
+yend=ystep*ceiling(max(p$excess)/ystep)
+ybreak=seq(ystart,yend,ystep)
+
+p$type=factor(p$type,me[,sum(as.double(alive)),type][order(-V1)]$type)
+color=hsv(c(240,355,330,204,36)/360,c(.94,.75,.8,.67,.64),c(.76,.82,.5,.87,.95))
+
+pointsize=c(1e4,3e4,1e5,3e5)
+
+ sub=&quot;All doses included and not only first doses. Only batches with at least 10,000 doses are included. The excess mortality is calculated from the day of vaccination up to the end of 2022, so that people are kept included under earlier batches even after a dose from a new batch. The expected number of deaths for each batch was calculated so that the number of person-days for each combination of age and month was multiplied by the mortality rate of all people in the record-level data for the same combination of age and month.&quot;|&gt;stringr::str_wrap(128)
+
+ggplot(p,aes(x=date,y=excess))+
+geom_vline(xintercept=seq(xstart,xend,&quot;month&quot;),color=&quot;gray90&quot;,linewidth=.23,lineend=&quot;square&quot;)+
+geom_vline(xintercept=seq(xstart,xend,&quot;3 month&quot;),color=&quot;gray70&quot;,linewidth=.3,lineend=&quot;square&quot;)+
+geom_vline(xintercept=c(xstart,xend),linewidth=.3,lineend=&quot;square&quot;)+
+geom_hline(yintercept=c(ystart,0,yend),linewidth=.3,lineend=&quot;square&quot;)+
+geom_point(aes(color=type,size=doses),stroke=0)+
+# geom_text(aes(label=batch,color=type),size=2.3,vjust=-.6,show.legend=F)+
+ggrepel::geom_text_repel(aes(label=batch,color=type),size=2.3,show.legend=F,max.overlaps=Inf,segment.size=.2,min.segment.length=.2,force=10,force_pull=2,box.padding=.1)+
+labs(title=&quot;All doses in Czech record-level data: Excess mortality by batch&quot;,x=&quot;Mean date of vaccination&quot;,y=&quot;Excess mortality&quot;,subtitle=sub)+
+scale_x_date(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,labels=\(x)paste0(x,&quot;%&quot;))+
+scale_color_manual(values=color,name=&quot;Type&quot;)+
+scale_size_continuous(range=c(.7,2.7),limits=range(pointsize),breaks=pointsize,labels=paste0(pointsize/1e3,&quot;k+&quot;),name=&quot;Doses&quot;)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(color=guide_legend(order=1),size=guide_legend(order=2))+
+theme(axis.text=element_text(size=8,color=&quot;black&quot;),
+  # axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
+  axis.ticks=element_line(linewidth=.3),
+  axis.ticks.x=element_line(color=alpha(&quot;black&quot;,c(1,0))),
+  axis.ticks.length=unit(3,&quot;pt&quot;),
+  axis.title=element_text(size=8,face=&quot;bold&quot;),
+  axis.title.x=element_text(margin=margin(4,0,0,0)),
+  axis.title.y=element_text(margin=margin(0,2,0,1)),
+  legend.background=element_rect(fill=&quot;white&quot;,color=&quot;black&quot;,linewidth=.3),
+  legend.key.height=unit(8,&quot;pt&quot;),
+  legend.key.width=unit(6,&quot;pt&quot;),
+  legend.key=element_rect(fill=&quot;white&quot;),
+  legend.margin=margin(6,8,6,8),
+  legend.justification=c(1,1),
+  legend.position=c(1,1),
+  legend.direction=&quot;horizontal&quot;,
+  legend.box=&quot;vertical&quot;,
+  legend.box.just=&quot;right&quot;,
+  legend.box.margin=margin(0,0,0,0),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.spacing=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=8),
+  legend.title=element_text(size=8,face=&quot;bold&quot;,margin=margin(0,2,0,0)),
+  panel.background=element_rect(fill=&quot;white&quot;),
+  panel.grid=element_blank(),
+  plot.margin=margin(5,6,5,5),
+  plot.subtitle=element_text(size=8,margin=margin(0,0,4,0)),
+  plot.title=element_text(size=9,face=&quot;bold&quot;,margin=margin(2,,5,0)))
+ggsave(&quot;1.png&quot;,width=7,height=4.8,dpi=340)</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
