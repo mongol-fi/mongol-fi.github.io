@@ -2368,7 +2368,9 @@ name2[name1==&quot;COVID-19 Vaccine Janssen&quot;]=&quot;Janssen&quot;
 name2[name1==&quot;VAXZEVRIA&quot;]=&quot;AstraZeneca&quot;
 d$type=name2[match(d$type,name1)]
 
-p=d[dose&lt;=4&amp;type!=&quot;Novavax&quot;&amp;type!=&quot;Other&quot;&amp;type!=&quot;&quot;,.(pop=.N,dead=sum(!is.na(death))),.(age=age(birth,date),type,dose)]
+p=d[dose&lt;=4&amp;type!=&quot;Novavax&quot;&amp;type!=&quot;Other&quot;&amp;type!=&quot;&quot;]
+p=p[,.(pop=.N,dead=sum(!is.na(death))),.(age=age(birth,date),type,dose=paste0(&quot;Dose &quot;,dose))]
+p=rbind(p,p[,.(pop=sum(pop),dead=sum(dead),dose=&quot;Doses 1-4&quot;),.(age,type)])
 p[,survival:=(1-(dead/pop))*100]
 
 xstart=0;xend=max(p$age);xstep=10;ystart=0;yend=100;ystep=10
@@ -2377,7 +2379,7 @@ p$type=factor(p$type,p[,sum(as.double(pop)),type][order(-V1)]$type)
 color=hsv(c(240,355,330,204,36)/360,c(.94,.75,.8,.67,.64),c(.76,.82,.5,.87,.95))
 pointsize=c(1e4,3e4,1e5,3e5)
 
-sub=&quot;People remain included under p dose after subsequent doses. The age at vaccination was calculated by assigning a random day of birth to each person in the dataset.&quot;|&gt;stringr::str_wrap(73)
+sub=&quot;People remain included under a dose after subsequent doses. The age at vaccination was calculated by assigning a random birthday to each person in the dataset.&quot;|&gt;stringr::str_wrap(73)
 
 ggplot(p,aes(x=age,y=survival))+
 facet_wrap(~dose,ncol=1,scales=&quot;free_x&quot;,strip.position=&quot;top&quot;)+
@@ -2385,7 +2387,7 @@ geom_vline(xintercept=c(xstart,xend),linewidth=.3,lineend=&quot;square&quot;)+
 geom_hline(yintercept=c(ystart,yend),linewidth=.3,lineend=&quot;square&quot;)+
 geom_point(aes(color=type),size=1.5,stroke=0)+
 geom_line(aes(color=type),linewidth=.4)+
-geom_label(data=data.frame(dose=unique(p$dose)),aes(label=paste0(&quot;\n    Dose &quot;,dose,&quot;    \n&quot;)),x=xstart,y=0,lineheight=.7,hjust=0,vjust=0,size=2.5,fill=alpha(&quot;white&quot;,1),label.r=unit(0,&quot;lines&quot;),label.padding=unit(0,&quot;lines&quot;),label.size=.25)+
+geom_label(data=data.frame(dose=unique(p$dose)),aes(label=paste0(&quot;\n    &quot;,dose,&quot;    \n&quot;)),x=xstart,y=0,lineheight=.7,hjust=0,vjust=0,size=2.5,fill=alpha(&quot;white&quot;,1),label.r=unit(0,&quot;lines&quot;),label.padding=unit(0,&quot;lines&quot;),label.size=.25)+
 labs(title=&quot;Czech record-level data: Probability of survival up to end of 2022&quot;,x=&quot;Age at vaccination&quot;,y=&quot;Probability of survival up to end of 2022&quot;,subtitle=sub)+
 scale_x_continuous(limits=c(xstart,xend),breaks=seq(xstart,xend,xstep))+
 scale_y_continuous(labels=\(x)paste0(x,&quot;%&quot;))+
@@ -2401,7 +2403,7 @@ theme(axis.text=element_text(size=8,color=&quot;black&quot;),
   legend.key.height=unit(10,&quot;pt&quot;),
   legend.key.width=unit(20,&quot;pt&quot;),
   legend.key=element_rect(fill=&quot;white&quot;),
-  legend.margin=margin(0,0,7,0),
+  legend.margin=margin(,,7),
   legend.direction=&quot;horizontal&quot;,
   legend.box.just=&quot;right&quot;,
   legend.justification=c(1,.5),
@@ -2411,7 +2413,6 @@ theme(axis.text=element_text(size=8,color=&quot;black&quot;),
   legend.box.spacing=unit(0,&quot;pt&quot;),
   legend.spacing=unit(0,&quot;pt&quot;),
   legend.text=element_text(size=8),
-  # legend.title=element_text(size=8,face=&quot;bold&quot;,margin=margin(0,2,0,0)),
   legend.title=element_blank(),
   panel.background=element_rect(fill=&quot;white&quot;),
   panel.grid.major=element_line(linewidth=.3,color=&quot;gray90&quot;),
@@ -2421,11 +2422,11 @@ theme(axis.text=element_text(size=8,color=&quot;black&quot;),
   plot.margin=margin(5,9,5,5),
   plot.subtitle=element_text(size=8,margin=margin(,,5)),
   plot.title=element_text(size=8.8,face=&quot;bold&quot;,margin=margin(2,,4)))
-ggsave(&quot;1.png&quot;,width=4.5,height=6,dpi=380)</pre>
+ggsave(&quot;1.png&quot;,width=4.5,height=7,dpi=380)</pre>
 <h2>
 <a href=#ASMR_by_month_and_vaccine_type id=ASMR_by_month_and_vaccine_type>ASMR by month and vaccine type</a>
 </h2>
-<p>I figured out one way to compare the efficacy of different vaccine types, which is to look at how big the spike in ASMR is during the COVID wave in November to December 2021. However the spike seems to be lower for Pfizer and Moderna but higher for AstraZeneca and Janssen:</p>
+<p>I figured out one way to compare the efficacy of different vaccine types, which is to look at how big the spike in ASMR is during the COVID wave in November to December 2021. However the spike seems to be more flat for people whose first dose was Pfizer and Moderna, but the spike is more pronounced for people whose first dose was AstraZeneca and Janssen:</p>
 <div class="width6">
 <img src="i/czech-asmrtype.png">
 </div>
@@ -2483,8 +2484,7 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   plot.margin=margin(4,10,4,4),
   plot.subtitle=element_text(size=7,margin=margin(0,0,4,0)),
   plot.title=element_text(size=7.5,face=&quot;bold&quot;,margin=margin(2,0,4,0)))
-ggsave(&quot;1.png&quot;,width=4.5,height=2.6,dpi=400)
-qp()</pre>
+ggsave(&quot;1.png&quot;,width=4.5,height=2.6,dpi=400)</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
