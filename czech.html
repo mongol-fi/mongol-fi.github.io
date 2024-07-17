@@ -93,6 +93,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#ASMR_by_month_and_vaccine_type>ASMR by month and vaccine type</a></li>
 <li><a href=#Does_Novavax_have_lower_mortality_than_Pfizer>Does Novavax have lower mortality than Pfizer?</a></li>
 <li><a href=#Monthly_CMR_by_age_group_relative_to_baseline_CMR_during_the_same_month_of_the_year_in_2015_2019>Monthly CMR by age group relative to baseline CMR during the same month of the year in 2015-2019</a></li>
+<li><a href=#Number_of_vaccine_doses_by_type_in_record_level_data_compared_to_MoH_data>Number of vaccine doses by type in record-level data compared to MoH data</a></li>
 </ul>
 
 <h2>
@@ -122,7 +123,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=f/czweeklydead.csv>f/czweeklydead.csv</a> (119 kiB): Weekly number of deaths by 5-year age groups published by the <a href=https://vdb.czso.cz/vdbvo2/faces/en/index.jsf?page=vystup-objekt-parametry&pvo=DEMD007KR-R2024&sp=A&skupId=3629&pvokc=&katalog=30845&z=T>Czech Statistical Bureau</a>.</li>
 <li><a href=f/czdeadproj.csv>f/czdeadproj.csv</a> (4 MiB): Daily projected deaths by 5-year age groups derived from a seasonality-adjusted linear trend in CMR in 2010-2019 multiplied by population size. Also includes daily deaths by 5-year age groups interpolated from weekly deaths by 5-year age groups and daily population estimates by 5-year age groups interpolated from Eurostat's yearly population estimates.</li>
 </ul>
-<p>COVID data published by the <a href=https://onemocneni-aktualne.mzcr.cz/api/rv2/covid-19>Czech Ministry of Health</a>:</p>
+<p>COVID data published by the <a href=https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19>Czech Ministry of Health</a>:</p>
 <ul>
 <li><a href="https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/umrti.csv">https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/umrti.csv</a> (3 MiB): COVID deaths by day and single year of age.</li>
 <li><a href="https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/nakazeni-hospitalizace-testy.csv">https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/nakazeni-hospitalizace-testy.csv</a> (34 MiB): Tests, hospitalizations, and cases by age group. This file only has the number of new PCR tests performed but it's missing the number of positive PCR tests.</li>
@@ -2596,6 +2597,38 @@ tit=&quot;Excess percentage of deaths relative to population size multiplied by 
 cap=&quot;Weekly deaths by five-year age groups were interpolated to daily deaths, and yearly population estimates by single year of age were interpolated to daily population estimates, and for each combination of 12 months and 19 5-year age groups, the baseline mortality rate was calculated by dividing total deaths in 2015-2019 with the total person-days in 2015-2019. Then for each cell of the heatmap, the expected number of deaths was derived by multiplying the number of person-days in the cell with the baseline mortality rate for the month and age group of the cell. For example the row for ages 70-79 actually consists of ages 70-74 and 75-79 added together.&quot;
 
 system(paste0(&quot;w=`identify -format %w i1.png`;pad=48;convert -gravity northwest -pointsize 42 -font Arial-Bold \\( -splice x24 -size $[w-pad]x caption:&#39;Unvaccinated: &quot;,tit,&quot;&#39; -extent $[w-pad]x -gravity center \\) i1.png -gravity northwest \\( -size $[w-40]x caption:&#39;Vaccinated: &quot;,tit,&quot;&#39; -extent $[w-pad]x -gravity center \\) i2.png \\( -font Arial -interline-spacing -2 -gravity west -size $[w-pad]x caption:&#39;&quot;,cap,&quot;&#39; -extent $[w-pad]x -gravity south -splice 0x20 \\) -append 1.png&quot;))</pre>
+<h2>
+<a href=#Number_of_vaccine_doses_by_type_in_record_level_data_compared_to_MoH_data id=Number_of_vaccine_doses_by_type_in_record_level_data_compared_to_MoH_data>Number of vaccine doses by type in record-level data compared to MoH data</a>
+</h2>
+<p>The vaccination figures in the third file from the bottom here seem to be almost identical to the record-level data: <a href="https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19">https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19</a>. The file even uses the same type names. For example here's the number of first doses given up to the end of 2023 by vaccine type:</p>
+<pre>&gt; download.file(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-orp.csv&quot;,&quot;ockovani-orp.csv&quot;)
+&gt; t=fread(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-orp.csv&quot;)
+&gt; moh=t[datum&lt;&quot;2023-12-31&quot;,.(moh=sum(prvni_davka)),.(type=ockovaci_latka_nazev)]
+&gt; rec=fread(&quot;CR_records.csv&quot;)
+&gt; merge(rec[Datum_1&lt;=&quot;2023-12-31&quot;,.(recordlevel=.N),.(type=OckovaciLatka_1)],moh,all=T)|&gt;print(r=F)
+                                      type recordlevel     moh
+            COMIRNATY OMICRON XBB.1.5 6m-4          11      11
+                                   COVAXIN           5       5
+                  COVID-19 Vaccine Janssen      412312  412318
+                                 Comirnaty     5586978 5586776
+                            Comirnaty 6m-4         111     111
+                Comirnaty Omicron XBB.1.5.        1744    1745
+           Comirnaty Omicron XBB.1.5. 5-11          73      73
+           Comirnaty Original/Omicron BA.1         289     290
+      Comirnaty Original/Omicron BA.4/BA.5         661     663
+                                Covishield         115     116
+                                   Covovax          29      29
+                                 Nuvaxovid        5425    5424
+                         Nuvaxovid XBB 1.5          NA       0
+                                  SPIKEVAX      526452  526447
+ SPIKEVAX BIVALENT ORIGINAL/OMICRON BA.4-5           4       4
+                                 Sinopharm          38      38
+                                   Sinovac         180     181
+   Spikevax bivalent Original/Omicron BA.1          15      15
+                                 Sputnik V          10      10
+                                 VAXZEVRIA      447450  447428
+                                   Valneva           2       2
+                                      type recordlevel     moh</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
