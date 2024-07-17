@@ -1959,20 +1959,23 @@ d=merge(b[dose%in%1:4],b[dose&lt;=1,.(base=sum(dead)/sum(alive)),.(month,age)])[
 p=d[,.(y=(sum(dead)/sum(base)-1)*100,pop=sum(alive)),.(x=week,z=paste0(&quot;Dose &quot;,dose))]
 
 # # second plot
-d=merge(b[type!=&quot;&quot;&amp;type!=&quot;Other&quot;],b[dose&lt;=1,.(base=sum(dead)/sum(alive)),.(month,age)])[,base:=base*alive]
-p=d[,.(y=(sum(dead)/sum(base)-1)*100,pop=sum(alive)),.(x=week,z=factor(type,names(sort(table(type),T))))]
+# d=merge(b[type%in%c(&quot;Pfizer&quot;,&quot;Moderna&quot;)],b[dose&lt;=1,.(base=sum(dead)/sum(alive)),.(month,age)])[,base:=base*alive]
+# p=d[,.(y=(sum(dead)/sum(base)-1)*100,pop=sum(alive)),.(x=week,z=factor(type,names(sort(table(type),T))))]
 
 hidelim=1e4;p[pop&lt;hidelim,y:=NA]
 
 xstart=0;xend=105;xstep=5;ystart=-100;yend=50;ystep=25
 
-color=hsv(c(120,50,0,300)/360,1,c(.7,.7,.8,.8))
+color=hsv(c(12,21,24,30)/36,seq(.5,.8,,4),c(.9,.85,.7,.6))
+
+sub=paste0(&quot;      &quot;,&quot;For each combination of 5-year age group and ongoing month, the person-days were multiplied by the mortality rate among all people included in the record-level data for the same combination of age group and ongoing month, and the results were added together to get the baseline number of deaths.&quot;|&gt;stringr::str_wrap(90))
+sub=paste0(sub,&quot;\n      &quot;,paste0(&quot;People are kept under earlier doses after a new dose. The excess mortality percent is not shown on weeks with less than &quot;,formatC(hidelim,digits=0,format=&quot;f&quot;,big.mark=&quot;,&quot;),&quot; person-days. Week 0 consists of the day of vaccination and the next 6 days.&quot;)|&gt;stringr::str_wrap(90))
 
 ggplot(p,aes(x,y))+
 geom_hline(yintercept=c(ystart,0,yend),linewidth=.3,lineend=&quot;square&quot;)+
 geom_vline(xintercept=c(xstart,xend),linewidth=.3,lineend=&quot;square&quot;)+
 geom_line(aes(color=z),linewidth=.4)+
-labs(title=&quot;Czech record-level data: Excess mortality by weeks after vaccination and dose&quot;,subtitle=paste0(&quot;People are kept under earlier doses after a new dose. The excess mortality percent is not shown on weeks with less than &quot;,formatC(hidelim,digits=0,format=&quot;f&quot;,big.mark=&quot;,&quot;),&quot; person-days. Week 0 consists of the day of vaccination and the next 6 days.&quot;)|&gt;stringr::str_wrap(90),x=NULL,y=NULL)+
+labs(title=&quot;Czech record-level data: Excess mortality by weeks after vaccination and dose&quot;,subtitle=sub,x=NULL,y=NULL)+
 scale_x_continuous(limits=c(xstart,xend),breaks=seq(xstart,xend,xstep))+
 scale_y_continuous(limits=c(ystart,yend),breaks=seq(ystart,yend,ystep),labels=\(x)paste0(x,&quot;%&quot;))+
 scale_color_manual(values=color)+
@@ -1985,9 +1988,9 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   legend.key.height=unit(11,&quot;pt&quot;),
   legend.key.width=unit(15,&quot;pt&quot;),
   legend.key=element_rect(fill=&quot;white&quot;),
-  legend.margin=margin(-3,6,2,4.5),
+  legend.margin=margin(-2,7,3,6),
   legend.position=c(0,1),
-  legend.spacing.x=unit(1.5,&quot;pt&quot;),
+  legend.spacing.x=unit(2,&quot;pt&quot;),
   legend.text=element_text(size=7),
   legend.title=element_blank(),
   panel.grid.major=element_line(linewidth=.3,color=&quot;gray90&quot;),
@@ -1995,7 +1998,8 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   plot.margin=margin(4,10,4,4),
   plot.subtitle=element_text(size=7,margin=margin(0,0,4,0)),
   plot.title=element_text(size=7.5,face=&quot;bold&quot;,margin=margin(2,0,4,0)))
-ggsave(&quot;1.png&quot;,width=4.5,height=2.6,dpi=400)</pre>
+ggsave(&quot;0.png&quot;,width=4.5,height=3.2,dpi=400*4)
+system(&quot;convert 0.png -filter lanczos2 -resize 25% 1.png&quot;)</pre>
 <h2>
 <a href=#Excess_CMR_percent_in_vaccinated_people_relative_to_unvaccinated_people id=Excess_CMR_percent_in_vaccinated_people_relative_to_unvaccinated_people>Excess CMR percent in vaccinated people relative to unvaccinated people</a>
 </h2>
