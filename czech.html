@@ -51,8 +51,8 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
   blockquote blockquote blockquote,blockquote .quote .quote,.quote .quote .quote{color:hsl(30,70%,60%)}
 }
 </style>
-<title>Czech record-level mortality data by vaccination status (unpublished draft)</title>
-<h1>Czech record-level mortality data by vaccination status (unpublished draft) - <a href=index.html>sars2.net</a></h1>
+<title>Czech record-level mortality and vaccine data</title>
+<h1>Czech record-level mortality and vaccine data - <a href=index.html>sars2.net</a></h1>
 <h2 id=Contents><a href=#Contents>Contents</a></h2>
 <ul>
 <li><a href=#Background>Background</a></li>
@@ -90,7 +90,6 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Excess_CMR_percent_in_vaccinated_people_relative_to_unvaccinated_people>Excess CMR percent in vaccinated people relative to unvaccinated people</a></li>
 <li><a href=#Statistics_by_batch>Statistics by batch</a></li>
 <li><a href=#Excess_mortality_normalized_by_month_of_vaccination_and_dose_number>Excess mortality normalized by month of vaccination and dose number</a></li>
-<li><a href=#Survival_analysis>Survival analysis</a></li>
 <li><a href=#ASMR_by_month_and_vaccine_type>ASMR by month and vaccine type</a></li>
 <li><a href=#Does_Novavax_have_lower_mortality_than_Pfizer>Does Novavax have lower mortality than Pfizer?</a></li>
 </ul>
@@ -100,7 +99,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 </h2>
 <p>In March 2024 Stanislav Veselý received a FOIA response of record-level vaccination data from the Institute of Health Information and Statistics of the Czech Republic: <a href="https://www.skirsch.com/covid/CzechFOIA.pdf">https://www.skirsch.com/covid/CzechFOIA.pdf</a>. The dataset includes rows for about 11 million people, who have columns for the year of birth, date of death, dates of vaccination for doses 1-7, and the type and batch number of each dose.</p>
 <p>The data was used in a paper published in June 2024 titled <span class="quote">&quot;Batch-dependent safety of COVID-19 vaccines in the Czech Republic and comparison with data from Denmark&quot;</span>: <a href="https://onlinelibrary.wiley.com/doi/full/10.1111/eci.14271">https://onlinelibrary.wiley.com/doi/full/10.1111/eci.14271</a>. The paper is behind a paywall and not available at Sci-Hub, but the authors of the paper made the data publicly available at GitHub.</p>
-<p>However the data was almost completely overlooked until Steve Kirsch published this analysis of the data in July 2024: <a href="https://github.com/skirsch/Czech">https://github.com/skirsch/Czech</a>.</p>
+<p>However the data was almost completely overlooked until Steve Kirsch published this analysis of the data in July 2024: <a href="https://kirschsubstack.com/p/breaking-record-level-data-from-czech">https://kirschsubstack.com/p/breaking-record-level-data-from-czech</a>, <a href="https://github.com/skirsch/Czech">https://github.com/skirsch/Czech</a>.</p>
 <h2>
 <a href=#Files_used_in_my_analysis id=Files_used_in_my_analysis>Files used in my analysis</a>
 </h2>
@@ -112,8 +111,8 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <ul>
 <li><a href=f/czbuckets.csv.gz>f/czbuckets.csv.gz</a> (6 MiB): Deaths and person-days grouped by ongoing month, month of vaccination, weeks since vaccination, age, dose number, and vaccine type. People are removed under earlier doses after a new dose.</li>
 <li><a href=f/czbucketskeep.csv.gz>f/czbucketskeep.csv.gz</a> (8 MiB): Deaths and person-days grouped by ongoing month, month of vaccination, weeks since vaccination, age, dose number, and vaccine type. People are kept under earlier doses after a new dose.</li>
+<li><a href=f/czbucketsbatchkeep.csv.xz>f/czbucketsbatchkeep.csv.xz</a> (38 MiB): Same as <code>czbucketskeep.csv</code> but with an additional column for batch identifier.</li>
 <li><a href=f/czbucketsdaily.csv.gz>f/czbucketsdaily.csv.gz</a> (2 MiB): Deaths and person-days grouped by ongoing day, age, and dose number. People are removed under earlier doses after a new dose.</li>
-<li><a href=f/czbucketsbatchkeep.csv.xz>f/czbucketsbatchkeep.csv.xz</a> (38 MiB): Deaths and person-days grouped by ongoing month, month of vaccination, weeks since vaccination, age, dose number, vaccine type, and batch identifier. People are kept under earlier doses after a new dose.</li>
 </ul>
 <p>Population and deaths:</p>
 <ul>
@@ -2352,89 +2351,6 @@ age     AstraZeneca Janssen Moderna Novavax Pfizer Total
   80              6       6      21     -58     -4     0
   90              3       0      13     -37     -3     0
   Total          10      11      19     -57     -5     0</pre>
-<h2>
-<a href=#Survival_analysis id=Survival_analysis>Survival analysis</a>
-</h2>
-<div class="width6">
-<img src="i/czech-survival-2.png">
-</div>
-<pre>library(data.table);library(ggplot2)
-
-ua=\(x,y,...){u=unique(x);y(u,...)[match(x,u)]}
-age=\(x,y){class(x)=class(y)=NULL;(y-x-(y-789)%/%1461+(x-789)%/%1461)%/%365}
-
-rec=fread(&quot;Czech/data/CR_records.csv&quot;,showProgress=F)
-
-d=data.table(dose=rep(1:7,each=nrow(rec)),death=rec$DatumUmrti)
-set.seed(0);d$birth=ua(paste0(rec$Rok_narozeni,&quot;-1-1&quot;),as.Date)+sample(0:364,nrow(d),T)
-d$date=rec[,unlist(.SD,,F),.SDcols=patterns(&quot;Datum_&quot;)]
-d$type=rec[,unlist(.SD,,F),.SDcols=patterns(&quot;Latka_&quot;)]
-d=d[!is.na(date)]
-
-name1=unique(d$type);name2=rep(&quot;Other&quot;,length(name1))
-name2[name1==&quot;&quot;]=&quot;&quot;
-name2[grep(&quot;comirnaty&quot;,ignore.case=T,name1)]=&quot;Pfizer&quot;
-name2[grep(&quot;spikevax&quot;,ignore.case=T,name1)]=&quot;Moderna&quot;
-name2[grep(&quot;nuvaxovid&quot;,ignore.case=T,name1)]=&quot;Novavax&quot;
-name2[name1==&quot;COVID-19 Vaccine Janssen&quot;]=&quot;Janssen&quot;
-name2[name1==&quot;VAXZEVRIA&quot;]=&quot;AstraZeneca&quot;
-d$type=name2[match(d$type,name1)]
-
-p=d[dose&lt;=4&amp;type!=&quot;Novavax&quot;&amp;type!=&quot;Other&quot;&amp;type!=&quot;&quot;]
-p=p[,.(pop=.N,dead=sum(!is.na(death))),.(age=age(birth,date),type,dose=paste0(&quot;Dose &quot;,dose))]
-p=rbind(p,p[,.(pop=sum(pop),dead=sum(dead),dose=&quot;Doses 1-4&quot;),.(age,type)])
-p[,survival:=(1-(dead/pop))*100]
-
-xstart=0;xend=max(p$age);xstep=10;ystart=0;yend=100;ystep=10
-
-p$type=factor(p$type,p[,sum(as.double(pop)),type][order(-V1)]$type)
-color=hsv(c(240,355,330,204,36)/360,c(.94,.75,.8,.67,.64),c(.76,.82,.5,.87,.95))
-pointsize=c(1e4,3e4,1e5,3e5)
-
-sub=&quot;People remain included under a dose after subsequent doses. The age at vaccination was calculated by assigning a random birthday to each person in the dataset.&quot;|&gt;stringr::str_wrap(73)
-
-ggplot(p,aes(x=age,y=survival))+
-facet_wrap(~dose,ncol=1,scales=&quot;free_x&quot;,strip.position=&quot;top&quot;)+
-geom_vline(xintercept=c(xstart,xend),linewidth=.3,lineend=&quot;square&quot;)+
-geom_hline(yintercept=c(ystart,yend),linewidth=.3,lineend=&quot;square&quot;)+
-geom_point(aes(color=type),size=1.5,stroke=0)+
-geom_line(aes(color=type),linewidth=.4)+
-geom_label(data=data.frame(dose=unique(p$dose)),aes(label=paste0(&quot;\n    &quot;,dose,&quot;    \n&quot;)),x=xstart,y=0,lineheight=.7,hjust=0,vjust=0,size=2.5,fill=alpha(&quot;white&quot;,1),label.r=unit(0,&quot;lines&quot;),label.padding=unit(0,&quot;lines&quot;),label.size=.25)+
-labs(title=&quot;Czech record-level data: Probability of survival up to end of 2022&quot;,x=&quot;Age at vaccination&quot;,y=&quot;Probability of survival up to end of 2022&quot;,subtitle=sub)+
-scale_x_continuous(limits=c(xstart,xend),breaks=seq(xstart,xend,xstep))+
-scale_y_continuous(labels=\(x)paste0(x,&quot;%&quot;))+
-scale_color_manual(values=color,name=&quot;Type&quot;)+
-coord_cartesian(clip=&quot;off&quot;,expand=F)+
-theme(axis.text=element_text(size=8,color=&quot;black&quot;),
-  axis.ticks=element_line(linewidth=.3),
-  axis.ticks.length=unit(3,&quot;pt&quot;),
-  axis.title=element_text(size=8,face=&quot;bold&quot;),
-  axis.title.x=element_text(margin=margin(4)),
-  axis.title.y=element_text(margin=margin(,2,,1)),
-  legend.background=element_rect(fill=alpha(&quot;white&quot;,0)),
-  legend.key.height=unit(10,&quot;pt&quot;),
-  legend.key.width=unit(20,&quot;pt&quot;),
-  legend.key=element_rect(fill=&quot;white&quot;),
-  legend.margin=margin(,,7),
-  legend.direction=&quot;horizontal&quot;,
-  legend.box.just=&quot;right&quot;,
-  legend.justification=c(1,.5),
-  legend.position=&quot;top&quot;,
-  legend.box.margin=margin(),
-  legend.spacing.x=unit(2,&quot;pt&quot;),
-  legend.box.spacing=unit(0,&quot;pt&quot;),
-  legend.spacing=unit(0,&quot;pt&quot;),
-  legend.text=element_text(size=8),
-  legend.title=element_blank(),
-  panel.background=element_rect(fill=&quot;white&quot;),
-  panel.grid.major=element_line(linewidth=.3,color=&quot;gray90&quot;),
-  panel.spacing=unit(3,&quot;pt&quot;),
-  strip.background=element_blank(),
-  strip.text=element_blank(),
-  plot.margin=margin(5,9,5,5),
-  plot.subtitle=element_text(size=8,margin=margin(,,5)),
-  plot.title=element_text(size=8.8,face=&quot;bold&quot;,margin=margin(2,,4)))
-ggsave(&quot;1.png&quot;,width=4.5,height=7,dpi=380)</pre>
 <h2>
 <a href=#ASMR_by_month_and_vaccine_type id=ASMR_by_month_and_vaccine_type>ASMR by month and vaccine type</a>
 </h2>
