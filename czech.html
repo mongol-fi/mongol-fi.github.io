@@ -1,7 +1,7 @@
 <!doctype html>
 <meta charset=utf-8>
 <style>
-body{background:#292929;color:#f2f2f2;margin:6px 6px 6px max(6px, min(50vw - 270px, 100vw - 1100px))}
+body{background:#292929;color:white;margin:6px 6px 6px max(6px, min(50vw - 270px, 100vw - 1100px))}
 body,td,th{font:14.5px/1.3 Arial,Helvetica,'Liberation Sans',sans-serif}
 p{max-width:540px}
 h1,h2,h2 a,h3 a,h2 a:visited,h3 a:visited{font-weight:normal;color:white}
@@ -94,6 +94,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Does_Novavax_have_lower_mortality_than_Pfizer>Does Novavax have lower mortality than Pfizer?</a></li>
 <li><a href=#Monthly_CMR_by_age_group_relative_to_baseline_CMR_during_the_same_month_of_the_year_in_2015_2019>Monthly CMR by age group relative to baseline CMR during the same month of the year in 2015-2019</a></li>
 <li><a href=#Number_of_vaccine_doses_by_type_in_record_level_data_compared_to_MoH_data>Number of vaccine doses by type in record-level data compared to MoH data</a></li>
+<li><a href=#Some_regions_had_more_Moderna_doses_given_relative_to_Pfizer_doses>Some regions had more Moderna doses given relative to Pfizer doses</a></li>
 </ul>
 
 <h2>
@@ -204,7 +205,7 @@ rm(rec) # free up memory so the script won&#39;t have to use swap
 buck=data.table()
 for(day in as.list(seq(mindate,maxdate,1))){
   cat(as.character(day),&quot;\n&quot;)
-  #buck=rbind(buck,t[date&lt;=day&amp;(is.na(death)|day&lt;=death)&amp;day&gt;=birth][!(dose==0&amp;id%in%id[dose&gt;0])][,.( # keep under earlier doses
+  # buck=rbind(buck,t[date&lt;=day&amp;(is.na(death)|day&lt;=death)&amp;day&gt;=birth][!(dose==0&amp;id%in%id[dose&gt;0])][,.( # keep under earlier doses
   buck=rbind(buck,unique(t[date&lt;=day&amp;(is.na(death)|day&lt;=death)&amp;day&gt;=birth],by=&quot;id&quot;)[,.( # remove under earlier doses
     month=substr(day,1,7),vaxmonth,week=ifelse(type==&quot;&quot;,0,as.numeric(day-date)%/%7),
     age=age(birth,day),dose,type,alive=1,dead=death==day)])[,.(
@@ -2603,7 +2604,7 @@ system(paste0(&quot;w=`identify -format %w i1.png`;pad=48;convert -gravity north
 <p>The vaccination figures in the third file from the bottom here seem to be almost identical to the record-level data: <a href="https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19">https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19</a>. The file even uses the same type names. For example here's the number of first doses given up to the end of 2023 by vaccine type:</p>
 <pre>&gt; download.file(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-orp.csv&quot;,&quot;ockovani-orp.csv&quot;)
 &gt; t=fread(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-orp.csv&quot;)
-&gt; moh=t[datum&lt;&quot;2023-12-31&quot;,.(moh=sum(prvni_davka)),.(type=ockovaci_latka_nazev)]
+&gt; moh=t[datum&lt;=&quot;2023-12-31&quot;,.(moh=sum(prvni_davka)),.(type=ockovaci_latka_nazev)]
 &gt; rec=fread(&quot;CR_records.csv&quot;)
 &gt; merge(rec[Datum_1&lt;=&quot;2023-12-31&quot;,.(recordlevel=.N),.(type=OckovaciLatka_1)],moh,all=T)|&gt;print(r=F)
                                       type recordlevel     moh
@@ -2629,6 +2630,65 @@ system(paste0(&quot;w=`identify -format %w i1.png`;pad=48;convert -gravity north
                                  VAXZEVRIA      447450  447428
                                    Valneva           2       2
                                       type recordlevel     moh</pre>
+<h2>
+<a href=#Some_regions_had_more_Moderna_doses_given_relative_to_Pfizer_doses id=Some_regions_had_more_Moderna_doses_given_relative_to_Pfizer_doses>Some regions had more Moderna doses given relative to Pfizer doses</a>
+</h2>
+<p>You can download regional vaccination data here from the first CSV file under <span class="quote">&quot;Očkování&quot;</span>: <a href="https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19">https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19</a>. It shows that the ratio of Pfizer first doses to Moderna first doses ranged from about 8 to 13 depending on the region:</p>
+<pre>&gt; vax=fread(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani.csv&quot;)
+&gt; d=vax[,.(doses=sum(prvnich_davek)),.(region=kraj_nazev,type=vakcina)]
+&gt; d1=d[grep(&quot;comirnaty&quot;,ignore.case=T,type),.(Pfizer=sum(doses)),region]
+&gt; d2=d[grep(&quot;spikevax&quot;,ignore.case=T,type),.(Moderna=sum(doses)),region]
+&gt; rat=merge(d1,d2)[,ratio:=Pfizer/Moderna][order(ratio)]
+&gt; rat[,ratio:=round(ratio,1)][]
+                  region  Pfizer Moderna ratio
+ 1:        Kraj Vysočina  242228   29168   8.3
+ 2:       Olomoucký kraj  283836   34131   8.3
+ 3:      Pardubický kraj  241427   27257   8.9
+ 4:         Zlínský kraj  272423   30752   8.9
+ 5: Královéhradecký kraj  282321   29809   9.5
+ 6: Moravskoslezský kraj  563177   56852   9.9
+ 7:       Liberecký kraj  223807   22292  10.0
+ 8:     Středočeský kraj  577675   53262  10.8
+ 9:     Karlovarský kraj  136853   11834  11.6
+10:    Jihomoravský kraj  630695   54459  11.6
+11:   Hlavní město Praha 1078626   92880  11.6
+12:       Jihočeský kraj  342569   28338  12.1
+13:         Ústecký kraj  404658   32337  12.5
+14:        Plzeňský kraj  309676   23097  13.4</pre>
+<p>I checked if the regions that had a higher proportion of Pfizer first doses to Moderna first doses would've had lower COVID ASMR, but actually it was the reverse so the correlation between ASMR and the dose ratio was positive each year:</p>
+<pre>&gt; dead=fread(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/umrti.csv&quot;)
+&gt; pop=fread(&quot;https://csu.gov.cz/docs/107508/1cab7ab3-4d2e-4d0e-c2a8-425e3442218c/130181-23data2022.csv&quot;)
+&gt; nuts=vax[,.(nuts=unique(kraj_nuts_kod)),.(region=kraj_nazev)]
+&gt; covid=dead[,.(dead=.N),.(year=year(datum),age=pmin(vek,95)%/%5*5,nuts=kraj_nuts_kod)]
+&gt; pop2=pop[uzemi_typ==&quot;kraj&quot;&amp;!is.na(vek_txt)&amp;pohlavi_txt!=&quot;&quot;]
+&gt; pop2=pop2[,.(pop=sum(hodnota)),.(age=pmin(95,vek_txt)%/%5*5,region=uzemi_txt)]
+&gt; covid=unique(rbind(covid,cbind(expand.grid(lapply(covid[,-4],unique)),dead=0)),by=1:3)[!is.na(age)]
+&gt; p=merge(covid,merge(pop2,nuts))
+&gt; std=pop2[,sum(pop),age][,V1/sum(V1)]
+&gt; me=merge(rat,p[,.(asmr=sum(dead/pop*std[age/5+1]*1e5)),.(region,year)])
+&gt; me[,.(cor=round(cor(ratio,asmr),2)),year]|&gt;print(r=F)
+ year   cor
+ 2022  0.34
+ 2020  0.01
+ 2021  0.42
+ 2023 -0.13
+ 2024  0.12
+&gt; me[year==2020][order(ratio)]|&gt;mutate_if(is.double,round,1)|&gt;print(r=F) # show COVID ASMR in 2020 as an example
+               region  Pfizer Moderna ratio year  asmr
+        Kraj Vysočina  242228   29168   8.3 2020 125.2
+       Olomoucký kraj  283836   34131   8.3 2020 115.0
+      Pardubický kraj  241427   27257   8.9 2020  88.3
+         Zlínský kraj  272423   30752   8.9 2020 130.0
+ Královéhradecký kraj  282321   29809   9.5 2020 105.9
+ Moravskoslezský kraj  563177   56852   9.9 2020 124.7
+       Liberecký kraj  223807   22292  10.0 2020 101.1
+     Středočeský kraj  577675   53262  10.8 2020  96.4
+     Karlovarský kraj  136853   11834  11.6 2020 149.4
+    Jihomoravský kraj  630695   54459  11.6 2020 119.2
+   Hlavní město Praha 1078626   92880  11.6 2020  81.9
+       Jihočeský kraj  342569   28338  12.1 2020 125.6
+         Ústecký kraj  404658   32337  12.5 2020 128.7
+        Plzeňský kraj  309676   23097  13.4 2020  98.5</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
