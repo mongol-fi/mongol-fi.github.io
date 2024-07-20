@@ -102,7 +102,8 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Percentage_of_first_doses_given_to_males_by_vaccine_type>Percentage of first doses given to males by vaccine type</a></li>
 <li><a href=#Monthly_ASMR_by_vaccine_type_and_dose_number>Monthly ASMR by vaccine type and dose number</a></li>
 <li><a href=#Triangle_plots_for_excess_mortality_by_vaccine_type>Triangle plots for excess mortality by vaccine type</a></li>
-<li><a href=#Prevalence_of_chronic_disease_by_vaccine_brand>Prevalence of chronic disease by vaccine brand</a></li>
+<li><a href=#Prevalence_of_chronic_disease_by_vaccine_type>Prevalence of chronic disease by vaccine type</a></li>
+<li><a href=#Hospitalizations_by_vaccine_type>Hospitalizations by vaccine type</a></li>
 </ul>
 
 <h2>
@@ -3084,7 +3085,7 @@ for(i in 1:length(types)){
 
 system(&quot;montage -tile 2x i[1-4].png -geometry +0+10 0.png;convert 0.png -trim -bordercolor white -border 32 1.png&quot;)</pre>
 <h2>
-<a href=#Prevalence_of_chronic_disease_by_vaccine_brand id=Prevalence_of_chronic_disease_by_vaccine_brand>Prevalence of chronic disease by vaccine brand</a>
+<a href=#Prevalence_of_chronic_disease_by_vaccine_type id=Prevalence_of_chronic_disease_by_vaccine_type>Prevalence of chronic disease by vaccine type</a>
 </h2>
 <p>Uncle John Returns posted the tables below on Twitter and wrote: <span class="quote">&quot;Turns out that those Czechs who received a dose of Moderna in 2021 were twice as likely to have a pre-existing chronic condition as those who had Pfizer with AZ higher still. [...] The source is a ministry of health file which has 1 row per dose (so 3.68 GB) with other data such as the age band, sex and place of residence. Available on the vaccinations tab here <a href="https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19">https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19</a>.&quot;</span> [<a href="https://x.com/UncleJo46902375/status/1814375808062112215">https://x.com/UncleJo46902375/status/1814375808062112215</a>]</p>
 <div class="maxwidth">
@@ -3257,6 +3258,145 @@ cap=&quot;\u00a0     Czech MoH data: Excess percentage for age-normalized preval
       Source: onemocneni-aktualne.mzcr.cz/api/v2/covid-19, \&quot;COVID-19: Overview of reported vaccinations by profession (place of vaccination, residence of the vaccinated person)\&quot;.&quot;
 
 system(paste0(&quot;w=`identify -format %w i1.png`;pad=20;magick -pointsize 40 -font Arial \\( -size $[w-pad*3]x caption:&#39;&quot;,cap,&quot;&#39; -splice $[pad]x20 \\) \\( i1.png -crop -0+8 \\) \\( -size $[w-pad*3]x caption:&#39;Number of people who received a first dose each month&#39; -splice $[pad]x0 \\) \\( i2.png -crop -0+8 \\) -append 1.png&quot;))</pre>
+<h2>
+<a href=#Hospitalizations_by_vaccine_type id=Hospitalizations_by_vaccine_type>Hospitalizations by vaccine type</a>
+</h2>
+<p>The second file from the bottom under vaccinations here has data for hospitalizations by vaccine type and age group: <a href="https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19">https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19</a>.</p>
+<p>The file has about 7 million rows with one row for each vaccinated person. It has these columns:</p>
+<pre>                             id id
+            kraj_bydliste_nazev name of region of resicence
+              kraj_bydliste_kod code of region of residence
+             orp_bydliste_nazev name of county of residence
+               orp_bydliste_kod code of county of residence
+               vekova_kategorie age category
+           ockovaci_latka_nazev vaccine name
+             ockovaci_latka_kod vaccine code
+                    prvni_davka date of first dose
+                    druha_davka date of second dose
+             dokoncene_ockovani date when completed primary course
+               posilujici_davka date of booster dose
+        indikace_pred_ockovanim type of test before vaccination
+        pozivita_pred_ockovanim positivity of test before vaccination
+  pozivita_pred_ockovanim_datum date of positive test before vaccination
+   hospitalizace_pred_ockovanim hospitalized before vaccination
+             jip_pred_ockovanim ICU before vaccination
+           indikace_po_ockovani type of test after vaccination
+           pozivita_po_ockovani positivivity of test after vaccination
+     pozivita_po_ockovani_datum date of positive test after vaccination
+hospitalizace_po_ockovani_datum date of hospitalization after vaccination
+      hospitalizace_po_ockovani hospitalized after vaccination
+                jip_po_ockovani ICU after vaccination</pre>
+<p>The types of test are diagnostic, preventative, epidemiological, or other (ostatní). Negative tests are not listed so the type of the test is only shown for positive tests. There's only up to one test before vaccination and one test after vaccination listed for each person, and similarly there's only up to one hospitalization before vaccination and one hospitalization after vaccination listed for each person.</p>
+<p>I used the file to count an age-normalized hospitalization rate from the day of the first dose up to the present. The file included data for hospitalizations up the the present month, so I used the date when I downloaded the file as the end of my observation period.</p>
+<p>For each 17 age groups included in the file, I calculated the expected number of deaths by multiplying the person-days by the mortality rate among all people who had a first dose listed in the file.</p>
+<p>My excess percentage of hospitalizations was about -6% for the first dose type <span class="quote">&quot;Comirnaty&quot;</span> and about -4% for the first dose type <span class="quote">&quot;SPIKEVAX&quot;</span>, so it was almost the same, but AstraZeneca and particularly Janssen vaccines had a much higher hospitalization rate (but they are not mRNA vaccines unlike Pfizer and Moderna, even though it might be a coincidence):</p>
+<pre>download.file(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-pozitivni-hospitalizovani.csv&quot;,&quot;ockovani-pozitivni-hospitalizovani.csv&quot;)
+
+h=fread(&quot;ockovani-pozitivni-hospitalizovani.csv&quot;)
+
+d=h[,.(age=vekova_kategorie,date=prvni_davka,type=ockovaci_latka_nazev,hosp=hospitalizace_po_ockovani)][age!=&quot;-&quot;]
+maxdate=as.IDate(&quot;2024-7-20&quot;)
+
+a=d[,.(hosp=sum(hosp,na.rm=T),pop=sum(as.double(maxdate-date+1))),.(type,age)]
+a=merge(a,a[,.(base=sum(hosp)/sum(pop)),age])[,base:=base*pop]
+a[,.(excesspct=round((sum(hosp)/sum(base)-1)*100),hospitalizations=sum(hosp),pyears=round(sum(pop/365))),type][order(-pyears)]|&gt;print(r=F)</pre>
+<!-- -->
+<pre>                                      type excesspct hospitalizations   pyears
+                                 Comirnaty        -6            43053 17432607 # Pfizer
+                                  SPIKEVAX        -4             6234  1657122 # Moderna
+                                 VAXZEVRIA        19            11921  1478098 # AstraZeneca
+                  COVID-19 Vaccine Janssen        57             3576  1185707
+                                 Nuvaxovid       -50                7    12140 # Novavax
+                Comirnaty Omicron XBB.1.5.       -10                7     1349
+      Comirnaty Original/Omicron BA.4/BA.5      -100                0     1015
+                                   Sinovac      -100                0      543
+           Comirnaty Original/Omicron BA.1      -100                0      454
+                                Covishield      -100                0      372
+                            Comirnaty 6m-4      -100                0      143
+                                 Sinopharm      -100                0      113
+                                   Covovax      -100                0       87
+           Comirnaty Omicron XBB.1.5. 5-11      -100                0       62
+                                 Sputnik V      -100                0       30
+   Spikevax bivalent Original/Omicron BA.1      -100                0       22
+                                   COVAXIN      -100                0       16
+            COMIRNATY OMICRON XBB.1.5 6m-4      -100                0       15
+ SPIKEVAX BIVALENT ORIGINAL/OMICRON BA.4-5      -100                0        4
+                                   Valneva      -100                0        4
+                         Nuvaxovid XBB 1.5      -100                0        2
+                                      type excesspct hospitalizations   pyears</pre>
+<p>In the code below I additionally normalized the hospitalization rate for the month of vaccination. I now only included first doses given in 2021, because otherwise I would've been more likely to get an anomalously high baseline rates for vaccination months with a low number of doses given in some age groups. However now Moderna got a slightly lower excess hospitalization percent than Pfizer which was the opposite of the previous plot. And now as expected the hospitalization rate of Janssen vaccines reduced dramatically, because late vaccinees had a higher hospitalization rate than early vaccinees, and late vaccinees are overrepresented for Janssen:</p>
+<pre>yemo=\(x,y){u=unique(x);p=as.POSIXlt(as.Date(u));sprintf(&quot;%d-%02d&quot;,p$year+1900,p$mon+1)[match(x,u)]}
+
+d2=d[date&lt;=&quot;2021-12-31&quot;][,month:=yemo(date)]
+a=d2[,.(hosp=sum(hosp,na.rm=T),pop=sum(as.double(maxdate-date+1))),.(type,age,month)]
+a=merge(a,a[,.(base=sum(hosp)/sum(pop)),.(month,age)])[,base:=base*pop]
+a=a[,.(excesspct=round((sum(hosp)/sum(base)-1)*100),hospitalizations=sum(hosp),pyears=round(sum(pop/365))),type]
+a[order(-pyears)]|&gt;print(r=F)</pre>
+<!-- -->
+<pre>                     type excesspct hospitalizations   pyears
+                Comirnaty        -5            42775 17127673
+                 SPIKEVAX        -6             6210  1633228
+                VAXZEVRIA        21            11921  1478067
+ COVID-19 Vaccine Janssen        28             3562  1168387
+                  Sinovac      -100                0      539
+               Covishield      -100                0      372
+                Sinopharm      -100                0      109
+                  Covovax      -100                0       85
+                Sputnik V      -100                0       28
+                  COVAXIN      -100                0       16</pre>
+<p>The plot below shows the excess hospitalization percent by age and the month of the first dose. There's a diagonal pattern across different age groups where there's a low excess hospitalization percent during the same month when the number of new first doses peaked in the age group:</p>
+<div class="width9">
+<img src="i/czech-hosprate.png">
+</div>
+<p>In the plot below I didn't normalize the total excess mortality by the month of vaccination so Janssen again got 57% excess hospitalizations, because late vaccinees also had a high age-normalized hospitalization rate for other vaccine types. However even in May 2021 when the total number of doses given peaked, Janssen and AstraZeneca had a much higher total hospitalization rate than Pfizer and Moderna:</p>
+<p><img src=i/czech-hosprate-2.png style=max-width:980px></p>
+<p>Here's code for making the heatmaps:</p>
+<pre>library(data.table)
+
+h=fread(&quot;ockovani-pozitivni-hospitalizovani.csv&quot;)
+
+d=h[,.(age=vekova_kategorie,date=prvni_davka,type=ockovaci_latka_nazev,hosp=hospitalizace_po_ockovani)]
+d=d[age!=&quot;-&quot;&amp;date&lt;&quot;2022-01-01&quot;]
+u=unique(d$date);d$month=format(u,&quot;%Y-%m&quot;)[match(d$date,u)]
+
+a=d[,.(.N,hosp=sum(hosp,na.rm=T),pop=sum(as.double(as.IDate(&quot;2024-7-20&quot;)-date+1))),.(month,age)]
+a=merge(a,a[,.(base=sum(hosp)/sum(pop)),age])[,base:=base*pop]
+
+p=a[,.(N=sum(N),hosp=sum(hosp),base=sum(base),pop=sum(pop)),.(month,age)]
+p=rbind(p,p[,.(N=sum(N),hosp=sum(hosp),base=sum(base),pop=sum(pop),age=&quot;Total&quot;),month])
+p=rbind(p,p[,.(N=sum(N),hosp=sum(hosp),base=sum(base),pop=sum(pop),month=&quot;Total&quot;),age])
+
+m=p[,tapply((hosp-base)/ifelse(hosp&gt;base,base,hosp)*100,.(age,month),c)]
+disp=p[,tapply((hosp/base-1)*100,.(age,month),round)]
+pop=p[,xtabs(N~age+month)]
+
+exp=.7;maxcolor=300;m[m==-Inf]=-maxcolor
+
+pheatmap::pheatmap(abs(m)^exp*sign(m),filename=&quot;i1.png&quot;,display_numbers=disp,
+  gaps_row=nrow(m)-1,gaps_col=ncol(m)-1,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;gray90&quot;,
+  number_color=ifelse((abs(m)^exp&gt;.55*maxcolor^exp)&amp;!is.na(m),&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(-maxcolor^exp,maxcolor^exp,,256),
+  colorRampPalette(hsv(rep(c(7/12,0),5:4),c(.9,.75,.6,.3,0,.3,.6,.75,.9),c(.4,.65,1,1,1,1,1,.65,.4)))(256))
+
+kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;p=!is.na(x)
+  x[p]=paste0(sprintf(paste0(&quot;%.&quot;,ifelse(e[p]%%3==0,1,0),&quot;f&quot;),x[p]/1e3^(e2[p]-1)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2[p]]);x}
+
+exp2=.6;maxcolor2=max(pop[-nrow(pop),-ncol(pop)])
+
+pheatmap::pheatmap(pop^exp2,filename=&quot;i2.png&quot;,display_numbers=ifelse(pop&lt;=10,round(pop),kimi(pop)),
+  gaps_row=nrow(m)-1,gaps_col=ncol(m)-1,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;white&quot;,
+  number_color=ifelse(pop^exp2&gt;maxcolor2^exp2*.45,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(0,maxcolor2^exp2,,256),
+  sapply(seq(1,0,,256),\(i)rgb(i,i,i)))
+
+cap=&quot;\u00a0     Czech MoH data: Excess percentage for age-normalized hospitalization rate for people with a first dose listed in 2021. The x-axis shows the month of vaccination. The baseline is the hospitalization rate among people in the same age group in the CSV file who got a first dose in 2021. The hospitalization rate was calculated from the day of the first dose until July 20th 2024.
+      Source: onemocneni-aktualne.mzcr.cz/api/v2/covid-19, tab for vaccinations, second file from bottom translated as \&quot;COVID-19: Overview of persons with reported vaccinations with regard to SARS-CoV-2 infection\&quot;.&quot;
+
+system(paste0(&quot;pad=24;w=`identify -format %w i1.png`;magick -pointsize 40 -font Arial \\( -size $[w*2-pad*3] caption:&#39;&quot;,cap,&quot;&#39; -splice $[pad]x20 \\) -font Arial-Bold \\( \\( \\( -size $[w-pad*3] caption:&#39;Excess hospitalization percentage&#39; -splice $[pad]x20 \\) i1.png -append \\) \\( \\( -size $[w-pad*2] caption:&#39;Number of people who received a first dose each month&#39; -splice $[pad]x20 \\) i2.png -append \\) +append \\) -append 1.png&quot;))</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
