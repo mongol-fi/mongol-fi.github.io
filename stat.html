@@ -90,6 +90,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Plot_excess_mortality_by_dose>Plot excess mortality by dose</a></li>
 <li><a href=#Make_multiple_line_plots_for_CMR_by_age_group>Make multiple line plots for CMR by age group</a></li>
 <li><a href=#Plot_deaths_by_weeks_after_vaccination_and_age_group>Plot deaths by weeks after vaccination and age group</a></li>
+<li><a href=#Make_a_heatmap_for_excess_CMR_by_age_group_relative_to_a_2015_2019_trend>Make a heatmap for excess CMR by age group relative to a 2015-2019 trend</a></li>
 <li><a href=#Plot_CMR_by_age_group_and_dose_along_with_CMR_in_general_population_of_England>Plot CMR by age group and dose along with CMR in general population of England</a></li>
 </ul></li>
 <li><a href=#United_Nations>United Nations</a>
@@ -1942,6 +1943,70 @@ system(&quot;montage -geometry +0+0 -tile 2x l[0-3].png 1.png&quot;)</pre>
 <p>For some reason there was a huge number of COVID deaths on the third and fourth weeks from vaccination, so in some age groups there were more than 5 times as many COVID deaths on the 3rd weeks from vaccination as 10 weeks from vaccination. It might be because the first two doses were rolled out at the tail end of a COVID wave, and the first booster was rolled out before a short-lasting spike in COVID cases caused by Omicron, or if could also be that the vaccine still offered limited protection on the third week from vaccination.</p>
 <p>At first I wasn't sure if the ONS table only included the first dose or all doses, but the title of table 9 also indicates that it includes <span class="quote">&quot;all registered deaths&quot;</span>: <span class="quote">&quot;Whole period counts of all registered deaths grouped by how many weeks after vaccination the deaths occurred; for deaths involving COVID-19 and deaths not involving COVID-19, deaths occurring between 1 January 2021 and 31 March 2022, England&quot;</span>. Table 9 includes a total of 606,534 deaths, which almost matches the total number of ever-vaccinated deaths in Table 1 (570,872). But I don't know why Table 9 includes slightly more deaths than Table 1.</p>
 <h3>
+<a href=#Make_a_heatmap_for_excess_CMR_by_age_group_relative_to_a_2015_2019_trend id=Make_a_heatmap_for_excess_CMR_by_age_group_relative_to_a_2015_2019_trend>Make a heatmap for excess CMR by age group relative to a 2015-2019 trend</a>
+</h3>
+<pre>download.file(&quot;https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/adhocs/1343dailydeathsbydateofoccurrence1stjune2014to31stmay2023bysingleyearofageengland/dailydeaths2014to2023england.xlsx&quot;,&quot;dailydeaths2014to2023england.xlsx&quot;)
+
+library(data.table)
+
+ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
+
+agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
+
+seapre=\(x,y,xout=x,spar=.5){class(x)=class(y)=&quot;Date&quot;
+  d=data.frame(x,y);lm=lm(y~x,d)
+  daily=tapply(y-predict(lm,list(x)),substr(x,6,10),mean)
+  daily=daily[names(daily)!=&quot;02-29&quot;]
+  daily[]=smooth.spline(rep(daily,3),spar=spar)$y[366:730]
+  daily[&quot;02-29&quot;]=mean(daily[c(&quot;02-28&quot;,&quot;03-01&quot;)])
+  data.frame(x=xout,y=predict(lm,list(x=xout))+daily[substr(xout,6,10)])}
+
+dead=as.data.table(readxl::read_excel(&quot;dailydeaths2014to2023england.xlsx&quot;,sheet=4,range=&quot;A6:CP3293&quot;))
+dead=dead[,.(date=as.Date(paste0(Year,&quot;-&quot;,Month,&quot;-&quot;,Day)),age=rep(0:90,each=.N),dead=unlist(.SD[,-(1:3)],,F))]
+
+pop=fread(&quot;http://sars2.net/f/englandpop.csv&quot;)[,date:=as.Date(paste0(year,&quot;-7-1&quot;))]
+pop=pop[,with(spline(date,pop,xout=unique(dead$date)),.(date=`class&lt;-`(x,&quot;Date&quot;),pop=y)),age]
+
+me=merge(dead,pop)[age&gt;=18,.(cmr=sum(dead)/sum(pop)),.(date,age=agecut(age,c(18,4:9*10)))]
+future=seq(as.Date(&quot;2020-1-1&quot;),as.Date(&quot;2023-5-31&quot;),1)
+me=me[,.(date,cmr=ma(cmr,10)),age][date&lt;=&quot;2019-12-31&quot;,seapre(date,cmr,future),age]
+me=me[,.(cmr=mean(y)),.(month=substr(x,1,7),age=levels(age)[age])]
+
+ons=fread(&quot;http://sars2.net/f/ons.csv&quot;)[ed==9|ed==7&amp;month&lt;=&quot;2021-03&quot;][cause==&quot;All causes&quot;]
+ons=merge(ons,me)[,.(month,age,dead,status,base=cmr*pop*365)]
+ons=rbind(ons,ons[status!=&quot;Unvaccinated&quot;,.(dead=sum(dead),base=sum(base),status=&quot;Ever vaccinated&quot;),.(age,month)])
+ons=rbind(ons,ons[status%in%paste0(c(&quot;Ever &quot;,&quot;Un&quot;),&quot;vaccinated&quot;),.(
+  dead=sum(dead),base=sum(base),status=&quot;Unvaccinated and ever vaccinated&quot;),.(age,month)])
+ons[,month:=factor(month,c(unique(month),2021:2023,&quot;Total&quot;))]
+ons=rbind(ons,ons[,.(dead=sum(dead),base=sum(base),month=&quot;Total&quot;),.(age,status)])
+ons=rbind(ons,ons[,.(dead=sum(dead),base=sum(base),age=&quot;Total&quot;),.(month,status)])
+ons=rbind(ons,ons[month!=&quot;Total&quot;,.(dead=sum(dead),base=sum(base)),.(month=substr(month,1,4),age,status)])
+
+stat=c(&quot;Unvaccinated&quot;,&quot;Ever vaccinated&quot;,&quot;Unvaccinated and ever vaccinated&quot;)
+
+for(i in 1:length(stat)){
+  m1=ons[status==stat[i],tapply(dead,list(age,month),c)]
+  m2=ons[status==stat[i],tapply(base,list(age,month),c)]
+
+  disp=round((m1/m2-1)*100)
+  m=(m1-m2)/ifelse(m1&gt;m2,m2,m1)*100
+  exp=.82;m=abs(m)^exp*sign(m);maxcolor=300^exp
+
+  pheatmap::pheatmap(m,filename=paste0(&quot;i&quot;,i,&quot;.png&quot;),display_numbers=disp,main=stat[i],
+    gaps_col=ncol(m)-c(4,1),gaps_row=nrow(m)-1,
+    cluster_rows=F,cluster_cols=F,legend=F,cellwidth=17,cellheight=17,fontsize=9,fontsize_number=8,
+    number_color=ifelse((abs(m)&gt;.55*maxcolor)&amp;!is.na(m),&quot;white&quot;,&quot;black&quot;),border_color=NA,na_col=&quot;gray90&quot;,
+    breaks=seq(-maxcolor,maxcolor,,256),
+    colorRampPalette(hsv(rep(c(7/12,0),5:4),c(.9,.75,.6,.3,0,.3,.6,.75,.9),c(.4,.65,1,1,1,1,1,.65,.4)))(256))
+}
+
+cap=&quot;ONS dataset for mortality by vaccination status: Excess mortality relative to a 2015-2019 linear trend adjusted for seasonal variation in mortality.&quot;
+
+system(paste0(&quot;w=`identify -format %w i1.png`;pad=48;convert -gravity northwest -pointsize 46 -font Arial -interline-spacing -2 \\( -splice x32 -size $[w-pad]x caption:&#39;&quot;,cap,&quot;&#39; -extent $[w-pad]x -gravity center \\) \\( -shave 0x8 i[123].png \\) -append 1.png&quot;))</pre>
+<div class="width9">
+<img src="i/stat-onscsvheat.png">
+</div>
+<h3>
 <a href=#Plot_CMR_by_age_group_and_dose_along_with_CMR_in_general_population_of_England id=Plot_CMR_by_age_group_and_dose_along_with_CMR_in_general_population_of_England>Plot CMR by age group and dose along with CMR in general population of England</a>
 </h3>
 <pre>download.file(&quot;https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/adhocs/1343dailydeathsbydateofoccurrence1stjune2014to31stmay2023bysingleyearofageengland/dailydeaths2014to2023england.xlsx&quot;,&quot;dailydeaths2014to2023england.xlsx&quot;)
@@ -1987,10 +2052,8 @@ p[,status:=factor(status,c(&quot;Unvaccinated&quot;,paste0(c(
   &quot;First&quot;,&quot;Second&quot;,&quot;Third&quot;,&quot;Fourth&quot;),&quot; dose&quot;),&quot;All vaccinated&quot;,&quot;All people&quot;,&quot;2015-2019 projection&quot;,&quot;English population&quot;))]
 p[is.infinite(cmr),cmr:=NA]
 
-meancmr=p[grep(&quot;proj&quot;,status),.(mean=mean(cmr)*6),age]
-p[,cmr:=cmr/meancmr$mean[match(age,meancmr$age)]]
-
-## historical=c(50,180,400,1000,3000,8500,21000)|sn(dead|cn)
+meancmr=p[grep(&quot;proj&quot;,status),.(mean=mean(cmr)),age]
+p[,cmr:=cmr/meancmr$mean[match(age,meancmr$age)]/6]
 
 xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2023-5-1&quot;)
 xbreak=c(seq(xstart+183,xend,&quot;year&quot;),as.Date(&quot;2023-3-1&quot;));xlab=2020:2023
