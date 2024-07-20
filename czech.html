@@ -3097,8 +3097,9 @@ system(&quot;montage -tile 2x i[1-4].png -geometry +0+10 0.png;convert 0.png -tr
 
 t=fread(&quot;ockovani-profese.csv&quot;)
 
-d=t[poradi_davky==1,.(.N,chronic=sum(indikace_chronicke_onemocneni,na.rm=T)),.(
-  type=vakcina,age=as.numeric(sub(&quot;[+-].*&quot;,&quot;&quot;,vekova_skupina)))][!is.na(age)]
+d=t[poradi_davky==1&amp;vekova_skupina!=&quot;nezařazeno&quot;,.(
+  .N,chronic=sum(indikace_chronicke_onemocneni,na.rm=T)),.(
+  type=vakcina,age=as.numeric(sub(&quot;[+-].*&quot;,&quot;&quot;,vekova_skupina)))]
 
 d[,.(chronicpct=round(sum(chronic)/sum(N)*100,1)),age][order(age)]|&gt;print(r=F)</pre>
 <!-- -->
@@ -3121,9 +3122,9 @@ d[,.(chronicpct=round(sum(chronic)/sum(N)*100,1)),age][order(age)]|&gt;print(r=F
   75        2.1
   80        1.1</pre>
 <p>When I calculated an age-normalized prevalence of chronic conditions relative to the prevalence among all people who are included in the CSV file for each age group, the excess prevalence was about -26% for the first dose type <span class="quote">&quot;Comirnaty&quot;</span> (Pfizer) but about 55% for <span class="quote">&quot;SPIKEVAX&quot;</span> (Moderna):</p>
-<pre>a=d[,.(base=sum(chronic)/sum(N)),age]
-a=merge(a,d[,.(N=sum(N),chronic=sum(chronic)),.(age,type)])
-a[,.(pct=round((sum(chronic)/sum(N*base)-1)*100),N=sum(N)),type][order(-N)]|&gt;print(r=F)</pre>
+<pre>a=d[,.(N=sum(N),chronic=sum(chronic)),.(age,type)]
+a=merge(a,d[,.(base=sum(chronic)/sum(N)),age])[,base:=base*N]
+a[,.(pct=round((sum(chronic)/sum(base)-1)*100),N=sum(N)),type][order(-N)]|&gt;print(r=F)</pre>
 <!-- -->
 <pre>                                      type  pct       N
                                  Comirnaty  -26 5527776
@@ -3149,6 +3150,73 @@ a[,.(pct=round((sum(chronic)/sum(N*base)-1)*100),N=sum(N)),type][order(-N)]|&gt;
  SPIKEVAX BIVALENT ORIGINAL/OMICRON BA.4-5  310       5
                                    Valneva -100       2
                                       type  pct       N</pre>
+<p>I was expecting the late vaccinees who got the first dose in late 2020 to have a higher age-normalized prevalence of chronic disease than people who got vaccinated during the rollout peak, but for some reason I got the opposite result:</p>
+<div class="width8">
+<img src="i/czech-chronic-3.png">
+</div>
+<pre># system(&quot;wget onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-profese.csv&quot;)
+
+library(data.table)
+
+t=fread(&quot;ockovani-profese.csv&quot;)
+
+yemo=\(x,y){u=unique(x);p=as.POSIXlt(`class&lt;-`(u,&quot;Date&quot;));sprintf(&quot;%d-%02d&quot;,p$year+1900,p$mon+1)[match(x,u)]}
+
+name1=unique(t$vakcina);name2=rep(&quot;Other&quot;,length(name1))
+name2[name1==&quot;&quot;]=&quot;&quot;
+name2[grep(&quot;comirnaty&quot;,ignore.case=T,name1)]=&quot;Pfizer&quot;
+name2[grep(&quot;spikevax&quot;,ignore.case=T,name1)]=&quot;Moderna&quot;
+name2[grep(&quot;nuvaxovid&quot;,ignore.case=T,name1)]=&quot;Novavax&quot;
+name2[name1==&quot;COVID-19 Vaccine Janssen&quot;]=&quot;Janssen&quot;
+name2[name1==&quot;VAXZEVRIA&quot;]=&quot;AstraZeneca&quot;
+t$type=name2[match(t$vakcina,name1)]
+
+d=t[year(datum)&lt;=2022&amp;poradi_davky==1,.(.N,chronic=sum(indikace_chronicke_onemocneni,na.rm=T)),.(
+  month=yemo(datum),type,age=vekova_skupina)][age!=&quot;nezařazeno&quot;]
+
+a=d[,.(N=sum(N),chronic=sum(chronic)),.(age,type,month)]
+a=merge(a,d[,.(base=sum(chronic)/sum(N)),age])[,base:=base*N]
+a=a[,.(chronic=sum(chronic),N=sum(N),base=sum(base)),.(type,month)]
+
+a[,type:=factor(type,names(sort(a[,tapply(N,type,sum)],T)))]
+a=rbind(a,a[,.(chronic=sum(chronic),N=sum(N),base=sum(base),month=&quot;Total&quot;),type])
+a=rbind(a,a[,.(chronic=sum(chronic),N=sum(N),base=sum(base),type=&quot;Total&quot;),month])
+
+m1=a[,tapply(chronic,.(type,month),c)]
+m2=a[,tapply(base,.(type,month),c)]
+pop=a[,xtabs(N~type+month)]
+
+m=(m1-m2)/ifelse(m1&gt;m2,m2,m1)*100
+disp=round((m1/m2-1)*100)
+exp=.82;maxcolor=500
+m[m==-Inf]=-maxcolor
+
+pheatmap::pheatmap(abs(m)^exp*sign(m),filename=&quot;i1.png&quot;,display_numbers=disp,
+  gaps_row=nrow(m)-1,gaps_col=ncol(m)-1,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;gray90&quot;,
+  number_color=ifelse((abs(m)^exp&gt;.55*maxcolor^exp)&amp;!is.na(m),&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(-maxcolor^exp,maxcolor^exp,,256),
+  colorRampPalette(hsv(rep(c(7/12,0),5:4),c(.9,.75,.6,.3,0,.3,.6,.75,.9),c(.4,.65,1,1,1,1,1,.65,.4)))(256))
+
+kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;p=!is.na(x)
+  x[p]=paste0(sprintf(paste0(&quot;%.&quot;,ifelse(e[p]%%3==0,1,0),&quot;f&quot;),x[p]/1e3^(e2[p]-1)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2[p]]);x}
+
+exp2=.6;maxcolor2=max(pop[-nrow(pop),-ncol(pop)])
+
+pheatmap::pheatmap(pop^exp2,filename=&quot;i2.png&quot;,display_numbers=ifelse(pop&lt;=10,round(pop),kimi(pop)),
+  gaps_row=nrow(m)-1,gaps_col=ncol(m)-1,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;white&quot;,
+  number_color=ifelse(pop^exp2&gt;maxcolor2^exp2*.45,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(0,maxcolor2^exp2,,256),
+  sapply(seq(1,0,,256),\(i)rgb(i,i,i)))
+
+cap=&quot;\u00a0     Czech MoH data: Excess percentage for age-normalized prevalence of chronic disease for people with a first dose listed. The x-axis shows the month of vaccination. The baseline is the prevalence of chronic disease by age group among all people in the CSV file who have a first dose listed in 2022 or earlier.
+      The direct method of age standardization was used, so that for each cell, the number of people in each age group was multiplied by the proportion of people in the same age group who were indicated as having a chronic illness in the whole CSV file, and the results for each age group were added together to get the total expected number of people with a chronic illness for the cell.
+      Source: onemocneni-aktualne.mzcr.cz/api/v2/covid-19, \&quot;Očkování\&quot;, \&quot;COVID-19: Overview of reported vaccinations by profession (place of vaccination, residence of the vaccinated person)\&quot;.&quot;
+
+system(paste0(&quot;w=`identify -format %w i1.png`;pad=20;magick -pointsize 40 -font Arial \\( -size $[w-pad*3]x caption:&#39;&quot;,cap,&quot;&#39; -splice $[pad]x20 \\) \\( i1.png -crop -0+8 \\) \\( -size $[w-pad*3]x caption:&#39;Number of people who received a first dose each month&#39; -splice $[pad]x0 \\) \\( i2.png -crop -0+8 \\) -append 1.png&quot;))</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
