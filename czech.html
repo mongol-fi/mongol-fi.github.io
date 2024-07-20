@@ -51,8 +51,8 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
   blockquote blockquote blockquote,blockquote .quote .quote,.quote .quote .quote{color:hsl(30,70%,60%)}
 }
 </style>
-<title>Czech record-level mortality and vaccine data</title>
-<h1>Czech record-level mortality and vaccine data - <a href=index.html>sars2.net</a></h1>
+<title>Czech record-level mortality data by vaccination status</title>
+<h1>Czech record-level mortality data by vaccination status - <a href=index.html>sars2.net</a></h1>
 <h2 id=Contents><a href=#Contents>Contents</a></h2>
 <ul>
 <li><a href=#Background>Background</a></li>
@@ -99,6 +99,9 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Deaths_by_ICD_code_region_age_group_and_year>Deaths by ICD code, region, age group, and year</a></li>
 <li><a href=#Hungarian_study_which_analyzed_all_cause_mortality_by_vaccine_manufacturer>Hungarian study which analyzed all-cause mortality by vaccine manufacturer</a></li>
 <li><a href=#ASMR_during_a_COVID_period_divided_by_ASMR_outside_of_a_COVID_period>ASMR during a COVID period divided by ASMR outside of a COVID period</a></li>
+<li><a href=#Percentage_of_first_doses_given_to_males_by_vaccine_types>Percentage of first doses given to males by vaccine types</a></li>
+<li><a href=#Monthly_ASMR_by_vaccine_type_and_dose_number>Monthly ASMR by vaccine type and dose number</a></li>
+<li><a href=#Triangle_plots_for_excess_mortality_by_vaccine_type>Triangle plots for excess mortality by vaccine type</a></li>
 </ul>
 
 <h2>
@@ -2576,6 +2579,40 @@ system(&quot;convert 0.png -filter lanczos2 -resize 25% 1.png&quot;)</pre>
 <div class="width11">
 <img src="i/czech-five-average.png">
 </div>
+<p>Jikkyleaks pointed out that in Morris's table unvaccinated people have more person-years than vaccinated people even in elderly age groups, because Morris started the observation period for unvaccinated people from the beginning of 2020. [<a href="https://x.com/Jikkyleaks/status/1813707647524438520">https://x.com/Jikkyleaks/status/1813707647524438520</a>] However when I modified the plot above so that I counted unvaccinated person-years from the start of 2021 instead of 2020, it increased the total excess mortality of unvaccinated people from about 31% to about 68%. But part of the difference can probably be blamed on the HVE.</p>
+<p>In order to make my calculation more similar to the calculation by Morris, I used the average CMR for each age group in 2015 to 2019 as the baseline. But it caused my baseline to be too high especially towards the later part of the observation period, because the Czech Republic has a decreasing trend in CMR within age groups. In the code below when I switched my baseline from a 2015-2019 average for each age group to a 2015-2019 linear trend, my total excess deaths in 2020 to 2022 increased from about 9% to about 13%:</p>
+<pre>&gt; t=fread(&quot;http://sars2.net/f/czpopdead.csv&quot;)[,age:=age%/%5*5]
+&gt; a=t[year&gt;2019,.(dead=sum(dead),pop=sum(pop)),age]
+&gt; a=merge(a,t[year%in%2015:2019,.(base=sum(dead)/sum(pop)),age])
+&gt; a=merge(a,t[year%in%2015:2019,.(year=2020:2022,base2=predict(lm(dead/pop~year,.SD),.(year=2020:2022))),age])
+&gt; a[,base:=base*pop][,base2:=base2*pop]
+&gt; a=rbind(a,a[,.(dead=sum(dead),pop=sum(pop),base=sum(base),base2=sum(base2),age=&quot;Total&quot;),year])
+&gt; a[,.(average=round((sum(dead)/sum(base)-1)*100),linear=round((sum(dead)/sum(base2)-1)*100)),age]|&gt;print(r=F)
+   age average linear
+     0     -18    -15
+     5      -1    -13
+    10      -2     15
+    15      -6    -19
+    20      -2     -7
+    25      -3      0
+    30      15      7
+    35      19     18
+    40       9     18
+    45       5     10
+    50       9     14
+    55       8     11
+    60       6     14
+    65       7     16
+    70       9     15
+    75      14     15
+    80      11     18
+    85       6     11
+    90       9      9
+    95       4     -8
+   100      48     68
+ Total       9     13
+   age average linear</pre>
+<p>Here's also the code for making the heatmap:</p>
 <pre>library(data.table)
 
 agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
@@ -2866,6 +2903,184 @@ close(con)</pre>
   AstraZeneca 1.243
       Janssen 1.306
  Unvaccinated 2.053</pre>
+<h2>
+<a href=#Percentage_of_first_doses_given_to_males_by_vaccine_types id=Percentage_of_first_doses_given_to_males_by_vaccine_types>Percentage of first doses given to males by vaccine types</a>
+</h2>
+<p>Another confounding factor between different vaccine types is that some types had more doses given to males (but of course males have a higher mortality rates within age groups and males were more likely to die of COVID). However the percentage of first doses given to males was about 48.0% for the type <span class="quote">&quot;Comirnaty&quot;</span> (Pfizer) but about 47.0% for the type <span class="quote">&quot;SPIKEVAX&quot;</span> (Moderna):</p>
+<pre>&gt; rec=fread(&quot;CR_records.csv&quot;)
+&gt; rec[,.N,.(type=OckovaciLatka_1,sex=Pohlavikod)][,dcast(.SD,type~sex,value.var=&quot;N&quot;)][,.(type,malepct=M/(F+M)*100,doses=F+M)][order(-doses)]|&gt;print(r=F)
+                                      type malepct   doses
+                                 Comirnaty   48.04 5579925
+                                             51.29 4046233
+                                  SPIKEVAX   47.01  526000
+                                 VAXZEVRIA   44.16  447300
+                  COVID-19 Vaccine Janssen   56.89  410057
+                                 Nuvaxovid   46.08    5421
+                Comirnaty Omicron XBB.1.5.   47.91    1916
+      Comirnaty Original/Omicron BA.4/BA.5   50.08     661
+           Comirnaty Original/Omicron BA.1   45.21     292
+                                   Sinovac   34.08     179
+                            Comirnaty 6m-4   55.86     111
+                                Covishield   57.66     111
+           Comirnaty Omicron XBB.1.5. 5-11   46.32      95
+                                 Sinopharm   51.43      35
+                                   Covovax   27.59      29
+            COMIRNATY OMICRON XBB.1.5 6m-4   38.46      26
+   Spikevax bivalent Original/Omicron BA.1   46.67      15
+                                 Sputnik V   60.00      10
+                                   COVAXIN   20.00       5
+                         Nuvaxovid XBB 1.5   33.33       3
+                                   Valneva   50.00       2
+ SPIKEVAX BIVALENT ORIGINAL/OMICRON BA.4-5      NA      NA
+                                      type malepct   doses</pre>
+<p>The 4th file from here has COVID deaths grouped by single year of age, sex, and region: <a href="https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19">https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19</a>. Only one person in the file was missing an age and none were missing the sex or region. In the file males account for about 56% of all COVID deaths:</p>
+<pre>&gt; dead=fread(&quot;umrti.csv&quot;)
+&gt; d=dead[,.N,.(sex=pohlavi,age=factor(vek%/%10*10))]
+&gt; d=rbind(d,d[,.(N=sum(N),age=&quot;Total&quot;),sex])
+&gt; d=d[,.(male=N[sex==&quot;M&quot;],female=N[sex==&quot;Z&quot;]),age][order(age)]
+&gt; d[,.(malepct=round(male/(male+female)*100)),age][!is.na(age)]|&gt;print(r=F)
+   age malepct
+     0      25
+    10      71
+    20      58
+    30      65
+    40      63
+    50      66
+    60      68
+    70      62
+    80      51
+    90      39
+   100      22
+ Total      56</pre>
+<h2>
+<a href=#Monthly_ASMR_by_vaccine_type_and_dose_number id=Monthly_ASMR_by_vaccine_type_and_dose_number>Monthly ASMR by vaccine type and dose number</a>
+</h2>
+<p>Kirsch sent this message to me:</p>
+<blockquote>
+<p>so I loved your acm chart that truther used. It shows the mortality of the unvaxxed got lower in 2023 (low point was lower) but the low points for moderna and pfizer were higher in 2023 vs. 2022.</p>
+<p>How do you explain that???? How can one go down and the other go up if the vaccines are lowering mortality?</p>
+</blockquote>
+<p>I guess he meant higher in 2022 vs 2021. But the simple answer to his question is that in 2021 people were still subject to the temporal HVE after their first dose.</p>
+<p>Similarly in early 2022 people with three doses had low ASMR because they were subject to the temporal HVE:</p>
+<p><img src=i/czech-asmrtypedose.png style=max-width:570px></p>
+<p>This GIF file also shows that in you remove under earlier doses after a new dose, it results in a huge increase in the ASMR of people with one dose:</p>
+<p><img src=i/czech-asmrtypedose-2.gif style=max-width:570px></p>
+<pre>library(data.table);library(ggplot2)
+
+download.file(&quot;http:/sars2.net/f/czbucketskeep.csv.gz&quot;,&quot;czbucketskeep.csv.gz&quot;)
+
+b=fread(&quot;czbucketskeep.csv.gz&quot;)
+std=fread(&quot;czcensus2021pop.csv&quot;)[,sum(pop),pmin(age,95)%/%5][,V1/sum(V1)]
+d=b[!(dose&gt;0&amp;type%in%c(&quot;&quot;,&quot;Other&quot;,&quot;Novavax&quot;))]
+d=d[dose==0,type:=&quot;Unvaccinated&quot;]
+d[,dose:=ifelse(dose==0,&quot;Unvaccinated&quot;,paste0(&quot;Dose &quot;,pmin(dose,4),&quot;+&quot;))]
+d$dose=factor(d$dose,c(&quot;Unvaccinated&quot;,paste0(&quot;Dose &quot;,1:4,&quot;+&quot;)))
+d=d[,.(dead=sum(dead),alive=sum(as.double(alive))),.(age=pmin(age,95)%/%5*5,type,dose,month)]
+p=d[,.(asmr=sum(dead/alive*std[age/5+1]*365e5),alive=sum(alive)),.(type,dose,month)]
+
+p$type=factor(p$type,p[,sum(alive),type][order(-V1)]$type)
+p$month=as.Date(paste0(p$month,&quot;-1&quot;))
+setorder(p,type,dose,month)
+p$asmr[p$alive&lt;3e4]=NA
+
+xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2023-1-1&quot;)
+xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=c(rbind(&quot;&quot;,2020:2022),&quot;&quot;)
+ymax=max(p$asmr,na.rm=T);ystep=1000
+ystart=0;yend=max(p$asmr,na.rm=T);ybreak=seq(ystart,yend,ystep)
+ylab=c(&quot;&quot;,paste0(ybreak[-1]/1e3,&quot;k&quot;))
+
+color=c(&quot;black&quot;,hsv(c(12,23,26,31)/36,c(.4,.6,.8,.8),c(.9,1,.8,.5)))
+
+ggplot(p,aes(x=month+15))+
+facet_wrap(~type,scales=&quot;free_y&quot;,ncol=1,strip.position=&quot;top&quot;)+
+geom_hline(yintercept=ybreak,linewidth=.25,color=&quot;gray85&quot;)+
+geom_vline(xintercept=seq(xstart,xend,&quot;3 month&quot;),linewidth=.25,color=&quot;gray85&quot;)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),linewidth=.25,lineend=&quot;square&quot;)+
+geom_hline(yintercept=c(ystart,yend),linewidth=.25,lineend=&quot;square&quot;)+
+geom_line(aes(y=asmr,color=dose),linewidth=.35)+
+geom_point(aes(y=asmr,color=dose),size=.5)+
+geom_label(data=unique(p,by=&quot;type&quot;),aes(label=paste0(&quot;\n    &quot;,type,&quot;    \n&quot;)),x=xstart,y=yend,lineheight=.6,hjust=0,vjust=1,size=2.3,fill=&quot;white&quot;,label.r=unit(0,&quot;lines&quot;),label.padding=unit(0,&quot;lines&quot;),label.size=.25)+
+labs(x=NULL,y=NULL,title=&quot;Czech record-level data: Monthly ASMR by vaccine type and dose&quot;,subtitle=&quot;The ASMR is not displayed on months with less than 30,000 person-days.\nThe standard population is the 2021 census population by 5-year age groups.&quot;)+
+scale_x_date(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,labels=ylab)+
+scale_color_manual(values=color)+
+scale_fill_manual(values=color)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(color=guide_legend(nrow=1,byrow=F))+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.ticks=element_line(linewidth=.25),
+  axis.ticks.x=element_line(color=alpha(&quot;black&quot;,c(1,0))),
+  axis.ticks.y=element_line(color=alpha(&quot;black&quot;,c(0,rep(1,length(ybreak)-1)))),
+  axis.ticks.length=unit(2,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;horizontal&quot;,
+  legend.justification=c(1,.5),
+  legend.key.height=unit(10,&quot;pt&quot;),
+  legend.key.width=unit(13,&quot;pt&quot;),
+  legend.key=element_rect(fill=alpha(&quot;white&quot;,0)),
+  legend.margin=margin(2),
+  legend.position=&quot;bottom&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.text=element_text(size=7,vjust=.5),
+  legend.title=element_blank(),
+  panel.spacing=unit(0,&quot;lines&quot;),
+  panel.background=element_rect(fill=&quot;white&quot;),
+  panel.grid=element_blank(),
+  plot.margin=margin(4,5,4,4),
+  plot.subtitle=element_text(size=6.5,margin=margin(0,0,3,0)),
+  plot.title=element_text(size=7,face=&quot;bold&quot;,margin=margin(1,0,4,0)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=3.4,height=4.7,dpi=450)</pre>
+<h2>
+<a href=#Triangle_plots_for_excess_mortality_by_vaccine_type id=Triangle_plots_for_excess_mortality_by_vaccine_type>Triangle plots for excess mortality by vaccine type</a>
+</h2>
+<p>The plot below shows an excess mortality percent calculated the same way as in earlier. The x-axis shows the quarter of vaccination and the y-axis shows the quarter of death. The plot only includes first doses and people remain included under the first dose after a second dose.</p>
+<p>The x-axis shows in the first two quarters all vaccine types had low mortality, because people were still subject to the temporal healthy vaccinee effect after the first dose.</p>
+<p>However the y-axis shows that there was a sudden increase in mortality in people who were vaccinated in the third quarter of 2021 or later. For people who were vaccinated in the fourth quarter of 2021, Pfizer had about 42% excess mortality but Moderna had 45% excess mortality, so the ratio between Moderna and Pfizer was close to 1, but during the next three quarters the ratio fell below 1 because Moderna had lower excess mortality than Pfizer:</p>
+<p><img src=i/czech-triangletype.png style=max-width:650px></p>
+<p>The next plot is otherwise the same except I included all doses instead of only first doses, and I also removed people under earlier doses after a new dose. Now AstraZeneca has a massive increase in excess mortality in the first quarter of 2022, which is because almost no people got a booster dose from an AstraZeneca vaccine, so the healthy vaccinees moved under another vaccine brand in the first quarter of 2021. Now the y-axis shows the month of most recent vaccination, so in the first quarter of 2021 there's a huge increase in the excess mortality of people whose most recent vaccine was in the first three quarters of 2021:</p>
+<p><img src=i/czech-triangletype-2.png style=max-width:650px></p>
+<pre>library(data.table)
+
+system(&quot;wget sars2.net/f/czbuckets{,keep}.csv.gz&quot;)
+
+# first plot
+b=fread(&quot;czbucketskeep.csv.gz&quot;)[,age:=pmin(age,95)]
+d=merge(b[dose==1&amp;month&gt;=2021&amp;vaxmonth&gt;=2021],b[dose&lt;=1,.(base=sum(dead)/sum(alive)),.(age,month)])[,base:=alive*base]
+
+# # second plot
+# b=fread(&quot;czbuckets.csv.gz&quot;)[,age:=pmin(age,95)]
+# d=merge(b[dose&gt;0&amp;month&gt;=2021&amp;vaxmonth&gt;=2021],b[,.(base=sum(dead)/sum(alive)),.(age,month)])[,base:=alive*base]
+
+quar=\(x){u=unique(x);paste0(substr(u,1,4),&quot;Q&quot;,(as.numeric(substr(u,6,7))-1)%/%3+1)[match(x,u)]}
+
+d=d[,.(dead=sum(dead),alive=sum(as.double(alive)),base=sum(base)),
+  .(month=factor(quar(month)),vaxmonth=factor(quar(vaxmonth)),type)]
+
+d=rbind(d,d[,.(dead=sum(dead),alive=sum(alive),base=sum(base),month=&quot;Total&quot;),.(vaxmonth,type)])
+d=rbind(d,d[,.(dead=sum(dead),alive=sum(alive),base=sum(base),vaxmonth=&quot;Total&quot;),.(month,type)])
+
+types=c(&quot;Pfizer&quot;,&quot;Moderna&quot;,&quot;AstraZeneca&quot;,&quot;Janssen&quot;)
+maxcolor=300;exp=.8
+
+for(i in 1:length(types)){
+  disp=d[type==types[i],tapply((dead/base-1)*100,list(vaxmonth,month),round)]
+  m=d[type==types[i],tapply((dead-base)*100/ifelse(dead&gt;base,base,dead),list(vaxmonth,month),c)]
+  disp[lower.tri(disp)&amp;row(disp)!=nrow(disp)]=&quot;&quot;
+  m[is.infinite(m)]=-maxcolor
+
+  pheatmap::pheatmap(abs(m)^exp*sign(m),filename=paste0(&quot;i&quot;,i,&quot;.png&quot;),display_numbers=disp,
+    gaps_col=ncol(m)-1,gaps_row=nrow(m)-1,main=types[i],
+    cluster_rows=F,cluster_cols=F,legend=F,
+    cellwidth=18,cellheight=18,fontsize=9,fontsize_number=8,border_color=NA,na_col=&quot;white&quot;,
+    number_color=ifelse(!is.na(m)&amp;abs(m)^exp&gt;.5*maxcolor^exp,&quot;white&quot;,&quot;black&quot;),
+    breaks=seq(-maxcolor^exp,maxcolor^exp,,256),
+    colorRampPalette(hsv(rep(c(7/12,0),4:5),c(.9,.75,.6,.3,0,.3,.6,.75,.9),c(.4,.65,1,1,1,1,1,.65,.4)))(256))
+}
+
+system(&quot;montage -tile 2x i[1-4].png -geometry +0+10 0.png;convert 0.png -trim -bordercolor white -border 32 1.png&quot;)</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
