@@ -109,7 +109,6 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <a href=#Background id=Background>Background</a>
 </h2>
 <p>In March 2024 Stanislav Veselý received a FOIA response of record-level vaccination data from the Institute of Health Information and Statistics of the Czech Republic: <a href="https://www.skirsch.com/covid/CzechFOIA.pdf">https://www.skirsch.com/covid/CzechFOIA.pdf</a>. The dataset includes rows for about 11 million people, who have columns for the year of birth, date of death, dates of vaccination for doses 1-7, and the type and batch number of each dose.</p>
-<p>The data was used in a paper published in June 2024 titled <span class="quote">&quot;Batch-dependent safety of COVID-19 vaccines in the Czech Republic and comparison with data from Denmark&quot;</span>: <a href="https://onlinelibrary.wiley.com/doi/full/10.1111/eci.14271">https://onlinelibrary.wiley.com/doi/full/10.1111/eci.14271</a>. The paper is behind a paywall and not available at Sci-Hub, but the authors of the paper made the data publicly available at GitHub.</p>
 <p>However the data was almost completely overlooked until Steve Kirsch published this analysis of the data in July 2024: <a href="https://kirschsubstack.com/p/breaking-record-level-data-from-czech">https://kirschsubstack.com/p/breaking-record-level-data-from-czech</a>, <a href="https://github.com/skirsch/Czech">https://github.com/skirsch/Czech</a>.</p>
 <h2>
 <a href=#Files_used_in_my_analysis id=Files_used_in_my_analysis>Files used in my analysis</a>
@@ -182,7 +181,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <p>But of course our result isn't a simpson's paradox because we computed the CMR ratios by single digit age groups and five year brackets and plotted it.</p>
 </blockquote>
 <p>However people who received a Moderna vaccine were older on average than people who received a Pfizer vaccine, which explains why Kirsch's ratio is higher for all ages aggregated together than for individual age groups.</p>
-<p>Added later: Kirsch later edited the GitHub README file and he told me: &quot;i've changed randomly to non-systematically in the github. sorry for the error.&quot;</p>
+<p>Added later: Kirsch later edited the README file at GitHub and he told me: &quot;i've changed randomly to non-systematically in the github. sorry for the error.&quot;</p>
 <h2>
 <a href=#Bucket_analysis id=Bucket_analysis>Bucket analysis</a>
 </h2>
@@ -2582,15 +2581,15 @@ system(&quot;convert 0.png -filter lanczos2 -resize 25% 1.png&quot;)</pre>
 <img src="i/czech-five-average.png">
 </div>
 <p>Jikkyleaks pointed out that in Morris's table unvaccinated people have more person-years than vaccinated people even in elderly age groups, because Morris started the observation period for unvaccinated people from the beginning of 2020. [<a href="https://x.com/Jikkyleaks/status/1813707647524438520">https://x.com/Jikkyleaks/status/1813707647524438520</a>] However when I modified the plot above so that I counted unvaccinated person-years from the start of 2021 instead of 2020, it increased the total excess mortality of unvaccinated people from about 31% to about 68%. But part of the difference can probably be blamed on the HVE.</p>
-<p>In order to make my calculation more similar to the calculation by Morris, I used the average CMR for each age group in 2015 to 2019 as the baseline. But it caused my baseline to be too high especially towards the later part of the observation period, because the Czech Republic has a decreasing trend in CMR within age groups. In the code below when I switched my baseline from a 2015-2019 average for each age group to a 2015-2019 linear trend, my total excess deaths in 2020 to 2022 increased from about 9% to about 13%:</p>
+<p>In order to make my calculation more similar to the calculation by Morris, I used the total CMR for each age group in 2015 to 2019 as the baseline. But it caused my baseline to be too high especially towards the later part of the observation period, because the Czech Republic has a decreasing trend in CMR within age groups. In the code below when I switched my baseline from a 2015-2019 total for each age group to a 2015-2019 linear trend, my total excess deaths in 2020 to 2022 increased from about 9% to about 13%:</p>
 <pre>&gt; t=fread(&quot;http://sars2.net/f/czpopdead.csv&quot;)[,age:=age%/%5*5]
 &gt; a=t[year&gt;2019,.(dead=sum(dead),pop=sum(pop)),age]
 &gt; a=merge(a,t[year%in%2015:2019,.(base=sum(dead)/sum(pop)),age])
 &gt; a=merge(a,t[year%in%2015:2019,.(year=2020:2022,base2=predict(lm(dead/pop~year,.SD),.(year=2020:2022))),age])
 &gt; a[,base:=base*pop][,base2:=base2*pop]
 &gt; a=rbind(a,a[,.(dead=sum(dead),pop=sum(pop),base=sum(base),base2=sum(base2),age=&quot;Total&quot;),year])
-&gt; a[,.(average=round((sum(dead)/sum(base)-1)*100),linear=round((sum(dead)/sum(base2)-1)*100)),age]|&gt;print(r=F)
-   age average linear
+&gt; a[,.(total=round((sum(dead)/sum(base)-1)*100),linear=round((sum(dead)/sum(base2)-1)*100)),age]|&gt;print(r=F)
+   age total linear
      0     -18    -15
      5      -1    -13
     10      -2     15
