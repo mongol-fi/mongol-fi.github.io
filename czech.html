@@ -105,6 +105,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Prevalence_of_chronic_disease_by_vaccine_type>Prevalence of chronic disease by vaccine type</a></li>
 <li><a href=#Hospitalizations_by_vaccine_type>Hospitalizations by vaccine type</a></li>
 <li><a href=#Moderna_Pfizer_ratio_by_weeks_after_vaccination>Moderna-Pfizer ratio by weeks after vaccination</a></li>
+<li><a href=#Efficacy_against_hospitalization_relative_to_a_baseline_of_unvaccinated_people>Efficacy against hospitalization relative to a baseline of unvaccinated people</a></li>
 </ul>
 
 <h2>
@@ -460,7 +461,7 @@ geom_line(data=xy[grep(&quot;Office&quot;,xy$z),],color=color[8],linewidth=.4)+
 geom_hline(yintercept=c(0,yend),linewidth=.3,lineend=&quot;square&quot;)+
 geom_vline(xintercept=c(xstart,xend),linewidth=.3,lineend=&quot;square&quot;)+
 geom_label(data=label,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.7),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.1,&quot;lines&quot;),label.size=0,color=color[1:nrow(label)],size=2.7,hjust=0)+
-labs(title=&quot;Age-standardized mortality rate in Czech record-level data (±10-day moving averages)&quot;,subtitle=str_wrap(&quot;People are removed under earlier doses after a new dose. The standard population is the estimated resident population in the 2021 census. ASMR values are not displayed on days with population size below 2,000. Sources: github.com/PalackyUniversity/uzis-data-analysis, scitani.gov.cz/age-structure, ec.europa.eu/eurostat/data/database,  csu.gov.cz/produkty/number-of-deaths-weekly-and-monthly-time-series.&quot;,108),x=NULL,y=&quot;ASMR per 100k person-years&quot;)+
+labs(title=&quot;Age-standardized mortality rate in Czech record-level data (±10-day moving averages)&quot;,subtitle=str_wrap(&quot;People are removed under earlier doses after a new dose. The standard population is the estimated resident population in the 2021 census. ASMR values are not displayed on days with population size below 2,000. Sources: github.com/PalackyUniversity/uzis-data-analysis, scitani.gov.cz/age-structure, ec.europa.eu/eurostat/data/database, csu.gov.cz/produkty/number-of-deaths-weekly-and-monthly-time-series.&quot;,108),x=NULL,y=&quot;ASMR per 100k person-years&quot;)+
 scale_x_date(limits=c(xstart,xend),breaks=seq(xstart,xend,&quot;2 month&quot;),date_labels=&quot;%b\n%y&quot;)+
 scale_y_continuous(limits=c(0,yend),breaks=seq(0,yend,ystep),labels=\(x)ifelse(x==0,x,paste0(x/1e3,&quot;k&quot;)),sec.axis=sec_axis(trans=~./secmult,breaks=seq(0,yend2,ystep2),name=&quot;Percentage of people with dose&quot;))+
 scale_color_manual(values=color)+
@@ -3284,7 +3285,6 @@ system(paste0(&quot;w=`identify -format %w i1.png`;pad=20;magick -pointsize 40 -
            indikace_po_ockovani type of test after vaccination
            pozivita_po_ockovani positivivity of test after vaccination
      pozivita_po_ockovani_datum date of positive test after vaccination
-hospitalizace_po_ockovani_datum date of hospitalization after vaccination
       hospitalizace_po_ockovani hospitalized after vaccination
                 jip_po_ockovani ICU after vaccination</pre>
 <p>The types of test are diagnostic, preventative, epidemiological, or other (ostatní). Negative tests are not listed so the type of the test is only shown for positive tests. There's only up to one test before vaccination and one test after vaccination listed for each person, and similarly there's only up to one hospitalization before vaccination and one hospitalization after vaccination listed for each person.</p>
@@ -3408,8 +3408,8 @@ system(paste0(&quot;pad=24;w=`identify -format %w i1.png`;magick -pointsize 40 -
 <div class="width6">
 <img src="i/czech-mrrweeks.png">
 </div>
-<p>In the black line the ratio was only normalized by age. In the gray line the ratio was additionally normalized by ongoing month, but it didn't change the Moderna-Pfizer ratios that much.</p>
-<p>But anyway, you would at least think that there would be more vaccine deaths in weeks 0 to 29 than weeks 60 to 89. But because the Moderna-Pfizer ratio remains consistently elevated even more than a year after vaccination, it rather seems to be the product of the same kind of confounding factors which also cause late vaccinees to have much higher mortality than early vaccinees.</p>
+<p>In the black line the ratio was only normalized by age. In the gray line the ratio was additionally normalized by ongoing month, but it didn't change the results that much.</p>
+<p>But anyway, you would at least think that there would be more vaccine deaths in weeks 0 to 29 than weeks 60 to 89. But because the Moderna-Pfizer ratio remains consistently elevated even more than a year after vaccination, it rather seems to be the product of the same kind of confounding factors which also cause late vaccinees to have much higher age-normalized mortality than early vaccinees.</p>
 <pre>b=data.table::fread(&quot;http://sars2.net/f/czbucketskeep.csv.gz&quot;)
 b[,age:=pmax(pmin(95,age%/%5*5),15)]
 
@@ -3424,13 +3424,63 @@ week=unique(d$week)
 png(&quot;1.png&quot;,1300,800,res=198)
 par(mar=c(2.3,2.3,2.1,.8),mgp=c(0,.6,0))
 tit=&quot;Age-normalized Moderna-Pfizer ratio by weeks after first dose&quot;
-leg=c(&quot;Same baseline for each month&quot;,&quot;Different baseline for each month&quot;)
+leg=c(&quot;Normalized by age only&quot;,&quot;Normalized by age and ongoing month&quot;)
 col=c(&quot;black&quot;,&quot;gray60&quot;)
 plot(week,r1,type=&quot;l&quot;,col=col[1],main=tit,xlab=NA,ylab=NA,lwd=1.5,cex.main=1.1)
 abline(h=1,lty=2)
 lines(week,r2,type=&quot;l&quot;,col=col[2],lwd=1.5)
 legend(&quot;bottom&quot;,legend=leg,col=col,lty=1,lwd=1.5)
 dev.off()</pre>
+<h2>
+<a href=#Efficacy_against_hospitalization_relative_to_a_baseline_of_unvaccinated_people id=Efficacy_against_hospitalization_relative_to_a_baseline_of_unvaccinated_people>Efficacy against hospitalization relative to a baseline of unvaccinated people</a>
+</h2>
+<p>The following code calculates an age-normalized excess hospitalization percentage relative to a baseline of unvaccinated people.</p>
+<p>I combined two different CSV files published by the Czech ministry of health: <a href="https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19">https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19</a>.</p>
+<p>I took hospitalizations by vaccine type from the same CSV file as earlier. It's missing the date of hospitalization but it only has a field which indicates if a person has been hospitalized after vaccination or not, so I had to calculate the hospitalization rate up to the present day and I wasn't able to choose which day my observation period ended.</p>
+<p>I took hospitalizations in unvaccinated people from another CSV file published by the MoH. But I didn't find a good way to calculate the number of person-days for unvaccinated people by age group up to the present day, so I took the number of person-days for unvaccinated people from one of my buckets files, so that I used the number of person-days in each age group in December 2022 as the subsequent population size up to July 2024 so that I adjusted the person-days for the length of each month.</p>
+<pre>library(data.table)
+
+yemo=\(x,y){u=unique(x);p=as.POSIXlt(as.Date(u));sprintf(&quot;%d-%02d&quot;,p$year+1900,p$mon+1)[match(x,u)]}
+
+system(&quot;wget onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani{,-hospitalizace-tyden,-pozitivni-hospitalizovani}.csv sars2.net/f/czbucketsdaily.csv.gz&quot;)
+
+ho=fread(&quot;ockovani-hospitalizace-tyden.csv&quot;)
+unvax=ho[,.(hosp=hospitalizovani_bez_ockovani),.(date=tyden_od+3,age=pmax(25,pmin(80,as.numeric(sub(&quot;[-+].*&quot;,&quot;&quot;,vekova_skupina)))))][,spline(date,hosp/7,xout=min(date):max(date)),age][,.(hosp=sum(y)),.(age,month=yemo(`class&lt;-`(x,&quot;Date&quot;)))]
+
+maxdate=as.IDate(&quot;2024-7-20&quot;)
+
+unvaxpop=fread(&quot;czbucketsdaily.csv.gz&quot;)[dose==0][,.(pop=sum(alive)),.(month=yemo(date),age=pmax(pmin(age,80),25)%/%5*5)]
+unvaxpop=rbind(unvaxpop,unvaxpop[month==&quot;2022-12&quot;,.(pop,month=seq(as.Date(&quot;2023-1-1&quot;),as.Date(&quot;2024-7-1&quot;),&quot;month&quot;)),age][,pop:=pop/31*ifelse(month==as.Date(&quot;2024-7-1&quot;),20,lubridate::days_in_month(month))][,month:=yemo(month)][])
+
+hosp=fread(&quot;ockovani-pozitivni-hospitalizovani.csv&quot;)
+hospi=hosp[,.(age=vekova_kategorie,date=prvni_davka,type=ockovaci_latka_nazev,hosp=hospitalizace_po_ockovani)][age!=&quot;-&quot;]
+
+name1=unique(hospi$type);name2=rep(&quot;Other&quot;,length(name1))
+name2[name1==&quot;&quot;]=&quot;&quot;
+name2[grep(&quot;comirnaty&quot;,ignore.case=T,name1)]=&quot;Pfizer&quot;
+name2[grep(&quot;spikevax&quot;,ignore.case=T,name1)]=&quot;Moderna&quot;
+name2[grep(&quot;nuvaxovid&quot;,ignore.case=T,name1)]=&quot;Novavax&quot;
+name2[name1==&quot;COVID-19 Vaccine Janssen&quot;]=&quot;Janssen&quot;
+name2[name1==&quot;VAXZEVRIA&quot;]=&quot;AstraZeneca&quot;
+hospi$type=name2[match(hospi$type,name1)]
+
+a=hospi[,.(hosp=sum(hosp,na.rm=T),pop=sum(as.double(as.IDate(&quot;2024-7-20&quot;)-date+1))),.(age=pmax(25,pmin(80,as.numeric(sub(&quot;[+-].*&quot;,&quot;&quot;,age)))),type)]
+
+a=merge(a,merge(unvax,unvaxpop)[,.(hosp=sum(hosp),pop=sum(pop)),age][,.(base=hosp/pop,age)])[,base:=base*pop][]
+
+a[,.(excesspct=(sum(hosp)/sum(base)-1)*100),type][order(-excess),excess:=round(excess)][]|&gt;print(r=F)</pre>
+<p>I only considered first doses in the code above. The output shows that the excess hospitalization percent was about -79% for people whose first dose was Pfizer, -77% for Moderna, -71% for AstraZeneca, and -68% for Janssen:</p>
+<pre>        type excesspct
+      Pfizer       -79
+     Moderna       -77
+     Novavax       -91
+ AstraZeneca       -71
+     Janssen       -68
+       Other      -100</pre>
+<p>So in other words unvaccinated people had about 5 times higher age-normalized hospitalization rate than people who got a Pfizer vaccine for the first dose, or Pfizer vaccines had about 79% efficacy in preventing hospitalization relative to the baseline of unvaccinated people.</p>
+<p>Novavax got an excess hospitalization percent of -91% above, but it's because people only started getting Novavax vaccines in March 2022 after which there weren't that many people hospitalized for COVID. The CSV file I used to get hospitalization data by vaccine type is missing the date of hospitalization, so I wasn't able to adjust my excess mortality percent for the ongoing month.</p>
+<p>There were zero hospitalizations in people who got a vaccine from the other rare types, so the excess hospitalization percent was -100%.</p>
+<p>But anyway, my results roughly seem to match the record-level data which shows that during the COVID wave in the last two months of 2021, the spike in all-cause ASMR was higher for Janssen and AstraZeneca but more flat for Moderna and Pfizer.</p>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
