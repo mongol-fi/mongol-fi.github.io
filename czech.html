@@ -106,6 +106,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Hospitalizations_by_vaccine_type>Hospitalizations by vaccine type</a></li>
 <li><a href=#Moderna_Pfizer_ratio_by_weeks_after_vaccination>Moderna-Pfizer ratio by weeks after vaccination</a></li>
 <li><a href=#Efficacy_against_hospitalization_relative_to_a_baseline_of_unvaccinated_people>Efficacy against hospitalization relative to a baseline of unvaccinated people</a></li>
+<li><a href=#Batch_safety_study_by_authors_from_Palack_University>Batch safety study by authors from Palacký University</a></li>
 </ul>
 
 <h2>
@@ -3481,6 +3482,72 @@ a[,.(excesspct=(sum(hosp)/sum(base)-1)*100),type][order(-excess),excess:=round(e
 <p>Novavax got an excess hospitalization percent of -91% above, but it's because people only started getting Novavax vaccines in March 2022 after which there weren't that many people hospitalized for COVID. The CSV file I used to get hospitalization data by vaccine type is missing the date of hospitalization, so I wasn't able to adjust my excess mortality percent for the ongoing month.</p>
 <p>There were zero hospitalizations in people who got a vaccine from the other rare types, so the excess hospitalization percent was -100%.</p>
 <p>But anyway, my results roughly seem to match the record-level data which shows that during the COVID wave in the last two months of 2021, the spike in all-cause ASMR was higher for Janssen and AstraZeneca but more flat for Moderna and Pfizer.</p>
+<h2>
+<a href=#Batch_safety_study_by_authors_from_Palack_University id=Batch_safety_study_by_authors_from_Palack_University>Batch safety study by authors from Palacký University</a>
+</h2>
+<p>In June 2024 the Czech authors who uploaded the record-level data to GitHub published a paper which analyzed batch safety data they received through a freedom of information response: <a href="https://onlinelibrary.wiley.com/doi/abs/10.1111/eci.14271">https://onlinelibrary.wiley.com/doi/abs/10.1111/eci.14271</a>. The paper is behind a paywall, but I bought access to it and posted screenshots of the paper here: <a href=i/czech-batch-study.jpg>i/czech-batch-study.jpg</a>. The batch data can be downloaded from here: <a href="https://github.com/PalackyUniversity/batch-dependent-safety/blob/main/data/SUKL-batches-AE.xlsx">https://github.com/PalackyUniversity/batch-dependent-safety/blob/main/data/SUKL-batches-AE.xlsx</a>.</p>
+<p>In the spreadsheet posted at GitHub, Pfizer vaccines got a lower rate of deaths than Moderna vaccines but a higher rate of serious adverse events:</p>
+<pre>library(data.table);library(openxlsx)
+
+f=&quot;SUKL-batches-AE.xlsx&quot;
+download.file(&quot;https://github.com/PalackyUniversity/batch-dependent-safety/raw/main/data/SUKL-batches-AE.xlsx&quot;,f)
+
+s1=data.table(read.xlsx(f))[,.(doses=sum(doses_per_batch)),name]
+s2=data.table(read.xlsx(f,sheet=2))[,.(dead=sum(deaths),serious=sum(serious)),name]
+
+me=merge(s1,s2,all=T)
+name=rep(&quot;Other&quot;,nrow(me))
+name[grep(&quot;COMIRNATY&quot;,me$name)]=&quot;Pfizer&quot;
+name[grep(&quot;MODERNA|SPIKEVAX&quot;,me$name)]=&quot;Moderna&quot;
+name[grep(&quot;NUVAXOVID&quot;,me$name)]=&quot;Novavax&quot;
+name[grep(&quot;JANSSEN&quot;,me$name)]=&quot;Janssen&quot;
+name[grep(&quot;VAXZEVRIA|ASTRAZENECA&quot;,me$name)]=&quot;AstraZeneca&quot;
+me$name=name
+
+me[is.na(me)]=0
+me=me[,.(dead=sum(dead),serious=sum(serious),doses=sum(doses)),name]
+
+me=me[,.(doses,name,dead,serious,deadpermil=dead/doses*1e6,seriouspermil=serious/doses*1e6)]
+me[order(-doses)]|&gt;dplyr::mutate_if(is.double,round,1)|&gt;print(r=F)</pre>
+<!-- -->
+<pre>        name    doses dead serious deadpermil seriouspermil
+      Pfizer 28343760  134    5183        4.7         182.9
+     Moderna  3798150   26     583        6.8         153.5
+ AstraZeneca  1113200   44     695       39.5         624.3
+     Janssen   776800   10     241       12.9         310.2
+     Novavax   632000    0       4        0.0           6.3
+       Other    64800    2      13       30.9         200.6</pre>
+<p>If Pfizer is used as the baseline, the number of deaths per million was about 8 times higher for AstraZeneca and about 3 times higher for Janssen:</p>
+<pre>&gt; x=data.frame(me,row.names=1);t((t(x)/unlist(x[&quot;Pfizer&quot;,])))[,4:5]|&gt;round(2)
+            deadpermil seriouspermil
+Pfizer            1.00          1.00
+AstraZeneca       8.36          3.41
+Janssen           2.72          1.70
+Moderna           1.45          0.84
+Novavax           0.00          0.03
+Other             6.53          1.10</pre>
+<p>However the spreadsheet didn't contain information about age or other confounders, but in the record-level data when I assigned a random birthday for each person and I counted the person-days for each age up to the end of 2022, the average age is about 50 for people who got Pfizer for the first dose but about 56 for Moderna and 68 for AstraZeneca:</p>
+<pre>&gt; b=fread(&quot;http://sars2.net/f/czbucketskeep.csv.gz&quot;)
+&gt; b[dose==1,.(alive=sum(as.double(alive))),.(age,type)][,.(age=weighted.mean(age,alive)),type]|&gt;print(r=F)
+        type  age
+      Pfizer 49.7
+     Moderna 56.0
+       Other 44.1
+ AstraZeneca 68.4
+     Janssen 47.3
+     Novavax 41.5</pre>
+<p>However when I calculated the average age of people who got each batch in the record-level data, it got a fairly low correlation with both the rate of deaths per batch and the rate of serious adverse events per batch:</p>
+<pre>&gt; download.file(&quot;http://sars2.net/f/czbucketsbatchkeep.csv.xz&quot;,&quot;czbucketsbatchkeep.csv.xz&quot;)
+&gt; b=fread(&quot;xz -dc czbucketsbatchkeep.csv.xz&quot;)
+&gt; ages=b[batch!=&quot;&quot;,.(alive=sum(alive)),.(age,batch)][,.(age=weighted.mean(age,alive)),batch]
+&gt; s1=data.table(read.xlsx(f))[,.(batch=sub(&quot;^\t&quot;,&quot;&quot;,batch_id),doses=doses_per_batch)]
+&gt; s2=data.table(read.xlsx(f,sheet=2))[,.(dead=sum(deaths),serious=sum(serious)),batch]
+&gt; me=merge(merge(s1,ages,all=T),s2,all=T)
+&gt; me[is.na(me)]=0
+&gt; me[doses&gt;0,cor(dead/doses,age)] # the correlation was about 0.18 between age and the rate of deaths
+[1] 0.1825102
+&gt; me[doses&gt;0,cor(serious/doses,age)] # the correlation was about 0.18 between age and the rate of serious adverse events
+[1] 0.1874058</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
