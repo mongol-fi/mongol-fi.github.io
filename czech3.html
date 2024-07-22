@@ -547,9 +547,9 @@ dev.off()</pre>
 <a href=#Efficacy_against_hospitalization_relative_to_a_baseline_of_unvaccinated_people id=Efficacy_against_hospitalization_relative_to_a_baseline_of_unvaccinated_people>Efficacy against hospitalization relative to a baseline of unvaccinated people</a>
 </h2>
 <p>The following code calculates an age-normalized excess hospitalization percentage relative to a baseline of unvaccinated people. The observation period starts in January 2021 and ends on July 20th 2024.</p>
-<p>I combined two different CSV files published by the Czech ministry of health: <a href="https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19">https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19</a>.</p>
+<p>I combined two different CSV files published by the Czech Ministry of Health: <a href="https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19">https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19</a>.</p>
 <p>I took hospitalizations by vaccine type from the same CSV file as earlier. It's missing the date of hospitalization but it only has a field which indicates if a person has been hospitalized after vaccination or not, so I had to calculate the hospitalization rate up to the present day and I wasn't able to choose which day my observation period ended.</p>
-<p>I took hospitalizations in unvaccinated people from another CSV file published by the MoH. But I didn't find a good way to calculate the number of person-days for unvaccinated people by age group up to the present day, so I took the number of person-days for unvaccinated people from one of my buckets files, so that I used the number of person-days in each age group in December 2022 as the subsequent population size up to July 2024 so that I adjusted the person-days for the length of each month.</p>
+<p>I took hospitalizations in unvaccinated people from another CSV file published by the MoH. But I didn't find a good way to calculate the number of person-days for unvaccinated people up to the present day, so I took the number of person-days for unvaccinated people from one of my buckets files, so that I used the number of person-days in each age group in December 2022 as the subsequent population size up to July 2024 so that I adjusted the person-days for the length of each month.</p>
 <pre>system(&quot;wget onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-{hospitalizace-tyden,pozitivni-hospitalizovani}.csv sars2.net/f/czbucketsdaily.csv.gz&quot;)
 
 library(data.table)
@@ -591,13 +591,13 @@ a[,.(excess=(sum(hosp)/sum(base)-1)*100),type][order(-excess),excess:=round(exce
        Other      -100</pre>
 <p>So in other words unvaccinated people had about 5 times higher age-normalized hospitalization rate than people who got a Pfizer vaccine for the first dose, or Pfizer vaccines had about 79% efficacy in preventing hospitalization relative to the baseline of unvaccinated people.</p>
 <p>Novavax got an excess hospitalization percent of -91% above, but it's because people only started getting Novavax vaccines in March 2022 after which there weren't that many people hospitalized for COVID. The CSV file I used to get hospitalization data by vaccine type is missing the date of hospitalization, so I wasn't able to adjust my excess mortality percent for the ongoing month.</p>
-<p>There were zero hospitalizations in people who got a vaccine from the other rare types, so the excess hospitalization percent was -100%.</p>
-<p>But anyway, my results roughly seem to match the record-level data which shows that during the COVID wave in the last two months of 2021, the spike in all-cause ASMR was higher for Janssen and AstraZeneca but more flat for Moderna and Pfizer.</p>
-<p>One limitation of my analysis is that a large part of the person-days of vaccinated people are during periods with low hospitalizations in the third quarter of 2021 and from mid-2022 up to July 2024. But unvaccinated people have a lot of person-days in the first quarter of 2021 when there was a high number of hospitalizations but many people had not yet been vaccinated.</p>
+<p>For the rare vaccine types that I aggregated under the label <span class="quote">&quot;Other&quot;</span>, there were zero hospitalizations so the excess hospitalization percent was -100%.</p>
+<p>But anyway, my results roughly seem to match the record-level data which shows that during the COVID wave in the last two months of 2021, the spike in all-cause ASMR was higher for Janssen and AstraZeneca vaccines but more flat for Moderna and Pfizer.</p>
+<p>One limitation of my analysis is that a large part of the person-days of vaccinated people are during periods with low hospitalizations from mid-2022 up to July 2024 and in the third quarter of 2021. But unvaccinated people have a lot of person-days in the first quarter of 2021 when there was a high number of hospitalizations but many people had not yet been vaccinated.</p>
 <h2>
 <a href=#Batch_safety_study_by_authors_from_Palack_University id=Batch_safety_study_by_authors_from_Palack_University>Batch safety study by authors from Palacký University</a>
 </h2>
-<p>In June 2024 the Czech authors who uploaded the record-level data to GitHub published a paper which analyzed batch safety data they received through a freedom of information response: <a href="https://onlinelibrary.wiley.com/doi/abs/10.1111/eci.14271">https://onlinelibrary.wiley.com/doi/abs/10.1111/eci.14271</a>. The paper is behind a paywall, but I bought access to it and posted screenshots of the paper here: <a href=i/czech-batch-study.jpg>i/czech-batch-study.jpg</a>. The batch data is available from this spreadsheet: <a href="https://github.com/PalackyUniversity/batch-dependent-safety/blob/main/data/SUKL-batches-AE.xlsx">https://github.com/PalackyUniversity/batch-dependent-safety/blob/main/data/SUKL-batches-AE.xlsx</a>.</p>
+<p>In June 2024 the Czech authors who uploaded the record-level data to GitHub published a paper where they analyzed batch safety data they received through a freedom of information response: <a href="https://onlinelibrary.wiley.com/doi/abs/10.1111/eci.14271">https://onlinelibrary.wiley.com/doi/abs/10.1111/eci.14271</a>. The paper is behind a paywall, but I bought access to it and posted screenshots of the paper here: <a href=i/czech-batch-study.jpg>i/czech-batch-study.jpg</a>. The batch data is available from this spreadsheet: <a href="https://github.com/PalackyUniversity/batch-dependent-safety/blob/main/data/SUKL-batches-AE.xlsx">https://github.com/PalackyUniversity/batch-dependent-safety/blob/main/data/SUKL-batches-AE.xlsx</a>.</p>
 <p>In the spreadsheet posted at GitHub, Pfizer vaccines got a lower rate of deaths than Moderna vaccines but a higher rate of serious adverse events:</p>
 <pre>library(data.table);library(openxlsx)
 
@@ -629,7 +629,7 @@ me[order(-doses)]|&gt;dplyr::mutate_if(is.double,round,1)|&gt;print(r=F)</pre>
      Janssen   776800   10     241       12.9         310.2
      Novavax   632000    0       4        0.0           6.3
        Other    64800    2      13       30.9         200.6</pre>
-<p>If Pfizer is used as the baseline, the number of deaths per million was about 8 times higher for AstraZeneca and about 3 times higher for Janssen:</p>
+<p>If Pfizer is used as the baseline, the number of deaths per capita was about 8 times higher for AstraZeneca and about 3 times higher for Janssen:</p>
 <pre>&gt; x=data.frame(me,row.names=1);t((t(x)/unlist(x[&quot;Pfizer&quot;,])))[,4:5]|&gt;round(2)
             deadpermil seriouspermil
 Pfizer            1.00          1.00
@@ -638,7 +638,7 @@ Janssen           2.72          1.70
 Moderna           1.45          0.84
 Novavax           0.00          0.03
 Other             6.53          1.10</pre>
-<p>However the spreadsheet didn't contain information about age or other confounders, but in the record-level data when I assigned a random birthday for each person and I counted the person-days for each age up to the end of 2022, the average age is about 50 for people who got Pfizer for the first dose but about 56 for Moderna and 68 for AstraZeneca:</p>
+<p>The spreadsheet for the batch data didn't contain information about age or other confounders. But in the record-level data when I assigned a random birthday for each person and I counted the person-days for each age up to the end of 2022, the average age was about 50 for people who got a Pfizer vaccine for the first dose but about 56 for Moderna and 68 for AstraZeneca:</p>
 <pre>&gt; b=fread(&quot;http://sars2.net/f/czbucketskeep.csv.gz&quot;)
 &gt; b[dose==1,.(alive=sum(as.double(alive))),.(age,type)][,.(age=weighted.mean(age,alive)),type]|&gt;print(r=F)
         type  age
@@ -648,7 +648,7 @@ Other             6.53          1.10</pre>
  AstraZeneca 68.4
      Janssen 47.3
      Novavax 41.5</pre>
-<p>However when I took an average age for the batches from the record-level data, it got a fairly low correlation with both the rate of deaths per batch and the rate of serious adverse events per batch:</p>
+<p>However when I took an average age for the batches from the record-level data, it got a low correlation with both the rate of deaths per batch and the rate of serious adverse events per batch:</p>
 <pre>download.file(&quot;http://sars2.net/f/czbucketsbatchkeep.csv.xz&quot;,&quot;czbucketsbatchkeep.csv.xz&quot;)
 b=fread(&quot;xz -dc czbucketsbatchkeep.csv.xz&quot;)
 
@@ -683,9 +683,8 @@ merge(d,merge(s1,s2)[doses&gt;0,.(reported=serious/doses),batch])[,cor(rate,repo
 <h2>
 <a href=#Monthly_percentage_of_COVID_deaths_in_unvaccinated_people id=Monthly_percentage_of_COVID_deaths_in_unvaccinated_people>Monthly percentage of COVID deaths in unvaccinated people</a>
 </h2>
-<p>The Czech MoH has published CSV files for the daily number of COVID deaths by vaccination status: <a href="https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19">https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19</a>.</p>
-<p>Unfortunately the file is missing age groups, so I calculated a weighted average of the percentage of unvaccinated people in each age group where the weight was the total number of COVID deaths in the age group in 2020-2023, which gave me a figure of only about 15-16% unvaccinated people from December 2021 onwards.</p>
-<p>The code below shows the number of COVID deaths in each age group compared to the percentage of unvaccinated people in December 2022 in the record-level data. You can see that most COVID deaths are in the 5-year age groups between 65 and 94 which all have below 20% unvaccinated people:</p>
+<p>The Czech MoH has published CSV files which show the daily number of COVID deaths by vaccination status: <a href="https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19">https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19</a>. But unfortunately the files are missing age groups, so I calculated a weighted average for the percentage of unvaccinated people in each age group where the weight was the total number of COVID deaths the age group had in 2020-2023. It gave me a figure of only about 15-16% unvaccinated people from December 2021 onwards.</p>
+<p>The code below shows the number of COVID deaths in each age group compared to the percentage of unvaccinated people the age group has in December 2022. You can see that most COVID deaths are in the 5-year age groups between 65 and 94 which all have below 20% unvaccinated people:</p>
 <pre>&gt; icd=fread(&quot;http://sars2.net/f/czicd.csv.gz&quot;)[icd==&quot;U07&quot;,.(coviddead=sum(dead)),.(age=ifelse(age&lt;20,0,age))]
 &gt; b=fread(&quot;http://sars2.net/f/czbucketsdaily.csv.gz&quot;)[date&gt;=&quot;2022-12-01&quot;,.(alive=sum(alive)),.(age=ifelse(age&lt;20,0,pmin(age,95)%/%5*5),unvax=dose==0)]
 &gt; merge(icd,b[order(age)][,.(unvaxpct=round(alive[unvax==T]/sum(alive)*100)),age])|&gt;print(r=F)
@@ -707,7 +706,7 @@ merge(d,merge(s1,s2)[doses&gt;0,.(reported=serious/doses),batch])[,cor(rate,repo
   85      6347       12
   90      3626       19
   95      1013       38</pre>
-<p>This calculates an excess mortality percentage among unvaccinated people relative to the weighted percentage of unvaccinated people in the whole population:</p>
+<p>The following code calculates an excess mortality percentage among unvaccinated people relative to the weighted percentage of unvaccinated people in the whole population:</p>
 <pre>system(&quot;wget onemocneni-aktualne.mzcr.cz/api/v2/covid-19/{ockovani-umrti,umrti}.csv sars2.net/f/cz{icd,bucketsdaily}.csv.gz&quot;)
 
 u=fread(&quot;ockovani-umrti.csv&quot;)
@@ -726,7 +725,7 @@ uv=rbind(uv,u[!month%in%uv$month,.(month,unvaxpoppct=uv[month==&quot;2022-12&quo
 
 me=merge(u,uv)[,ratio:=round(unvaxdeadpct/unvaxpoppct,1)]
 me[,4:5]=round(me[,4:5]);print(me,r=F)</pre>
-<p>The output shows that starting from May 2021 the percentage of COVID deaths in unvaccinated people was about 2 to 4 times higher than the weighted percentage of the unvaccinated population size:</p>
+<p>The output shows that from May 2021 onwards the percentage of COVID deaths in unvaccinated people was about 2 to 4 times higher than the weighted percentage of the unvaccinated population size:</p>
 <pre>   month totaldead unvaxdead unvaxdeadpct unvaxpoppct ratio
  2020-03        35        35          100         100   1.0
  2020-04       207       207          100         100   1.0
@@ -785,8 +784,8 @@ me[,4:5]=round(me[,4:5]);print(me,r=F)</pre>
 <h2>
 <a href=#Age_standardized_hospitalization_rate_by_vaccination_status id=Age_standardized_hospitalization_rate_by_vaccination_status>Age-standardized hospitalization rate by vaccination status</a>
 </h2>
-<p>The CSV file which showed hospitalizations by vaccine type didn't include the date of hospitalization, but there's another file which includes the week of hospitalization but not vaccine type: <a href="https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-hospitalizace-tyden.csv">https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-hospitalizace-tyden.csv</a>.</p>
-<p>I used the file to make the plot below, which shows that during the COVID wave in December 2021, unvaccinated people had about 6 times higher age-standardized hospitalization rate than vaccinated people. However the difference between the rates got smaller over time which may have been if unvaccinated people acquired natural immunity over time. So by December 2023 the rate was only about 1.5 times higher in unvaccinated people than in vaccinated people:</p>
+<p>The date of hospitalization was missing from the CSV file I used to get hospitalizations by vaccine type in a previous section, but there's another file which includes the week of hospitalization but not vaccine type: <a href="https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-hospitalizace-tyden.csv">https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-hospitalizace-tyden.csv</a>.</p>
+<p>I used the file to make the plot below, which shows that during the COVID wave in December 2021, unvaccinated people had about 6 times higher age-standardized hospitalization rate than vaccinated people. However the difference between the rates got smaller over time which may have been because unvaccinated people acquired natural immunity over time. So by December 2023 the rate was only about 1.5 times higher in unvaccinated people than in vaccinated people:</p>
 <div class="width6">
 <img src="i/czech-hospstandard.png">
 </div>
@@ -860,7 +859,7 @@ ggsave(&quot;1.png&quot;,width=3.8,height=2.3,dpi=300)</pre>
 <h2>
 <a href=#Hospitalizations_by_age_group_and_vaccination_status id=Hospitalizations_by_age_group_and_vaccination_status>Hospitalizations by age group and vaccination status</a>
 </h2>
-<p>The file <code>ockovani-hospitalizace-tyden.csv</code> has hospitalizations by age group and vaccination status, but it's missing data for 2020. The file <code>nakazeni-hospitalizace-testy.csv</code> has hospitalizations by age group and it includes 2020, but it's missing the vaccination stats, and also the total number of hospitalizations is much higher in than in the other file:</p>
+<p>The file <code>ockovani-hospitalizace-tyden.csv</code> has hospitalizations by age group and vaccination status, but it's missing data for 2020. The file <code>nakazeni-hospitalizace-testy.csv</code> has hospitalizations by age group and it includes data for 2020, but it's missing the vaccination status, and for some reason it has about 27% more hospitalizations in 2021-2023 than the other file:</p>
 <pre>&gt; ho1=fread(&quot;ockovani-hospitalizace-tyden.csv&quot;)
 &gt; ho2=fread(&quot;nakazeni-hospitalizace-testy.csv&quot;)
 &gt; d1=ho1[,.(tyden=sum(hospitalizovani_celkem)),.(year=substr(tyden,1,4))]
@@ -872,13 +871,13 @@ ggsave(&quot;1.png&quot;,width=3.8,height=2.3,dpi=300)</pre>
 3: 2022  55494  72212  1.301258
 4: 2023  17133  24564  1.433724
 5: 2024   1460   2266  1.552055</pre>
-<p>Therefore I wasn't able to merge the two files so I could've included hospitalizations from 2020 in the plots below. So the plots below are also likely to miss about 20-30% of all hospitalizations in 2021-2022.</p>
+<p>Therefore I wasn't able to merge the two files so I could've included hospitalizations from 2020 in the plots below. And the plots below are also likely to miss about 27% of hospitalizations in 2021-2023.</p>
 <p>The hospitalization figures at OWID seem to match the file <code>nakazeni-hospitalizace-testy.csv</code>:</p>
 <pre>$ wget covid.ourworldindata.org/data/owid-covid-data.csv
 $ csvtk cut -f location,date,weekly_hosp_admissions owid-covid-data.csv|grep Czechia|grep 2021|awk -F, &#39;{x+=$3}END{print x/7}&#39;
 134893</pre>
 <p>But anyway the following plot still shows that in ages 12-19 where there's the lowest percentage of vaccinated people, the total number of hospitalizations during the peak in February 2022 is higher than the number of hospitalizations at the start of 2021. But in ages 80+ where there's the highest percentage of vaccinated people, the total number of hospitalizations during the peak around February 2022 is much smaller than at the start of 2021.</p>
-<p>And also if you add together the blue and red lines during the peak in March 2021, then the combined height of the lines is lower in old age groups that got vaccinated earlier:</p>
+<p>And also if you add together the blue and red lines during the peak in March 2021, then the combined height of the lines is lower in old age groups that got vaccinated earlier.</p>
 <p>However it's also weird that during the peak in February 2022, ages 12-19 have almost the same number of hospitalizations in vaccinated and unvaccinated people even though the percentage of vaccinated people is not that high.</p>
 <p><img src=i/czech-hospvaxun.png style=max-width:520px></p>
 <p>The next plot which shows the hospitalization rate per million people instead of the raw number of hospitalizations. Now vaccinated people in ages 12-19 got a big spike in the hospitalization rate around April 2021, but it's probably because vulnerable or immunocompromised people had been priorized for vaccination. But otherwise unvaccinated people generally continue to have a much higher hospitalization rate than vaccinated people up to around mid-2022, after which the difference probably gets smaller because unvaccinated people have acquired natural immunity:</p>
