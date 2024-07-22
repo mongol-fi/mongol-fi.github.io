@@ -176,14 +176,145 @@ Novavax     NA NA  0 100  7  0  0  3  0  0  6  0  0  6  5  0 12     3
 Other       NA NA NA  NA NA  0  0  0  0  0  0  0  0  0  0  0 NA     0
 Total        0  0  0   1  2  3  3  3  4  5  6  8  9 12  6  2  1     5</pre>
 <p>In both of the tables above Novavax got a lower percentage than Pfizer, which might partially explain people with a Novavax vaccine have such low mortality.</p>
-<p>Here's code for making the heatmap:</p>
+<p>When I looked at third doses instead of first doses and I aggregated Omicron and pediatric vaccine types together with the main vaccine type, my excess proportion of the <span class="quote">&quot;indication chronic illness&quot;</span> column was about -6% for Pfizer but 38% for Moderna:</p>
+<pre>t=fread(&quot;ockovani-profese.csv&quot;)
+d=t[poradi_davky==3,.(.N,chronic=sum(indikace_chronicke_onemocneni,na.rm=T)),.(type=vakcina,age=vekova_skupina)][age!=&quot;nezařazeno&quot;]
+
+name1=unique(d$type);name2=ifelse(name1==&quot;&quot;,&quot;&quot;,&quot;Other&quot;)
+name2[grep(&quot;comirnaty&quot;,ignore.case=T,name1)]=&quot;Pfizer&quot;
+name2[grep(&quot;spikevax&quot;,ignore.case=T,name1)]=&quot;Moderna&quot;
+name2[grep(&quot;nuvaxovid&quot;,ignore.case=T,name1)]=&quot;Novavax&quot;
+name2[name1==&quot;COVID-19 Vaccine Janssen&quot;]=&quot;Janssen&quot;
+name2[name1==&quot;VAXZEVRIA&quot;]=&quot;AstraZeneca&quot;
+d$type=name2[match(d$type,name1)]
+
+a=d[,.(N=sum(N),chronic=sum(chronic)),.(age,type)]
+a=merge(a,d[,.(base=sum(chronic)/sum(N)),age])[,base:=base*N]
+a[,.(pct=round((sum(chronic)/sum(base)-1)*100),N=sum(N)),type][order(-N)]|&gt;print(r=F)</pre>
+<!-- -->
+<pre>        type  pct       N
+      Pfizer   -6 3805345
+     Moderna   38  569083
+     Janssen   -5    2463
+ AstraZeneca  134     433
+     Novavax  -48     318
+       Other -100      28</pre>
+<p>When I calculated a Moderna-Pfizer ratio for an age-normalized proportion of the <span class="quote">&quot;indication chronic illness&quot;</span> column so that I grouped the ratio by the month when people got the first dose, the ratio remained at a fairly steady level of about 5-6 for people vaccinated May to October 2021, but it suddenly dropped to about 2.3 the next month and it remained around 1 to 1.5 for the next 4 months. So it might also partially explain why the Moderna-Pfizer mortality ratio dropped to around 1.0 in people who were vaccinated in the fourth quarter of 2021 (even though the drop in the mortality ratio was already in October and not November):</p>
+<pre>a=d[,.(N=sum(N),chronic=sum(chronic)),.(age,type,month)]
+a=merge(a,d[,.(base=sum(chronic)/sum(N)),age])[,base:=base*N]
+a=a[,.(rat=sum(chronic)/sum(base)),.(type,month)]
+m=a[,tapply(rat,.(type,month),c)]
+round(m[&quot;Moderna&quot;,]/m[&quot;Pfizer&quot;,],2)</pre>
+<!-- -->
+<pre>2020-12 2021-01 2021-02 2021-03 2021-04 2021-05 2021-06 2021-07 2021-08 2021-09
+     NA    0.62    0.61    2.65    1.74    2.87    5.68    5.03    6.86    5.84
+2021-10 2021-11 2021-12 2022-01 2022-02 2022-03 2022-04 2022-05 2022-06 2022-07
+   5.44    2.32    1.51    1.12    1.45    1.40    0.43    0.67    1.35    0.00
+2022-08 2022-09 2022-10 2022-11 2022-12 2023-01 2023-02 2023-03 2023-04 2023-05
+   1.26    1.47    1.51    0.00    0.00    3.74    0.00    0.00    0.00     NaN
+2023-06 2023-07 2023-08 2023-09 2023-10 2023-11 2023-12 2024-01 2024-02 2024-03
+     NA      NA      NA    0.00    0.00    0.00    0.00    0.00      NA      NA
+2024-04 2024-05 2024-06 2024-07
+     NA      NA     NaN      NA</pre>
+<p>This shows the chronic illness ratio compared to the age-normalized mortality ratio:</p>
+<div class="width7">
+<img src="i/czech-chronic-4.png">
+</div>
+<p>Here's code for the previous plot:</p>
+<pre>download.file(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-profese.csv&quot;,&quot;ockovani-profese.csv&quot;)
+download.file(&quot;http://sars2.net/f/czbucketskeep.csv.gz&quot;,&quot;czbucketskeep.csv.gz&quot;)
+
+library(data.table);library(ggplot2)
+
+yemo=\(x){u=unique(x);format(u,&quot;%Y-%m&quot;)[match(x,u)]}
+kim=\(x)ifelse(x&gt;=1e3,ifelse(x&gt;=1e6,paste0(x/1e6,&quot;M&quot;),paste0(x/1e3,&quot;k&quot;)),x)
+
+t=fread(&quot;ockovani-profese.csv&quot;)
+
+d=t[poradi_davky==1,.(.N,chronic=sum(indikace_chronicke_onemocneni,na.rm=T)),.(type=vakcina,age=vekova_skupina,month=yemo(datum))][age!=&quot;nezařazeno&quot;]
+
+name1=unique(d$type);name2=ifelse(name1==&quot;&quot;,&quot;&quot;,&quot;Other&quot;)
+name2[grep(&quot;comirnaty&quot;,ignore.case=T,name1)]=&quot;Pfizer&quot;
+name2[grep(&quot;spikevax&quot;,ignore.case=T,name1)]=&quot;Moderna&quot;
+name2[grep(&quot;nuvaxovid&quot;,ignore.case=T,name1)]=&quot;Novavax&quot;
+name2[name1==&quot;COVID-19 Vaccine Janssen&quot;]=&quot;Janssen&quot;
+name2[name1==&quot;VAXZEVRIA&quot;]=&quot;AstraZeneca&quot;
+d$type=name2[match(d$type,name1)]
+
+a=d[,.(N=sum(N),chronic=sum(chronic)),.(age,type,month)]
+a=merge(a,d[,.(base=sum(chronic)/sum(N)),age])[,base:=base*N]
+a=a[,.(chronic=sum(chronic)/sum(base),N=sum(N)),.(type,month)]
+p=dcast(a,month~type,value.var=&quot;chronic&quot;)[,.(month,chronic=Moderna/Pfizer)]
+p=cbind(p,dcast(a,month~type,value.var=&quot;N&quot;)[,.(Pfizer,Moderna)])
+
+b=fread(&quot;czbucketskeep.csv.gz&quot;)[,age:=pmax(pmin(95,age%/%5*5),15)]
+me=merge(b[dose==1],b[dose&lt;=1,.(base=sum(dead)/sum(alive)),age])[,base:=base*alive]
+me=me[,.(rate=sum(dead)/sum(base)),.(month=vaxmonth,type)]
+p=merge(p,dcast(me,month~type,value.var=&quot;rate&quot;)[,.(month,mort=Moderna/Pfizer)])
+
+p1=data.frame(month=p$month,y=c(p$mort,p$chronic),type=rep(c(&quot;Mortality ratio&quot;,&quot;Chronic illness ratio&quot;),each=nrow(p)))
+p2=data.frame(month=p$month,y=c(p$Pfizer,p$Moderna),type=rep(c(&quot;Pfizer&quot;,&quot;Moderna&quot;),each=nrow(p)))
+p1$type=factor(p1$type,unique(p1$type))
+p2$type=factor(p2$type,unique(p2$type))
+
+cand=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
+ymax=max(p$chronic,p$mort,na.rm=T)
+ystep=cand[which.min(abs(cand-ymax/6))]
+yend=ystep*ceiling(ymax/ystep)
+ymax2=max(p2$y,na.rm=T)
+ystep2=cand[which.min(abs(cand-ymax2/6))]
+yend2=ystep2*ceiling(ymax2/ystep2)
+secmult=yend/yend2
+
+pal1=c(&quot;black&quot;,&quot;gray60&quot;)
+pal2=alpha(hsv(c(22,0)/36,1,.8),.5)
+
+exp=.7;xstart=1-exp;xend=length(p$month)+exp
+
+ggplot(p,aes(x=month))+
+geom_vline(xintercept=c(xstart,xend),linewidth=.3,lineend=&quot;square&quot;)+
+geom_hline(yintercept=1,linewidth=.3,linetype=2,lineend=&quot;square&quot;)+
+geom_bar(data=p2,aes(y=y*secmult,fill=type),stat=&quot;identity&quot;,position=&quot;dodge&quot;,linewidth=.15)+
+geom_line(data=na.omit(p1),aes(y=y,color=type,group=type),linewidth=.4)+
+labs(title=&quot;Age-normalized Moderna-Pfizer ratio by month of vaccination&quot;,x=NULL,y=&quot;Moderna-Pfizer ratio&quot;)+
+scale_x_discrete(expand=expansion(mult=0,add=exp))+
+scale_y_continuous(limits=c(0,yend),breaks=seq(0,yend,ystep),expand=expansion(0),labels=\(x)ifelse(x&gt;=1e3,paste0(x/1e3,&quot;k&quot;),x),sec.axis=sec_axis(trans=~./secmult,breaks=seq(0,yend2,ystep2),name=&quot;Monthly new doses&quot;,labels=kim))+
+scale_color_manual(values=pal1)+
+scale_fill_manual(values=pal2)+
+coord_cartesian(clip=&quot;off&quot;)+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.text.x=element_text(angle=90,vjust=.5,hjust=1,margin=margin(2.5)),
+  axis.ticks=element_line(linewidth=.3),
+  axis.ticks.length=unit(3,&quot;pt&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.title=element_text(size=7,color=&quot;black&quot;),
+  axis.title.y.left=element_text(margin=margin(,3,,1)),
+  axis.title.y.right=element_text(margin=margin(,,,4)),
+  legend.direction=&quot;horizontal&quot;,
+  legend.background=element_rect(fill=alpha(&quot;white&quot;,0)),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.key.height=unit(4,&quot;pt&quot;),
+  legend.key.width=unit(15,&quot;pt&quot;),
+  legend.key=element_rect(fill=alpha(&quot;white&quot;,0)),
+  legend.margin=margin(0,2,4,2),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.text=element_text(size=7),
+  legend.title=element_blank(),
+  panel.grid.major=element_blank(),
+  panel.background=element_rect(fill=&quot;white&quot;),
+  plot.margin=margin(4,4,4,4),
+  plot.title=element_text(size=7.5,margin=margin(1,0,4.5,0),face=2))
+ggsave(&quot;0.png&quot;,width=4,height=2.2,dpi=300*4)
+system(&quot;magick 0.png -resize 25% 1.png&quot;)</pre>
+<p>And here's code for making the heatmap:</p>
 <pre># download.file(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-profese.csv&quot;,&quot;ockovani-profese.csv&quot;)
 
 library(data.table)
 
 t=fread(&quot;ockovani-profese.csv&quot;)
 
-yemo=\(x,y){u=unique(x);p=as.POSIXlt(`class&lt;-`(u,&quot;Date&quot;));sprintf(&quot;%d-%02d&quot;,p$year+1900,p$mon+1)[match(x,u)]}
+yemo=\(x){u=unique(x);format(u,&quot;%Y-%m&quot;)[match(x,u)]}
 
 name1=unique(t$vakcina);name2=rep(&quot;Other&quot;,length(name1))
 name2[name1==&quot;&quot;]=&quot;&quot;
@@ -306,7 +437,7 @@ a[,.(excesspct=round((sum(hosp)/sum(base)-1)*100),hospitalizations=sum(hosp),pye
                          Nuvaxovid XBB 1.5      -100                0        2
                                       type excesspct hospitalizations   pyears</pre>
 <p>In the code below I additionally normalized the hospitalization rate for the month of vaccination. I now only included first doses given in 2021, because otherwise I would've been more likely to get an anomalously high baseline rates for vaccination months with a low number of doses given in some age groups. However now Moderna got a slightly lower excess hospitalization percent than Pfizer which was the opposite of the previous plot. And now the hospitalization rate of Janssen vaccines reduced dramatically as expected, because late vaccinees had a higher hospitalization rate than early vaccinees, and late vaccinees are overrepresented for Janssen vaccines:</p>
-<pre>yemo=\(x,y){u=unique(x);p=as.POSIXlt(as.Date(u));sprintf(&quot;%d-%02d&quot;,p$year+1900,p$mon+1)[match(x,u)]}
+<pre>yemo=\(x){u=unique(x);format(u,&quot;%Y-%m&quot;)[match(x,u)]}
 
 d2=d[date&lt;=&quot;2021-12-31&quot;][,month:=yemo(date)]
 a=d2[,.(hosp=sum(hosp,na.rm=T),pop=sum(as.double(maxdate-date+1))),.(type,age,month)]
@@ -422,7 +553,7 @@ dev.off()</pre>
 
 library(data.table)
 
-yemo=\(x,y){u=unique(x);p=as.POSIXlt(as.Date(u));sprintf(&quot;%d-%02d&quot;,p$year+1900,p$mon+1)[match(x,u)]}
+yemo=\(x){u=unique(x);format(u,&quot;%Y-%m&quot;)[match(x,u)]}
 
 unvaxhosp=fread(&quot;ockovani-hospitalizace-tyden.csv&quot;)
 unvax=unvaxhosp[,.(hosp=hospitalizovani_bez_ockovani),.(date=tyden_od+3,age=pmax(25,pmin(80,as.numeric(sub(&quot;[-+].*&quot;,&quot;&quot;,vekova_skupina)))))][,spline(date,hosp/7,xout=min(date):max(date)),age][,.(hosp=sum(y)),.(age,month=yemo(`class&lt;-`(x,&quot;Date&quot;)))]
