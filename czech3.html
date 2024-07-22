@@ -63,6 +63,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Batch_safety_study_by_authors_from_Palack_University>Batch safety study by authors from Palacký University</a></li>
 <li><a href=#Monthly_percentage_of_COVID_deaths_in_unvaccinated_people>Monthly percentage of COVID deaths in unvaccinated people</a></li>
 <li><a href=#Age_standardized_hospitalization_rate_by_vaccination_status>Age-standardized hospitalization rate by vaccination status</a></li>
+<li><a href=#Hospitalizations_by_age_group_and_vaccination_status>Hospitalizations by age group and vaccination status</a></li>
 </ul>
 
 <h2>
@@ -216,7 +217,7 @@ round(m[&quot;Moderna&quot;,]/m[&quot;Pfizer&quot;,],2)</pre>
      NA      NA      NA    0.00    0.00    0.00    0.00    0.00      NA      NA
 2024-04 2024-05 2024-06 2024-07
      NA      NA     NaN      NA</pre>
-<p>This shows the chronic illness ratio compared to the age-normalized mortality ratio:</p>
+<p>This shows the age-normalized chronic illness ratio compared to the age-normalized mortality ratio:</p>
 <div class="width7">
 <img src="i/czech-chronic-4.png">
 </div>
@@ -456,11 +457,11 @@ a[order(-pyears)]|&gt;print(r=F)</pre>
                   Covovax      -100                0       85
                 Sputnik V      -100                0       28
                   COVAXIN      -100                0       16</pre>
-<p>The plot below shows the excess hospitalization percent by age and the month of the first dose. There's a diagonal pattern across different age groups where there's a low excess hospitalization percent during the same month when the number of new first doses peaked in the age group:</p>
+<p>The plot below shows the excess hospitalization percent by age and the month of the first dose. There's a diagonal pattern across different age groups where there's a low excess hospitalization percent during the same month when the number of first doses peaked in the age group:</p>
 <div class="width9">
 <img src="i/czech-hosprate.png">
 </div>
-<p>In the plot below I didn't normalize the total excess mortality by the month of vaccination so Janssen again got 57% excess hospitalizations, because late vaccinees also had a high age-normalized hospitalization rate for other vaccine types. However even in May 2021 when the total number of doses given peaked, Janssen and AstraZeneca had a much higher total hospitalization rate than Pfizer and Moderna:</p>
+<p>The next plot shows the excess hospitalization rate by vaccine type instead of age group. Janssen and AstraZeneca got a much higher total hospitalization rate than Pfizer and Moderna. I didn't normalize the total excess mortality by the month of vaccination so Janssen again got 57% excess hospitalizations (because the late vaccinees who had a high hospitalization rate were overrepresented for Janssen vaccines):</p>
 <div class="width10">
 <img src="i/czech-hosprate-2.png">
 </div>
@@ -520,7 +521,7 @@ system(paste0(&quot;pad=24;w=`identify -format %w i1.png`;magick -pointsize 40 -
 <img src="i/czech-mrrweeks.png">
 </div>
 <p>In the black line the ratio was only normalized by age. In the gray line the ratio was additionally normalized by ongoing month, but it didn't change the results that much.</p>
-<p>But anyway, you would at least think that there would be more vaccine deaths in weeks 0 to 29 than weeks 60 to 89. But because the Moderna-Pfizer ratio remains consistently elevated even more than a year after vaccination, it rather seems to be the product of the same kind of confounding factors which also cause late vaccinees to have much higher age-normalized mortality than early vaccinees.</p>
+<p>But anyway, you would at least think that there would be more vaccine deaths in weeks 0 to 29 after vaccination than in weeks 60 to 89. But because the Moderna-Pfizer ratio remains consistently elevated even more than a year after vaccination, it rather seems to be the product of some kind of confounding factors.</p>
 <pre>b=data.table::fread(&quot;http://sars2.net/f/czbucketskeep.csv.gz&quot;)
 b[,age:=pmax(pmin(95,age%/%5*5),15)]
 
@@ -596,7 +597,7 @@ a[,.(excess=(sum(hosp)/sum(base)-1)*100),type][order(-excess),excess:=round(exce
 <h2>
 <a href=#Batch_safety_study_by_authors_from_Palack_University id=Batch_safety_study_by_authors_from_Palack_University>Batch safety study by authors from Palacký University</a>
 </h2>
-<p>In June 2024 the Czech authors who uploaded the record-level data to GitHub published a paper which analyzed batch safety data they received through a freedom of information response: <a href="https://onlinelibrary.wiley.com/doi/abs/10.1111/eci.14271">https://onlinelibrary.wiley.com/doi/abs/10.1111/eci.14271</a>. The paper is behind a paywall, but I bought access to it and posted screenshots of the paper here: <a href=i/czech-batch-study.jpg>i/czech-batch-study.jpg</a>. The batch data can be downloaded from here: <a href="https://github.com/PalackyUniversity/batch-dependent-safety/blob/main/data/SUKL-batches-AE.xlsx">https://github.com/PalackyUniversity/batch-dependent-safety/blob/main/data/SUKL-batches-AE.xlsx</a>.</p>
+<p>In June 2024 the Czech authors who uploaded the record-level data to GitHub published a paper which analyzed batch safety data they received through a freedom of information response: <a href="https://onlinelibrary.wiley.com/doi/abs/10.1111/eci.14271">https://onlinelibrary.wiley.com/doi/abs/10.1111/eci.14271</a>. The paper is behind a paywall, but I bought access to it and posted screenshots of the paper here: <a href=i/czech-batch-study.jpg>i/czech-batch-study.jpg</a>. The batch data is available from this spreadsheet: <a href="https://github.com/PalackyUniversity/batch-dependent-safety/blob/main/data/SUKL-batches-AE.xlsx">https://github.com/PalackyUniversity/batch-dependent-safety/blob/main/data/SUKL-batches-AE.xlsx</a>.</p>
 <p>In the spreadsheet posted at GitHub, Pfizer vaccines got a lower rate of deaths than Moderna vaccines but a higher rate of serious adverse events:</p>
 <pre>library(data.table);library(openxlsx)
 
@@ -648,17 +649,37 @@ Other             6.53          1.10</pre>
      Janssen 47.3
      Novavax 41.5</pre>
 <p>However when I took an average age for the batches from the record-level data, it got a fairly low correlation with both the rate of deaths per batch and the rate of serious adverse events per batch:</p>
-<pre>&gt; download.file(&quot;http://sars2.net/f/czbucketsbatchkeep.csv.xz&quot;,&quot;czbucketsbatchkeep.csv.xz&quot;)
-&gt; b=fread(&quot;xz -dc czbucketsbatchkeep.csv.xz&quot;)
-&gt; ages=b[batch!=&quot;&quot;,.(alive=sum(alive)),.(age,batch)][,.(age=weighted.mean(age,alive)),batch]
-&gt; s1=data.table(read.xlsx(f))[,.(batch=sub(&quot;^\t&quot;,&quot;&quot;,batch_id),doses=doses_per_batch)]
-&gt; s2=data.table(read.xlsx(f,sheet=2))[,.(dead=sum(deaths),serious=sum(serious)),batch]
-&gt; me=merge(merge(s1,ages,all=T),s2,all=T)
-&gt; me[is.na(me)]=0
-&gt; me[doses&gt;0,cor(dead/doses,age)] # the correlation was about 0.18 between age and the rate of deaths
-[1] 0.1825102
-&gt; me[doses&gt;0,cor(serious/doses,age)] # the correlation was about 0.18 between age and the rate of serious adverse events
-[1] 0.1874058</pre>
+<pre>download.file(&quot;http://sars2.net/f/czbucketsbatchkeep.csv.xz&quot;,&quot;czbucketsbatchkeep.csv.xz&quot;)
+b=fread(&quot;xz -dc czbucketsbatchkeep.csv.xz&quot;)
+
+ages=b[batch!=&quot;&quot;,.(alive=sum(alive)),.(age,batch)][,.(age=weighted.mean(age,alive)),batch]
+
+s1=data.table(read.xlsx(f))[,.(batch=sub(&quot;^\t&quot;,&quot;&quot;,batch_id),doses=doses_per_batch)]
+s2=data.table(read.xlsx(f,sheet=2))[,.(dead=sum(deaths),serious=sum(serious)),batch]
+
+me=merge(merge(s1,ages,all=T),s2,all=T)
+me[is.na(me)]=0
+
+me[doses&gt;0,cor(dead/doses,age)]
+# [1] 0.1825102 (correlation between age and the rate of deaths)
+
+me[doses&gt;0,cor(serious/doses,age)]
+# [1] 0.1874058 (correlation between age and the rate of serious adverse events)</pre>
+<p>In the following code I calculated an age-normalized mortality rate for each batch in the record-level data. Its correlation was about -0.01 with both the rate of deaths in the spreadsheet and the rate of serious adverse events:</p>
+<pre>b=fread(&quot;xz -dc czbucketsbatchkeep.csv.xz&quot;)
+d=b[,.(dead=sum(dead),alive=sum(alive)),.(batch,age=ifelse(age&lt;15,0,pmin(age,95)))]
+d=merge(d,d[,.(base=sum(dead)/sum(alive)),.(age)])[,base:=base*alive]
+d=d[,.(rate=sum(dead)/sum(base)),batch]
+
+f=&quot;SUKL-batches-AE.xlsx&quot;
+s1=data.table(read.xlsx(f))[,.(batch=sub(&quot;^\t&quot;,&quot;&quot;,batch_id),doses=doses_per_batch)]
+s2=data.table(read.xlsx(f,sheet=2))[,.(dead=sum(deaths),serious=sum(serious)),batch]
+
+merge(d,merge(s1,s2)[doses&gt;0,.(reported=dead/doses),batch])[,cor(rate,reported)]
+# [1] -0.009126758
+
+merge(d,merge(s1,s2)[doses&gt;0,.(reported=serious/doses),batch])[,cor(rate,reported)]
+# [1] -0.01475335</pre>
 <h2>
 <a href=#Monthly_percentage_of_COVID_deaths_in_unvaccinated_people id=Monthly_percentage_of_COVID_deaths_in_unvaccinated_people>Monthly percentage of COVID deaths in unvaccinated people</a>
 </h2>
@@ -705,7 +726,7 @@ uv=rbind(uv,u[!month%in%uv$month,.(month,unvaxpoppct=uv[month==&quot;2022-12&quo
 
 me=merge(u,uv)[,ratio:=round(unvaxdeadpct/unvaxpoppct,1)]
 me[,4:5]=round(me[,4:5]);print(me,r=F)</pre>
-<p>The output shows that starting from May 2021 when the rollout of the first dose peaked, the percentage of COVID deaths in unvaccinated people out of all COVID deaths was about 2-4 times higher than the weighted percentage of the unvaccinated population size:</p>
+<p>The output shows that starting from May 2021 the percentage of COVID deaths in unvaccinated people was about 2 to 4 times higher than the weighted percentage of the unvaccinated population size:</p>
 <pre>   month totaldead unvaxdead unvaxdeadpct unvaxpoppct ratio
  2020-03        35        35          100         100   1.0
  2020-04       207       207          100         100   1.0
@@ -764,8 +785,8 @@ me[,4:5]=round(me[,4:5]);print(me,r=F)</pre>
 <h2>
 <a href=#Age_standardized_hospitalization_rate_by_vaccination_status id=Age_standardized_hospitalization_rate_by_vaccination_status>Age-standardized hospitalization rate by vaccination status</a>
 </h2>
-<p>The CSV file which showed hospitalizations by vaccine type didn't include the hospitalization date, but there's another file which includes the hospitalization week but not vaccine type: <a href="https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-hospitalizace-tyden.csv">https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-hospitalizace-tyden.csv</a>.</p>
-<p>I used the file to make the plot below, which shows that during the COVID wave in December 2021, unvaccinated people had about 6 times higher age-standardized hospitalization rate than vaccinated people. However the difference between the rates got smaller over time which may have been because unvaccinated people acquired natural immunity over time. So by December 2023 the rate was only about 1.5 times higher in unvaccinated people than in vaccinated people:</p>
+<p>The CSV file which showed hospitalizations by vaccine type didn't include the date of hospitalization, but there's another file which includes the week of hospitalization but not vaccine type: <a href="https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-hospitalizace-tyden.csv">https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-hospitalizace-tyden.csv</a>.</p>
+<p>I used the file to make the plot below, which shows that during the COVID wave in December 2021, unvaccinated people had about 6 times higher age-standardized hospitalization rate than vaccinated people. However the difference between the rates got smaller over time which may have been if unvaccinated people acquired natural immunity over time. So by December 2023 the rate was only about 1.5 times higher in unvaccinated people than in vaccinated people:</p>
 <div class="width6">
 <img src="i/czech-hospstandard.png">
 </div>
@@ -836,6 +857,119 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   plot.subtitle=element_text(size=6.7,margin=margin(0,0,4,0)),
   plot.title=element_text(size=7.5,face=&quot;bold&quot;,margin=margin(2,0,4,0)))
 ggsave(&quot;1.png&quot;,width=3.8,height=2.3,dpi=300)</pre>
+<h2>
+<a href=#Hospitalizations_by_age_group_and_vaccination_status id=Hospitalizations_by_age_group_and_vaccination_status>Hospitalizations by age group and vaccination status</a>
+</h2>
+<p>The file <code>ockovani-hospitalizace-tyden.csv</code> has hospitalizations by age group and vaccination status, but it's missing data for 2020. The file <code>nakazeni-hospitalizace-testy.csv</code> has hospitalizations by age group and it includes 2020, but it's missing the vaccination stats, and also the total number of hospitalizations is much higher in than in the other file:</p>
+<pre>&gt; ho1=fread(&quot;ockovani-hospitalizace-tyden.csv&quot;)
+&gt; ho2=fread(&quot;nakazeni-hospitalizace-testy.csv&quot;)
+&gt; d1=ho1[,.(tyden=sum(hospitalizovani_celkem)),.(year=substr(tyden,1,4))]
+&gt; d2=ho2[,.(testy=sum(nove_hospitalizace,na.rm=T)),.(year=substr(datum,1,4))]
+&gt; merge(d1,d2)[,ratio:=testy/tyden][]
+   year  tyden  testy     ratio
+1: 2020   5139  65095 12.666861
+2: 2021 108847 133201  1.223745
+3: 2022  55494  72212  1.301258
+4: 2023  17133  24564  1.433724
+5: 2024   1460   2266  1.552055</pre>
+<p>Therefore I wasn't able to merge the two files so I could've included hospitalizations from 2020 in the plots below. So the plots below are also likely to miss about 20-30% of all hospitalizations in 2021-2022.</p>
+<p>The hospitalization figures at OWID seem to match the file <code>nakazeni-hospitalizace-testy.csv</code>:</p>
+<pre>$ wget covid.ourworldindata.org/data/owid-covid-data.csv
+$ csvtk cut -f location,date,weekly_hosp_admissions owid-covid-data.csv|grep Czechia|grep 2021|awk -F, &#39;{x+=$3}END{print x/7}&#39;
+134893</pre>
+<p>But anyway the following plot still shows that in ages 12-19 where there's the lowest percentage of vaccinated people, the total number of hospitalizations during the peak in February 2022 is higher than the number of hospitalizations at the start of 2021. But in ages 80+ where there's the highest percentage of vaccinated people, the total number of hospitalizations during the peak around February 2022 is much smaller than at the start of 2021.</p>
+<p>And also if you add together the blue and red lines during the peak in March 2021, then the combined height of the lines is lower in old age groups that got vaccinated earlier:</p>
+<p>However it's also weird that during the peak in February 2022, ages 12-19 have almost the same number of hospitalizations in vaccinated and unvaccinated people even though the percentage of vaccinated people is not that high.</p>
+<p><img src=i/czech-hospvaxun.png style=max-width:520px></p>
+<p>The next plot which shows the hospitalization rate per million people instead of the raw number of hospitalizations. Now vaccinated people in ages 12-19 got a big spike in the hospitalization rate around April 2021, but it's probably because vulnerable or immunocompromised people had been priorized for vaccination. But otherwise unvaccinated people generally continue to have a much higher hospitalization rate than vaccinated people up to around mid-2022, after which the difference probably gets smaller because unvaccinated people have acquired natural immunity:</p>
+<p><img src=i/czech-hospvaxun-2.png style=max-width:520px></p>
+<pre>library(data.table);library(ggplot2)
+
+ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
+
+agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
+ages=c(12,20,30,50,65,80)
+
+t=fread(&quot;ockovani-hospitalizace-tyden.csv&quot;)
+t=t[,.(date=tyden_od+3,hosp=c(hospitalizovani_celkem-hospitalizovani_bez_ockovani,hospitalizovani_bez_ockovani),status=rep(c(&quot;Vaccinated&quot;,&quot;Unvaccinated&quot;),each=.N),age=agecut(as.integer(sub(&quot;[-+].*&quot;,&quot;&quot;,vekova_skupina)),ages))]
+
+a=t[,spline(date,hosp/7,xout=min(t$date):max(t$date)),.(age,status)][,.(hosp=sum(y)),.(age,status,date=as.IDate(x))]
+
+hosp=fread(&quot;nakazeni-hospitalizace-testy.csv&quot;)
+hosp=hosp[vekova_kategorie!=&quot;-&quot;&amp;datum&lt;&quot;2021-1-1&quot;,.(hosp=sum(nove_hospitalizace,na.rm=T),status=&quot;Unvaccinated&quot;),.(age=agecut(as.numeric(sub(&quot;[-+].*&quot;,&quot;&quot;,vekova_kategorie)),ages),date=datum)]
+a=rbind(a[date&gt;=&quot;2021-1-1&quot;],hosp)
+
+b=fread(&quot;czbucketsdaily.csv.gz&quot;)[,.(pop=sum(as.double(alive))),.(date,status=ifelse(dose==0,&quot;Unvaccinated&quot;,&quot;Vaccinated&quot;),age=agecut(age,ages))]
+
+last=b[date==&quot;2022-12-31&quot;,2:4]
+b=rbind(b,cbind(last,date=rep(as.IDate(setdiff(a$date,b$date)),each=nrow(last))))
+
+me=merge(a,b)
+me=merge(me,me[,.(base=sum(hosp)/sum(pop)),age])[,base:=base*pop]
+me=me[,.(hosp=sum(hosp),pop=sum(pop)),.(status,date,age)]
+
+# first plot
+p=me[,.(y=ma(hosp/pop,10),date),.(z=status,age)]
+
+# # second plot
+# p=me[,.(y=ifelse(pop&lt;2e3,NA,ma(hosp/pop*1e6,10)),date),.(z=status,age)]
+
+xstart=as.Date(&quot;2021-01-01&quot;);xend=as.Date(&quot;2024-1-1&quot;)
+xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=c(rbind(&quot;&quot;,2021:2023),&quot;&quot;)
+
+p=p[date&gt;=xstart&amp;date&lt;=xend]
+p=merge(p,p[,.(max=max(y)),age])
+
+v=merge(b[status==&quot;Vaccinated&quot;,.(age,date,vax=pop)],b[,.(pop=sum(pop)),.(date,age)])
+p=rbind(p,v[,.(y=vax/pop,z=&quot;Percent vaccinated&quot;,age,date,max=1)])
+
+p=p[!is.na(age)]
+p$z=factor(p$z,c(&quot;Unvaccinated&quot;,&quot;Vaccinated&quot;,&quot;Percent vaccinated&quot;))
+
+color=c(hsv(c(7,0)/12,1,.8),&quot;black&quot;)
+
+ggplot(p,aes(x=date))+
+facet_wrap(~age,ncol=1,strip.position=&quot;top&quot;)+
+geom_vline(xintercept=seq(xstart,xend,&quot;month&quot;),linewidth=.2,color=&quot;gray92&quot;)+
+geom_vline(xintercept=seq(xstart,xend,&quot;3 month&quot;),linewidth=.25,color=&quot;gray83&quot;)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),linewidth=.25,color=&quot;gray66&quot;,lineend=&quot;square&quot;)+
+geom_vline(xintercept=c(xstart,xend),linewidth=.25,lineend=&quot;square&quot;)+
+geom_hline(yintercept=0:1,linewidth=.25,lineend=&quot;square&quot;)+
+geom_line(aes(y=y/max,color=z),linewidth=.35)+
+geom_label(data=p[!duplicated(age)],aes(label=sprintf(&quot;\n   %s (%.0f)  \n&quot;,age,max)),x=xend,y=1,lineheight=.5,hjust=1,vjust=1,size=2.3,fill=alpha(&quot;white&quot;,1),label.r=unit(0,&quot;lines&quot;),label.padding=unit(0,&quot;lines&quot;),label.size=.25)+
+labs(x=NULL,y=NULL,title=&quot;Daily hospitalizations by vaccination status&quot;,subtitle=&quot;±10-day moving averages, not adjusted for population size. Displayed as percentage of the maximum value which is shown in parentheses.&quot;|&gt;stringr::str_wrap(64))+
+scale_x_date(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
+scale_y_continuous(limits=0:1)+
+scale_color_manual(values=color)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(color=guide_legend(nrow=1,byrow=F))+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.text.y=element_blank(),
+  axis.ticks=element_blank(),
+  axis.ticks.x=element_line(color=alpha(&quot;black&quot;,c(1,0)),linewidth=.25),
+  axis.ticks.length=unit(0,&quot;lines&quot;),
+  axis.ticks.length.x=unit(.15,&quot;lines&quot;),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;horizontal&quot;,
+  legend.justification=c(1,.5),
+  legend.key.height=unit(.7,&quot;lines&quot;),
+  legend.key.width=unit(1.1,&quot;lines&quot;),
+  legend.key=element_rect(fill=alpha(&quot;white&quot;,0)),
+  legend.margin=margin(.15,0,0,0,&quot;lines&quot;),
+  legend.position=&quot;bottom&quot;,
+  legend.spacing.x=unit(.1,&quot;lines&quot;),
+  legend.text=element_text(size=7,vjust=.5),
+  legend.title=element_blank(),
+  panel.spacing=unit(0,&quot;lines&quot;),
+  panel.background=element_rect(fill=&quot;white&quot;),
+  panel.grid=element_blank(),
+  plot.margin=margin(.3,.3,.3,.3,&quot;lines&quot;),
+  plot.subtitle=element_text(size=6.8,margin=margin(0,0,.6,0,&quot;lines&quot;)),
+  plot.title=element_text(size=7.2,face=&quot;bold&quot;,margin=margin(.1,0,.5,0,&quot;lines&quot;)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=3,height=4.7,dpi=450)</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
