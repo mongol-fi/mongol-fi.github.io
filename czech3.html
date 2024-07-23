@@ -137,6 +137,69 @@ a[,.(pct=round((sum(chronic)/sum(base)-1)*100),N=sum(N)),type][order(-N)]|&gt;pr
 <div class="width8">
 <img src="i/czech-chronic-3.png">
 </div>
+<pre># download.file(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-profese.csv&quot;,&quot;ockovani-profese.csv&quot;)
+
+library(data.table)
+
+t=fread(&quot;ockovani-profese.csv&quot;)
+
+yemo=\(x){u=unique(x);format(u,&quot;%Y-%m&quot;)[match(x,u)]}
+
+name1=unique(t$vakcina);name2=rep(&quot;Other&quot;,length(name1))
+name2[name1==&quot;&quot;]=&quot;&quot;
+name2[grep(&quot;comirnaty&quot;,ignore.case=T,name1)]=&quot;Pfizer&quot;
+name2[grep(&quot;spikevax&quot;,ignore.case=T,name1)]=&quot;Moderna&quot;
+name2[grep(&quot;nuvaxovid&quot;,ignore.case=T,name1)]=&quot;Novavax&quot;
+name2[name1==&quot;COVID-19 Vaccine Janssen&quot;]=&quot;Janssen&quot;
+name2[name1==&quot;VAXZEVRIA&quot;]=&quot;AstraZeneca&quot;
+t$type=name2[match(t$vakcina,name1)]
+
+d=t[year(datum)&lt;=2022&amp;poradi_davky==1,.(.N,chronic=sum(indikace_chronicke_onemocneni,na.rm=T)),.(
+  month=yemo(datum),type,age=vekova_skupina)][age!=&quot;nezařazeno&quot;]
+
+a=d[,.(N=sum(N),chronic=sum(chronic)),.(age,type,month)]
+a=merge(a,d[,.(base=sum(chronic)/sum(N)),age])[,base:=base*N]
+a=a[,.(chronic=sum(chronic),N=sum(N),base=sum(base)),.(type,month)]
+
+a[,type:=factor(type,names(sort(a[,tapply(N,type,sum)],T)))]
+a=rbind(a,a[,.(chronic=sum(chronic),N=sum(N),base=sum(base),month=&quot;Total&quot;),type])
+a=rbind(a,a[,.(chronic=sum(chronic),N=sum(N),base=sum(base),type=&quot;Total&quot;),month])
+
+m1=a[,tapply(chronic,.(type,month),c)]
+m2=a[,tapply(base,.(type,month),c)]
+pop=a[,xtabs(N~type+month)]
+
+m=(m1-m2)/ifelse(m1&gt;m2,m2,m1)*100
+disp=round((m1/m2-1)*100)
+exp=.82;maxcolor=500
+m[m==-Inf]=-maxcolor
+
+pheatmap::pheatmap(abs(m)^exp*sign(m),filename=&quot;i1.png&quot;,display_numbers=disp,
+  gaps_row=nrow(m)-1,gaps_col=ncol(m)-1,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;gray90&quot;,
+  number_color=ifelse((abs(m)^exp&gt;.55*maxcolor^exp)&amp;!is.na(m),&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(-maxcolor^exp,maxcolor^exp,,256),
+  colorRampPalette(hsv(rep(c(7/12,0),5:4),c(.9,.75,.6,.3,0,.3,.6,.75,.9),c(.4,.65,1,1,1,1,1,.65,.4)))(256))
+
+kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;p=!is.na(x)
+  x[p]=paste0(sprintf(paste0(&quot;%.&quot;,ifelse(e[p]%%3==0,1,0),&quot;f&quot;),x[p]/1e3^(e2[p]-1)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2[p]]);x}
+
+exp2=.6;maxcolor2=max(pop[-nrow(pop),-ncol(pop)])
+
+pheatmap::pheatmap(pop^exp2,filename=&quot;i2.png&quot;,display_numbers=ifelse(pop&lt;=10,round(pop),kimi(pop)),
+  gaps_row=nrow(m)-1,gaps_col=ncol(m)-1,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;white&quot;,
+  number_color=ifelse(pop^exp2&gt;maxcolor2^exp2*.45,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(0,maxcolor2^exp2,,256),
+  sapply(seq(1,0,,256),\(i)rgb(i,i,i)))
+
+cap=&quot;\u00a0     Czech MoH data: Excess percentage of people who were priorized for vaccination due to chronic illness out of all people with a first dose listed. The x-axis shows the month of vaccination. The baseline is the proportion of people who were prioritized due to chronic illness by age group among all people in the CSV file who have a first dose listed in 2022 or earlier.
+      The direct method of age standardization was used, so that for each cell, the number of people in each age group was multiplied by the proportion of people in the same age group who were priorized due to chronic illness in the whole CSV file, and the results for each age group were added together to get the total expected number of people priorized due to chronic illness for the cell.
+      Source: onemocneni-aktualne.mzcr.cz/api/v2/covid-19, tab for vaccines, \&quot;COVID-19: Overview of reported vaccinations by profession (place of vaccination, residence of the vaccinated person)\&quot;.&quot;
+
+system(paste0(&quot;w=`identify -format %w i1.png`;pad=20;magick -pointsize 40 -font Arial \\( -size $[w-pad*3]x caption:&#39;&quot;,cap,&quot;&#39; -splice $[pad]x20 \\) \\( i1.png -crop -0+8 \\) \\( -size $[w-pad*3]x caption:&#39;Number of people who received a first dose each month&#39; -splice $[pad]x0 \\) \\( i2.png -crop -0+8 \\) -append 1.png&quot;))</pre>
 <p>This shows the percentage of people by age group and vaccine type who were eligible to be vaccinated early due to chronic illness. I again only included first doses:</p>
 <pre>t=fread(&quot;ockovani-profese.csv&quot;)
 
@@ -221,7 +284,6 @@ round(m[&quot;Moderna&quot;,]/m[&quot;Pfizer&quot;,],2)</pre>
 <div class="width7">
 <img src="i/czech-chronic-4.png">
 </div>
-<p>Here's code for the previous plot:</p>
 <pre>download.file(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-profese.csv&quot;,&quot;ockovani-profese.csv&quot;)
 download.file(&quot;http://sars2.net/f/czbucketskeep.csv.gz&quot;,&quot;czbucketskeep.csv.gz&quot;)
 
@@ -308,70 +370,8 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   plot.title=element_text(size=7.5,margin=margin(1,0,4.5,0),face=2))
 ggsave(&quot;0.png&quot;,width=4,height=2.2,dpi=300*4)
 system(&quot;magick 0.png -resize 25% 1.png&quot;)</pre>
-<p>And here's code for making the heatmap:</p>
-<pre># download.file(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-profese.csv&quot;,&quot;ockovani-profese.csv&quot;)
-
-library(data.table)
-
-t=fread(&quot;ockovani-profese.csv&quot;)
-
-yemo=\(x){u=unique(x);format(u,&quot;%Y-%m&quot;)[match(x,u)]}
-
-name1=unique(t$vakcina);name2=rep(&quot;Other&quot;,length(name1))
-name2[name1==&quot;&quot;]=&quot;&quot;
-name2[grep(&quot;comirnaty&quot;,ignore.case=T,name1)]=&quot;Pfizer&quot;
-name2[grep(&quot;spikevax&quot;,ignore.case=T,name1)]=&quot;Moderna&quot;
-name2[grep(&quot;nuvaxovid&quot;,ignore.case=T,name1)]=&quot;Novavax&quot;
-name2[name1==&quot;COVID-19 Vaccine Janssen&quot;]=&quot;Janssen&quot;
-name2[name1==&quot;VAXZEVRIA&quot;]=&quot;AstraZeneca&quot;
-t$type=name2[match(t$vakcina,name1)]
-
-d=t[year(datum)&lt;=2022&amp;poradi_davky==1,.(.N,chronic=sum(indikace_chronicke_onemocneni,na.rm=T)),.(
-  month=yemo(datum),type,age=vekova_skupina)][age!=&quot;nezařazeno&quot;]
-
-a=d[,.(N=sum(N),chronic=sum(chronic)),.(age,type,month)]
-a=merge(a,d[,.(base=sum(chronic)/sum(N)),age])[,base:=base*N]
-a=a[,.(chronic=sum(chronic),N=sum(N),base=sum(base)),.(type,month)]
-
-a[,type:=factor(type,names(sort(a[,tapply(N,type,sum)],T)))]
-a=rbind(a,a[,.(chronic=sum(chronic),N=sum(N),base=sum(base),month=&quot;Total&quot;),type])
-a=rbind(a,a[,.(chronic=sum(chronic),N=sum(N),base=sum(base),type=&quot;Total&quot;),month])
-
-m1=a[,tapply(chronic,.(type,month),c)]
-m2=a[,tapply(base,.(type,month),c)]
-pop=a[,xtabs(N~type+month)]
-
-m=(m1-m2)/ifelse(m1&gt;m2,m2,m1)*100
-disp=round((m1/m2-1)*100)
-exp=.82;maxcolor=500
-m[m==-Inf]=-maxcolor
-
-pheatmap::pheatmap(abs(m)^exp*sign(m),filename=&quot;i1.png&quot;,display_numbers=disp,
-  gaps_row=nrow(m)-1,gaps_col=ncol(m)-1,
-  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,
-  border_color=NA,na_col=&quot;gray90&quot;,
-  number_color=ifelse((abs(m)^exp&gt;.55*maxcolor^exp)&amp;!is.na(m),&quot;white&quot;,&quot;black&quot;),
-  breaks=seq(-maxcolor^exp,maxcolor^exp,,256),
-  colorRampPalette(hsv(rep(c(7/12,0),5:4),c(.9,.75,.6,.3,0,.3,.6,.75,.9),c(.4,.65,1,1,1,1,1,.65,.4)))(256))
-
-kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;p=!is.na(x)
-  x[p]=paste0(sprintf(paste0(&quot;%.&quot;,ifelse(e[p]%%3==0,1,0),&quot;f&quot;),x[p]/1e3^(e2[p]-1)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2[p]]);x}
-
-exp2=.6;maxcolor2=max(pop[-nrow(pop),-ncol(pop)])
-
-pheatmap::pheatmap(pop^exp2,filename=&quot;i2.png&quot;,display_numbers=ifelse(pop&lt;=10,round(pop),kimi(pop)),
-  gaps_row=nrow(m)-1,gaps_col=ncol(m)-1,
-  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,
-  border_color=NA,na_col=&quot;white&quot;,
-  number_color=ifelse(pop^exp2&gt;maxcolor2^exp2*.45,&quot;white&quot;,&quot;black&quot;),
-  breaks=seq(0,maxcolor2^exp2,,256),
-  sapply(seq(1,0,,256),\(i)rgb(i,i,i)))
-
-cap=&quot;\u00a0     Czech MoH data: Excess percentage of people who were priorized for vaccination due to chronic illness out of all people with a first dose listed. The x-axis shows the month of vaccination. The baseline is the proportion of people who were prioritized due to chronic illness by age group among all people in the CSV file who have a first dose listed in 2022 or earlier.
-      The direct method of age standardization was used, so that for each cell, the number of people in each age group was multiplied by the proportion of people in the same age group who were priorized due to chronic illness in the whole CSV file, and the results for each age group were added together to get the total expected number of people priorized due to chronic illness for the cell.
-      Source: onemocneni-aktualne.mzcr.cz/api/v2/covid-19, tab for vaccines, \&quot;COVID-19: Overview of reported vaccinations by profession (place of vaccination, residence of the vaccinated person)\&quot;.&quot;
-
-system(paste0(&quot;w=`identify -format %w i1.png`;pad=20;magick -pointsize 40 -font Arial \\( -size $[w-pad*3]x caption:&#39;&quot;,cap,&quot;&#39; -splice $[pad]x20 \\) \\( i1.png -crop -0+8 \\) \\( -size $[w-pad*3]x caption:&#39;Number of people who received a first dose each month&#39; -splice $[pad]x0 \\) \\( i2.png -crop -0+8 \\) -append 1.png&quot;))</pre>
+<p>This shows the Moderna-Pfizer ratio by age group and month of vaccination:</p>
+<p><img src=i/czech-chronic-5.png style=max-width:550px></p>
 <h2>
 <a href=#Hospitalizations_by_vaccine_type id=Hospitalizations_by_vaccine_type>Hospitalizations by vaccine type</a>
 </h2>
@@ -629,7 +629,7 @@ me[order(-doses)]|&gt;dplyr::mutate_if(is.double,round,1)|&gt;print(r=F)</pre>
      Janssen   776800   10     241       12.9         310.2
      Novavax   632000    0       4        0.0           6.3
        Other    64800    2      13       30.9         200.6</pre>
-<p>If Pfizer is used as the baseline, the number of deaths per capita was about 8 times higher for AstraZeneca and about 3 times higher for Janssen:</p>
+<p>If Pfizer is used as the baseline, the number of deaths per dose was about 8 times higher for AstraZeneca and about 3 times higher for Janssen:</p>
 <pre>&gt; x=data.frame(me,row.names=1);t((t(x)/unlist(x[&quot;Pfizer&quot;,])))[,4:5]|&gt;round(2)
             deadpermil seriouspermil
 Pfizer            1.00          1.00
@@ -640,15 +640,15 @@ Novavax           0.00          0.03
 Other             6.53          1.10</pre>
 <p>The spreadsheet for the batch data didn't contain information about age or other confounders. But in the record-level data when I assigned a random birthday for each person and I counted the person-days for each age up to the end of 2022, the average age was about 50 for people who got a Pfizer vaccine for the first dose but about 56 for Moderna and 68 for AstraZeneca:</p>
 <pre>&gt; b=fread(&quot;http://sars2.net/f/czbucketskeep.csv.gz&quot;)
-&gt; b[dose==1,.(alive=sum(as.double(alive))),.(age,type)][,.(age=weighted.mean(age,alive)),type]|&gt;print(r=F)
+&gt; b[dose==1,.(alive=sum(as.double(alive))),.(age,type)][,.(age=weighted.mean(age,alive)),type][order(age)]|&gt;print(r=F)
         type  age
+     Novavax 41.5
+       Other 44.1
+     Janssen 47.3
       Pfizer 49.7
      Moderna 56.0
-       Other 44.1
- AstraZeneca 68.4
-     Janssen 47.3
-     Novavax 41.5</pre>
-<p>However when I took an average age for the batches from the record-level data, it got a low correlation with both the rate of deaths per batch and the rate of serious adverse events per batch:</p>
+ AstraZeneca 68.4</pre>
+<p>However when I took the average age for the batches from the record-level data, it got a correlation of only about 0.2 with both the rate of deaths per batch and the rate of serious adverse events per batch:</p>
 <pre>download.file(&quot;http://sars2.net/f/czbucketsbatchkeep.csv.xz&quot;,&quot;czbucketsbatchkeep.csv.xz&quot;)
 b=fread(&quot;xz -dc czbucketsbatchkeep.csv.xz&quot;)
 
@@ -683,7 +683,7 @@ merge(d,merge(s1,s2)[doses&gt;0,.(reported=serious/doses),batch])[,cor(rate,repo
 <h2>
 <a href=#Monthly_percentage_of_COVID_deaths_in_unvaccinated_people id=Monthly_percentage_of_COVID_deaths_in_unvaccinated_people>Monthly percentage of COVID deaths in unvaccinated people</a>
 </h2>
-<p>The Czech MoH has published CSV files which show the daily number of COVID deaths by vaccination status: <a href="https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19">https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19</a>. But unfortunately the files are missing age groups, so I calculated a weighted average for the percentage of unvaccinated people in each age group where the weight was the total number of COVID deaths the age group had in 2020-2023. It gave me a figure of only about 15-16% unvaccinated people from December 2021 onwards.</p>
+<p>The Czech MoH has published CSV files which show the daily number of COVID deaths by vaccination status: <a href="https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19">https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19</a>. But unfortunately the files are missing age groups, so in order to estimate the percentage of unvaccinated people in the age groups which accounted for the COVID deaths, I calculated a weighted average for the percentage of unvaccinated people in each age group where the weight was the total number of COVID deaths the age group had in 2020-2023. It gave me a figure of only about 15-16% unvaccinated people from December 2021 onwards.</p>
 <p>The code below shows the number of COVID deaths in each age group compared to the percentage of unvaccinated people the age group has in December 2022. You can see that most COVID deaths are in the 5-year age groups between 65 and 94 which all have below 20% unvaccinated people:</p>
 <pre>&gt; icd=fread(&quot;http://sars2.net/f/czicd.csv.gz&quot;)[icd==&quot;U07&quot;,.(coviddead=sum(dead)),.(age=ifelse(age&lt;20,0,age))]
 &gt; b=fread(&quot;http://sars2.net/f/czbucketsdaily.csv.gz&quot;)[date&gt;=&quot;2022-12-01&quot;,.(alive=sum(alive)),.(age=ifelse(age&lt;20,0,pmin(age,95)%/%5*5),unvax=dose==0)]
@@ -871,14 +871,14 @@ ggsave(&quot;1.png&quot;,width=3.8,height=2.3,dpi=300)</pre>
 3: 2022  55494  72212  1.301258
 4: 2023  17133  24564  1.433724
 5: 2024   1460   2266  1.552055</pre>
-<p>Therefore I wasn't able to merge the two files so I could've included hospitalizations from 2020 in the plots below. And the plots below are also likely to miss about 27% of hospitalizations in 2021-2023.</p>
-<p>The hospitalization figures at OWID seem to match the file <code>nakazeni-hospitalizace-testy.csv</code>:</p>
+<p>Therefore I wasn't able to merge the two files so I could've included hospitalizations from 2020 in the next two plots. And the next two plots are also likely to miss about 27% of hospitalizations in 2021-2023.</p>
+<p>The hospitalization figures at OWID seem to roughly match the file <code>nakazeni-hospitalizace-testy.csv</code>:</p>
 <pre>$ wget covid.ourworldindata.org/data/owid-covid-data.csv
 $ csvtk cut -f location,date,weekly_hosp_admissions owid-covid-data.csv|grep Czechia|grep 2021|awk -F, &#39;{x+=$3}END{print x/7}&#39;
 134893</pre>
-<p>But anyway the following plot still shows that in ages 12-19 where there's the lowest percentage of vaccinated people, the total number of hospitalizations during the peak in February 2022 is higher than the number of hospitalizations at the start of 2021. But in ages 80+ where there's the highest percentage of vaccinated people, the total number of hospitalizations during the peak around February 2022 is much smaller than at the start of 2021.</p>
+<p>But anyway the following plot still shows that in ages 12-19 where there's the lowest percentage of vaccinated people, the total number of hospitalizations during the peak in February 2021 is higher than the number of hospitalizations at the start of 2021. But in ages 80+ where there's the highest percentage of vaccinated people, the total number of hospitalizations during the peak around February 2021 is much smaller than at the start of 2021.</p>
 <p>And also if you add together the blue and red lines during the peak in March 2021, then the combined height of the lines is lower in old age groups that got vaccinated earlier.</p>
-<p>However it's also weird that during the peak in February 2022, ages 12-19 have almost the same number of hospitalizations in vaccinated and unvaccinated people even though the percentage of vaccinated people is not that high.</p>
+<p>However it's also weird that during the peak in February 2021, ages 12-19 have almost the same number of hospitalizations in vaccinated and unvaccinated people even though the percentage of vaccinated people is not that high.</p>
 <p><img src=i/czech-hospvaxun.png style=max-width:520px></p>
 <p>The next plot shows the hospitalization rate per million people instead of the raw number of hospitalizations. Now vaccinated people in ages 12-19 got a big spike in the hospitalization rate around April 2021, but it's probably because vulnerable or immunocompromised people had been priorized for vaccination. But otherwise unvaccinated people generally have a much higher hospitalization rate than vaccinated people up to around mid-2022, after which the difference gets smaller which might be because unvaccinated people have acquired natural immunity:</p>
 <p><img src=i/czech-hospvaxun-2.png style=max-width:520px></p>
