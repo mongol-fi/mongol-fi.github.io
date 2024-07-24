@@ -1049,11 +1049,10 @@ ggsave(&quot;1.png&quot;,width=3,height=4.7,dpi=450)</pre>
 </h2>
 <p>The Czech Statistical Office has published spreadsheets for the number of deaths by year, ICD code, age group, and region: <a href="https://csu.gov.cz/produkty/zemreli-podle-seznamu-pricin-smrti-pohlavi-a-veku-v-cr-krajich-a-okresech-fgjmtyk2qr">https://csu.gov.cz/produkty/zemreli-podle-seznamu-pricin-smrti-pohlavi-a-veku-v-cr-krajich-a-okresech-fgjmtyk2qr</a>. Eurostat has published the yearly number of deaths by single year of age: <a href="https://ec.europa.eu/eurostat/data/database">https://ec.europa.eu/eurostat/data/database</a>.</p>
 <p>The yearly number of deaths in the record-level CSV file is otherwise identical to both sources except there's one death missing in 2021:</p>
-<pre>&gt; system(&quot;wget sars2.net/f/{czicd.csv.gz,czpopdead.csv}&quot;)
-&gt; rec=fread(&quot;CR_records.csv&quot;,showProgress=F)
+<pre>&gt; rec=fread(&quot;CR_records.csv&quot;,showProgress=F)
 &gt; reclev=rec[,.(reclev=.N),.(year=year(DatumUmrti))]
-&gt; eurostat=fread(&quot;czpopdead.csv&quot;)[year&gt;=2020,.(eurostat=sum(dead)),year]
-&gt; icd=fread(&quot;czicd.csv.gz&quot;)[year&gt;=2020,.(icd=sum(dead)),year]
+&gt; eurostat=fread(&quot;http://sars2.net/f/czpopdead.csv&quot;)[year&gt;=2020,.(eurostat=sum(dead)),year]
+&gt; icd=fread(&quot;http://sars2.net/f/czicd.csv.gz&quot;)[year&gt;=2020,.(icd=sum(dead)),year]
 &gt; merge(merge(reclev,eurostat),icd)
    year reclev eurostat    icd
 1: 2020 129289   129289 129289
@@ -1062,37 +1061,39 @@ ggsave(&quot;1.png&quot;,width=3,height=4.7,dpi=450)</pre>
 <h2>
 <a href=#Proportion_of_doses_that_were_given_by_an_elderly_home id=Proportion_of_doses_that_were_given_by_an_elderly_home>Proportion of doses that were given by an elderly home</a>
 </h2>
-<p>The file <code>ockovani-profese.csv</code> has about 19 million rows with one row per vaccine dose. It includes a field for the name of the institution or individual who gave each vaccine dose. The file doesn't include a way to indentify which doses were given to the same person, so I didn't just include first doses for each person below but all doses.</p>
-<p>Elderly people who live in long-term care have much higher age-normalized mortality rates than elderly people who don't live in long-term care, so I wanted to check if Pfizer or Moderna vaccines had a higher percentage of vaccinators that were listed as elderly homes, so I searched for vaccinators whose name matched <code>Domov pro seniory|Domov seniorů|Penzion pro seniory</code>. There was only a total of 7,708 matching rows, which might be if the name of the individual vaccinating person was listed as the vaccinator instead, or if people in elderly homes got vaccinated at a hospital:</p>
+<p>The file <code>ockovani-profese.csv</code> has about 19 million rows with one row per vaccine dose. It includes a field for the name of the organization or individual who gave each vaccine dose.</p>
+<p>Elderly people who live in long-term care have much higher age-normalized mortality rates than elderly people who don't live in long-term care, which is one of the confounding factors that is not accounted by simple age-standardized mortality rates.</p>
+<p>I wanted to check if Pfizer or Moderna vaccines had a higher percentage of vaccinators that were listed as elderly homes, so I searched for vaccinators whose name matched <span class="quote">&quot;Domov pro seniory&quot;</span>, <span class="quote">&quot;Domov seniorů&quot;</span>, or <span class="quote">&quot;Penzion pro seniory&quot;</span>. There was only a total of 7,708 matching rows, which might be if people in elderly homes got vaccinated at a hospital or some other vaccination center, or if the name of the individual vaccinating person was listed as the vaccinator:</p>
 <pre>&gt; download.file(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-profese.csv&quot;,&quot;ockovani-profese.csv&quot;) # about 4 GiB
 &gt; pro=fread(&quot;ockovani-profese.csv&quot;)
 &gt; ta=table(pro$zarizeni_nazev)
-&gt; sort(ta[grep(&quot;Domov pro seniory|Domov seniorů|Penzion pro seniory&quot;,names(ta))],T)
-           Domov pro seniory Zahradní Město - ordinace             Domov pro seniory Háje, PL pro dospělé
-                                                  1324                                               1014
-             Domov pro seniory Chodov, praktický lékař                         Domov pro seniory Malešice
-                                                   966                                                959
-           Domov pro seniory Kobylisy, praktický lékař                              Domov pro seniory Krč
-                                                   536                                                512
-      Domov pro seniory Kamenec, Slezská Ostrava, p.o.                      Domov seniorů Vysočany s.r.o.
-                                                   490                                                435
-                              Domov pro seniory Kladno                    Domov seniorů U Přehrady, z. s.
-                                                   361                                                322
-    Domov pro seniory Osoblaha, příspěvková organizace             Domov pro seniory Frýdek-Místek, p. o.
-                                                   185                                                175
-                    Domov pro seniory Holásecká, p. o.     Domov pro seniory Seniorcentrum Slavkov, p. o.
-                                                   103                                                101
-                     Domov pro seniory U Pramene Louny           Penzion pro seniory Frýdek-Místek, p. o.
-                                                    86                                                 59
-                    Domov pro seniory Foltýnova, p. o.    Domov pro seniory Nopova,příspěvková organizace
-                                                    50                                                 18
-                   Domov pro seniory Kosmonautů, p. o.     Domov seniorů Jankov, poskytovatel soc. služeb
-                                                     8                                                  4</pre>
-<p>But anyway, compared to a baseline of all vaccine types, the excess age-normalized proportion of rows where the vaccinator was one of the facilities listed above was about 50% for SPIKEVAX but about 8% for Comirnaty:</p>
-<pre>&gt; p=pro[,.N,.(vaxtype=vakcina,fac=zarizeni_nazev,age=vekova_skupina)]
-&gt; p=p[,.(N=sum(N),match=sum(N*grepl(&quot;Domov pro seniory|Domov seniorů|Penzion pro seniory&quot;,fac))),.(vaxtype,age)]
-&gt; a=merge(p,p[,.(base=sum(match)/sum(N)),age])[,base:=base*N]
-&gt; a[,.(excess=(sum(match)/sum(base)-1)*100,match=sum(match),N=sum(N)),vaxtype][,matchpct:=match/N*100][order(-N)][N&gt;1e4]|&gt;print(r=F)
+&gt; pro[,.N,zarizeni_nazev][grep(&quot;Domov pro seniory|Domov seniorů|Penzion pro seniory&quot;,zarizeni_nazev)][order(-N)]|&gt;print(r=F)
+                                    zarizeni_nazev    N
+       Domov pro seniory Zahradní Město - ordinace 1324
+            Domov pro seniory Háje, PL pro dospělé 1014
+         Domov pro seniory Chodov, praktický lékař  966
+                        Domov pro seniory Malešice  959
+       Domov pro seniory Kobylisy, praktický lékař  536
+                             Domov pro seniory Krč  512
+  Domov pro seniory Kamenec, Slezská Ostrava, p.o.  490
+                     Domov seniorů Vysočany s.r.o.  435
+                          Domov pro seniory Kladno  361
+                   Domov seniorů U Přehrady, z. s.  322
+Domov pro seniory Osoblaha, příspěvková organizace  185
+            Domov pro seniory Frýdek-Místek, p. o.  175
+                Domov pro seniory Holásecká, p. o.  103
+    Domov pro seniory Seniorcentrum Slavkov, p. o.  101
+                 Domov pro seniory U Pramene Louny   86
+          Penzion pro seniory Frýdek-Místek, p. o.   59
+                Domov pro seniory Foltýnova, p. o.   50
+   Domov pro seniory Nopova,příspěvková organizace   18
+               Domov pro seniory Kosmonautů, p. o.    8
+    Domov seniorů Jankov, poskytovatel soc. služeb    4</pre>
+<p>But anyway, compared to a baseline of all vaccine types, the excess age-normalized proportion of rows where the vaccinator was one of the elderly homes listed above was about 50% for SPIKEVAX but about 8% for Comirnaty:</p>
+<pre>&gt; d=pro[,.N,.(vaxtype=vakcina,vaccinator=zarizeni_nazev,age=vekova_skupina)]
+&gt; d=d[,.(N=sum(N),match=sum(N*grepl(&quot;Domov pro seniory|Domov seniorů|Penzion pro seniory&quot;,vaccinator))),.(vaxtype,age)]
+&gt; d=merge(d,d[,.(base=sum(match)/sum(N)),age])[,base:=base*N]
+&gt; d[,.(excess=(sum(match)/sum(base)-1)*100,match=sum(match),N=sum(N)),vaxtype][,matchpct:=match/N*100][order(-N)][N&gt;1e4]|&gt;print(r=F)
                               vaxtype  excess match        N matchpct # excess is adjusted for age but matchpct is not
                             Comirnaty    7.64  6071 15037534 0.040372
                              SPIKEVAX   50.47  1111  1634938 0.067954
@@ -1103,6 +1104,82 @@ ggsave(&quot;1.png&quot;,width=3,height=4.7,dpi=450)</pre>
       Comirnaty Original/Omicron BA.1    9.70    89   121312 0.073365
                        Comirnaty 5-11 -100.00     0   112874 0.000000
                             Nuvaxovid -100.00     0    11311 0.000000</pre>
+<p>The file <code>ockovani-profese.csv</code> includes a vaccinator ID and vaccinator name for all 19,047,050 rows. However it includes a different set of vaccinator IDs and vaccinator names than the <code>ockovaci-zarizeni.csv</code> which has information about each vaccinator. However regardless of whether I tried to join the two files by the names or the IDs, about 15 million out of about 19 million rows in <code>ockovani-profese.csv</code> could not be joined with the other file:</p>
+<table>
+<tr><th>
+File
+</th><th>
+Unique IDs
+</th><th>
+Unique names
+</th></tr>
+<tr><td>
+<code>ockovaci-zarizeni.csv</code>
+</td><td>
+5365
+</td><td>
+5571
+</td></tr>
+<tr><td>
+<code>ockovani-profese.csv</code>
+</td><td>
+5439
+</td><td>
+5663
+</td></tr>
+<tr><td>
+Shared by both files
+</td><td>
+5391
+</td><td>
+5168
+</td></tr>
+<tr><td>
+Doses included by join
+</td><td>
+3979039
+</td><td>
+4052183
+</td></tr>
+</table>
+<p>The proportion of doses whose vaccinator ID missing from the file for vaccinator information was about 89% for Comirnaty, 48% for SPIKEVAX, and 19% for VAXZEVRIA:</p>
+<pre>&gt; zar=fread(&quot;ockovaci-zarizeni.csv&quot;)
+&gt; pro[,.(missingpct=round(mean(!zarizeni_kod%in%zar$zarizeni_kod)*100),N=.N),vakcina][order(-N)][N&gt;1e5]|&gt;print(r=F)
+                              vakcina missingpct        N
+                            Comirnaty         89 15037534
+                             SPIKEVAX         48  1634938
+                            VAXZEVRIA         19   887562
+ Comirnaty Original/Omicron BA.4/BA.5         57   436729
+             COVID-19 Vaccine Janssen         47   415094
+           Comirnaty Omicron XBB.1.5.         26   375130
+      Comirnaty Original/Omicron BA.1         41   121312
+                       Comirnaty 5-11         64   112874</pre>
+<p>In the file for vaccinator information, I believe the field <code>prakticky_lekar</code> indicates if the vaccinator was a doctor who is a practicioner (but it might not necessarily mean a general practicioner). For the approximately 4 million out of 19 million rows in <code>ockovani-profese.csv</code> where the vaccinator ID was not missing from the file for vaccinator information, the excess age-normalized percentage of doses where the <code>practicky_lekar</code> field was true was about -7% for Comirnaty but 7% for SPIKEVAX:</p>
+<pre>&gt; vaccinators=zar[,.(vaccinator=zarizeni_kod,practioner=!is.na(zar$prakticky_lekar))]
+&gt; d=merge(pro[,.N,.(vaxtype=vakcina,vaccinator=zarizeni_kod,age=vekova_skupina)],vaccinators)
+&gt; d=d[,.(N=sum(N),match=sum(practioner*N)),.(vaxtype,age)]
+&gt; d=merge(d,d[,.(base=sum(match)/sum(N)),age])[,base:=base*N]
+&gt; d[,.(excesspct=round((sum(match)/sum(base)-1)*100),N=sum(N)),vaxtype][order(-N)][N&gt;=1e4]|&gt;print(r=F)
+                              vaxtype excesspct       N
+                            Comirnaty        -7 1606601
+                             SPIKEVAX         7  850742
+                            VAXZEVRIA         3  714750
+           Comirnaty Omicron XBB.1.5.         4  278685
+             COVID-19 Vaccine Janssen         5  220765
+ Comirnaty Original/Omicron BA.4/BA.5         3  186579
+      Comirnaty Original/Omicron BA.1         3   72163
+                       Comirnaty 5-11         0   40573</pre>
+<p>When I looked at only first doses instead of all doses, there were so many doses missing for the type Comirnaty that there were three other vaccine types with a higher number of doses that could be joined. But now the excess age-normalized percentage was about -30% for Comirnaty but 11% for SPIKEVAX:</p>
+<pre>&gt; d=merge(pro[poradi_davky==1,.N,.(vaxtype=vakcina,vaccinator=zarizeni_kod,age=vekova_skupina)],vaccinators)
+&gt; d=d[,.(N=sum(N),match=sum(practioner*N)),.(vaxtype,age)]
+&gt; d=merge(d,d[,.(base=sum(match)/sum(N)),age])[,base:=base*N]
+&gt; d[,.(excesspct=round((sum(match)/sum(base)-1)*100),N=sum(N)),vaxtype][order(-N)][N&gt;=1e4]|&gt;print(r=F)
+                  vaxtype excesspct      N
+                VAXZEVRIA         4 359921
+                 SPIKEVAX        11 272755
+ COVID-19 Vaccine Janssen         7 218950
+                Comirnaty       -30 209720
+           Comirnaty 5-11         0  21275</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
