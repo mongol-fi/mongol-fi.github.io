@@ -179,11 +179,10 @@ vaxq       0   10   20   30   40   50   60   70   80    90 Total
 <h2>
 <a href=#Triangle_plot_of_Moderna_Pfizer_ratio id=Triangle_plot_of_Moderna_Pfizer_ratio>Triangle plot of Moderna-Pfizer ratio</a>
 </h2>
-<p>In the plot below I calculated mortality relative to the baseline using the same method as in earlier sections of this HTML file, so that for each cell of the heatmap, I multiplied a vector of the number of person-days for each age by a vector of mortality rates the same month among each age in the total population that is included in the record-level data.</p>
-<p>For example Moderna had 18019 actual deaths and about 18220.05 expected deaths, and Pfizer had 94068 actual deaths and about 125238.85 expected deaths, so I calculated the total Moderna-Pfizer ratio as <code>(18019/18220.05)/(94068/125238.85)</code>, which is about 1.32.</p>
-<p>The plot below shows that people who were vaccinated in January 2021 had a total Moderna-Pfizer ratio of about 2.3. However the ratio continued to remain high even in late 2022 which was almost two years after vaccination. But if the reason why the total Moderna-Pfizer ratio is above 1 is because Moderna vaccines killed more people like Kirsch is saying, then you'd expect the deaths to be concentrated in the weeks or months following vaccination when vaccine deaths are the most common, so that the ratio would get closer to zero over time and it wouldn't remain at a high level even two years after vaccination.</p>
-<p>The plot also shows that people who got vaccinated in the fourth quarter of 2021 had a Moderna-Pfizer ratio close to 1.0, and the ratio continued to remain around the same level even a year later.</p>
-<p>The Czech data seems to have some confounding factors which cause people who got the first dose in late 2021 to subsequently have much higher excess mortality than people who got the first dose around the rollout peak in May 2021. But in the same way there seem to be some confounding factors which cause the Moderna-Pfizer ratio to shift from about 1.58 in people vaccinated in May 2021 to around 1.02 in people who were vaccinated in the fourth quarter of 2021.</p>
+<p>In the plot below I calculated mortality relative to the baseline using the same method as in earlier sections of this HTML file, so that for each cell of the heatmap, I multiplied a vector of the number of person-days for each age by a vector of mortality rates the same month among the age in the total population that is included in the record-level data. However this time I didn't just aggregate together ages 100+ into a single age group but also ages 1-4, 5-9, 10-14, 15-19 (even though it made little difference on the results).</p>
+<p>But anyway, for example Moderna had 18019 actual deaths and about 19572.7 expected deaths, and Pfizer had 94068 actual deaths and about 134376.0 expected deaths, so I calculated the total Moderna-Pfizer ratio as <code>(18019/19572.7)/(94068/134376.0)</code>, which is about 1.32.</p>
+<p>The plot below shows that people who were vaccinated in January 2021 had a total Moderna-Pfizer ratio of about 2.3, and their ratio continued to remain high even in late 2022 which was almost two years after vaccination. But if the reason why the total Moderna-Pfizer ratio is above 1 is because Moderna vaccines killed more people like Kirsch is saying, then you'd expect the deaths to be concentrated in the weeks or months following vaccination when vaccine deaths are the most common, so that the ratio would get closer to zero over time and it wouldn't remain at a high level even two years after vaccination.</p>
+<p>The plot also shows that people who got vaccinated in the fourth quarter of 2021 had a Moderna-Pfizer ratio close to 1.0, and the ratio continued to remain around the same level even a year later. The Czech data seems to have some confounding factors which cause people who got the first dose in late 2021 to subsequently have much higher excess mortality than people who got the first dose around the rollout peak in May 2021. But in the same way there seem to be some confounding factors which cause the Moderna-Pfizer ratio to shift from about 1.59 in people vaccinated in May 2021 to around 1.02 in people who were vaccinated in the fourth quarter of 2021.</p>
 <div class="width9">
 <img src="i/czech-mrr-triangle.png">
 </div>
@@ -196,9 +195,9 @@ kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1
 
 type1=&quot;Moderna&quot;;type2=&quot;Pfizer&quot;
 
-buck=fread(&quot;http://sars2.net/f/czbucketskeep.csv.gz&quot;)[month&gt;=&quot;2020-12&quot;&amp;dose&lt;=1]
-t=buck[,.(dead=sum(dead),alive=as.numeric(sum(alive))),.(age=pmin(age,100),month,vaxmonth,type)]
-t=merge(t[type!=&quot;&quot;],t[,.(base=sum(dead)/sum(alive)),.(age,month)])[,base:=base*alive]
+b=fread(&quot;http://sars2.net/f/czbucketskeep.csv.gz&quot;)[month&gt;=&quot;2020-12&quot;&amp;dose&lt;=1][,age:=pmin(age,100)]
+t=b[,.(dead=sum(dead),alive=as.numeric(sum(alive))),.(age,month,vaxmonth,type)]
+t=merge(t[type!=&quot;&quot;],t[,.(base=sum(dead)/sum(alive)),age])[,base:=base*alive]
 t=rbind(t,t[,.(dead=sum(dead),alive=sum(alive),base=sum(base),month=&quot;Total&quot;),.(age,vaxmonth,type)])
 t=rbind(t,t[,.(dead=sum(dead),alive=sum(alive),base=sum(base),vaxmonth=&quot;Total&quot;),.(age,month,type)])
 t=t[,.(rat=sum(dead)/sum(base),alive=sum(alive)),.(type,vaxmonth,month)]
@@ -218,7 +217,7 @@ pheatmap::pheatmap(m,filename=&quot;mort.png&quot;,display_numbers=disp,
   breaks=seq(-maxcolor,maxcolor,,256),
   colorRampPalette(hsv(rep(c(7/12,0),4:5),c(.9,.75,.6,.3,0,.3,.6,.75,.9),c(.4,.65,1,1,1,1,1,.65,.4)))(256))
 
-rec=fread(&quot;Czech/data/CR_records.csv&quot;,showProgress=F)
+rec=fread(&quot;CR_records.csv&quot;,showProgress=F)
 d=rec[,.N,.(month=ua(Datum_1,substr,1,7),type=OckovaciLatka_1)]
 name1=unique(d$type);name2=rep(&quot;Other&quot;,length(name1))
 name2[name1==&quot;&quot;]=&quot;&quot;
@@ -229,7 +228,7 @@ name2[name1==&quot;COVID-19 Vaccine Janssen&quot;]=&quot;Janssen&quot;
 name2[name1==&quot;VAXZEVRIA&quot;]=&quot;AstraZeneca&quot;
 d$type=name2[match(d$type,name1)]
 
-pop=xtabs(N~month+type,d)[,c(type1,type2)]
+pop=xtabs(N~month+type,d)[,c(type2,type1)]
 pop=rbind(pop,Total=colSums(pop))[rownames(m),]
 
 exp2=.6;maxcolor2=max(pop[-nrow(pop),])
@@ -240,7 +239,27 @@ pheatmap::pheatmap(pop^exp2,filename=&quot;pop.png&quot;,display_numbers=kimi(po
   number_color=ifelse(pop^exp2&gt;maxcolor2^exp2*.45,&quot;white&quot;,&quot;black&quot;),
   breaks=seq(0,maxcolor2^exp2,,256),sapply(seq(1,0,,256),\(i)rgb(i,i,i)))
 
-system(&quot;convert -gravity north mort.png \\( -splice x4 pop.png \\) +append 0.png;w=`identify -format %w 0.png`;pad=48;convert \\( -pointsize 46 -font Arial-Bold -size $[w-pad]x caption:&#39;Czech record-level data: Moderna-Pfizer mortality ratio from day of first dose until end of 2022&#39; \\( -gravity northwest -splice x12 -pointsize 42 -font Arial -interline-spacing -2 caption:&#39;The y-axis shows the month of vaccination and the x-axis shows the month of death. The two columns on the right show the number of people who got vaccinated each month. Only first doses included.&#39; \\) -extent $[w-pad]x -gravity center \\) \\( -gravity north 0.png -shave x6 \\) -append -gravity north -splice x20 1.png&quot;)</pre>
+system(&quot;magick mort.png \\( pop.png -chop 14x -splice x5 \\) +append 0.png;w=`identify -format %w 0.png`;pad=22;magick -pointsize 46 -font Arial-Bold -interline-spacing -2 \\( -size $[w-pad*2]x caption:&#39;Czech record-level data: Moderna-Pfizer mortality ratio from day of first dose until end of 2022&#39; -splice $[pad]x20 \\) \\( -pointsize 42 -font Arial caption:&#39;The y-axis shows the month of vaccination and the x-axis shows the month of death. The two columns on the right show the number of people who got vaccinated each month. Only first doses included.&#39; -splice $[pad]x14 \\) 0.png -append 1.png&quot;)</pre>
+<p>Kirsch later quoted my triangle plot in a Substack post where his caption for the plot said: <span class="quote">&quot;Triangle plot. Y is date of shot. x is month of death. For all 110 combinations with sufficient data to be above the noise, Moderna was a disaster.&quot;</span> [<a href="https://kirschsubstack.com/p/while-working-on-the-czech-republic">https://kirschsubstack.com/p/while-working-on-the-czech-republic</a>] However you don't have to look at the Moderna-Pfizer ratio grouped by both month of vaccination and month of death, but you can just look at the ratio by the month of vaccination alone like in the total column in my heatmap. And there's about 103k people who got a first dose from a Moderna or Pfizer vaccine in October 2021, 317k in November, and 141k in December, so I think it's a big enough sample size. And the Moderna-Pfizer ratio was only about 0.93 in people who were vaccinated in October 2021, 1.02 in November, and 1.02 in December:</p>
+<pre>&gt; library(data.table)
+&gt; b=fread(&quot;http://sars2.net/f/czbucketskeep.csv.gz&quot;)[,age:=pmin(age,100)]
+&gt; d=merge(b[dose==1&amp;grepl(2021,vaxmonth)],b[dose&lt;=1,.(base=sum(dead)/sum(alive)),age])[,base:=alive*base]
+&gt; a=d[,.(dead=sum(dead),base=sum(base)),.(type,vaxmonth)]
+&gt; dcast(a[,ratio:=dead/base*100],vaxmonth~type,value.var=&quot;ratio&quot;)[,.(vaxmonth,Moderna=round(Moderna),Pfizer=round(Pfizer),ratio=round(Moderna/Pfizer,2))]|&gt;print(r=F)
+ vaxmonth Moderna Pfizer ratio
+  2021-01     205     88  2.34
+  2021-02      94     72  1.31
+  2021-03      78     61  1.28
+  2021-04      78     63  1.24
+  2021-05      91     57  1.59
+  2021-06     112     76  1.48
+  2021-07     114     84  1.35
+  2021-08     109     98  1.12
+  2021-09     169    128  1.32
+  2021-10     128    137  0.93
+  2021-11     128    125  1.02
+  2021-12     154    151  1.02</pre>
+<p>In the output above, the second and third columns show the age-normalized mortality rate as percentage of all people who are included in the record-level data (so for example 78 means -22% excess mortality).</p>
 <h2>
 <a href=#Stacked_plot_of_multiple_variables_from_record_level_data_and_Czech_MoH_data id=Stacked_plot_of_multiple_variables_from_record_level_data_and_Czech_MoH_data>Stacked plot of multiple variables from record-level data and Czech MoH data</a>
 </h2>
@@ -1530,7 +1549,7 @@ ggsave(&quot;1.png&quot;,width=3.4,height=4.7,dpi=450)</pre>
 <p>The x-axis shows in the first two quarters all vaccine types had low mortality, because people were still subject to the temporal healthy vaccinee effect after the first dose.</p>
 <p>However the y-axis shows that there was a sudden increase in mortality in people who were vaccinated in the third quarter of 2021 or later. For people who were vaccinated in the fourth quarter of 2021, Pfizer had about 42% excess mortality but Moderna had 45% excess mortality, so the ratio between Moderna and Pfizer was close to 1, but during the next three quarters the ratio fell below 1 because Moderna had lower excess mortality than Pfizer:</p>
 <p><img src=i/czech-triangletype.png style=max-width:650px></p>
-<p>The next plot is otherwise the same except I included all doses instead of only first doses, and I also removed people under earlier doses after a new dose. Now AstraZeneca has a massive increase in excess mortality in the first quarter of 2022, which is because almost no people got a booster dose from an AstraZeneca vaccine, so the healthy vaccinees moved under another vaccine brand in the first quarter of 2021. Now the y-axis shows the month of most recent vaccination, so in the first quarter of 2021 there's a huge increase in the excess mortality of people whose most recent vaccine was in the first three quarters of 2021:</p>
+<p>The next plot is otherwise the same except I included all doses instead of only first doses, and I also removed people under earlier doses after a new dose. Now AstraZeneca has a massive increase in excess mortality in the first quarter of 2022, which is because almost no people got a booster dose from an AstraZeneca vaccine, so the healthy vaccinees moved under another vaccine brand in the first quarter of 2022. Now the y-axis shows the month of most recent vaccination, so in the first quarter of 2022 there's a huge increase in the excess mortality of people whose most recent vaccine was in the first three quarters of 2021:</p>
 <p><img src=i/czech-triangletype-2.png style=max-width:650px></p>
 <pre>library(data.table)
 
