@@ -75,8 +75,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <div class="maxwidth">
 <img src=i/czech-chronic-1.png class=width5><img src=i/czech-chronic-2.png class=width4>
 </div>
-<p>The value of the <code>indikace_chronicke_onemocneni</code> field (indication chronic illness) is always either 1 or empty.</p>
-<p>For first doses, at first I thought that the percentage of people where the value of the <span class="quote">&quot;indication chronic illness&quot;</span> column was 1 was surprisingly low, because there's only one age group where it's above 10%, and the percentage seemed to be fairly high in young age groups relative to old age groups:</p>
+<p>The value of the <code>indikace_chronicke_onemocneni</code> column (indication chronic illness) is always either 1 or empty. I thought that the percentage of people where the value of the <span class="quote">&quot;indication chronic illness&quot;</span> column was 1 was surprisingly low, because there's only one age group where the column is true for over 10% of people with a first dose, and the percentage seemed to be fairly high in young age groups relative to old age groups (and for some reaoson it was about 5 times higher in ages 65-69 than ages 75-79):</p>
 <pre>&gt; download.file(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-profese.csv&quot;,&quot;ockovani-profese.csv&quot;) # about 4 GiB
 &gt; t=fread(&quot;ockovani-profese.csv&quot;)
 &gt; d=t[poradi_davky==1&amp;vekova_skupina!=&quot;nezařazeno&quot;,.(.N,chronic=sum(indikace_chronicke_onemocneni,na.rm=T)),.(type=vakcina,age=as.numeric(sub(&quot;[+-].*&quot;,&quot;&quot;,vekova_skupina)))]
@@ -99,8 +98,79 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
   70        5.3
   75        2.1
   80        1.1</pre>
-<p>However later on Clare Craig realized that the column probably meant something like if person was eligible to be vaccinated early because they had a chronic illness, which would mean that it wouldn't include all types of chronic illnesses. [<a href="https://drclarecraig.substack.com/p/double-checking-the-claims-about">https://drclarecraig.substack.com/p/double-checking-the-claims-about</a>] So that would explain the low percentages.</p>
-<p>In the following code I calculated an age-normalized proportion of people whose <span class="quote">&quot;indication chronic illness&quot;</span> column was true by vaccine type, so that my baseline was the proportion of the column by age group among all people who are included in the CSV file. The excess proportion of the column was about -26% for the first dose type Comirnaty but about 55% for SPIKEVAX:</p>
+<p>Clare Craig said that the column didn't mean if the person had a chronic illness or not but that it referred to <span class="quote">&quot;individuals preferentially vaccinated due to chronic disease&quot;</span>, even though she didn't cite any source for why that would be the case. [<a href="https://drclarecraig.substack.com/p/double-checking-the-claims-about">https://drclarecraig.substack.com/p/double-checking-the-claims-about</a>] That might explain why the total percentage of people who have the indication of a chronic illness is so low.</p>
+<p>However on this page for Czech vaccination statistics, there were 285,232 vaccinated people with the <span class="quote">&quot;indication&quot;</span> of chronic illness but there's 273,374 vaccinated people in the <span class="quote">&quot;priority group&quot;</span> of chronic illness: <a href="https://ockovani.opendatalab.cz/statistiky_ockovani#ockovani-indikace">https://ockovani.opendatalab.cz/statistiky_ockovani#ockovani-indikace</a>. I don't know how the two groups are different. A tooltip for the indication of chronic illness included the following text in Czech: <span class="quote">&quot;Chronically ill (hemato-oncological disease, oncological disease (solid tumors), serious acute or long-term heart disease, serious long-term lung disease, diabetes mellitus, obesity, serious long-term kidney disease, serious long-term liver disease, status after transplantation or on the waiting list, hypertension, seriousltip neurological or neuromuscular disease, congenital or acquired cognitive deficit, rare genetic disease, severe weakening of the immune system, other serious diseases).&quot;</span> But the tooltip for the priority group of chronic illness simply said <span class="quote">&quot;A person with a chronic illness&quot;</span>. The <code>ockovani-profese.csv</code> file had 285,232 rows where the <code>indikace_chronicke_onemocneni</code> column was true and the dose number was 1.</p>
+<div class="width8">
+<img src="i/czech-indication-chronic.jpg">
+</div>
+<p>But anyway, one explanation for why there's so few people who have the indication of chronic illness might be if they only include serious chronic illnesses (even though the list of chronic illnesses in the tooltip also included hypertension, which alone should have a prevalence of more than the total percentage of people with the <span class="quote">&quot;indication&quot;</span> of chronic illness).</p>
+<p>This PDF describes the <span class="quote">&quot;infectious disease information system&quot;</span> that is used in the Czech Republic (<span class="quote">&quot;Informační systém infekční nemoci&quot;</span>, ISIN): <a href="https://vladci.cz/archive/covid/106/UZIS_2022-02_Struktura_NZIS_106.pdf">https://vladci.cz/archive/covid/106/UZIS_2022-02_Struktura_NZIS_106.pdf</a>. The PDF includes a list of fields which are contained in a database for COVID-19 cases, which also includes a module for COVID vaccinations (<span class="quote">&quot;Modul vakcinace&quot;</span>, or <span class="quote">&quot;OČKO&quot;</span> which is short for <span class="quote">&quot;očkovací&quot;</span> which is the Czech word for vaccination). Here's a machine translation of the complete list of <span class="quote">&quot;indications&quot;</span> that were included in the vaccination module:</p>
+<blockquote>
+<p>Indications (may change with regard to indications in the Central Reservation System - CRS):</p>
+<ul>
+<li>Professional
+<ul>
+<li>Health workers of the ARO Department, ICU</li>
+<li>Health workers Emergency reception</li>
+<li>Ambulance</li>
+<li>Medical staff of the Infectious Diseases Department</li>
+<li>Medical staff of the Pulmonary Department</li>
+<li>Employees of public health authorities conducting epidemiological investigations</li>
+<li>Laboratory workers processing biological samples for examination on Covid-19</li>
+<li>Workers and clients in social services</li>
+<li>General practitioners, general practitioners for children and adolescents, dentists, pharmacists</li>
+<li>Workers of critical infrastructure - integrated rescue system, energy workers, government, crisis teams</li>
+<li>Other workers of public health protection authorities</li>
+<li>Other healthcare workers</li>
+<li>Employees of the Ministry of Defense</li>
+<li>Teaching staff</li>
+<li>Other workers in education</li>
+<li>Security forces</li>
+<li>Persons involved in the provision of health services</li>
+<li>THP workers in hospitals</li>
+<li>Caregivers (a person caring for a person in the III or IV degree dependencies)</li>
+<li>University academic staff</li>
+</ul></li>
+<li>Riskiness
+<ul>
+<li>Hemato-oncological disease</li>
+<li>Oncological disease (solid tumors)</li>
+<li>Severe acute or long-term heart disease</li>
+<li>Serious long-term lung disease</li>
+<li>Diabetes mellitus</li>
+<li>Obesity</li>
+<li>Other serious illness</li>
+<li>Severe long-term kidney disease</li>
+<li>Severe long-term liver disease</li>
+<li>Status after transplant or on the waiting list</li>
+<li>Hypertension</li>
+<li>Severe neurological or neuromuscular disease</li>
+<li>Congenital or acquired cognitive deficit</li>
+<li>A rare genetic disease</li>
+<li>Severe weakening of the immune system</li>
+</ul></li>
+<li>Age
+<ul>
+<li>People aged 80+</li>
+<li>People aged 70 - 79</li>
+<li>People aged 65 - 69</li>
+<li>People aged 60-64</li>
+<li>People aged 55-59</li>
+<li>People aged 50-54</li>
+<li>People aged 45-49</li>
+<li>People aged 40 - 44</li>
+<li>People aged 35 - 39</li>
+<li>People aged 30 - 34</li>
+<li>People aged 25-29</li>
+<li>People aged 20 - 24</li>
+<li>People aged 16-19</li>
+<li>People aged 12-15</li>
+<li>Other</li>
+</ul></li>
+</ul>
+</blockquote>
+<p>I guess another reason why the percentage of people who are indicated as having a chronic illness is so low might be if information about chronic illnesses was not added to the database for all people. It might also be that the data about chronic illnesses was entered for people who were in a priority group for vaccination because of a chronic illness, but it was rare for chronic illnesses to be filled in for other groups of people (which might explain why the number of people who had the indication of a chronic illness was only about 4% higher than the number of people who were in the priority group for a chronic illness).</p>
+<p>But anyway, in the following code I calculated an age-normalized proportion of people whose <span class="quote">&quot;indication chronic illness&quot;</span> column was true, so that my baseline was the proportion of the column by age group among all people who are included in the CSV file. The excess proportion of the column was about -26% for the first dose type Comirnaty but about 55% for SPIKEVAX:</p>
 <pre>&gt; a=d[,.(N=sum(N),chronic=sum(chronic)),.(age,type)]
 &gt; a=merge(a,d[,.(base=sum(chronic)/sum(N)),age])[,base:=base*N]
 &gt; a[,.(pct=round((sum(chronic)/sum(base)-1)*100),N=sum(N)),type][order(-N)]|&gt;print(r=F)
@@ -128,7 +198,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
  SPIKEVAX BIVALENT ORIGINAL/OMICRON BA.4-5  310       5
                                    Valneva -100       2
                                       type  pct       N</pre>
-<p>Before I realized that the <span class="quote">&quot;indication chronic illness&quot;</span> meant something like whether a person was eligible to be vaccinated early because of a chronic illness, I was expecting the late vaccinees who got the first dose in late 2021 to have a higher age-normalized proportion of the column than people who got vaccinated during the rollout peak, but actually I got the opposite result. However I misunderstood the value of the column, and actually it makes sense that there would no longer be many people who were eligible to get vaccinated early but who only got vaccinated in late 2021:</p>
+<p>I was expecting the late vaccinees who got the first dose in late 2021 to have a higher age-normalized proportion of the <span class="quote">&quot;indication chronic illness&quot;</span> column than people who got vaccinated during the rollout peak, but actually I got the opposite result. However it might be if the column indicates if people were priorized for vaccination because of a chronic illness like Clare Craig suggested (or if chronic illnesses were entered more often for people who qualified to be vaccinated early but less often for other groups of people):</p>
 <div class="width8">
 <img src="i/czech-chronic-3.png">
 </div>
@@ -190,9 +260,9 @@ pheatmap::pheatmap(pop^exp2,filename=&quot;i2.png&quot;,display_numbers=ifelse(p
   breaks=seq(0,maxcolor2^exp2,,256),
   sapply(seq(1,0,,256),\(i)rgb(i,i,i)))
 
-cap=&quot;\u00a0     Czech MoH data: Excess percentage of people who were priorized for vaccination due to chronic illness out of all people with a first dose listed. The x-axis shows the month of vaccination. The baseline is the proportion of people who were prioritized due to chronic illness by age group among all people in the CSV file who have a first dose listed in 2022 or earlier.
-      The direct method of age standardization was used, so that for each cell, the number of people in each age group was multiplied by the proportion of people in the same age group who were priorized due to chronic illness in the whole CSV file, and the results for each age group were added together to get the total expected number of people priorized due to chronic illness for the cell.
-      Source: onemocneni-aktualne.mzcr.cz/api/v2/covid-19, tab for vaccines, \&quot;COVID-19: Overview of reported vaccinations by profession (place of vaccination, residence of the vaccinated person)\&quot;.&quot;
+cap=&quot;\u00a0     Czech MoH data: Excess percentage of people indicated to have a chronic illness out of all people who have a first dose listed. The x-axis shows the month of vaccination. The baseline is the proportion of people who were prioritized due to chronic illness by age group among all people in the CSV file who have a first dose listed in 2022 or earlier.
+      The direct method of age standardization was used, so that for each cell, the number of people in each age group was multiplied by the proportion of people in the same age group who were priorized due to chronic illness in the whole CSV file, and the results for each age group were added together to get the total expected number of people who were indicated to have a chronic illness for the cell.
+      Source: onemocneni-aktualne.mzcr.cz/api/v2/covid-19, tab for vaccines, CSV file translated as \&quot;COVID-19: Overview of reported vaccinations by profession (place of vaccination, residence of the vaccinated person, column \&quot;indikace_chronicke_onemocneni\&quot;)\&quot;.&quot;
 
 system(paste0(&quot;w=`identify -format %w i1.png`;pad=20;magick -pointsize 40 -font Arial \\( -size $[w-pad*3]x caption:&#39;&quot;,cap,&quot;&#39; -splice $[pad]x20 \\) \\( i1.png -crop -0+8 \\) \\( -size $[w-pad*3]x caption:&#39;Number of people who received a first dose each month&#39; -splice $[pad]x0 \\) \\( i2.png -crop -0+8 \\) -append 1.png&quot;))</pre>
 <p>This shows the percentage of people by age group and vaccine type whose <span class="quote">&quot;indication chronic illness&quot;</span> column was true (where I again included only first doses):</p>
@@ -1045,10 +1115,9 @@ ggsave(&quot;1.png&quot;,width=3,height=4.7,dpi=450)</pre>
 </h2>
 <p>The file <code>ockovani-profese.csv</code> has about 19 million rows with one row per vaccine dose. It includes a field for the name of the organization or individual who gave each vaccine dose.</p>
 <p>Elderly people who live in long-term care have much higher age-normalized mortality rates than elderly people who don't live in long-term care, which is one of the confounding factors that is not accounted by simple age-standardized mortality rates.</p>
-<p>I wanted to check if Pfizer or Moderna vaccines had a higher percentage of vaccinators that were listed as elderly homes, so I searched for vaccinators whose name matched <span class="quote">&quot;Domov pro seniory&quot;</span>, <span class="quote">&quot;Domov seniorů&quot;</span>, or <span class="quote">&quot;Penzion pro seniory&quot;</span>. There was only a total of 7,708 matching rows, which might be if people in elderly homes got vaccinated at a hospital or some other vaccination center, or if the name of the individual vaccinating person was listed as the vaccinator:</p>
+<p>I wanted to check if Pfizer or Moderna had a higher percentage of vaccines given to elderly homes, so I searched for vaccinators whose name matched <span class="quote">&quot;Domov pro seniory&quot;</span>, <span class="quote">&quot;Domov seniorů&quot;</span>, or <span class="quote">&quot;Penzion pro seniory&quot;</span>. There was a total of only 7,708 matching rows, but it might be if people in elderly homes got vaccinated at a hospital, or if the name of the individual person who gave vaccine was listed as the vaccinator and not the name of an elderly care facility:</p>
 <pre>&gt; download.file(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-profese.csv&quot;,&quot;ockovani-profese.csv&quot;) # about 4 GiB
 &gt; pro=fread(&quot;ockovani-profese.csv&quot;)
-&gt; ta=table(pro$zarizeni_nazev)
 &gt; pro[,.N,zarizeni_nazev][grep(&quot;Domov pro seniory|Domov seniorů|Penzion pro seniory&quot;,zarizeni_nazev)][order(-N)]|&gt;print(r=F)
                                     zarizeni_nazev    N
        Domov pro seniory Zahradní Město - ordinace 1324
