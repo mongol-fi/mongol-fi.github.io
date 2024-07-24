@@ -82,6 +82,8 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Paper_about_two_subsets_of_Czech_record_level_data_from_insurance_companies>Paper about two subsets of Czech record-level data from insurance companies</a></li>
 <li><a href=#Table_for_percentage_of_different_vaccine_types_given_each_month>Table for percentage of different vaccine types given each month</a></li>
 <li><a href=#Kirschs_calculation_for_increase_in_all_cause_mortality>Kirsch's calculation for increase in all-cause mortality</a></li>
+<li><a href=#Comparison_of_yearly_number_of_deaths_according_to_different_sources>Comparison of yearly number of deaths according to different sources</a></li>
+<li><a href=#Proportion_of_doses_that_were_given_by_an_elderly_home>Proportion of doses that were given by an elderly home</a></li>
 </ul>
 
 <h2>
@@ -125,6 +127,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <p>Other:</p>
 <ul>
 <li><a href="https://github.com/PalackyUniversity/batch-dependent-safety/blob/main/data/SUKL-batches-AE.xlsx">https://github.com/PalackyUniversity/batch-dependent-safety/blob/main/data/SUKL-batches-AE.xlsx</a> (28 kiB): Number of deaths and serious adverse events reported per batch.</li>
+<li><a href="https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovaci-zarizeni.csv">https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovaci-zarizeni.csv</a>: Names for each vaccination facility code (from <a href="https://www.nzip.cz/datova-sada/18">https://www.nzip.cz/datova-sada/18</a>).</li>
 <li><a href=f/cznuts.csv>f/cznuts.csv</a> (2 kiB): NUTS3 and NUTS4 codes of Czech regions.</li>
 </ul>
 <h2>
@@ -1578,6 +1581,65 @@ month      0 10 20 30 40 50 60 70 80 90 100 Total
   2022-11  2 41 69 64 72 77 83 88 88 78  36    64
   2022-12  2 41 69 64 72 77 83 88 88 78  36    64
   Total    1 28 47 46 54 59 65 73 75 66  33    49</pre>
+<h2>
+<a href=#Comparison_of_yearly_number_of_deaths_according_to_different_sources id=Comparison_of_yearly_number_of_deaths_according_to_different_sources>Comparison of yearly number of deaths according to different sources</a>
+</h2>
+<p>The Czech Statistical Office has published spreadsheets which have deaths by year, ICD code, age group, and region: <a href="https://csu.gov.cz/produkty/zemreli-podle-seznamu-pricin-smrti-pohlavi-a-veku-v-cr-krajich-a-okresech-fgjmtyk2qr">https://csu.gov.cz/produkty/zemreli-podle-seznamu-pricin-smrti-pohlavi-a-veku-v-cr-krajich-a-okresech-fgjmtyk2qr</a>. Eurostat has published the yearly number of deaths by single year age of age: <a href="https://ec.europa.eu/eurostat/data/database">https://ec.europa.eu/eurostat/data/database</a>.</p>
+<p>The yearly number of deaths in the record-level CSV file is otherwise identical to both sources except there's one death missing in 2021:</p>
+<pre>&gt; system(&quot;wget sars2.net/f/{czicd.csv.gz,czpopdead.csv}&quot;)
+&gt; rec=fread(&quot;CR_records.csv&quot;,showProgress=F)
+&gt; reclev=rec[,.(reclev=.N),.(year=year(DatumUmrti))]
+&gt; eurostat=fread(&quot;czpopdead.csv&quot;)[year&gt;=2020,.(eurostat=sum(dead)),year]
+&gt; icd=fread(&quot;czicd.csv.gz&quot;)[year&gt;=2020,.(icd=sum(dead)),year]
+&gt; merge(merge(reclev,eurostat),icd)
+   year reclev eurostat    icd
+1: 2020 129289   129289 129289
+2: 2021 139890   139891 139891
+3: 2022 120219   120219 120219</pre>
+<h2>
+<a href=#Proportion_of_doses_that_were_given_by_an_elderly_home id=Proportion_of_doses_that_were_given_by_an_elderly_home>Proportion of doses that were given by an elderly home</a>
+</h2>
+<p>The file <code>ockovani-profese.csv</code> has about 19 million rows with one row per vaccine dose, which includes a field for the name of the institution or individual who gave each vaccine dose. The file doesn't include a way to indentify which doses were given to the same person, so I didn't just include first doses for each person below but all doses.</p>
+<p>Elderly people who live in long-term care have much higher age-normalized mortality rates than elderly people who don't live in long-term care, so I wanted to check if Pfizer or Moderna vaccines had a higher percentage of vaccinators that were listed as elderly homes, so I searched for vaccinators whose name matched <code>Domov pro seniory|Domov seniorů|Penzion pro seniory</code>. There was only a total of 7,708 matching rows, which might be if the name of the individual vaccinating person was listed as the vaccinator instead, or if people in elderly homes got vaccinated at a hospital:</p>
+<pre>&gt; download.file(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-profese.csv&quot;,&quot;ockovani-profese.csv&quot;) # about 4 GiB
+&gt; pro=fread(&quot;ockovani-profese.csv&quot;)
+&gt; ta=table(pro$zarizeni_nazev)
+&gt; sort(ta[grep(&quot;Domov pro seniory|Domov seniorů|Penzion pro seniory&quot;,names(ta))],T)
+           Domov pro seniory Zahradní Město - ordinace             Domov pro seniory Háje, PL pro dospělé
+                                                  1324                                               1014
+             Domov pro seniory Chodov, praktický lékař                         Domov pro seniory Malešice
+                                                   966                                                959
+           Domov pro seniory Kobylisy, praktický lékař                              Domov pro seniory Krč
+                                                   536                                                512
+      Domov pro seniory Kamenec, Slezská Ostrava, p.o.                      Domov seniorů Vysočany s.r.o.
+                                                   490                                                435
+                              Domov pro seniory Kladno                    Domov seniorů U Přehrady, z. s.
+                                                   361                                                322
+    Domov pro seniory Osoblaha, příspěvková organizace             Domov pro seniory Frýdek-Místek, p. o.
+                                                   185                                                175
+                    Domov pro seniory Holásecká, p. o.     Domov pro seniory Seniorcentrum Slavkov, p. o.
+                                                   103                                                101
+                     Domov pro seniory U Pramene Louny           Penzion pro seniory Frýdek-Místek, p. o.
+                                                    86                                                 59
+                    Domov pro seniory Foltýnova, p. o.    Domov pro seniory Nopova,příspěvková organizace
+                                                    50                                                 18
+                   Domov pro seniory Kosmonautů, p. o.     Domov seniorů Jankov, poskytovatel soc. služeb
+                                                     8                                                  4</pre>
+<p>But anyway, compared to a baseline of all vaccine types, the excess age-normalized proportion of rows where the vaccinator was one of the facilities listed above was about 50% for SPIKEVAX but about 8% for Comirnaty:</p>
+<pre>&gt; p=pro[,.N,.(vaxtype=vakcina,fac=zarizeni_nazev,age=vekova_skupina)]
+&gt; p=p[,.(N=sum(N),match=sum(N*grepl(&quot;Domov pro seniory|Domov seniorů|Penzion pro seniory&quot;,fac))),.(vaxtype,age)]
+&gt; a=merge(p,p[,.(base=sum(match)/sum(N)),age])[,base:=base*N]
+&gt; a[,.(excess=(sum(match)/sum(base)-1)*100,match=sum(match),N=sum(N)),vaxtype][,matchpct:=match/N*100][order(-N)][N&gt;1e4]|&gt;print(r=F)
+                              vaxtype  excess match        N matchpct # excess is adjusted for age but matchpct is not
+                            Comirnaty    7.64  6071 15037534 0.040372
+                             SPIKEVAX   50.47  1111  1634938 0.067954
+                            VAXZEVRIA  -82.64   104   887562 0.011717
+ Comirnaty Original/Omicron BA.4/BA.5  -37.68   158   436729 0.036178
+             COVID-19 Vaccine Janssen  -98.30     2   415094 0.000482
+           Comirnaty Omicron XBB.1.5.  -35.76   172   375130 0.045851
+      Comirnaty Original/Omicron BA.1    9.70    89   121312 0.073365
+                       Comirnaty 5-11 -100.00     0   112874 0.000000
+                            Nuvaxovid -100.00     0    11311 0.000000</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")

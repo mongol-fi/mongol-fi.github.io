@@ -856,13 +856,13 @@ me[,4:5]=round(me[,4:5]);print(me,r=F)</pre>
 <a href=#Age_standardized_hospitalization_rate_by_vaccination_status id=Age_standardized_hospitalization_rate_by_vaccination_status>Age-standardized hospitalization rate by vaccination status</a>
 </h2>
 <p>The date of hospitalization was missing from the CSV file I used to get hospitalizations by vaccine type in a previous section, but there's another file which includes the week of hospitalization but not vaccine type: <a href="https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-hospitalizace-tyden.csv">https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-hospitalizace-tyden.csv</a>.</p>
-<p>I used the file to make the plot below, which shows that during the COVID wave in December 2021, unvaccinated people had about 6 times higher age-standardized hospitalization rate than vaccinated people. However the difference between the rates got smaller over time which may have been because unvaccinated people acquired natural immunity over time. So by December 2023 the rate was only about 1.5 times higher in unvaccinated people than in vaccinated people:</p>
+<p>I used the file to make the plot below, which shows that during the COVID wave in December 2021, unvaccinated people had about 6 times higher age-standardized hospitalization rate than vaccinated people. However the difference between the rates got smaller, over time which may have been because unvaccinated people acquired natural immunity over time. So by December 2023 the rate was only about 1.5 times higher in unvaccinated people than in vaccinated people:</p>
 <div class="width6">
 <img src="i/czech-hospstandard.png">
 </div>
-<pre>library(data.table);library(ggplot2);library(lubridate)
+<pre>library(data.table);library(ggplot2)
 
-system(&quot;wget onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-hospitalizace-tyden.csv sars2.net/f/cz{bucketsdaily.csv.gz,census2021pop.csv}&quot;)
+# system(&quot;wget onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-hospitalizace-tyden.csv sars2.net/f/cz{bucketsdaily.csv.gz,census2021pop.csv}&quot;)
 
 t=fread(&quot;ockovani-hospitalizace-tyden.csv&quot;)
 t=t[,.(date=tyden_od+3,hosp=c(hospitalizovani_celkem-hospitalizovani_bez_ockovani,hospitalizovani_bez_ockovani),status=rep(c(&quot;Vaccinated&quot;,&quot;Unvaccinated&quot;),each=.N),age=as.integer(sub(&quot;[-+].*&quot;,&quot;&quot;,vekova_skupina)))]
@@ -879,7 +879,7 @@ me=merge(me,me[,.(base=sum(hosp)/sum(pop)),age])[,base:=base*pop]
 me=merge(me,fread(&quot;czcensus2021pop.csv&quot;)[,.(stdpop=sum(pop)),.(age=ifelse(age&lt;25,0,pmin(age,95)%/%5*5))])
 
 me[,month:=as.Date(paste0(month,&quot;-1&quot;))]
-p=me[,.(hosp=sum(hosp/pop*stdpop/sum(stdpop)*1e5*lubridate::days_in_month(month))),.(status,month)]
+p=me[,.(hosp=sum(hosp/pop*stdpop/sum(stdpop)*365e5)),.(status,month)]
 
 xstart=as.Date(&quot;2021-1-1&quot;);xend=as.Date(&quot;2024-8-1&quot;)
 xlab=c(rbind(&quot;&quot;,2021:2024),&quot;&quot;)
@@ -901,7 +901,7 @@ geom_vline(xintercept=c(xstart,xend),linewidth=.3,lineend=&quot;square&quot;)+
 geom_hline(yintercept=c(ystart,0,yend),linewidth=.3,lineend=&quot;square&quot;)+
 geom_line(aes(color=status),linewidth=.4)+
 geom_point(aes(color=status),size=.5)+
-labs(title=&quot;Czech record-level data: Age-standardized hospitalization rate&quot;,subtitle=paste0(&quot;The standard population is the 2021 census population by 5-year age groups. The unit on the y-axis is monthly hospitalizations per 100,000 people (and not per 100,000 person-years).&quot;)|&gt;stringr::str_wrap(76),x=NULL,y=NULL)+
+labs(title=&quot;Age-standardized hospitalization rate per 100,000 person-years&quot;,subtitle=paste0(&quot;The standard population is the 2021 census population by 5-year age groups.&quot;)|&gt;stringr::str_wrap(76),x=NULL,y=NULL)+
 scale_x_date(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
 scale_y_continuous(limits=c(ystart,yend),breaks=seq(ystart,yend,ystep),labels=\(x)ifelse(x&gt;=1e3,paste0(x/1e3,&quot;k&quot;),x))+
 scale_color_manual(values=color)+
@@ -926,7 +926,9 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   plot.margin=margin(3,5,4,4),
   plot.subtitle=element_text(size=6.7,margin=margin(0,0,4,0)),
   plot.title=element_text(size=7.5,face=&quot;bold&quot;,margin=margin(2,0,4,0)))
-ggsave(&quot;1.png&quot;,width=3.8,height=2.3,dpi=300)</pre>
+ggsave(&quot;0.png&quot;,width=3.8,height=2.1,dpi=300*4)
+system(&quot;magick 0.png -resize 25% 1.png&quot;)
+qp()</pre>
 <h2>
 <a href=#Hospitalizations_by_age_group_and_vaccination_status id=Hospitalizations_by_age_group_and_vaccination_status>Hospitalizations by age group and vaccination status</a>
 </h2>
@@ -951,7 +953,7 @@ $ csvtk cut -f location,date,weekly_hosp_admissions owid-covid-data.csv|grep Cze
 <p>And also if you add together the blue and red lines during the peak in March 2021, then the combined height of the lines is lower in old age groups that got vaccinated earlier.</p>
 <p>However it's also weird that during the peak in February 2021, ages 12-19 have almost the same number of hospitalizations in vaccinated and unvaccinated people even though the percentage of vaccinated people is not that high.</p>
 <p><img src=i/czech-hospvaxun.png style=max-width:520px></p>
-<p>The next plot shows the hospitalization rate per million people instead of the raw number of hospitalizations. Now vaccinated people in ages 12-19 got a big spike in the hospitalization rate around April 2021, but it's probably because vulnerable or immunocompromised people had been priorized for vaccination. But otherwise unvaccinated people generally have a much higher hospitalization rate than vaccinated people up to around mid-2022, after which the difference gets smaller which might be because unvaccinated people have acquired natural immunity:</p>
+<p>The next plot shows the hospitalization rate per million people instead of the raw number of hospitalizations. Now vaccinated people in ages 12-19 got a big spike in the hospitalization rate around April 2021, but it's probably because vulnerable groups of people had been priorized to be vaccinated early. But otherwise unvaccinated people generally have a much higher hospitalization rate than vaccinated people up to around mid-2022, after which the ratio between vaccinated and unvaccinated people gets smaller which might be because unvaccinated people have acquired natural immunity:</p>
 <p><img src=i/czech-hospvaxun-2.png style=max-width:520px></p>
 <pre>library(data.table);library(ggplot2)
 
