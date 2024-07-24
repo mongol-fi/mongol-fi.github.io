@@ -56,7 +56,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <p>Parts 1 and 2 are here: <a href=czech.html>czech.html</a>, <a href=czech2.html>czech2.html</a>.</p>
 <h2 id=Contents><a href=#Contents>Contents</a></h2>
 <ul>
-<li><a href=#People_who_were_eligible_to_be_vaccinated_early_due_to_a_chronic_illness>People who were eligible to be vaccinated early due to a chronic illness</a></li>
+<li><a href=#People_who_were_indicated_to_have_a_chronic_illness>People who were indicated to have a chronic illness</a></li>
 <li><a href=#Hospitalizations_by_vaccine_type>Hospitalizations by vaccine type</a></li>
 <li><a href=#Moderna_Pfizer_ratio_by_weeks_after_vaccination>Moderna-Pfizer ratio by weeks after vaccination</a></li>
 <li><a href=#Efficacy_against_hospitalization_relative_to_a_baseline_of_unvaccinated_people>Efficacy against hospitalization relative to a baseline of unvaccinated people</a></li>
@@ -69,7 +69,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 </ul>
 
 <h2>
-<a href=#People_who_were_eligible_to_be_vaccinated_early_due_to_a_chronic_illness id=People_who_were_eligible_to_be_vaccinated_early_due_to_a_chronic_illness>People who were eligible to be vaccinated early due to a chronic illness</a>
+<a href=#People_who_were_indicated_to_have_a_chronic_illness id=People_who_were_indicated_to_have_a_chronic_illness>People who were indicated to have a chronic illness</a>
 </h2>
 <p>Uncle John Returns posted the tables below on Twitter and wrote: <span class="quote">&quot;Turns out that those Czechs who received a dose of Moderna in 2021 were twice as likely to have a pre-existing chronic condition as those who had Pfizer with AZ higher still. [...] The source is a ministry of health file which has 1 row per dose (so 3.68 GB) with other data such as the age band, sex and place of residence. Available on the vaccinations tab here <a href="https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19">https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19</a>.&quot;</span> [<a href="https://x.com/UncleJo46902375/status/1814375808062112215">https://x.com/UncleJo46902375/status/1814375808062112215</a>]</p>
 <div class="maxwidth">
@@ -77,17 +77,11 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 </div>
 <p>The value of the <code>indikace_chronicke_onemocneni</code> field (indication chronic illness) is always either 1 or empty.</p>
 <p>For first doses, at first I thought that the percentage of people where the value of the <span class="quote">&quot;indication chronic illness&quot;</span> column was 1 was surprisingly low, because there's only one age group where it's above 10%, and the percentage seemed to be fairly high in young age groups relative to old age groups:</p>
-<pre>download.file(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-profese.csv&quot;,&quot;ockovani-profese.csv&quot;)
-
-t=fread(&quot;ockovani-profese.csv&quot;)
-
-d=t[poradi_davky==1&amp;vekova_skupina!=&quot;nezařazeno&quot;,.(
-  .N,chronic=sum(indikace_chronicke_onemocneni,na.rm=T)),.(
-  type=vakcina,age=as.numeric(sub(&quot;[+-].*&quot;,&quot;&quot;,vekova_skupina)))]
-
-d[,.(chronicpct=round(sum(chronic)/sum(N)*100,1)),age][order(age)]|&gt;print(r=F)</pre>
-<!-- -->
-<pre> age chronicpct
+<pre>&gt; download.file(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-profese.csv&quot;,&quot;ockovani-profese.csv&quot;) # about 4 GiB
+&gt; t=fread(&quot;ockovani-profese.csv&quot;)
+&gt; d=t[poradi_davky==1&amp;vekova_skupina!=&quot;nezařazeno&quot;,.(.N,chronic=sum(indikace_chronicke_onemocneni,na.rm=T)),.(type=vakcina,age=as.numeric(sub(&quot;[+-].*&quot;,&quot;&quot;,vekova_skupina)))]
+&gt; d[,.(chronicpct=round(sum(chronic)/sum(N)*100,1)),age][order(age)]|&gt;print(r=F)
+ age chronicpct
    0        1.5
    5        0.0
   12        0.1
@@ -105,19 +99,18 @@ d[,.(chronicpct=round(sum(chronic)/sum(N)*100,1)),age][order(age)]|&gt;print(r=F
   70        5.3
   75        2.1
   80        1.1</pre>
-<p>However later on people realized that actually the column does not mean if the person had a chronic illness or not, but actually it meant something like the person was eligible to be vaccinated early because they had a chronic illness. So that explains the low percentages.</p>
-<p>In the following code I calculated an age-normalized proportion of people whose <span class="quote">&quot;indication chronic illness&quot;</span> column was true by vaccine type, so that my baseline was the proportion of the column by age group among all people who are included in the CSV file. The excess proportion of the column was about -26% for the first dose type <span class="quote">&quot;Comirnaty&quot;</span> (Pfizer) but about 55% for <span class="quote">&quot;SPIKEVAX&quot;</span> (Moderna):</p>
-<pre>a=d[,.(N=sum(N),chronic=sum(chronic)),.(age,type)]
-a=merge(a,d[,.(base=sum(chronic)/sum(N)),age])[,base:=base*N]
-a[,.(pct=round((sum(chronic)/sum(base)-1)*100),N=sum(N)),type][order(-N)]|&gt;print(r=F)</pre>
-<!-- -->
-<pre>                                      type  pct       N
-                                 Comirnaty  -26 5527776
-                                  SPIKEVAX   55  526448
-                                 VAXZEVRIA  252  447428
+<p>However later on Clare Craig realized that the column probably meant something like the person was eligible to be vaccinated early because they had a chronic illness, so that it doesn't include all types of chronic illnesses. So that would explain the low percentages.</p>
+<p>In the following code I calculated an age-normalized proportion of people whose <span class="quote">&quot;indication chronic illness&quot;</span> column was true by vaccine type, so that my baseline was the proportion of the column by age group among all people who are included in the CSV file. The excess proportion of the column was about -26% for the first dose type Comirnaty but about 55% for SPIKEVAX:</p>
+<pre>&gt; a=d[,.(N=sum(N),chronic=sum(chronic)),.(age,type)]
+&gt; a=merge(a,d[,.(base=sum(chronic)/sum(N)),age])[,base:=base*N]
+&gt; a[,.(pct=round((sum(chronic)/sum(base)-1)*100),N=sum(N)),type][order(-N)]|&gt;print(r=F)
+                                      type  pct       N
+                                 Comirnaty  -26 5527776 # Pfizer
+                                  SPIKEVAX   55  526448 # Moderna
+                                 VAXZEVRIA  252  447428 # AstraZeneca
                   COVID-19 Vaccine Janssen  -35  412320
                             Comirnaty 5-11   31   59001
-                                 Nuvaxovid  -91    5424
+                                 Nuvaxovid  -91    5424 # Novavax
                 Comirnaty Omicron XBB.1.5.    6    1988
       Comirnaty Original/Omicron BA.4/BA.5  -33     669
            Comirnaty Original/Omicron BA.1   77     294
@@ -135,7 +128,7 @@ a[,.(pct=round((sum(chronic)/sum(base)-1)*100),N=sum(N)),type][order(-N)]|&gt;pr
  SPIKEVAX BIVALENT ORIGINAL/OMICRON BA.4-5  310       5
                                    Valneva -100       2
                                       type  pct       N</pre>
-<p>Before I realized that the <span class="quote">&quot;indication chronic illness&quot;</span> meant if a person was priorized to be vaccinated because of chronic illness, I was expecting the late vaccinees who got the first dose in late 2021 to have a higher age-normalized proportion of the column than people who got vaccinated during the rollout peak, but actually I got the opposite result. However I misunderstood the value of the column, and actually it makes sense that there would no longer be many people who were eligible to get vaccinated early but who only got vaccinated in late 2021:</p>
+<p>Before I realized that the <span class="quote">&quot;indication chronic illness&quot;</span> meant something like whether a person was eligible to be vaccinated early because of a chronic illness, I was expecting the late vaccinees who got the first dose in late 2021 to have a higher age-normalized proportion of the column than people who got vaccinated during the rollout peak, but actually I got the opposite result. However I misunderstood the value of the column, and actually it makes sense that there would no longer be many people who were eligible to get vaccinated early but who only got vaccinated in late 2021:</p>
 <div class="width8">
 <img src="i/czech-chronic-3.png">
 </div>
@@ -202,29 +195,23 @@ cap=&quot;\u00a0     Czech MoH data: Excess percentage of people who were priori
       Source: onemocneni-aktualne.mzcr.cz/api/v2/covid-19, tab for vaccines, \&quot;COVID-19: Overview of reported vaccinations by profession (place of vaccination, residence of the vaccinated person)\&quot;.&quot;
 
 system(paste0(&quot;w=`identify -format %w i1.png`;pad=20;magick -pointsize 40 -font Arial \\( -size $[w-pad*3]x caption:&#39;&quot;,cap,&quot;&#39; -splice $[pad]x20 \\) \\( i1.png -crop -0+8 \\) \\( -size $[w-pad*3]x caption:&#39;Number of people who received a first dose each month&#39; -splice $[pad]x0 \\) \\( i2.png -crop -0+8 \\) -append 1.png&quot;))</pre>
-<p>This shows the percentage of people by age group and vaccine type who were eligible to be vaccinated early due to chronic illness. I again only included first doses:</p>
-<pre>t=fread(&quot;ockovani-profese.csv&quot;)
-
-name1=unique(t$vakcina);name2=rep(&quot;Other&quot;,length(name1))
-name2[name1==&quot;&quot;]=&quot;&quot;
-name2[grep(&quot;comirnaty&quot;,ignore.case=T,name1)]=&quot;Pfizer&quot;
-name2[grep(&quot;spikevax&quot;,ignore.case=T,name1)]=&quot;Moderna&quot;
-name2[grep(&quot;nuvaxovid&quot;,ignore.case=T,name1)]=&quot;Novavax&quot;
-name2[name1==&quot;COVID-19 Vaccine Janssen&quot;]=&quot;Janssen&quot;
-name2[name1==&quot;VAXZEVRIA&quot;]=&quot;AstraZeneca&quot;
-t$type=name2[match(t$vakcina,name1)]
-
-a=t[poradi_davky==1&amp;vekova_skupina!=&quot;nezařazeno&quot;,.(.N,chronic=sum(indikace_chronicke_onemocneni,na.rm=T)),.(
-  type,age=as.integer(sub(&quot;[-+].*&quot;,&quot;&quot;,vekova_skupina)))]
-
-a[,age:=factor(age,unique(age)[order(as.numeric(sub(&quot;[-+].*&quot;,&quot;&quot;,unique(age))))])]
-a[,type:=factor(type,a[,sum(N),type][order(-V1)]$type)]
-
-a=rbind(a,a[,.(N=sum(N),chronic=sum(chronic),age=&quot;Total&quot;),type])
-a=rbind(a,a[,.(N=sum(N),chronic=sum(chronic),type=&quot;Total&quot;),age])
-a[,tapply(round(chronic/N*100),.(type,age),c)]</pre>
-<!-- -->
-<pre>             0  5 12 16 18 25 30 35 40 45 50 55 60 65 70 75 80 Total
+<p>This shows the percentage of people by age group and vaccine type whose <span class="quote">&quot;indication chronic illness&quot;</span> column was true (where I again included only first doses):</p>
+<pre>&gt; t=fread(&quot;ockovani-profese.csv&quot;)
+&gt; name1=unique(t$vakcina);name2=rep(&quot;Other&quot;,length(name1))
+&gt; name2[name1==&quot;&quot;]=&quot;&quot;
+&gt; name2[grep(&quot;comirnaty&quot;,ignore.case=T,name1)]=&quot;Pfizer&quot;
+&gt; name2[grep(&quot;spikevax&quot;,ignore.case=T,name1)]=&quot;Moderna&quot;
+&gt; name2[grep(&quot;nuvaxovid&quot;,ignore.case=T,name1)]=&quot;Novavax&quot;
+&gt; name2[name1==&quot;COVID-19 Vaccine Janssen&quot;]=&quot;Janssen&quot;
+&gt; name2[name1==&quot;VAXZEVRIA&quot;]=&quot;AstraZeneca&quot;
+&gt; t$type=name2[match(t$vakcina,name1)]
+&gt; a=t[poradi_davky==1&amp;vekova_skupina!=&quot;nezařazeno&quot;,.(.N,chronic=sum(indikace_chronicke_onemocneni,na.rm=T)),.(type,age=as.integer(sub(&quot;[-+].*&quot;,&quot;&quot;,vekova_skupina)))]
+&gt; a[,age:=factor(age,unique(age)[order(as.numeric(sub(&quot;[-+].*&quot;,&quot;&quot;,unique(age))))])]
+&gt; a[,type:=factor(type,a[,sum(N),type][order(-V1)]$type)]
+&gt; a=rbind(a,a[,.(N=sum(N),chronic=sum(chronic),age=&quot;Total&quot;),type])
+&gt; a=rbind(a,a[,.(N=sum(N),chronic=sum(chronic),type=&quot;Total&quot;),age])
+&gt; a[,tapply(round(chronic/N*100),.(type,age),c)]
+             0  5 12 16 18 25 30 35 40 45 50 55 60 65 70 75 80 Total
 Pfizer       1  0  0  1  1  1  2  2  2  3  4  5  6  7  3  1  1     3
 Moderna     NA NA  0  1  3  4  4  5  5  7  8 10 12 16  7  3  2     7
 AstraZeneca NA NA NA 14 17 16 19 20 21 25 28 31 34 39 12  4  3    17
@@ -243,36 +230,32 @@ Other       NA NA NA  NA NA  0  0  0  0  0  0  0  0  0  0  0 NA     0
 Total        0  0  0   1  2  3  3  3  4  5  6  8  9 12  6  2  1     5</pre>
 <p>In both of the tables above Novavax got a lower percentage than Pfizer, which might partially explain people with a Novavax vaccine have such low mortality.</p>
 <p>When I looked at third doses instead of first doses and I aggregated Omicron and pediatric vaccine types together with the main vaccine type, my excess proportion of the <span class="quote">&quot;indication chronic illness&quot;</span> column was about -6% for Pfizer but 38% for Moderna:</p>
-<pre>t=fread(&quot;ockovani-profese.csv&quot;)
-d=t[poradi_davky==3,.(.N,chronic=sum(indikace_chronicke_onemocneni,na.rm=T)),.(type=vakcina,age=vekova_skupina)][age!=&quot;nezařazeno&quot;]
-
-name1=unique(d$type);name2=ifelse(name1==&quot;&quot;,&quot;&quot;,&quot;Other&quot;)
-name2[grep(&quot;comirnaty&quot;,ignore.case=T,name1)]=&quot;Pfizer&quot;
-name2[grep(&quot;spikevax&quot;,ignore.case=T,name1)]=&quot;Moderna&quot;
-name2[grep(&quot;nuvaxovid&quot;,ignore.case=T,name1)]=&quot;Novavax&quot;
-name2[name1==&quot;COVID-19 Vaccine Janssen&quot;]=&quot;Janssen&quot;
-name2[name1==&quot;VAXZEVRIA&quot;]=&quot;AstraZeneca&quot;
-d$type=name2[match(d$type,name1)]
-
-a=d[,.(N=sum(N),chronic=sum(chronic)),.(age,type)]
-a=merge(a,d[,.(base=sum(chronic)/sum(N)),age])[,base:=base*N]
-a[,.(pct=round((sum(chronic)/sum(base)-1)*100),N=sum(N)),type][order(-N)]|&gt;print(r=F)</pre>
-<!-- -->
-<pre>        type  pct       N
+<pre>&gt; t=fread(&quot;ockovani-profese.csv&quot;)
+&gt; d=t[poradi_davky==3,.(.N,chronic=sum(indikace_chronicke_onemocneni,na.rm=T)),.(type=vakcina,age=vekova_skupina)][age!=&quot;nezařazeno&quot;]
+&gt; name1=unique(d$type);name2=ifelse(name1==&quot;&quot;,&quot;&quot;,&quot;Other&quot;)
+&gt; name2[grep(&quot;comirnaty&quot;,ignore.case=T,name1)]=&quot;Pfizer&quot;
+&gt; name2[grep(&quot;spikevax&quot;,ignore.case=T,name1)]=&quot;Moderna&quot;
+&gt; name2[grep(&quot;nuvaxovid&quot;,ignore.case=T,name1)]=&quot;Novavax&quot;
+&gt; name2[name1==&quot;COVID-19 Vaccine Janssen&quot;]=&quot;Janssen&quot;
+&gt; name2[name1==&quot;VAXZEVRIA&quot;]=&quot;AstraZeneca&quot;
+&gt; d$type=name2[match(d$type,name1)]
+&gt; a=d[,.(N=sum(N),chronic=sum(chronic)),.(age,type)]
+&gt; a=merge(a,d[,.(base=sum(chronic)/sum(N)),age])[,base:=base*N]
+&gt; a[,.(pct=round((sum(chronic)/sum(base)-1)*100),N=sum(N)),type][order(-N)]|&gt;print(r=F)
+        type  pct       N
       Pfizer   -6 3805345
      Moderna   38  569083
      Janssen   -5    2463
  AstraZeneca  134     433
      Novavax  -48     318
        Other -100      28</pre>
-<p>When I calculated a Moderna-Pfizer ratio for an age-normalized proportion of the <span class="quote">&quot;indication chronic illness&quot;</span> column so that I grouped the ratio by the month when people got the first dose, the ratio remained at a fairly steady level of about 5-6 for people vaccinated May to October 2021, but it suddenly dropped to about 2.3 the next month and it remained around 1 to 1.5 for the next 4 months. So it might also partially explain why the Moderna-Pfizer mortality ratio dropped to around 1.0 in people who were vaccinated in the fourth quarter of 2021 (even though the drop in the mortality ratio was already in October and not November):</p>
-<pre>a=d[,.(N=sum(N),chronic=sum(chronic)),.(age,type,month)]
-a=merge(a,d[,.(base=sum(chronic)/sum(N)),age])[,base:=base*N]
-a=a[,.(rat=sum(chronic)/sum(base)),.(type,month)]
-m=a[,tapply(rat,.(type,month),c)]
-round(m[&quot;Moderna&quot;,]/m[&quot;Pfizer&quot;,],2)</pre>
-<!-- -->
-<pre>2020-12 2021-01 2021-02 2021-03 2021-04 2021-05 2021-06 2021-07 2021-08 2021-09
+<p>When I calculated a Moderna-Pfizer ratio for an age-normalized proportion of the <span class="quote">&quot;indication chronic illness&quot;</span> column so that I grouped the ratio by the month when people got the first dose, the ratio remained at a fairly steady level of about 5 to 6 for people vaccinated May to October 2021, but it suddenly dropped to about 2.3 the next month and it remained around 1 to 1.5 for the next 4 months. So it might also partially explain why the Moderna-Pfizer mortality ratio dropped to around 1.0 in people who were vaccinated in the fourth quarter of 2021 (even though the drop in the mortality ratio was already in October and not November):</p>
+<pre>&gt; a=d[,.(N=sum(N),chronic=sum(chronic)),.(age,type,month)]
+&gt; a=merge(a,d[,.(base=sum(chronic)/sum(N)),age])[,base:=base*N]
+&gt; a=a[,.(rat=sum(chronic)/sum(base)),.(type,month)]
+&gt; m=a[,tapply(rat,.(type,month),c)]
+&gt; round(m[&quot;Moderna&quot;,]/m[&quot;Pfizer&quot;,],2)
+2020-12 2021-01 2021-02 2021-03 2021-04 2021-05 2021-06 2021-07 2021-08 2021-09
      NA    0.62    0.61    2.65    1.74    2.87    5.68    5.03    6.86    5.84
 2021-10 2021-11 2021-12 2022-01 2022-02 2022-03 2022-04 2022-05 2022-06 2022-07
    5.44    2.32    1.51    1.12    1.45    1.40    0.43    0.67    1.35    0.00
@@ -372,7 +355,7 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   plot.title=element_text(size=7.5,margin=margin(1,0,4.5,0),face=2))
 ggsave(&quot;0.png&quot;,width=4,height=2.2,dpi=300*4)
 system(&quot;magick 0.png -resize 25% 1.png&quot;)</pre>
-<p>This shows the Moderna-Pfizer ratio by age group and month of vaccination:</p>
+<p>This also shows the Moderna-Pfizer ratio by age group and month of vaccination:</p>
 <p><img src=i/czech-chronic-5.png style=max-width:550px></p>
 <h2>
 <a href=#Hospitalizations_by_vaccine_type id=Hospitalizations_by_vaccine_type>Hospitalizations by vaccine type</a>
@@ -1142,25 +1125,27 @@ Doses included by join
 4052183
 </td></tr>
 </table>
-<p>The proportion of doses whose vaccinator ID missing from the file for vaccinator information was about 89% for Comirnaty, 48% for SPIKEVAX, and 19% for VAXZEVRIA:</p>
-<pre>&gt; zar=fread(&quot;ockovaci-zarizeni.csv&quot;)
-&gt; pro[,.(missingpct=round(mean(!zarizeni_kod%in%zar$zarizeni_kod)*100),N=.N),vakcina][order(-N)][N&gt;1e5]|&gt;print(r=F)
-                              vakcina missingpct        N
-                            Comirnaty         89 15037534
-                             SPIKEVAX         48  1634938
-                            VAXZEVRIA         19   887562
- Comirnaty Original/Omicron BA.4/BA.5         57   436729
-             COVID-19 Vaccine Janssen         47   415094
-           Comirnaty Omicron XBB.1.5.         26   375130
-      Comirnaty Original/Omicron BA.1         41   121312
-                       Comirnaty 5-11         64   112874</pre>
+<p>The proportion of doses whose vaccinator ID was not missing from the file for vaccinator information was about 11% for Comirnaty, 52% for SPIKEVAX, and 81% for VAXZEVRIA:</p>
+<pre>&gt; download.file(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-zarizeni.csv&quot;,&quot;ockovani-zarizeni.csv&quot;)
+&gt; zar=fread(&quot;ockovaci-zarizeni.csv&quot;)
+&gt; d=pro[,.(joined=sum(zarizeni_kod%in%zar$zarizeni_kod),doses=.N),.(vaxtype=vakcina)]
+&gt; d[,joinedpct:=round((joined/doses)*100)][order(-joined)][joined&gt;1e4]|&gt;print(r=F)
+                              vaxtype  joined    doses joinedpct
+                            Comirnaty 1606601 15037534        11
+                             SPIKEVAX  850742  1634938        52
+                            VAXZEVRIA  714750   887562        81
+           Comirnaty Omicron XBB.1.5.  278685   375130        74
+             COVID-19 Vaccine Janssen  220765   415094        53
+ Comirnaty Original/Omicron BA.4/BA.5  186579   436729        43
+      Comirnaty Original/Omicron BA.1   72163   121312        59
+                       Comirnaty 5-11   40573   112874        36</pre>
 <p>In the file for vaccinator information, I believe the field <code>prakticky_lekar</code> indicates if the vaccinator was a doctor who is a practicioner (but it might not necessarily mean a general practicioner). For the approximately 4 million out of 19 million rows in <code>ockovani-profese.csv</code> where the vaccinator ID was not missing from the file for vaccinator information, the excess age-normalized percentage of doses where the <code>practicky_lekar</code> field was true was about -7% for Comirnaty but 7% for SPIKEVAX:</p>
 <pre>&gt; vaccinators=zar[,.(vaccinator=zarizeni_kod,practioner=!is.na(zar$prakticky_lekar))]
 &gt; d=merge(pro[,.N,.(vaxtype=vakcina,vaccinator=zarizeni_kod,age=vekova_skupina)],vaccinators)
 &gt; d=d[,.(N=sum(N),match=sum(practioner*N)),.(vaxtype,age)]
 &gt; d=merge(d,d[,.(base=sum(match)/sum(N)),age])[,base:=base*N]
-&gt; d[,.(excesspct=round((sum(match)/sum(base)-1)*100),N=sum(N)),vaxtype][order(-N)][N&gt;=1e4]|&gt;print(r=F)
-                              vaxtype excesspct       N
+&gt; d[,.(excesspct=round((sum(match)/sum(base)-1)*100),joined=sum(N)),vaxtype][order(-joined)][joined&gt;=1e4]|&gt;print(r=F)
+                              vaxtype excesspct  joined
                             Comirnaty        -7 1606601
                              SPIKEVAX         7  850742
                             VAXZEVRIA         3  714750
@@ -1169,12 +1154,12 @@ Doses included by join
  Comirnaty Original/Omicron BA.4/BA.5         3  186579
       Comirnaty Original/Omicron BA.1         3   72163
                        Comirnaty 5-11         0   40573</pre>
-<p>When I looked at only first doses instead of all doses, there were so many doses missing for the type Comirnaty that there were three other vaccine types with a higher number of doses that could be joined. But now the excess age-normalized percentage was about -30% for Comirnaty but 11% for SPIKEVAX:</p>
+<p>When I looked at only first doses instead of all doses, there were now so many doses missing for the type Comirnaty that there were three other vaccine types that had a higher number of doses that could be joined. And now the excess age-normalized percentage of doses given by a practicioner was about -30% for Comirnaty but 11% for SPIKEVAX:</p>
 <pre>&gt; d=merge(pro[poradi_davky==1,.N,.(vaxtype=vakcina,vaccinator=zarizeni_kod,age=vekova_skupina)],vaccinators)
 &gt; d=d[,.(N=sum(N),match=sum(practioner*N)),.(vaxtype,age)]
 &gt; d=merge(d,d[,.(base=sum(match)/sum(N)),age])[,base:=base*N]
-&gt; d[,.(excesspct=round((sum(match)/sum(base)-1)*100),N=sum(N)),vaxtype][order(-N)][N&gt;=1e4]|&gt;print(r=F)
-                  vaxtype excesspct      N
+&gt; d[,.(excesspct=round((sum(match)/sum(base)-1)*100),joined=sum(N)),vaxtype][order(-joined)][joined&gt;=1e4]|&gt;print(r=F)
+                  vaxtype excesspct joined
                 VAXZEVRIA         4 359921
                  SPIKEVAX        11 272755
  COVID-19 Vaccine Janssen         7 218950
