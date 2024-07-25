@@ -497,9 +497,11 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=output>
 <span class=title># mode value</span></span>
 <span class=prompt>&gt;</span> <span class=code>v=c(5,3,8,5,8,8)</span>
-<span class=prompt>&gt;</span> <span class=code>as.numeric(names(which.max(table(v))))</span>
+<span class=prompt>&gt;</span> <span class=code>collapse::fmode(v)</span><span class=comment> # this was fastest in a benchmark with a longer vector</span>
 <span class=output>[1] 8</span>
-<span class=prompt>&gt;</span> <span class=code>collapse::fmode(v)</span>
+<span class=prompt>&gt;</span> <span class=code>data.table(v)[,.N,v][which.max(N),v]</span><span class=comment> # this was about 4 times slower</span>
+<span class=output>[1] 8</span>
+<span class=prompt>&gt;</span> <span class=code>as.numeric(names(which.max(table(v))))</span><span class=comment> # this was about 12 times slower</span>
 <span class=output>[1] 8</span>
 <span class=output>
 <span class=title># mean-center matrix columns</span></span>
@@ -1246,14 +1248,6 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=output>1                unlist(mtcars) 59.31585</span>
 <span class=output>2 unlist(mtcars, use.names = F)  2.98307</span>
 <span class=output>
-<span class=title># add a row for colsums to data.table but ignore non-numeric column</span></span>
-<span class=prompt>&gt;</span> <span class=code>t=data.table(sex=c(&quot;M&quot;,&quot;F&quot;),col1=4:5,col2=6:7)</span>
-<span class=prompt>&gt;</span> <span class=code>rbind(t,t[,-1][,lapply(.SD,sum)][,sex:=&quot;Total&quot;])</span>
-<span class=output>     sex col1 col2</span>
-<span class=output>1:     M    4    6</span>
-<span class=output>2:     F    5    7</span>
-<span class=output>3: Total    9   13</span>
-<span class=output>
 <span class=title># add totals grouped by each variable to data.table</span></span>
 <span class=prompt>&gt;</span> <span class=code>d=data.table(month=month.abb[c(1,1,2,2)],state=state.name[1:2],col1=1:4,col2=10:13)</span>
 <span class=prompt>&gt;</span> <span class=code>d=rbind(d,d[,lapply(.SD,sum),month,.SDcols=3:4][,state:=&quot;Total&quot;])</span>
@@ -1353,9 +1347,10 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=output>2: 8</span>
 <span class=output>
 <span class=title># replace vector values at specified positions with values from another vector</span></span>
-<span class=prompt>&gt;</span> <span class=code>replace(rep(1,5),3:4,8)</span>
+<span class=prompt>&gt;</span> <span class=code>v=rep(1,5)</span>
+<span class=prompt>&gt;</span> <span class=code>replace(v,3:4,8)</span>
 <span class=output>[1] 1 1 8 8 1</span>
-<span class=prompt>&gt;</span> <span class=code>replace(rep(1,5),3:4,8:9)</span>
+<span class=prompt>&gt;</span> <span class=code>replace(v,3:4,8:9)</span>
 <span class=output>[1] 1 1 8 9 1</span>
 <span class=output>
 <span class=title># insert an item to a vector after the specified position</span></span>
@@ -1393,4 +1388,21 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=output>               mpg cyl  disp hp drat   wt qsec vs am gear carb</span>
 <span class=output>Porsche 914-2 26.0   4 120.3 91 4.43 2.14 16.7  0  1    5    2</span>
 <span class=output>Merc 240D     24.4   4 146.7 62 3.69 3.19 20.0  1  0    4    2</span>
+<span class=output>
+<span class=title># get mode value by group</span></span>
+<span class=prompt>&gt;</span> <span class=code>v=sample(1:10,1e5,T);g=sample(letters,1e5,T)</span>
+<span class=prompt>&gt;</span> <span class=code>modeby=\(v,g)data.table(v,g)[,.N,.(v,g)][order(-N)][rowid(g)==1]</span>
+<span class=prompt>&gt;</span> <span class=code>modeby2=\(v,g)data.table(v,g)[,.N,.(v,g)][,v[which.max(N)],g]</span>
+<span class=prompt>&gt;</span> <span class=code>fmode=\(v,g)data.table(v,g)[,collapse::fmode(v),g]</span>
+<span class=prompt>&gt;</span> <span class=code>fmodetapply=\(v,g)tapply(v,g,collapse::fmode)</span>
+<span class=prompt>&gt;</span> <span class=code>summary(microbenchmark(times=10,modeby(v,g),modeby2(v,g),fmode(v,g),fmodetapply(v,g)))[,c(1,5)]</span>
+<span class=output>               expr   median</span>
+<span class=output>1      modeby(v, g) 4.297637</span>
+<span class=output>2     modeby2(v, g) 4.258582</span>
+<span class=output>3       fmode(v, g) 3.094666</span>
+<span class=output>4 fmodetapply(v, g) 6.454565</span>
+<span class=output>
+<span class=title># subtract 2% from start of range and add 2% to end</span></span>
+<span class=prompt>&gt;</span> <span class=code>extendrange(0:5,,.02)</span>
+<span class=output>[1] -0.1  5.1</span>
 </pre>
