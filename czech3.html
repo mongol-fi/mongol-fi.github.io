@@ -308,7 +308,7 @@ THP pracovníci v nemocnicích
  SPIKEVAX BIVALENT ORIGINAL/OMICRON BA.4-5  310       5
                                    Valneva -100       2
                                       type  pct       N</pre>
-<p>I was expecting the late vaccinees who got the first dose in late 2021 to have a higher age-normalized proportion of the <span class="quote">&quot;indication chronic illness&quot;</span> column than people who got vaccinated during the rollout peak, but actually I got the opposite result. However it might be if the column indicates if people were first eligible to be vaccinated early because of a chronic illness:</p>
+<p>The next plot shows the age-normalized proportion of the column by vaccine type and month of vaccination. I was expecting the late vaccinees who got the first dose in late 2021 to have a higher age-normalized proportion of the <span class="quote">&quot;indication chronic illness&quot;</span> column than people who got vaccinated during the rollout peak, but actually I got the opposite result. However it might be if the column indicates if people were first eligible to be vaccinated early because of a chronic illness.</p>
 <div class="width8">
 <img src="i/czech-chronic-3.png">
 </div>
@@ -409,17 +409,8 @@ Novavax     NA NA  0 100  7  0  0  3  0  0  6  0  0  6  5  0 12     3
 Other       NA NA NA  NA NA  0  0  0  0  0  0  0  0  0  0  0 NA     0
 Total        0  0  0   1  2  3  3  3  4  5  6  8  9 12  6  2  1     5</pre>
 <p>In both of the tables above Novavax got a lower percentage than Pfizer, which might partially explain people with a Novavax vaccine have such low mortality.</p>
-<p>When I looked at third doses instead of first doses and I aggregated Omicron and pediatric vaccine types together with the main vaccine type, my excess proportion of the <span class="quote">&quot;indication chronic illness&quot;</span> column was about -6% for Pfizer but 38% for Moderna:</p>
-<pre>&gt; t=fread(&quot;ockovani-profese.csv&quot;)
-&gt; d=t[poradi_davky==3,.(.N,chronic=sum(indikace_chronicke_onemocneni,na.rm=T)),.(type=vakcina,age=vekova_skupina)][age!=&quot;nezařazeno&quot;]
-&gt; name1=unique(d$type);name2=ifelse(name1==&quot;&quot;,&quot;&quot;,&quot;Other&quot;)
-&gt; name2[grep(&quot;comirnaty&quot;,ignore.case=T,name1)]=&quot;Pfizer&quot;
-&gt; name2[grep(&quot;spikevax&quot;,ignore.case=T,name1)]=&quot;Moderna&quot;
-&gt; name2[grep(&quot;nuvaxovid&quot;,ignore.case=T,name1)]=&quot;Novavax&quot;
-&gt; name2[name1==&quot;COVID-19 Vaccine Janssen&quot;]=&quot;Janssen&quot;
-&gt; name2[name1==&quot;VAXZEVRIA&quot;]=&quot;AstraZeneca&quot;
-&gt; d$type=name2[match(d$type,name1)]
-&gt; a=d[,.(N=sum(N),chronic=sum(chronic)),.(age,type)]
+<p>When I looked at third doses instead of first doses and I aggregated Omicron and pediatric vaccine types together with the main vaccine type, my excess age-normalized proportion of the <span class="quote">&quot;indication chronic illness&quot;</span> column was about -6% for Pfizer but 38% for Moderna:</p>
+<pre>&gt; a=t[,.(N=sum(N),chronic=sum(chronic)),.(age,type)]
 &gt; a=merge(a,d[,.(base=sum(chronic)/sum(N)),age])[,base:=base*N]
 &gt; a[,.(pct=round((sum(chronic)/sum(base)-1)*100),N=sum(N)),type][order(-N)]|&gt;print(r=F)
         type  pct       N
@@ -429,7 +420,7 @@ Total        0  0  0   1  2  3  3  3  4  5  6  8  9 12  6  2  1     5</pre>
  AstraZeneca  134     433
      Novavax  -48     318
        Other -100      28</pre>
-<p>When I calculated a Moderna-Pfizer ratio for an age-normalized proportion of the <span class="quote">&quot;indication chronic illness&quot;</span> column so that I grouped the ratio by the month when people got the first dose, the ratio remained at a fairly steady level of about 5 to 6 for people vaccinated May to October 2021, but it suddenly dropped to about 2.3 the next month and it remained around 1 to 1.5 for the next 4 months. So it might also partially explain why the Moderna-Pfizer mortality ratio dropped to around 1.0 in people who were vaccinated in the fourth quarter of 2021 (even though the drop in the mortality ratio was already in October and not November):</p>
+<p>When I calculated a Moderna-Pfizer ratio for an age-normalized proportion of the chronic illness column grouped by the month of the first dose, the ratio remained at a fairly steady level of about 5 to 6 for people who were vaccinated in May to October 2021, but the ratio suddenly dropped to about 2.3 the next month and it remained around 1 to 1.5 for the next 4 months. So that might also partially explain why the Moderna-Pfizer mortality ratio dropped to around 1.0 in people who were vaccinated in the fourth quarter of 2021 (even though the drop in the mortality ratio was already in October and not November):</p>
 <pre>&gt; a=d[,.(N=sum(N),chronic=sum(chronic)),.(age,type,month)]
 &gt; a=merge(a,d[,.(base=sum(chronic)/sum(N)),age])[,base:=base*N]
 &gt; a=a[,.(rat=sum(chronic)/sum(base)),.(type,month)]
@@ -1581,32 +1572,33 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   plot.title=element_text(size=8,face=&quot;bold&quot;,margin=margin(2,,5)))
 ggsave(&quot;0.png&quot;,width=5.4,height=3.2,dpi=370*4)
 system(&quot;magick 0.png -resize 25% 1.png&quot;)</pre>
-<p>I excluded Prague from the plot above, because it had about 97% vaccinated people even though the next-highest percentage was only about 65%. For example in ages 30-34 Prague had almost 5 times as many vaccinated people as the total population size, so it probably included people who didn't actually live in Prague:</p>
+<p>I excluded Prague from the plot above, because it had about 97% vaccinated people even though the next-highest percentage was only about 65%, and in many age groups there were more vaccinated people than the total population size. So maybe it includes people who lived outside Prague:</p>
 <pre>&gt; vax=fread(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani.csv&quot;)
 &gt; pop=fread(&quot;https://csu.gov.cz/docs/107508/1cab7ab3-4d2e-4d0e-c2a8-425e3442218c/130181-23data2022.csv&quot;)
 &gt; v=vax[vekova_skupina!=&quot;nezařazeno&quot;&amp;kraj_nazev==&quot;Hlavní město Praha&quot;,.(vax=sum(prvnich_davek)),.(age=as.numeric(sub(&quot;[-+].*&quot;,&quot;&quot;,vekova_skupina)))]
 &gt; cul=\(x,y)y[cut(x,c(y,Inf),,T,F)] # cut left
-&gt; p=pop[uzemi_txt==&quot;Hlavní město Praha&quot;&amp;pohlavi_txt==&quot;&quot;&amp;!is.na(vek_txt),.(pop=sum(hodnota)),.(age=cul(vek_txt,v$age))]
+&gt; p=pop[uzemi_txt==&quot;Hlavní město Praha&quot;&amp;pohlavi_txt==&quot;&quot;&amp;!is.na(vek_txt),.(pop=sum(hodnota)),.(age=cul(vek_txt,sort(v$age)))]
 &gt; me=merge(v,p)
 &gt; me=rbind(me,me[,.(vax=sum(vax),pop=sum(pop),age=&quot;Total&quot;)])
+&gt; print(me[,pct:=round(vax/pop*100)][],r=F)
    age     vax     pop pct
-     0      66   57877   0
-     5   17732   60170  29
-    12   46141   67388  68
-    16   25165   69461  36
-    18  110186  103610 106
-    25  106575  102655 104
-    30  122900   25668 479
-    35  120213   79198 152
+     0      66   72645   0
+     5   17732  102655  17
+    12   46141   57207  81
+    16   25165   25668  98
+    18  110186   90035 122
+    25  106575   79198 135
+    30  122900  103610 119
+    35  120213  109717 110
     40  132965  115795 115
-    45  126063   85964 147
-    50   89726   90035 100
+    45  126063  118052 107
+    50   89726   85964 104
     55   79771   78193 102
-    60   63867   72645  88
-    65   70931   57207 124
-    70   70938  109717  65
-    75   60680   63691  95
-    80   68902  118052  58
+    60   63867   63691 100
+    65   70931   69461 102
+    70   70938   67388 105
+    75   60680   60170 101
+    80   68902   57877 119
  Total 1312821 1357326  97</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
