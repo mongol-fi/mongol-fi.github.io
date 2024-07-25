@@ -1235,10 +1235,10 @@ Doses included by join
 2: 2021 139891 139890   139891
 3: 2022 120219 120219   120219</pre>
 <p>But anyway, I now used the data for deaths by underlying cause of death to make the plot below, where the left side shows ASMR grouped by the underlying cause of death, and the right side shows the excess ASMR percent relative to a 2013-2019 linear trend. I used the 2021 census population by 5-year age groups as the standard population.</p>
-<p>Basically there's almost no excess deaths in 2021 or 2022 if the deaths were the underlying cause of death was COVID are subtracted. So if vaccines were killing a huge number of people, then did all of the people die of COVID?</p>
-<p>Turbo cancer is nowhere to be seen either, because the excess percentage of deaths with an underlying cause of neoplasms is about -3% in 2021 and -1% in 2022. (But Ethical Skeptic would probably argue it's because I committed the crime of torfuscation, which means that I didn't adjust my baseline for mortality displacement which he calls the <span class="quote">&quot;pull forward effect&quot;</span>.)</p>
-<p>There is however a clear increase in diseases of the circulatory system under the ICD code I, even though the excess mortality for ICD code I was the biggest in 2020 which is difficult to blame on the vaccines.</p>
-<div class="width13">
+<p>There's very little excess deaths in 2021 or 2022 if the deaths where the underlying cause of death was COVID are excluded. For example in 2021 there was about 25% total excess ASMR but it fell to only about 3% if deaths with UCoD COVID were excluded. So if vaccines were killing a huge number of people, then did all of the people die of COVID?</p>
+<p>Turbo cancer is nowhere to be seen either, because the excess percentage of deaths with an underlying cause of neoplasms is about -3% in 2021 and -1% in 2022. (But Ethical Skeptic would probably argue it's because I committed the crime of torfuscation, which means that I didn't adjust my baseline for the pull forward effect.)</p>
+<p>There is however a clear increase in deaths under the ICD code I which contains diseases of the circulatory system, even though the excess mortality for ICD code I was the biggest in 2020 which is difficult to blame on the vaccines.</p>
+<div class="width12">
 <img src="i/czech-icd.png">
 </div>
 <pre>library(data.table)
@@ -1317,6 +1317,71 @@ pheatmap::pheatmap(m^exp,filename=&quot;i2.png&quot;,display_numbers=disp,
   breaks=seq(0,maxcolor^exp,,256),pal2)
 
 system(&quot;magick \\( i2.png -extent 780x \\) \\( i1.png -chop 14x \\) +append 1.png&quot;)</pre>
+<p>The plot below shows raw deaths and not ASMR. Now the only year when circulatory deaths are clearly elevated above the baseline is 2020, but in 2021 and 2022 circulatory deaths are close to the baseline. However the calculation for excess deaths in my previous plot was probably more accurate because it was based on ASMR and not raw deaths:</p>
+<div class="width7">
+<img src="i/czech-icd-2.png">
+</div>
+<pre>library(data.table)
+
+cul=\(x,y)y[cut(x,c(y,Inf),y,T,F)]
+
+t=fread(&quot;http://sars2.net/f/czicd.csv.gz&quot;)
+
+codes=read.csv(sep=&quot;:&quot;,text=&quot;start:end:name
+C00:D48:Neoplasms
+I00:I99:Circulatory
+J00:J98:Respiratory
+V01:Y89:External causes
+U07:U07:COVID-19&quot;)
+
+u=unique(t$icd)
+w=apply(outer(u,codes$start,&quot;&gt;=&quot;)&amp;outer(u,codes$end,&quot;&lt;=&quot;),1,which)
+w[lengths(w)==0]=NA;w=unlist(w)
+icdname=paste0(codes$start,&quot;-&quot;,codes$end,&quot; (&quot;,codes$name,&quot;)&quot;)
+p=t[,.(y=sum(dead)),.(z=factor(icdname[w[match(t$icd,u)]],icdname),x=year)][!is.na(z)]
+
+xstart=min(p$x);xend=max(p$x)
+xbreak=seq(xstart-.5,xend+.5,.5);xlab=c(rbind(&quot;&quot;,xstart:xend),&quot;&quot;)
+ystart=0;yend=max(p$y);ystep=1e4;ybreak=seq(ystart,yend,ystep)
+
+color=c(&quot;#bb00bb&quot;,&quot;red&quot;,hsv(22/36,1,.7),hsv(4/36,.5,.5),hsv(9/36,1,.6))
+
+lm=p[x&lt;2020,.(x=2013:2022,y=predict(lm(y~x),.(x=2013:2022))),z]
+
+ggplot(p,aes(x,y))+
+geom_vline(xintercept=c(xstart-.5,xend+.5),linewidth=.3,lineend=&quot;square&quot;)+
+geom_hline(yintercept=c(ystart,yend),linewidth=.3,lineend=&quot;square&quot;)+
+geom_line(aes(color=z),linewidth=.4)+
+geom_line(data=lm,aes(color=z),linetype=2,linewidth=.4,alpha=.3)+
+geom_line(data=lm[x&lt;2020],aes(color=z),linetype=2,linewidth=.4)+
+geom_point(data=p[!grep(&quot;Linear&quot;,z)],aes(color=z),size=.5,show.legend=F)+
+labs(title=&quot;Yearly deaths in the Czech Republic by underlying cause of death&quot;,subtitle=paste0(&quot;Source: sars2.net/f/czicd.csv.gz (compiled from spreadsheets in dataset \&quot;Zemřelí podle seznamu příčin smrti, pohlaví a věku v ČR, krajích a okresech - 2013-2022\&quot;). The dashed line is a 2013-2019 linear regression.&quot;|&gt;stringr::str_wrap(88)),x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=xbreak,labels=xlab)+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,labels=\(x)ifelse(x&gt;=1e3,paste0(x/1e3,&quot;k&quot;),x))+
+scale_color_manual(values=color)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.ticks=element_line(linewidth=.3),
+  axis.ticks.x=element_line(color=alpha(&quot;black&quot;,c(1,0))),
+  axis.ticks.length=unit(3,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.background=element_rect(fill=alpha(&quot;white&quot;,.8),color=&quot;black&quot;,linewidth=.3),
+  legend.key.height=unit(9,&quot;pt&quot;),
+  legend.key.width=unit(15,&quot;pt&quot;),
+  legend.key=element_rect(fill=&quot;white&quot;),
+  legend.margin=margin(-2,5,3,4),
+  legend.justification=c(0,.5),
+  legend.position=c(0,.73),
+  legend.spacing.x=unit(1.5,&quot;pt&quot;),
+  legend.text=element_text(size=7),
+  legend.title=element_blank(),
+  panel.grid.major=element_blank(),
+  panel.background=element_rect(fill=&quot;white&quot;),
+  plot.margin=margin(3,5,4,4),
+  plot.subtitle=element_text(size=6.7,margin=margin(0,0,4,0)),
+  plot.title=element_text(size=7.5,face=&quot;bold&quot;,margin=margin(2,0,4,0)))
+ggsave(&quot;0.png&quot;,width=4.2,height=2.9,dpi=400*4)
+system(&quot;magick 0.png -resize 25% 1.png&quot;)</pre>
 <h2>
 <a href=#Yearly_COVID_ASMR_compared_to_percentage_of_vaccinated_people id=Yearly_COVID_ASMR_compared_to_percentage_of_vaccinated_people>Yearly COVID ASMR compared to percentage of vaccinated people</a>
 </h2>
