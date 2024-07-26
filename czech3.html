@@ -66,7 +66,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Hospitalizations_by_age_group_and_vaccination_status>Hospitalizations by age group and vaccination status</a></li>
 <li><a href=#Vaccinator_types>Vaccinator types</a></li>
 <li><a href=#Yearly_deaths_in_Czech_Republic_by_underlying_cause_of_death>Yearly deaths in Czech Republic by underlying cause of death</a></li>
-<li><a href=#Yearly_COVID_ASMR_compared_to_percentage_of_vaccinated_people>Yearly COVID ASMR compared to percentage of vaccinated people</a></li>
+<li><a href=#COVID_ASMR_compared_to_percentage_of_vaccinated_people_by_region>COVID ASMR compared to percentage of vaccinated people by region</a></li>
 </ul>
 
 <h2>
@@ -76,7 +76,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <div class="maxwidth">
 <img src=i/czech-chronic-1.png class=width5><img src=i/czech-chronic-2.png class=width4>
 </div>
-<p>The value of the <code>indikace_chronicke_onemocneni</code> column (indication chronic illness) is always either 1 or empty. I thought that the percentage of people where the value of the <span class="quote">&quot;indication chronic illness&quot;</span> column was 1 was surprisingly low, because there's only one age group where the column is true for over 10% of people with a first dose, and the percentage seemed to be fairly high in young age groups relative to old age groups (and for some reaoson it's about 10 times higher in ages 65-69 than ages 80+):</p>
+<p>The value of the <code>indikace_chronicke_onemocneni</code> column (indication chronic illness) is always either 1 or empty. I thought that the percentage of people where the value of the <span class="quote">&quot;indication chronic illness&quot;</span> column was 1 was surprisingly low, because there's only one age group where the column is true for over 10% of people with a first dose, and the percentage seemed to be fairly high in young age groups relative to old age groups (and for some reason it's about 10 times higher in ages 65-69 than ages 80+):</p>
 <pre>&gt; download.file(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-profese.csv&quot;,&quot;ockovani-profese.csv&quot;) # about 4 GiB
 &gt; pro=fread(&quot;ockovani-profese.csv&quot;)
 &gt; d=pro[poradi_davky==1&amp;vekova_skupina!=&quot;nezařazeno&quot;,.(.N,chronic=sum(indikace_chronicke_onemocneni,na.rm=T)),.(type=vakcina,age=as.numeric(sub(&quot;[+-].*&quot;,&quot;&quot;,vekova_skupina)))]
@@ -533,8 +533,7 @@ system(&quot;magick 0.png -resize 25% 1.png&quot;)</pre>
 </h2>
 <p>The second file from the bottom under vaccinations here has data for hospitalizations by vaccine type and age group: <a href="https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19">https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19</a>.</p>
 <p>The file has about 7 million rows with one row for each vaccinated person. It has these columns:</p>
-<pre>                             id id
-            kraj_bydliste_nazev name of region of resicence
+<pre>            kraj_bydliste_nazev name of region of resicence
               kraj_bydliste_kod code of region of residence
              orp_bydliste_nazev name of county of residence
                orp_bydliste_kod code of county of residence
@@ -557,20 +556,16 @@ system(&quot;magick 0.png -resize 25% 1.png&quot;)</pre>
                 jip_po_ockovani ICU after vaccination</pre>
 <p>The types of test are diagnostic, preventative, epidemiological, or other (ostatní). Negative tests are not listed so the type of the test is only shown for positive tests. There's only up to one test before vaccination and one test after vaccination listed for each person, and similarly there's only up to one hospitalization before vaccination and one hospitalization after vaccination listed for each person.</p>
 <p>I used the file to calculate an age-normalized hospitalization rate from the day of the first dose up to the present. The file included data for hospitalizations up the the present month, so I used the date when I downloaded the file as the end of my observation period.</p>
-<p>For each 17 age groups included in the file, I calculated the expected number of deaths by multiplying the person-days by the mortality rate among all people who had a first dose listed in the file.</p>
-<p>My excess percentage of hospitalizations was about -6% for the first dose type <span class="quote">&quot;Comirnaty&quot;</span> and about -4% for the first dose type <span class="quote">&quot;SPIKEVAX&quot;</span>, so it was almost the same, but AstraZeneca and particularly Janssen vaccines had a much higher hospitalization rate (but they are not mRNA vaccines unlike Pfizer and Moderna, even though it might be a coincidence):</p>
-<pre>download.file(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-pozitivni-hospitalizovani.csv&quot;,&quot;ockovani-pozitivni-hospitalizovani.csv&quot;)
-
-h=fread(&quot;ockovani-pozitivni-hospitalizovani.csv&quot;)
-
-d=h[,.(age=vekova_kategorie,date=prvni_davka,type=ockovaci_latka_nazev,hosp=hospitalizace_po_ockovani)][age!=&quot;-&quot;]
-maxdate=as.IDate(&quot;2024-7-20&quot;)
-
-a=d[,.(hosp=sum(hosp,na.rm=T),pop=sum(as.double(maxdate-date+1))),.(type,age)]
-a=merge(a,a[,.(base=sum(hosp)/sum(pop)),age])[,base:=base*pop]
-a[,.(excesspct=round((sum(hosp)/sum(base)-1)*100),hospitalizations=sum(hosp),pyears=round(sum(pop/365))),type][order(-pyears)]|&gt;print(r=F)</pre>
-<!-- -->
-<pre>                                      type excesspct hospitalizations   pyears
+<p>In order to calculate the expected number of deaths for each vaccine type, I multiplied the number of person-days the vaccine type had for each age group with the mortality rate of each age group among all people who had a first dose listed in the file.</p>
+<p>My excess percentage of hospitalizations was about -6% for the first dose type <span class="quote">&quot;Comirnaty&quot;</span> and about -4% for the first dose type <span class="quote">&quot;SPIKEVAX&quot;</span>, so there was not much difference, but AstraZeneca and particularly Janssen vaccines had a much higher hospitalization rate:</p>
+<pre>&gt; download.file(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-pozitivni-hospitalizovani.csv&quot;,&quot;ockovani-pozitivni-hospitalizovani.csv&quot;)
+&gt; h=fread(&quot;ockovani-pozitivni-hospitalizovani.csv&quot;)
+&gt; d=h[,.(age=vekova_kategorie,date=prvni_davka,type=ockovaci_latka_nazev,hosp=hospitalizace_po_ockovani)][age!=&quot;-&quot;]
+&gt; maxdate=as.IDate(&quot;2024-7-20&quot;)
+&gt; a=d[,.(hosp=sum(hosp,na.rm=T),pop=sum(as.double(maxdate-date+1))),.(type,age)]
+&gt; a=merge(a,a[,.(base=sum(hosp)/sum(pop)),age])[,base:=base*pop]
+&gt; a[,.(excesspct=round((sum(hosp)/sum(base)-1)*100),hospitalizations=sum(hosp),pyears=round(sum(pop/365))),type][order(-pyears)]|&gt;print(r=F)
+                                      type excesspct hospitalizations   pyears
                                  Comirnaty        -6            43053 17432607 # Pfizer
                                   SPIKEVAX        -4             6234  1657122 # Moderna
                                  VAXZEVRIA        19            11921  1478098 # AstraZeneca
@@ -593,16 +588,14 @@ a[,.(excesspct=round((sum(hosp)/sum(base)-1)*100),hospitalizations=sum(hosp),pye
                                    Valneva      -100                0        4
                          Nuvaxovid XBB 1.5      -100                0        2
                                       type excesspct hospitalizations   pyears</pre>
-<p>In the code below I additionally normalized the hospitalization rate for the month of vaccination. I now only included first doses given in 2021, because otherwise I would've been more likely to get an anomalously high baseline rates for vaccination months with a low number of doses given in some age groups. However now Moderna got a slightly lower excess hospitalization percent than Pfizer which was the opposite of the previous plot. And now the hospitalization rate of Janssen vaccines reduced dramatically as expected, because late vaccinees had a higher hospitalization rate than early vaccinees, and late vaccinees are overrepresented for Janssen vaccines:</p>
-<pre>yemo=\(x){u=unique(x);format(u,&quot;%Y-%m&quot;)[match(x,u)]}
-
-d2=d[date&lt;=&quot;2021-12-31&quot;][,month:=yemo(date)]
-a=d2[,.(hosp=sum(hosp,na.rm=T),pop=sum(as.double(maxdate-date+1))),.(type,age,month)]
-a=merge(a,a[,.(base=sum(hosp)/sum(pop)),.(month,age)])[,base:=base*pop]
-a=a[,.(excesspct=round((sum(hosp)/sum(base)-1)*100),hospitalizations=sum(hosp),pyears=round(sum(pop/365))),type]
-a[order(-pyears)]|&gt;print(r=F)</pre>
-<!-- -->
-<pre>                     type excesspct hospitalizations   pyears
+<p>In the code below I additionally normalized the hospitalization rate for the month of vaccination. I now only included first doses given in 2021, because otherwise I would've been more likely to get anomalously high baseline mortality rates for combinations of vaccination month and age group that had a low number of person-days. However now Moderna got a slightly lower excess hospitalization percent than Pfizer which was the opposite of my previous calculation. And now there was a big drop in the excess hospitalization rate of Janssen vaccines, because late vaccinees have a higher hospitalization rate than early vaccinees, and late vaccinees are overrepresented for Janssen vaccines:</p>
+<pre>&gt; yemo=\(x){u=unique(x);format(u,&quot;%Y-%m&quot;)[match(x,u)]}
+&gt; d2=d[date&lt;=&quot;2021-12-31&quot;][,month:=yemo(date)]
+&gt; a=d2[,.(hosp=sum(hosp,na.rm=T),pop=sum(as.double(maxdate-date+1))),.(type,age,month)]
+&gt; a=merge(a,a[,.(base=sum(hosp)/sum(pop)),.(month,age)])[,base:=base*pop]
+&gt; a=a[,.(excesspct=round((sum(hosp)/sum(base)-1)*100),hospitalizations=sum(hosp),pyears=round(sum(pop/365))),type]
+&gt; a[order(-pyears)]|&gt;print(r=F)
+                     type excesspct hospitalizations   pyears
                 Comirnaty        -5            42775 17127673
                  SPIKEVAX        -6             6210  1633228
                 VAXZEVRIA        21            11921  1478067
@@ -613,11 +606,11 @@ a[order(-pyears)]|&gt;print(r=F)</pre>
                   Covovax      -100                0       85
                 Sputnik V      -100                0       28
                   COVAXIN      -100                0       16</pre>
-<p>The plot below shows the excess hospitalization percent by age and the month of the first dose. There's a diagonal pattern across different age groups where there's a low excess hospitalization percent during the same month when the number of first doses peaked in the age group:</p>
+<p>The next plot shows the excess hospitalization percent by age and the month of the first dose. There's a diagonal pattern across different age groups where there's a low excess hospitalization percent during the same month when the number of first doses peaked in the age group:</p>
 <div class="width9">
 <img src="i/czech-hosprate.png">
 </div>
-<p>The next plot shows the excess hospitalization rate by vaccine type instead of age group. Janssen and AstraZeneca got a much higher total hospitalization rate than Pfizer and Moderna. I didn't normalize the total excess mortality by the month of vaccination so Janssen again got 57% excess hospitalizations (because the late vaccinees who had a high hospitalization rate were overrepresented for Janssen vaccines):</p>
+<p>The next plot shows the excess hospitalization rate by vaccine type instead of age group. Janssen and AstraZeneca got a much higher total hospitalization rate than Pfizer and Moderna. I didn't normalize the total excess mortality by the month of vaccination so Janssen again got a high percentage of excess hospitalizations (because the late vaccinees who had a high hospitalization rate were overrepresented for Janssen vaccines):</p>
 <div class="width10">
 <img src="i/czech-hosprate-2.png">
 </div>
@@ -1108,7 +1101,7 @@ $ csvtk cut -f location,date,weekly_hosp_admissions owid-covid-data.csv|grep Cze
 <p>And also if you add together the blue and red lines during the peak in March 2021, then the combined height of the lines is lower in old age groups that got vaccinated earlier.</p>
 <p>However it's also weird that during the peak in February 2021, ages 12-19 have almost the same number of hospitalizations in vaccinated and unvaccinated people even though the percentage of vaccinated people is not that high.</p>
 <p><img src=i/czech-hospvaxun.png style=max-width:520px></p>
-<p>The next plot shows the hospitalization rate per million people instead of the raw number of hospitalizations. Now vaccinated people in ages 12-19 have a big spike in the hospitalization rate around April 2021, but it's probably because vulnerable groups of people had been priorized to be vaccinated early. But otherwise unvaccinated people generally have a much higher hospitalization rate than vaccinated people up to around mid-2022, after which the ratio between vaccinated and unvaccinated people gets smaller which might be because unvaccinated people have acquired natural immunity:</p>
+<p>The next plot shows the hospitalization rate per million people instead of the raw number of hospitalizations. Now vaccinated people in ages 12-19 have a big spike in the hospitalization rate around April 2021, but it's probably because vulnerable groups of people had been priorized to be vaccinated early. But otherwise unvaccinated people generally have a much higher hospitalization rate than vaccinated people up to around mid-2022, after which the ratio between vaccinated and unvaccinated people gradually gets smaller over time (which might be because unvaccinated people gradually acquire natural immunity over time):</p>
 <p><img src=i/czech-hospvaxun-2.png style=max-width:520px></p>
 <pre>library(data.table);library(ggplot2)
 
@@ -1200,9 +1193,9 @@ ggsave(&quot;1.png&quot;,width=3,height=4.7,dpi=450)</pre>
 <h2>
 <a href=#Vaccinator_types id=Vaccinator_types>Vaccinator types</a>
 </h2>
-<p>The file <code>ockovani-profese.csv</code> has about 19 million rows with one row per vaccine dose. It includes a field for the name of the organization or individual who gave each vaccine dose.</p>
-<p>Elderly people who live in long-term care have much higher age-normalized mortality rates than elderly people who don't live in long-term care, which is one of the confounding factors that is not accounted by simple age-standardized mortality rates.</p>
-<p>I wanted to check if Pfizer or Moderna had a higher percentage of vaccines given to elderly homes, so I searched for vaccinators whose name matched <span class="quote">&quot;Domov pro seniory&quot;</span>, <span class="quote">&quot;Domov seniorů&quot;</span>, or <span class="quote">&quot;Penzion pro seniory&quot;</span>. There was a total of only 7,708 matching rows, but it might be if people in elderly homes got vaccinated at a hospital, or if the name of the individual person who gave vaccine was listed as the vaccinator and not the name of an elderly care facility:</p>
+<p>The file <code>ockovani-profese.csv</code> has about 19 million rows with one row per vaccine dose. There's also a column for the name of the organization or individual who gave each vaccine dose.</p>
+<p>Elderly people who live in a long-term care home have much higher age-normalized mortality rates than elderly people who don't live in a long-term care home, which is one of the confounding factors that is not account for by simple age-standardized mortality rates.</p>
+<p>I wanted to check if Pfizer or Moderna had a higher percentage of vaccines given to elderly homes, so I searched for vaccinators whose name matched <span class="quote">&quot;Domov pro seniory&quot;</span>, <span class="quote">&quot;Domov seniorů&quot;</span>, or <span class="quote">&quot;Penzion pro seniory&quot;</span>. There were only 7,708 matching rows, but it might be if people in elderly homes got vaccinated at a hospital, or if the name of the individual person who gave the vaccine was listed as the vaccinator and not the name of an elderly care facility:</p>
 <pre>&gt; download.file(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-profese.csv&quot;,&quot;ockovani-profese.csv&quot;) # about 4 GiB
 &gt; pro=fread(&quot;ockovani-profese.csv&quot;)
 &gt; pro[,.N,zarizeni_nazev][grep(&quot;Domov pro seniory|Domov seniorů|Penzion pro seniory&quot;,zarizeni_nazev)][order(-N)]|&gt;print(r=F)
@@ -1227,7 +1220,7 @@ Domov pro seniory Osoblaha, příspěvková organizace  185
    Domov pro seniory Nopova,příspěvková organizace   18
                Domov pro seniory Kosmonautů, p. o.    8
     Domov seniorů Jankov, poskytovatel soc. služeb    4</pre>
-<p>But anyway, compared to a baseline of all vaccine types, the excess age-normalized proportion of rows where the vaccinator was one of the elderly homes listed above was about 50% for SPIKEVAX but about 8% for Comirnaty:</p>
+<p>But anyway, compared to a baseline of all vaccine types, the excess age-normalized proportion of rows where the vaccinator was one of the elderly homes listed above was about 50% for SPIKEVAX but about 8% for Comirnaty. So it's another possible explanation for why Moderna vaccines get a higher age-normalized mortality rate than Pfizer vaccines:</p>
 <pre>&gt; d=pro[,.N,.(vaxtype=vakcina,vaccinator=zarizeni_nazev,age=vekova_skupina)]
 &gt; d=d[,.(N=sum(N),match=sum(N*grepl(&quot;Domov pro seniory|Domov seniorů|Penzion pro seniory&quot;,vaccinator))),.(vaxtype,age)]
 &gt; d=merge(d,d[,.(base=sum(match)/sum(N)),age])[,base:=base*N]
@@ -1242,7 +1235,7 @@ Domov pro seniory Osoblaha, příspěvková organizace  185
       Comirnaty Original/Omicron BA.1    9.70    89   121312 0.073365
                        Comirnaty 5-11 -100.00     0   112874 0.000000
                             Nuvaxovid -100.00     0    11311 0.000000</pre>
-<p>The file <code>ockovani-profese.csv</code> includes a vaccinator ID and vaccinator name for all 19,047,050 rows. However it includes a different set of vaccinator IDs and vaccinator names than the <code>ockovaci-zarizeni.csv</code> which has information about each vaccinator. And regardless of whether I tried to join the two files by the names or the IDs, about 15 million out of about 19 million rows in <code>ockovani-profese.csv</code> could not be joined with the file for vaccinator information because it was missing many of the most common vaccinator types:</p>
+<p>The file <code>ockovani-profese.csv</code> includes a vaccinator ID and vaccinator name for all 19,047,050 rows. However it includes a different set of vaccinator IDs and vaccinator names than the file <code>ockovaci-zarizeni.csv</code> which has information about each vaccinator. And regardless of whether I tried to join the two files by the names or the IDs, about 15 million out of about 19 million rows in <code>ockovani-profese.csv</code> could not be joined:</p>
 <table>
 <tr><th>
 File
@@ -1280,21 +1273,21 @@ Doses included by join
 4052183
 </td></tr>
 </table>
-<p>The proportion of doses whose vaccinator ID was not missing from the file for vaccinator information was about 11% for Comirnaty, 52% for SPIKEVAX, and 81% for VAXZEVRIA:</p>
+<p>The proportion of doses whose vaccinator ID was not missing from the file for vaccinator information was about 11% for Comirnaty, 52% for SPIKEVAX, and 81% for VAXZEVRIA (which again shows that the vaccine brands were not just distributed randomly like Kirsch has argued, since Pfizer vaccines had by far the highest percentage of doses whose vaccinator ID was missing from the <code>ockovaci-zarizeni.csv</code> file):</p>
 <pre>&gt; download.file(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-zarizeni.csv&quot;,&quot;ockovani-zarizeni.csv&quot;)
 &gt; zar=fread(&quot;ockovaci-zarizeni.csv&quot;)
 &gt; d=pro[,.(joined=sum(zarizeni_kod%in%zar$zarizeni_kod),doses=.N),.(vaxtype=vakcina)]
 &gt; d[,joinedpct:=round((joined/doses)*100)][order(-joined)][joined&gt;1e4]|&gt;print(r=F)
                               vaxtype  joined    doses joinedpct
-                            Comirnaty 1606601 15037534        11
-                             SPIKEVAX  850742  1634938        52
-                            VAXZEVRIA  714750   887562        81
+                            Comirnaty 1606601 15037534        11 # Pfizer (by far lowest joined percentage)
+                             SPIKEVAX  850742  1634938        52 # Moderna
+                            VAXZEVRIA  714750   887562        81 # AstraZeneca (highest joined percentage)
            Comirnaty Omicron XBB.1.5.  278685   375130        74
              COVID-19 Vaccine Janssen  220765   415094        53
  Comirnaty Original/Omicron BA.4/BA.5  186579   436729        43
       Comirnaty Original/Omicron BA.1   72163   121312        59
                        Comirnaty 5-11   40573   112874        36</pre>
-<p>In the file for vaccinator information, I believe the field <code>prakticky_lekar</code> indicates if the vaccinator was a doctor who is a practicioner (but it might not necessarily mean a general practicioner). For the approximately 4 million out of 19 million rows in <code>ockovani-profese.csv</code> where the vaccinator ID was not missing from the file for vaccinator information, the excess age-normalized percentage of doses where the <code>prakticky_lekar</code> field was true was about -7% for Comirnaty but 7% for SPIKEVAX:</p>
+<p>In the file for vaccinator information, I believe the field <code>prakticky_lekar</code> indicates if the vaccinator was a doctor who is a practicioner, but it might not necessarily mean a general practicioner. For the approximately 4 million out of 19 million rows in <code>ockovani-profese.csv</code> where the vaccinator ID was not missing from the file for vaccinator information, the excess age-normalized percentage of doses where the <code>prakticky_lekar</code> field was true was about -7% for Comirnaty but 7% for SPIKEVAX:</p>
 <pre>&gt; vaccinators=zar[,.(vaccinator=zarizeni_kod,practioner=!is.na(zar$prakticky_lekar))]
 &gt; d=merge(pro[,.N,.(vaxtype=vakcina,vaccinator=zarizeni_kod,age=vekova_skupina)],vaccinators)
 &gt; d=d[,.(N=sum(N),match=sum(practioner*N)),.(vaxtype,age)]
@@ -1309,7 +1302,7 @@ Doses included by join
  Comirnaty Original/Omicron BA.4/BA.5         3  186579
       Comirnaty Original/Omicron BA.1         3   72163
                        Comirnaty 5-11         0   40573</pre>
-<p>When I looked at only first doses instead of all doses, there were now so many doses missing for the type Comirnaty that there were three other vaccine types that had a higher number of doses that could be joined. But now the excess age-normalized percentage of doses where the <code>prakticky_lekar</code> field was true was about -30% for Comirnaty but 11% for SPIKEVAX:</p>
+<p>When I looked at only first doses instead of all doses, Comirnaty now had so many doses missing that there were three other vaccine types that had a higher number of doses that could be joined by the vaccinator ID. But now the excess age-normalized percentage of doses where the <code>prakticky_lekar</code> field was true was about -30% for Comirnaty but about 11% for SPIKEVAX:</p>
 <pre>&gt; d=merge(pro[poradi_davky==1,.N,.(vaxtype=vakcina,vaccinator=zarizeni_kod,age=vekova_skupina)],vaccinators)
 &gt; d=d[,.(N=sum(N),match=sum(practioner*N)),.(vaxtype,age)]
 &gt; d=merge(d,d[,.(base=sum(match)/sum(N)),age])[,base:=base*N]
@@ -1325,19 +1318,19 @@ Doses included by join
 </h2>
 <p>In an earlier section I combined Excel files published by the Czech Statistical Office in order to generate a CSV file that shows yearly deaths grouped by ICD code for the underlying cause of death and age: <a href=czech2.html#Deaths_by_ICD_code_region_age_group_and_year>czech2.html#Deaths_by_ICD_code_region_age_group_and_year</a>, <a href="https://csu.gov.cz/produkty/zemreli-podle-seznamu-pricin-smrti-pohlavi-a-veku-v-cr-krajich-a-okresech-fgjmtyk2qr">https://csu.gov.cz/produkty/zemreli-podle-seznamu-pricin-smrti-pohlavi-a-veku-v-cr-krajich-a-okresech-fgjmtyk2qr</a>.</p>
 <p>The yearly number of deaths in the Excel files is otherwise identical to the record-level data except the record-level data is missing a single death in 2021:</p>
-<pre>&gt; rec=fread(&quot;CR_records.csv&quot;,showProgress=F)
+<pre>&gt; rec=fread(&quot;CR_records.csv&quot;)
 &gt; reclev=rec[,.(reclev=.N),.(year=year(DatumUmrti))]
-&gt; eurostat=fread(&quot;http://sars2.net/f/czpopdead.csv&quot;)[year&gt;=2020,.(eurostat=sum(dead)),year]
-&gt; icd=fread(&quot;http://sars2.net/f/czicd.csv.gz&quot;)[year&gt;=2020,.(icd=sum(dead)),year]
+&gt; eurostat=fread(&quot;http://sars2.net/f/czpopdead.csv&quot;)[,.(eurostat=sum(dead)),year]
+&gt; icd=fread(&quot;http://sars2.net/f/czicd.csv.gz&quot;)[,.(icd=sum(dead)),year]
 &gt; merge(icd,merge(reclev,eurostat))
    year    icd reclev eurostat
 1: 2020 129289 129289   129289
 2: 2021 139891 139890   139891
 3: 2022 120219 120219   120219</pre>
 <p>But anyway, I now used the data for deaths by underlying cause of death to make the plot below, where the left side shows ASMR grouped by the underlying cause of death, and the right side shows the excess ASMR percent relative to a 2013-2019 linear trend. I used the 2021 census population by 5-year age groups as the standard population.</p>
-<p>There's very little excess deaths in 2021 or 2022 if the deaths where the underlying cause of death was COVID are excluded. For example in 2021 there was about 25% total excess ASMR but it fell to only about 3% if deaths with UCoD COVID were excluded. So if vaccines were killing a huge number of people, then did all of the people die of COVID?</p>
-<p>Turbo cancer is nowhere to be seen either, because the excess percentage of deaths with an underlying cause of neoplasms is about -3% in 2021 and -1% in 2022. (But Ethical Skeptic would probably argue it's because I committed the crime of torfuscation, which means that I didn't adjust my baseline for the pull forward effect.)</p>
-<p>There is however a clear increase in deaths under the ICD code I which contains diseases of the circulatory system, even though the excess mortality for ICD code I was the biggest in 2020 which is difficult to blame on the vaccines.</p>
+<p>There's almost no excess deaths in 2021 and 2022 if the deaths where the underlying cause of death was COVID are excluded. For example in 2021 there was about 25% total excess ASMR but it fell to only about 3% if deaths with the underlying cause of COVID were excluded. So if vaccines were killing a huge number of people like Kirsch seems to suggest, then did the people all die of COVID?</p>
+<p>Turbo cancer is nowhere to be seen either, because the excess percentage of deaths with an underlying cause of neoplasms is about -3% in 2021 and -1% in 2022. (But Ethical Skeptic would probably argue it's because I committed the crime of torfuscation, which means that I didn't account for mortality displacement by adjusting my baseline for the pull forward effect.)</p>
+<p>In 2020-2022 there is however a clear increase in deaths under the ICD chapter I which consists of diseases of the circulatory system, even though the excess mortality for chapter I was the highest in 2020 which is difficult to blame on the vaccines.</p>
 <div class="width12">
 <img src="i/czech-icd.png">
 </div>
@@ -1483,11 +1476,11 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
 ggsave(&quot;0.png&quot;,width=4.2,height=2.9,dpi=400*4)
 system(&quot;magick 0.png -resize 25% 1.png&quot;)</pre>
 <h2>
-<a href=#Yearly_COVID_ASMR_compared_to_percentage_of_vaccinated_people id=Yearly_COVID_ASMR_compared_to_percentage_of_vaccinated_people>Yearly COVID ASMR compared to percentage of vaccinated people</a>
+<a href=#COVID_ASMR_compared_to_percentage_of_vaccinated_people_by_region id=COVID_ASMR_compared_to_percentage_of_vaccinated_people_by_region>COVID ASMR compared to percentage of vaccinated people by region</a>
 </h2>
-<p>Ethical Skeptic and Clare Craig have made plots which have showed that US counties with a lower percentage of vaccinated people tended to already have a higher number of COVID deaths in 2020 before vaccination started. So I wanted to check if the same was true of the Czech Republic.</p>
-<p>The Czech Republic consists of 14 regions (kraj). They can be divided into 77 LAU1 units, which consist of 76 districts along with Prague. The NUTS4 regions are the same as LAU1 units. In the file <code>umrti.csv</code> COVID deaths are classified under 77 NUTS4/LAU1 codes. But in the files <code>ockovani-orp.csv</code> and <code>ockovani-profese.csv</code> the vaccinations classified under 208 ORP codes instead (<span class="quote">&quot;Obce s rozšířenou působností&quot;</span>). I didn't find a way to map the ORP codes to NUTS4 codes. This file has information about the ORP regions, but it doesn't seem to include NUTS4 or LAU1 codes: <a href="https://data.gov.cz/dataset?iri=https%3A%2F%2Fdata.gov.cz%2Fzdroj%2Fdatov%C3%A9-sady%2F00025712%2F52c6e525fda1b5f842e169420a4d8d29">https://data.gov.cz/dataset?iri=https%3A%2F%2Fdata.gov.cz%2Fzdroj%2Fdatov%C3%A9-sady%2F00025712%2F52c6e525fda1b5f842e169420a4d8d29</a>.</p>
-<p>So below I simply plotted the kraj but not more fine-grained regions. When I compared the percentage of vaccinated people in 2024 against the yearly COVID ASMR, I got a negative correlation of -0.35 in 2020, -0.30 in 2021, and -0.23 in 2022, but in 2023 I got a positive correlation of 0.34. But the percentage of vaccinated people only ranges from about 60% to 65% across the regions, so the difference is so small that it probably won't have much effect on mortality from COVID:</p>
+<p>Ethical Skeptic and Clare Craig have made plots which have showed that in US counties that later had a lower percentage of vaccinated people, there already tended to be a higher COVID mortality rate in 2020 before vaccination started. So I wanted to check if the same was true of the Czech Republic.</p>
+<p>The Czech Republic consists of 14 regions (kraj). They can be divided into 77 LAU1 regions, which consist of 76 districts along with Prague, and which are the same as the NUTS4 regions. In the file <code>umrti.csv</code> COVID deaths are classified under codes for the 77 NUTS4/LAU1 regions. But in the files <code>ockovani-orp.csv</code> and <code>ockovani-profese.csv</code> the vaccinations classified under 208 ORP codes instead (<span class="quote">&quot;obce s rozšířenou působností&quot;</span>, municipality with extended jurisdiction). I didn't find a way to map the ORP codes to NUTS4 codes. This file has information about the ORP codes, but it doesn't seem to include NUTS4 or LAU1 codes: <a href="https://data.gov.cz/dataset?iri=https%3A%2F%2Fdata.gov.cz%2Fzdroj%2Fdatov%C3%A9-sady%2F00025712%2F52c6e525fda1b5f842e169420a4d8d29">https://data.gov.cz/dataset?iri=https%3A%2F%2Fdata.gov.cz%2Fzdroj%2Fdatov%C3%A9-sady%2F00025712%2F52c6e525fda1b5f842e169420a4d8d29</a>.</p>
+<p>So in the plot below I had to settle with plotting the kraj but not more fine-grained regions. When I compared the percentage of vaccinated people in 2024 against the yearly COVID ASMR, I got a negative correlation of -0.35 in 2020, -0.30 in 2021, and -0.23 in 2022, but in 2023 I got a positive correlation of 0.34. But the percentage of vaccinated people only ranges from about 60% to 65% across the regions, so the difference is so small that it probably won't have much effect on mortality from COVID (regardless of whether the effect would be due to vaccine efficacy or due to confounders):</p>
 <div class="width8">
 <img src="i/czech-dipstick.png">
 </div>
@@ -1528,6 +1521,23 @@ ybreak=seq(ystart,yend,ystep)
 cor=sapply(split(p,p$year),\(x)cor(x$asmr,x$vaxpct))
 p$year=`levels&lt;-`(factor(p$year),sprintf(&quot;%s (r ≈ %.2f)&quot;,2020:2024,cor))
 
+    smooth=do.call(rbind,lapply(split(p,p$year),\(x)data.frame(year=x$year[1],x=0:1000/10,y=predict(lm(asmr~vaxpct,x),list(vaxpct=seq(0,100,.1))))))
+
+color=c(&quot;black&quot;,hcl(c(0,330,200,240)+15,c(130,110,120,100),c(50,60,50,40)))
+
+d=p[,.(x=vaxpct,y=asmr,year,name)][order(x)]
+
+ggplot(d,aes(x,y))+
+geom_vline(xintercept=c(xstart,xend),linewidth=.3,lineend=&quot;square&quot;)+
+geom_hline(yintercept=c(ystart,yend),linewidth=.3,lineend=&quot;square&quot;)+
+# ggrepel::geom_text_repel(data=d[year==2021],aes(label=sub(&quot; kraj$&quot;,&quot;&quot;,name),color=year),size=2.3,point.padding=2,show.legend=F,max.overlaps=Inf,segment.size=.3,min.segment.length=.1,direction=&quot;y&quot;,force=10,force_pull=2,box.padding=.1)+
+geom_text(data=d[grep(2021,year)],aes(label=sub(&quot; kraj$&quot;,&quot;&quot;,name),color=year),size=2.3,vjust=c(-.7,1.8)[c(2,1,2,2,1,2,2,1,2,2,1,2,1,2)],show.legend=F)+
+geom_point(aes(color=year),stroke=0,size=p$size,alpha=1)+
+geom_line(data=smooth,aes(group=year),color=color[smooth$year],linetype=2,linewidth=.4,show.legend=F)+
+labs(x=NULL,y=&quot;COVID deaths per 100,000 people&quot;,title=&quot;Regions of Czech Republic: COVID ASMR by percentage of vaccinated people in 2024&quot;,caption=&quot;Point size indicates population size. ASMR was calculated by 5-year age groups using the 2021 census
+population as the standard population. Sources:
+nemocneni-aktualne.mzcr.cz/api/v2/covid-19, csu.gov.cz/produkty/obyvatelstvo-podle-jednotek-veku-a-
+pohlavi-ve-spravnich-obvodech-obci-s-rozsirenou-pusobnosti.&quot;)+
 smooth=do.call(rbind,lapply(split(p,p$year),\(x)data.frame(year=x$year[1],x=0:1000/10,y=predict(lm(asmr~vaxpct,x,w=x$pop),list(vaxpct=seq(0,100,.1))))))
 
 pal2=c(&quot;black&quot;,hcl(c(0,0,100,190)+15,c(130,50,130,130),c(50,70,50,50)))
@@ -1572,7 +1582,7 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   plot.title=element_text(size=8,face=&quot;bold&quot;,margin=margin(2,,5)))
 ggsave(&quot;0.png&quot;,width=5.4,height=3.2,dpi=370*4)
 system(&quot;magick 0.png -resize 25% 1.png&quot;)</pre>
-<p>I excluded Prague from the plot above, because it had about 97% vaccinated people even though the next-highest percentage was only about 65%, and in many age groups there were more vaccinated people than the total population size. So maybe it includes people who lived outside Prague:</p>
+<p>I excluded Prague from the plot above, because it had about 97% vaccinated people even though in all other regions the percentage was below 65%. In many age groups Prague had more vaccinated people than the total population size, so maybe it includes people who lived outside of Prague but who only got vaccinated in Prague (or maybe the population estimates I used only included residents but the vaccination statistics also included non-residents):</p>
 <pre>&gt; vax=fread(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani.csv&quot;)
 &gt; pop=fread(&quot;https://csu.gov.cz/docs/107508/1cab7ab3-4d2e-4d0e-c2a8-425e3442218c/130181-23data2022.csv&quot;)
 &gt; v=vax[vekova_skupina!=&quot;nezařazeno&quot;&amp;kraj_nazev==&quot;Hlavní město Praha&quot;,.(vax=sum(prvnich_davek)),.(age=as.numeric(sub(&quot;[-+].*&quot;,&quot;&quot;,vekova_skupina)))]
