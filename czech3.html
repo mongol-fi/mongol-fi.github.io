@@ -65,7 +65,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Age_standardized_hospitalization_rate_by_vaccination_status>Age-standardized hospitalization rate by vaccination status</a></li>
 <li><a href=#Hospitalizations_by_age_group_and_vaccination_status>Hospitalizations by age group and vaccination status</a></li>
 <li><a href=#Vaccinator_types>Vaccinator types</a></li>
-<li><a href=#Yearly_deaths_in_Czech_Republic_by_underlying_cause_of_death>Yearly deaths in Czech Republic by underlying cause of death</a></li>
+<li><a href=#Yearly_deaths_in_the_Czech_Republic_by_underlying_cause_of_death>Yearly deaths in the Czech Republic by underlying cause of death</a></li>
 <li><a href=#COVID_ASMR_compared_to_percentage_of_vaccinated_people_by_region>COVID ASMR compared to percentage of vaccinated people by region</a></li>
 </ul>
 
@@ -904,7 +904,7 @@ system(&quot;magick 0.png -resize 25% 1.png&quot;)</pre>
 <a href=#Monthly_percentage_of_COVID_deaths_in_unvaccinated_people id=Monthly_percentage_of_COVID_deaths_in_unvaccinated_people>Monthly percentage of COVID deaths in unvaccinated people</a>
 </h2>
 <p>The Czech MoH has published CSV files which show the daily number of COVID deaths by vaccination status: <a href="https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19">https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19</a>. But unfortunately the files are missing age groups, so in order to estimate the percentage of unvaccinated people in the age groups which accounted for the COVID deaths, I calculated a weighted average for the percentage of unvaccinated people in each age group where the weight was the total number of COVID deaths the age group had in 2020-2023. It gave me a figure of only about 15-16% unvaccinated people from December 2021 onwards.</p>
-<p>The code below shows the number of COVID deaths in each age group compared to the percentage of unvaccinated people the age group has in December 2022 in one of my buckets files. You can see that most COVID deaths are in the 5-year age groups between 65 and 94 which all have below 20% unvaccinated people:</p>
+<p>In the code below the number of COVID deaths in each age group is compared to the percentage of unvaccinated people by age group in December 2022. You can see that most COVID deaths are in the 5-year age groups between 65 and 94 which all have below 20% unvaccinated people:</p>
 <pre>&gt; icd=fread(&quot;http://sars2.net/f/czicd.csv.gz&quot;)[icd==&quot;U07&quot;,.(coviddead=sum(dead)),.(age=ifelse(age&lt;20,0,age))]
 &gt; b=fread(&quot;http://sars2.net/f/czbucketsdaily.csv.gz&quot;)[date&gt;=&quot;2022-12-01&quot;,.(alive=sum(alive)),.(age=ifelse(age&lt;20,0,pmin(age,95)%/%5*5),unvax=dose==0)]
 &gt; merge(icd,b[order(age)][,.(unvaxpct=round(alive[unvax==T]/sum(alive)*100)),age])|&gt;print(r=F)
@@ -1313,8 +1313,76 @@ Doses included by join
  COVID-19 Vaccine Janssen         7 218950
                 Comirnaty       -30 209720
            Comirnaty 5-11         0  21275</pre>
+<p>Uncle John Returns found that about 7 million of the doses that couldn't be joined with the <code>ockovaci-zarizeni.csv</code> file could be joined with the file <code>prehled-ockovacich-mist.csv</code> (overview of vaccination sites):</p>
+<pre>&gt; pro=fread(&quot;ockovani-profese.csv&quot;)
+&gt; mist=fread(&quot;prehled-ockovacich-mist.csv&quot;)
+&gt; pro[zarizeni_kod%in%mist$nrpzs_kod,.N]
+[1] 6863264</pre>
+<p>The <code>prehled-ockovacich-mist.csv</code> file only includes the following columns but not the column which indicates if the vaccinator was a doctor practicioner or not:</p>
+<table>
+<tr><th>
+Column
+</th><th>
+Translation
+</th></tr>
+<tr><td>
+ockovaci_misto_id
+</td><td>
+vaccination site ID
+</td></tr>
+<tr><td>
+ockovaci_misto_nazev
+</td><td>
+vaccination site name
+</td></tr>
+<tr><td>
+okres_nuts_kod
+</td><td>
+district NUTS code
+</td></tr>
+<tr><td>
+operacni_status
+</td><td>
+operational status
+</td></tr>
+<tr><td>
+ockovaci_misto_adresa
+</td><td>
+vaccination site address
+</td></tr>
+<tr><td>
+latitude
+</td><td>
+latitude
+</td></tr>
+<tr><td>
+longitude
+</td><td>
+longitude
+</td></tr>
+<tr><td>
+ockovaci_misto_typ
+</td><td>
+vaccination site type
+</td></tr>
+<tr><td>
+nrpzs_kod
+</td><td>
+NRPZS code
+</td></tr>
+<tr><td>
+minimalni_kapacita
+</td><td>
+minimum capacity
+</td></tr>
+<tr><td>
+bezbarierovy_pristup
+</td><td>
+barrier-free access
+</td></tr>
+</table>
 <h2>
-<a href=#Yearly_deaths_in_Czech_Republic_by_underlying_cause_of_death id=Yearly_deaths_in_Czech_Republic_by_underlying_cause_of_death>Yearly deaths in Czech Republic by underlying cause of death</a>
+<a href=#Yearly_deaths_in_the_Czech_Republic_by_underlying_cause_of_death id=Yearly_deaths_in_the_Czech_Republic_by_underlying_cause_of_death>Yearly deaths in the Czech Republic by underlying cause of death</a>
 </h2>
 <p>In an earlier section I combined Excel files published by the Czech Statistical Office in order to generate a CSV file that shows yearly deaths grouped by ICD code for the underlying cause of death and age: <a href=czech2.html#Deaths_by_ICD_code_region_age_group_and_year>czech2.html#Deaths_by_ICD_code_region_age_group_and_year</a>, <a href="https://csu.gov.cz/produkty/zemreli-podle-seznamu-pricin-smrti-pohlavi-a-veku-v-cr-krajich-a-okresech-fgjmtyk2qr">https://csu.gov.cz/produkty/zemreli-podle-seznamu-pricin-smrti-pohlavi-a-veku-v-cr-krajich-a-okresech-fgjmtyk2qr</a>.</p>
 <p>The yearly number of deaths in the Excel files is otherwise identical to the record-level data except the record-level data is missing a single death in 2021:</p>
@@ -1410,7 +1478,7 @@ pheatmap::pheatmap(m^exp,filename=&quot;i2.png&quot;,display_numbers=disp,
   breaks=seq(0,maxcolor^exp,,256),pal2)
 
 system(&quot;magick \\( i2.png -extent 780x \\) \\( i1.png -chop 14x \\) +append 1.png&quot;)</pre>
-<p>The plot below shows raw deaths and not ASMR. Now the only year when circulatory deaths are clearly elevated above the baseline is 2020, but in 2021 and 2022 circulatory deaths are close to the baseline. However the calculation for excess deaths in my previous plot was probably more accurate because it was based on ASMR and not raw deaths:</p>
+<p>The plot below shows raw deaths and not ASMR. Now the only year when circulatory deaths are clearly elevated above the baseline is 2020, but in 2021 and 2022 circulatory deaths are close to the baseline (even though the method I used to calculate excess deaths in my previous plot was probably more accurate because it was based on ASMR and not raw deaths, and in my previous plot I also got fairly high excess mortality for circulatory deaths in 2021 and 2022):</p>
 <div class="width7">
 <img src="i/czech-icd-2.png">
 </div>
@@ -1514,14 +1582,14 @@ p[,vaxpct:=vax/pop*100]
 
 p$size=pmax(.2,log(p$pop,300)-1.2)^4+.2
 
-xstart=58;xend=68;xstep=2;ystart=0;yend=400;ystep=50
+xstart=58;xend=68;xstep=1;ystart=0;yend=400;ystep=50
 xbreak=seq(xstart,xend,xstep)
 ybreak=seq(ystart,yend,ystep)
 
 cor=sapply(split(p,p$year),\(x)cor(x$asmr,x$vaxpct))
 p$year=`levels&lt;-`(factor(p$year),sprintf(&quot;%s (r ≈ %.2f)&quot;,2020:2024,cor))
 
-    smooth=do.call(rbind,lapply(split(p,p$year),\(x)data.frame(year=x$year[1],x=0:1000/10,y=predict(lm(asmr~vaxpct,x),list(vaxpct=seq(0,100,.1))))))
+smooth=do.call(rbind,lapply(split(p,p$year),\(x)data.frame(year=x$year[1],x=0:1000/10,y=predict(lm(asmr~vaxpct,x),list(vaxpct=seq(0,100,.1))))))
 
 color=c(&quot;black&quot;,hcl(c(0,330,200,240)+15,c(130,110,120,100),c(50,60,50,40)))
 
@@ -1534,30 +1602,12 @@ geom_hline(yintercept=c(ystart,yend),linewidth=.3,lineend=&quot;square&quot;)+
 geom_text(data=d[grep(2021,year)],aes(label=sub(&quot; kraj$&quot;,&quot;&quot;,name),color=year),size=2.3,vjust=c(-.7,1.8)[c(2,1,2,2,1,2,2,1,2,2,1,2,1,2)],show.legend=F)+
 geom_point(aes(color=year),stroke=0,size=p$size,alpha=1)+
 geom_line(data=smooth,aes(group=year),color=color[smooth$year],linetype=2,linewidth=.4,show.legend=F)+
-labs(x=NULL,y=&quot;COVID deaths per 100,000 people&quot;,title=&quot;Regions of Czech Republic: COVID ASMR by percentage of vaccinated people in 2024&quot;,caption=&quot;Point size indicates population size. ASMR was calculated by 5-year age groups using the 2021 census
-population as the standard population. Sources:
-nemocneni-aktualne.mzcr.cz/api/v2/covid-19, csu.gov.cz/produkty/obyvatelstvo-podle-jednotek-veku-a-
-pohlavi-ve-spravnich-obvodech-obci-s-rozsirenou-pusobnosti.&quot;)+
-smooth=do.call(rbind,lapply(split(p,p$year),\(x)data.frame(year=x$year[1],x=0:1000/10,y=predict(lm(asmr~vaxpct,x,w=x$pop),list(vaxpct=seq(0,100,.1))))))
-
-pal2=c(&quot;black&quot;,hcl(c(0,0,100,190)+15,c(130,50,130,130),c(50,70,50,50)))
-
-d=p[,.(x=vaxpct,y=asmr,year,name)][order(x)]
-
-ggplot(d,aes(x,y))+
-geom_vline(xintercept=c(xstart,xend),linewidth=.3,lineend=&quot;square&quot;)+
-geom_hline(yintercept=c(ystart,yend),linewidth=.3,lineend=&quot;square&quot;)+
-# ggrepel::geom_text_repel(data=d[year==2021],aes(label=sub(&quot; kraj$&quot;,&quot;&quot;,name),color=year),size=2.3,point.padding=2,show.legend=F,max.overlaps=Inf,segment.size=.3,min.segment.length=.1,direction=&quot;y&quot;,force=10,force_pull=2,box.padding=.1)+
-geom_text(data=d[grep(2021,year)],aes(label=sub(&quot; kraj$&quot;,&quot;&quot;,name),color=year),size=2.3,vjust=c(-.7,1.8)[c(2,1,2,2,1,2,2,1,2,2,1,2,1,2)],show.legend=F)+
-geom_point(aes(color=year),stroke=0,size=p$size,alpha=1)+
-geom_line(data=smooth,aes(group=year),color=pal2[smooth$year],linetype=2,linewidth=.4,show.legend=F)+
-labs(x=NULL,y=&quot;COVID deaths per 100,000 people&quot;,title=&quot;Regions of Czech Republic: COVID ASMR by percentage of vaccinated people in 2024&quot;,caption=&quot;Point size indicates population size. ASMR was calculated by 5-year age groups using the 2021 census
-population as the standard population. The linear regression lines are weighted by population size. Sources:
-nemocneni-aktualne.mzcr.cz/api/v2/covid-19, csu.gov.cz/produkty/obyvatelstvo-podle-jednotek-veku-a-
-pohlavi-ve-spravnich-obvodech-obci-s-rozsirenou-pusobnosti.&quot;)+
+labs(x=NULL,y=&quot;COVID deaths per 100,000 people&quot;,title=&quot;Regions of Czech Republic: COVID ASMR by percentage of vaccinated people in 2024&quot;,caption=&quot;Point size indicates population size. ASMR was calculated by 5-year age groups using the 2021 census population
+as the standard population. Sources: nemocneni-aktualne.mzcr.cz/api/v2/covid-19, csu.gov.cz/produkty/
+obyvatelstvo-podle-jednotek-veku-a-pohlavi-ve-spravnich-obvodech-obci-s-rozsirenou-pusobnosti.&quot;)+
 scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=\(x)paste0(x,&quot;%&quot;))+
 scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
-scale_color_manual(values=pal2)+
+scale_color_manual(values=color)+
 coord_cartesian(clip=&quot;off&quot;,expand=F)+
 theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   axis.ticks=element_line(linewidth=.3),
@@ -1582,7 +1632,7 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   plot.title=element_text(size=8,face=&quot;bold&quot;,margin=margin(2,,5)))
 ggsave(&quot;0.png&quot;,width=5.4,height=3.2,dpi=370*4)
 system(&quot;magick 0.png -resize 25% 1.png&quot;)</pre>
-<p>I excluded Prague from the plot above, because it had about 97% vaccinated people even though in all other regions the percentage was below 65%. In many age groups Prague had more vaccinated people than the total population size, so maybe it includes people who lived outside of Prague but who only got vaccinated in Prague (or maybe the population estimates I used only included residents but the vaccination statistics also included non-residents):</p>
+<p>I excluded Prague from the plot above, because it had about 97% vaccinated people even though in all other regions the percentage was below 65%. In many age groups Prague had more vaccinated people than the total population size, so maybe it includes people who lived outside of Prague but who only got vaccinated in Prague (or maybe the population estimates I used only included residents but the vaccination data also included non-residents):</p>
 <pre>&gt; vax=fread(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani.csv&quot;)
 &gt; pop=fread(&quot;https://csu.gov.cz/docs/107508/1cab7ab3-4d2e-4d0e-c2a8-425e3442218c/130181-23data2022.csv&quot;)
 &gt; v=vax[vekova_skupina!=&quot;nezařazeno&quot;&amp;kraj_nazev==&quot;Hlavní město Praha&quot;,.(vax=sum(prvnich_davek)),.(age=as.numeric(sub(&quot;[-+].*&quot;,&quot;&quot;,vekova_skupina)))]
