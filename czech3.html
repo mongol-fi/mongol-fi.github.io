@@ -1770,12 +1770,12 @@ year    icd reclev eurostat
 <img src=i/czech-vaet-1.jpg class=width6><img src=i/czech-vaet-2.jpg class=width6>
 </div>
 <p>He posted the Perl code here: <a href="https://github.com/OpenVaet/mongol_asmr/blob/main/calculate_asmr.pl">https://github.com/OpenVaet/mongol_asmr/blob/main/calculate_asmr.pl</a>. I was able to fix his code by changing this line:</p>
-<pre>$deaths_per_100k_ASMR = $deaths_per_100k * $standard_percent / $age_group_percent_of_total</pre>
+<pre>$deaths_per_100k_ASMR = $deaths_per_100k * $standard_percent / $age_group_percent_of_total;</pre>
 <p>To this:</p>
-<pre>$deaths_per_100k_ASMR = $deaths_per_100k * $standard_percent / 100 * 365 / ($rolling_days + 1)</pre>
-<p>When he calculated an 11-day moving average of deaths, he added together the deaths on 11 days but he forgot to divide them by 11. The percentage of each age group in the standard population should've been divided by 100 to get the fraction of the age group. The division by the age group percent is not part of the ASMR formula. And the population sizes were in person-days and not person-years, so you have to multiply the deaths per 100,000 person-days by 365 to get deaths per 100,000 person-years.</p>
-<p>In his Perl code he also calculated an 11-day moving average for deaths where the window extended 10 days to the past, and he didn't use a moving average for the population size. But in my R code I calculated a 21-day centered moving average for both deaths and population size where the window extended 10 days into the past and 10 days into the future. So it partially explains why the lines in my plot look more smooth.</p>
-<p>However the lines became even more smooth when I fixed the line above in his Perl code. This R code produces the same result as his Perl code with the line above fixed:</p>
+<pre>$deaths_per_100k_ASMR = $deaths_per_100k * $standard_percent / 100 * 365 / ($rolling_days + 1);</pre>
+<p>When he calculated an 11-day moving average of deaths, he added together the deaths on 11 days but he forgot to divide them by 11. The percentage of each age group in the standard population should've been divided by 100 to get the fraction of the age group. The population sizes were in person-days and not person-years, so the deaths per person-days have to be multiplied by 365 to get deaths per person-years. And a division by the <span class="quote">&quot;age group percent of total&quot;</span> is not part of the ASMR formula.</p>
+<p>A more minor reason why his Perl script didn't reproduce the results of my R code was that he calculated an 11-day moving average for deaths where the window extended 10 days to the past, and he didn't use a moving average for the population size. But in my R code I calculated a 21-day centered moving average for both deaths and population size where the window extended 10 days into the past and 10 days into the future. So it partially explains why the lines in my plot look more smooth.</p>
+<p>However the lines became even more smooth when I fixed the line above in his Perl code. After I fixed the line, the Perl script produced the same result as this R code:</p>
 <pre>library(data.table);library(ggplot2);library(stringr)
 
 ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
@@ -1838,6 +1838,34 @@ system(&quot;magick 0.png -resize 25% 1.png&quot;)</pre>
 <div class="width7">
 <img src="i/czech-vaet-3.gif">
 </div>
+<p>The reason why the y-axis values in the plots above are so low is because I used the WHO standard population as my standard population. But the WHO standard population doesn't give enough weight to elderly age groups, because it's based on the world population so it includes developing countries that have a much lower percentage of people in elderly age groups than European countries:</p>
+<pre>&gt; who=fread(&quot;https://github.com/OpenVaet/mongol_asmr/raw/main/data/who_standard_population_age_group_5.csv&quot;)
+&gt; pop=fread(&quot;http://sars2.net/f/czcensus2021pop.csv&quot;)[,.(czech=sum(pop)),.(age=age%/%5*5)][,czech:=czech/sum(czech)*100]
+&gt; pop$who=head(who$who,-1)
+&gt; print(round(pop[,whopct:=who/czech*100],1),r=F)
+ age czech who whopct
+   0   5.3 8.9  166.3
+   5   5.2 8.7  166.3
+  10   5.5 8.6  155.8
+  15   4.7 8.5  182.0
+  20   4.5 8.2  181.3
+  25   5.7 7.9  138.8
+  30   6.6 7.6  116.0
+  35   6.8 7.2  104.6
+  40   8.2 6.6   80.8
+  45   8.3 6.0   72.4
+  50   6.5 5.4   82.1
+  55   6.3 4.6   71.9
+  60   5.9 3.7   63.5
+  65   6.3 3.0   46.6
+  70   5.9 2.2   37.6
+  75   4.0 1.5   38.1
+  80   2.3 0.9   39.4
+  85   1.3 0.4   34.2
+  90   0.5 0.1   29.9
+  95   0.1 0.0   42.7
+ 100   0.0 0.0   81.3
+ age czech who whopct</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
