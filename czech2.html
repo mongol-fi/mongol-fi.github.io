@@ -23,8 +23,8 @@ blockquote p{max-width:480px}
 blockquote blockquote p{max-width:440px}
 blockquote blockquote blockquote p{max-width:400px}
 blockquote,.quote,blockquote h1,blockquote h2,blockquote h3{color:hsl(50,100%,85%)}
-blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(45,90%,70%)}
-blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote .quote,.quote .quote .quote{color:hsl(40,50%,50%)}
+blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(45,55%,65%)}
+blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote .quote,.quote .quote .quote{color:hsl(40,40%,50%)}
 .width1{max-width:100px}
 .width2{max-width:200px}
 .width3{max-width:300px}
@@ -893,28 +893,31 @@ age     AstraZeneca Janssen Moderna Novavax Pfizer Total
 <img src="i/czech-asmrtype.png">
 </div>
 <p>The plot above also has a sharp increase in deaths in December 2022, but it occurs in both vaccinated and unvaccinated people, and it's probably because of an influenza wave that occured in many European countries around December 2022.</p>
-<pre>std=fread(&quot;http://sars2.net/f/czcensus2021pop.csv&quot;)[,.(pop=sum(pop)),.(age=pmin(age,95)%/%5*5)][,pop/sum(pop)]
+<pre>library(data.table);library(ggplot2)
+
+std=fread(&quot;http://sars2.net/f/czcensus2021pop.csv&quot;)[,.(pop=sum(pop)),.(age=pmin(age,95)%/%5*5)][,pop/sum(pop)]
 
 b=fread(&quot;http://sars2.net/f/czbucketskeep.csv.gz&quot;)[dose&lt;=1&amp;type!=&quot;Other&quot;][,age:=pmin(age,95)%/%5*5]
 b[dose==0,type:=&quot;Unvaccinated&quot;]
-a=b[,.(dead=sum(dead),alive=sum(alive)),.(type,month,age)]
+a=b[,.(dead=sum(dead),alive=sum(as.double(alive))),.(type,month,age)]
+a=rbind(a,a[,.(dead=sum(dead),alive=sum(alive),type=&quot;All people&quot;),.(month,age)])
 p=a[,.(pop=sum(alive),asmr=sum(dead/alive*std[age/5+1]*365e5)),.(month,type)]
 
 p[,month:=as.Date(paste0(month,&quot;-1-15&quot;))]
 xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2023-1-1&quot;)
 xbreak=seq(xstart,xend,&quot;2 month&quot;)
 
-p$type=factor(p$type,c(&quot;Unvaccinated&quot;,&quot;Pfizer&quot;,&quot;Moderna&quot;,&quot;AstraZeneca&quot;,&quot;Janssen&quot;))
-# hidelim=1e3;p[pop&lt;hidelim/365,asmr:=NA]
+p$type=factor(p$type,c(&quot;All people&quot;,&quot;Unvaccinated&quot;,&quot;Pfizer&quot;,&quot;Moderna&quot;,&quot;AstraZeneca&quot;,&quot;Janssen&quot;,&quot;Novavax&quot;))
+hidelim=1e2;p[pop&lt;hidelim*365,asmr:=NA]
 
 cand=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
 ymax=max(p$asmr,na.rm=T)
 ystep=cand[which.min(abs(cand-ymax/6))]
 yend=ystep*ceiling(ymax/ystep)
-yend=max(p$asmr)
+yend=max(p$asmr,na.rm=T)
 ystart=0;ybreak=seq(ystart,yend,ystep)
 
-color=c(&quot;black&quot;,hsv(c(240,355,330,204)/360,c(.94,.75,.8,.67),c(.76,.82,.5,.87)))
+color=c(&quot;gray50&quot;,&quot;black&quot;,hsv(c(240,355,330,204,36)/360,c(.94,.75,.8,.67,.64),c(.76,.82,.5,.87,.95)))
 
 ggplot(p,aes(x=month+15,y=asmr))+
 geom_vline(xintercept=seq(xstart,xend,&quot;3 month&quot;),color=&quot;gray85&quot;,linewidth=.3,lineend=&quot;square&quot;)+
@@ -922,10 +925,12 @@ geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray65&quot;
 geom_vline(xintercept=c(xstart,xend),linewidth=.3,lineend=&quot;square&quot;)+
 geom_hline(yintercept=c(ystart,0,yend),linewidth=.3,lineend=&quot;square&quot;)+
 geom_line(aes(color=type),linewidth=.4)+
+geom_point(data=p[type!=&quot;All people&quot;],aes(color=type),stroke=0,size=1,show.legend=F)+
 labs(title=&quot;Czech record-level data: ASMR by month and type of first vaccine dose&quot;,subtitle=paste0(&quot;People are kept included under the first dose after subsequent doses. The standard population is the estimated resident population in the 2021 census by 5-year age groups.&quot;)|&gt;stringr::str_wrap(90),x=NULL,y=NULL)+
 scale_x_date(limits=c(xstart,xend),breaks=seq(xstart,xend,&quot;6 month&quot;),labels=c(rbind(&quot;&quot;,2020:2022),&quot;&quot;))+
-scale_y_continuous(limits=c(ystart,yend),breaks=seq(ystart,yend,ystep),labels=\(x)paste0(x/1e3,&quot;k&quot;))+
+scale_y_continuous(limits=c(ystart,yend),breaks=seq(ystart,yend,ystep),labels=\(x)ifelse(x==0,0,paste0(x/1e3,&quot;k&quot;)))+
 scale_color_manual(values=color)+
+# scale_linetype_manual(values=c(2,rep(1,5)))+
 coord_cartesian(clip=&quot;off&quot;,expand=F)+
 theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   axis.ticks=element_line(linewidth=.3),
@@ -934,9 +939,9 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   legend.direction=&quot;vertical&quot;,
   legend.background=element_rect(fill=&quot;white&quot;,color=&quot;black&quot;,linewidth=.3),
   legend.key.height=unit(11,&quot;pt&quot;),
-  legend.key.width=unit(15,&quot;pt&quot;),
+  legend.key.width=unit(18,&quot;pt&quot;),
   legend.key=element_rect(fill=&quot;white&quot;),
-  legend.margin=margin(0,6,4,4.5),
+  legend.margin=margin(-1,6,4,4),
   legend.justification=c(0,1),
   legend.position=c(0,1),
   legend.spacing.x=unit(1.5,&quot;pt&quot;),
