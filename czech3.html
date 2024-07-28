@@ -68,6 +68,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Yearly_deaths_in_the_Czech_Republic_by_underlying_cause_of_death>Yearly deaths in the Czech Republic by underlying cause of death</a></li>
 <li><a href=#COVID_ASMR_compared_to_percentage_of_vaccinated_people_by_region>COVID ASMR compared to percentage of vaccinated people by region</a></li>
 <li><a href=#Reply_to_Substack_article_by_canceledmouse>Reply to Substack article by canceledmouse</a></li>
+<li><a href=#Excess_percentage_of_deaths_by_ICD_code_in_2021_2022>Excess percentage of deaths by ICD code in 2021-2022</a></li>
 </ul>
 
 <h2>
@@ -1774,6 +1775,7 @@ year    icd reclev eurostat
 <p>To this:</p>
 <pre>$deaths_per_100k_ASMR = $deaths_per_100k * $standard_percent / 100 * 365 / ($rolling_days + 1);</pre>
 <p>When he calculated an 11-day moving average of deaths, he added together the deaths on 11 days but he forgot to divide them by 11. And the percentage of each age group in the standard population should've been divided by 100 to get the fraction of the age group. And the deaths per person-days should've been multiplied by 365 to get deaths per person-years. And a division by the <span class="quote">&quot;age group percent of total&quot;</span> is not part of the ASMR formula.</p>
+<p>Canceledmouse acknowledged the errors in his Substack comments and fixed them in this commit: <a href="https://github.com/OpenVaet/mongol_asmr/commit/b5d39c7894d915453a5454e165a5f52ca3458fbf">https://github.com/OpenVaet/mongol_asmr/commit/b5d39c7894d915453a5454e165a5f52ca3458fbf</a>.</p>
 <p>A more minor reason why his Perl script didn't reproduce the results of my R code was that he calculated an 11-day moving average for deaths where the window extended 10 days to the past, and he didn't use a moving average for the population size. But in my R code I calculated a 21-day centered moving average for both deaths and population size where the window extended 10 days into the past and 10 days into the future. So it partially explains why the lines in my plot look more smooth.</p>
 <p>However the lines became even more smooth when I fixed the line above in his Perl code. After I fixed the line, the Perl script produced the same result as this R code:</p>
 <pre>library(data.table);library(ggplot2);library(stringr)
@@ -1834,7 +1836,7 @@ theme(axis.text=element_text(size=6.5,color=&quot;black&quot;),
   plot.title=element_text(size=7.5,face=&quot;bold&quot;,margin=margin(2,0,4,0)))
 ggsave(&quot;0.png&quot;,width=4.3,height=2.8,dpi=400*4)
 system(&quot;magick 0.png -resize 25% 1.png&quot;)</pre>
-<p>This shows the result of the code above:</p>
+<p>The next GIF file shows the result of the code above. When canceledmouse used a 11-day moving average with a backwards window for deaths but no moving average for the population size, the deaths were lagging 5 days behind the population size, so the ASMR of unvaccinated people was underestimated in early 2021 when the population size of vaccinated people was increasing rapidly:</p>
 <div class="width7">
 <img src="i/czech-vaet-3.gif">
 </div>
@@ -1866,6 +1868,176 @@ system(&quot;magick 0.png -resize 25% 1.png&quot;)</pre>
   95   0.1 0.0   42.7
  100   0.0 0.0   81.3
  age czech who whopct</pre>
+<h2>
+<a href=#Excess_percentage_of_deaths_by_ICD_code_in_2021_2022 id=Excess_percentage_of_deaths_by_ICD_code_in_2021_2022>Excess percentage of deaths by ICD code in 2021-2022</a>
+</h2>
+<p>In the following code I calculated an age-normalized excess percentage of deaths by the ICD code for the underlying cause of death, where my baseline number of deaths for each ICD code was derived by multiplying the population size for each age group with the total mortality rate of the age group in 2013-2019.</p>
+<p>I showed only ICD codes with at least 100 total deaths in 2020-2022, but out of them by far the highest total excess mortality percent in 2020-2022 was 2005% for <span class="quote">&quot;viral pneumonia, not elsewhere classified&quot;</span>. The next-highest was 167% for unspecified kidney failure.</p>
+<p>The lowest total excess mortality was about -59% for <span class="quote">&quot;Surgical operation and other surgical procedures as the cause of abnormal reaction of the patient, or of later complication, without mention of misadventure at the time of the procedure&quot;</span>.</p>
+<p>For some reason in 2020 cardiac arrest got one of the highest excess mortality percentages but in 2021 and 2022 it got one of the lowest percentages. But if the high percentage in 2020 was caused by COVID, then I don't understand why there didn't continue to be a high number of cardiac arrest deaths in 2021. Even though it might have been because of some change in policy where the cardiac deaths were classified under another ICD code.</p>
+<pre>library(data.table)
+
+cul=\(x,y)y[cut(x,c(y,Inf),,T,F)]
+dlf=\(x,y,...){if(missing(y))y=sub(&quot;.*/&quot;,&quot;&quot;,x);for(i in 1:length(x))download.file(x[i],y[i],quiet=T,...)}
+
+dlf(&quot;https://raw.githubusercontent.com/k4m1113/ICD-10-CSV/master/codes.csv&quot;)
+dlf(&quot;http://sars2.net/f/czicd.csv.gz&quot;)
+dlf(&quot;http://sars2.net/f/czpopdead.csv&quot;)
+
+pop=fread(&quot;czpopdead.csv&quot;)[,.(pop=sum(pop)),.(year,age=pmin(age,95)%/%5*5)]
+t=fread(&quot;czicd.csv.gz&quot;)[,.(dead=sum(dead)),.(year,icd,age)]|&gt;merge(pop)
+t=merge(t[year&lt;2020,.(base=sum(dead)/sum(pop)),.(age,icd)],t[year&gt;=2020])[,base:=base*pop]
+
+t=t[icd%in%t[,.(dead=sum(dead)),icd][dead&gt;=100,icd]]
+
+t=rbind(t,t[,.(base=sum(base),dead=sum(dead),pop=sum(pop),year=&quot;2020-2022&quot;),.(icd,age)])
+
+t=merge(unique(fread(&quot;codes.csv&quot;)[,.(icd=V1,name=V6)],by=&quot;icd&quot;),t)
+
+o=t[,.(excess=(sum(dead)/sum(base)-1)*100,dead=sum(dead)),.(year,cause=substr(paste(icd,name),1,80))]
+o=merge(dcast(o,cause~year,value.var=&quot;excess&quot;),o[,.(dead=sum(dead)),cause])
+o[,.(dead,`2020-2022`,`2020`,`2021`,`2022`,cause=sprintf(&quot;%-80s&quot;,cause))]
+o=o[,.(dead,`2020-2022`,`2020`,`2021`,`2022`,cause=sprintf(&quot;%-80s&quot;,cause))]
+o[order(-`2020-2022`)]|&gt;dplyr::mutate_if(is.double,round)|&gt;print(r=F,nrow=Inf)</pre>
+<!-- -->
+<pre>  dead 2020-2022 2020 2021 2022                                                                            cause
+  2350      2005 1771 2213 2030 J12 Viral pneumonia, not elsewhere classified
+  2082       167  214  168  119 R54 Age-related physical debility
+   566       121   50  127  183 N19 Unspecified kidney failure
+   548        87   42  109  110 J69 Pneumonitis due to solids and liquids
+   310        64   37   94   60 D48 Neoplasm of uncertain behavior of other and unspecified sites
+ 13452        62   55   69   61 R99 Ill-defined and unknown cause of mortality
+   620        53   63   38   59 D38 Neoplasm of uncertain behavior of middle ear and respiratory and intrathorac
+   386        48   25   46   74 A46 Erysipelas
+   372        45  -10   76   69 I38 Endocarditis, valve unspecified
+  3406        43   37   59   34 N17 Acute kidney failure
+  3434        42   38   45   44 G20 Parkinson&#39;s disease
+ 12062        42   44   40   42 I10 Essential (primary) hypertension
+ 41110        41   39   35   49 I50 Heart failure
+   286        40   33   36   52 J16 Pneumonia due to other infectious organisms, not elsewhere classified
+  8480        40   33   43   43 I48 Atrial fibrillation and flutter
+   962        37   24   39   47 K92 Other diseases of digestive system
+   220        33   14   35   51 D43 Neoplasm of uncertain behavior of brain and central nervous system
+ 14912        29   36   20   32 G30 Alzheimer&#39;s disease
+   212        28   64   38  -18 K75 Other inflammatory liver diseases
+   912        27    0   48   33 C21 Malignant neoplasm of anus and anal canal
+ 12772        27   36   21   22 I11 Hypertensive heart disease
+  1502        24   10   31   30 E86 Volume depletion
+  1010        24   13   43   15 K76 Other diseases of liver
+   216        21    7   39   18 Y30 Falling, jumping or pushed from a high place, undetermined intent
+   242        21   20    8   35 R64 Cachexia
+   428        21   11   49    2 D68 Other coagulation defects
+ 10496        20   11   24   26 K70 Alcoholic liver disease
+  3542        20   14   25   22 N18 Chronic kidney disease (CKD)
+   254        20   25   19   16 I72 Other aneurysm
+   660        20   20   34    5 I33 Acute and subacute endocarditis
+   204        19   19    2   36 J22 Unspecified acute lower respiratory infection
+   204        18   28   12   15 W69 Accidental drowning and submersion while in natural water
+   900        18   -4   34   24 X31 Exposure to excessive natural cold
+   420        17   33   14    3 C01 Malignant neoplasm of base of tongue
+   620        16   33   29  -15 E41 Nutritional marasmus
+   616        15   -2   19   29 C10 Malignant neoplasm of oropharynx
+   760        15   16    8   22 X72 Intentional self-harm by handgun discharge
+   218        15  -17   36   25 I44 Atrioventricular and left bundle-branch block
+   784        14    4   20   18 G35 Multiple sclerosis
+  2236        14   16   21    5 N39 Other disorders of urinary system
+   376        14   -7   16   31 I82 Other venous embolism and thrombosis
+   210        13   -4   26   16 C11 Malignant neoplasm of nasopharynx
+   596        12   16    4   17 C13 Malignant neoplasm of hypopharynx
+   820        12    9    3   25 C02 Malignant neoplasm of other and unspecified parts of tongue
+   220        11  -12   34   12 G10 Huntington&#39;s disease
+   394        11   11    4   19 K63 Other diseases of intestine
+  1850         9   14    7    5 I13 Hypertensive heart and chronic kidney disease
+   632         8   -7   10   22 N10 Acute pyelonephritis
+   350         8    8    4   12 C45 Mesothelioma
+   216         8    2    8   13 G91 Hydrocephalus
+   222         8  -16   11   28 G80 Cerebral palsy
+  1934         7    2    1   19 K56 Paralytic ileus and intestinal obstruction without hernia
+   674         7   26  -15    9 C17 Malignant neoplasm of small intestine
+   356         6  -10   -3   31 G21 Secondary parkinsonism
+   950         6    2    9    8 X80 Intentional self-harm by jumping from a high place
+ 17754         6   12    0    7 J18 Pneumonia, unspecified organism
+   796         6   10    9   -2 C49 Malignant neoplasm of other connective and soft tissue
+  1348         5   -3    8   10 K26 Duodenal ulcer
+   360         3   -3   17   -4 E87 Other disorders of fluid, electrolyte and acid-base balance
+   362         3   -6   -7   23 K22 Other diseases of esophagus
+   246         3   27  -12   -5 K43 Ventral hernia
+ 13964         3    4    4    2 C25 Malignant neoplasm of pancreas
+   476         3   -6   -5   20 C48 Malignant neoplasm of retroperitoneum and peritoneum
+  3528         2   -4    4    8 I35 Nonrheumatic aortic valve disorders
+  4348         2    5   -5    7 C71 Malignant neoplasm of brain
+   224         2  -24    1   28 C06 Malignant neoplasm of other and unspecified parts of mouth
+   634         2    1   -1    4 K83 Other diseases of biliary tract
+   572         1  -10   10    3 C51 Malignant neoplasm of vulva
+  3400         0    2    1   -3 C15 Malignant neoplasm of esophagus
+   872         0   -4   -8   11 E43 Unspecified severe protein-calorie malnutrition
+  1038         0   -5    5   -1 I12 Hypertensive chronic kidney disease
+   814        -1    1    2   -5 K65 Peritonitis
+  2526        -1    2   -9    4 C43 Malignant melanoma of skin
+   690        -1   -1   -8    5 C09 Malignant neoplasm of tonsil
+   830        -1    2  -10    4 J43 Emphysema
+  5394        -2   -1   -5    1 C67 Malignant neoplasm of bladder
+  7768        -2    2   -3   -5 C80 Malignant neoplasm without specification of site
+  1228        -2   -3   -3    0 K25 Gastric ulcer
+  3162        -3   -6   -1    0 K74 Fibrosis and cirrhosis of liver
+   476        -3  -26   22   -5 C73 Malignant neoplasm of thyroid gland
+   972        -4    8  -12   -9 C76 Malignant neoplasm of other and ill-defined sites
+   266        -5    0   -7   -6 C68 Malignant neoplasm of other and unspecified urinary organs
+   214        -5  -11   31  -34 I36 Nonrheumatic tricuspid valve disorders
+  8878        -5   -1   -8   -5 C61 Malignant neoplasm of prostate
+  1684        -5  -10   -2   -4 J15 Bacterial pneumonia, not elsewhere classified
+  2760        -5    2   -2  -16 I42 Cardiomyopathy
+   632        -6  -13   -1   -5 C65 Malignant neoplasm of renal pelvis
+  1990        -6   -2   -6  -11 C54 Malignant neoplasm of corpus uteri
+  5258        -6   -6   -6   -7 C22 Malignant neoplasm of liver and intrahepatic bile ducts
+  2292        -8   -4  -11   -8 C24 Malignant neoplasm of other and unspecified parts of biliary tract
+   424        -8   -6  -11   -7 K81 Cholecystitis
+   364        -8   -8    3  -20 K86 Other diseases of pancreas
+   416        -9   -7  -16   -4 C04 Malignant neoplasm of floor of mouth
+   622        -9   -6   -3  -18 G12 Spinal muscular atrophy and related syndromes
+   336       -10  -19   -1   -9 C39 Malignant neoplasm of other and ill-defined sites in the respiratory system
+   234       -10   12  -14  -27 N13 Obstructive and reflux uropathy
+ 12164       -10   -6  -13  -13 C18 Malignant neoplasm of colon
+ 17480       -11  -12  -15   -7 J44 Other chronic obstructive pulmonary disease
+  1260       -11   -9   -7  -19 I51 Complications and ill-defined descriptions of heart disease
+  1072       -12   -1  -16  -18 D46 Myelodysplastic syndromes
+  3742       -12   -9  -13  -14 C56 Malignant neoplasm of ovary
+   282       -12  -12  -29    5 K71 Toxic liver disease
+   404       -13   -9   -8  -21 C38 Malignant neoplasm of heart, mediastinum and pleura
+  5790       -13  -12  -12  -15 C16 Malignant neoplasm of stomach
+   900       -14  -23   -5  -13 G93 Other disorders of brain
+   364       -14    6  -20  -27 I05 Rheumatic mitral valve diseases
+  2270       -14    7  -28  -22 I24 Other acute ischemic heart diseases
+  6970       -14   -9  -16  -18 I61 Nontraumatic intracerebral hemorrhage
+  1736       -15  -14  -11  -20 C53 Malignant neoplasm of cervix uteri
+  5542       -16  -16  -17  -14 C64 Malignant neoplasm of kidney, except renal pelvis
+  1048       -16  -26   -9  -13 A04 Other bacterial intestinal infections
+   396       -16  -13   -4  -30 I20 Angina pectoris
+   520       -16  -20  -13  -16 C55 Malignant neoplasm of uterus, part unspecified
+   790       -16    5  -24  -31 I08 Multiple valve diseases
+  1302       -17   -3  -25  -22 W19 Unspecified fall
+  5082       -17  -19  -18  -13 C20 Malignant neoplasm of rectum
+   218       -17  -22  -15  -14 C07 Malignant neoplasm of parotid gland
+  1248       -18  -17  -16  -20 C32 Malignant neoplasm of larynx
+   288       -18  -30   -2  -22 A09 Infectious gastroenteritis and colitis, unspecified
+   736       -18  -22  -12  -21 C26 Malignant neoplasm of other and ill-defined digestive organs
+  2218       -19  -13  -20  -23 C19 Malignant neoplasm of rectosigmoid junction
+  8964       -19  -12  -21  -23 I70 Atherosclerosis
+   202       -19  -11   -8  -38 N11 Chronic tubulo-interstitial nephritis
+  4116       -20   50  -60  -49 I46 Cardiac arrest
+   214       -23   -5  -24  -40 C41 Malignant neoplasm of bone and articular cartilage of other and unspecified
+   238       -24   -5  -31  -35 K52 Other and unspecified noninfective gastroenteritis and colitis
+  1550       -28  -25  -32  -27 C23 Malignant neoplasm of gallbladder
+   990       -29  -36  -24  -28 I34 Nonrheumatic mitral valve disorders
+   226       -30    3  -44  -48 I06 Rheumatic aortic valve diseases
+  1024       -30  -26  -31  -34 I27 Other pulmonary heart diseases
+   210       -30   -6  -48  -37 Y84 Other medical procedures as the cause of abnormal reaction of the patient, o
+   230       -33  -10  -51  -37 J41 Simple and mucopurulent chronic bronchitis
+   982       -35  -15  -55  -35 J20 Acute bronchitis
+  6382       -44  -37  -48  -47 I67 Other cerebrovascular diseases
+   408       -45  -40  -56  -38 J42 Unspecified chronic bronchitis
+   244       -59  -30  -74  -73 Y83 Surgical operation and other surgical procedures as the cause of abnormal re
+  dead 2020-2022 2020 2021 2022                                                                            cause</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
