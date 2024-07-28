@@ -1765,15 +1765,15 @@ year    icd reclev eurostat
 <p>Then in another thread McKernan posted a screenshot that showed that Jikky had blocked him and wrote <span class="quote">&quot;Sorry to see it devolve into this.&quot;</span> And Bobby posted a screenshot of McKernan's tweet and wrote: <span class="quote">&quot;Will Jikky resort to blocking #metoo, instead of discussing this through? The digital artist is looking for more watertight attack vectors VS <span class="citation">@moderna_tx</span> which could hold at any court through qualitative &amp; quantitative persuasion. Am I now licking ass for my upcoming Moderna job?&quot;</span> (<a href="https://x.com/Bobby_Network/status/1496449231481184257">https://x.com/Bobby_Network/status/1496449231481184257</a>) After that Jikky also blocked Bobby.</p>
 <p>BTW yesterday when I was searching for Twitter accounts that had posted about Limeng Yan in Japanese, I found this bot that promotes Qanon and that posts in a mixture of Japanese, Arabic, and English: <a href="https://x.com/glorious_harmo">https://x.com/glorious_harmo</a> (<a href="https://x.com/search?q=lang%3Aja+limeng+yan&f=live">https://x.com/search?q=lang%3Aja+limeng+yan&amp;f=live</a>). I wonder if it's an acquaintance of Arkmedic, because its pinned tweet features the same image that Arkmedic uses as his profile picture at Gab and his banner image at Twitter, which features the text <span class="quote">&quot;WHERE WE GO ONE WE GO ALL&quot;</span> and the hashtag <span class="quote">&quot;#QAnon&quot;</span>. It's now been about three years since even Alex Jones, Mike Flynn, and Robert David Steele all started to say that Q was a psyop. So why does Arkmedic still use that image as his profile picture? Does he still trust the plan?</p>
 </blockquote>
-<p>Here the plot on the left was produced when canceledmouse ran a modified version of my code where he only kept vaccinated and unvaccinated people, and he calculated the ASMR so that the standard population was the 2021 census population by single year of age up to ages 100+. And in the plot on the right he used his own Perl code to calculate the ASMR using the WHO standard population which consists of 5-year age groups up to 100+:</p>
+<p>Here the first plot below left was produced when canceledmouse ran a modified version of my R code where he only kept vaccinated and unvaccinated people, and he calculated the ASMR so that the standard population was the 2021 census population by single year of age up to ages 100+. And in the second plot he used his own Perl code to calculate the ASMR using the WHO standard population (which consists of 5-year age groups up to ages 100+):</p>
 <div class="maxwidth">
 <img src=i/czech-vaet-1.jpg class=width6><img src=i/czech-vaet-2.jpg class=width6>
 </div>
-<p>He posted the Perl code here: <a href="https://github.com/OpenVaet/mongol_asmr/blob/main/calculate_asmr.pl">https://github.com/OpenVaet/mongol_asmr/blob/main/calculate_asmr.pl</a>. I was able to fix his code by changing this line:</p>
+<p>He posted the Perl code here: <a href="https://github.com/OpenVaet/mongol_asmr/blob/b5d39c7894d915453a5454e165a5f52ca3458fbf/calculate_asmr_v2.pl">https://github.com/OpenVaet/mongol_asmr/blob/b5d39c7894d915453a5454e165a5f52ca3458fbf/calculate_asmr_v2.pl</a>. His code had multiple errors, but I was able to fix them all by changing this line:</p>
 <pre>$deaths_per_100k_ASMR = $deaths_per_100k * $standard_percent / $age_group_percent_of_total;</pre>
 <p>To this:</p>
 <pre>$deaths_per_100k_ASMR = $deaths_per_100k * $standard_percent / 100 * 365 / ($rolling_days + 1);</pre>
-<p>When he calculated an 11-day moving average of deaths, he added together the deaths on 11 days but he forgot to divide them by 11. The percentage of each age group in the standard population should've been divided by 100 to get the fraction of the age group. The population sizes were in person-days and not person-years, so the deaths per person-days have to be multiplied by 365 to get deaths per person-years. And a division by the <span class="quote">&quot;age group percent of total&quot;</span> is not part of the ASMR formula.</p>
+<p>When he calculated an 11-day moving average of deaths, he added together the deaths on 11 days but he forgot to divide them by 11. And the percentage of each age group in the standard population should've been divided by 100 to get the fraction of the age group. And the deaths per person-days should've been multiplied by 365 to get deaths per person-years. And a division by the <span class="quote">&quot;age group percent of total&quot;</span> is not part of the ASMR formula.</p>
 <p>A more minor reason why his Perl script didn't reproduce the results of my R code was that he calculated an 11-day moving average for deaths where the window extended 10 days to the past, and he didn't use a moving average for the population size. But in my R code I calculated a 21-day centered moving average for both deaths and population size where the window extended 10 days into the past and 10 days into the future. So it partially explains why the lines in my plot look more smooth.</p>
 <p>However the lines became even more smooth when I fixed the line above in his Perl code. After I fixed the line, the Perl script produced the same result as this R code:</p>
 <pre>library(data.table);library(ggplot2);library(stringr)
@@ -1788,10 +1788,12 @@ d=unique(rbind(d,cbind(expand.grid(lapply(d[,1:3],unique)),alive=0,dead=0)),by=1
 d=merge(d,std[,.(age=age_group,std=who_world_standard_percent/100)])
 
 d=d[,.(date=date,alive,dead=ma(dead,10,0),std),.(age,dose)]
+sub=&quot;Moving average for deaths extends 10 days backwards, population is not moving average&quot;|&gt;str_wrap(80)
+
 # d=d[,.(date=date,alive=ma(alive,10),dead=ma(dead,10),std),.(age,dose)]
+# sub=&quot;Moving average for both deaths and population extends 10 days backwards and 10 days forwards&quot;|&gt;str_wrap(80)
 
 p=d[,.(y=sum(dead/alive*std*365e5,na.rm=T),pop=sum(alive)),.(x=date,z=dose)]
-
 p[,z:=factor(z,unique(z))]
 
 p[pop&lt;2e3,y:=NA]
@@ -1805,9 +1807,6 @@ fill=c(hcl(c(210,120,60,0,300)+15,80,70),&quot;black&quot;,&quot;gray45&quot;,&q
 label=data.frame(x=xstart+.02*(xend-xstart),y=seq(yend,,-yend/15,nlevels(p$z))-yend/16,label=levels(p$z))
 
 p=merge(p,p[,.(popsum=sum(pop)),x])[,pct:=pop/popsum*99.99]
-
-sub=&quot;Moving average for deaths extends 10 days backwards, population is not moving average&quot;|&gt;str_wrap(80)
-# sub=&quot;Moving average for both deaths and population extends 10 days backwards and 10 days forwards&quot;|&gt;str_wrap(80)
 
 ggplot(p,aes(x,y))+
 geom_hline(yintercept=c(0,yend),linewidth=.3,lineend=&quot;square&quot;)+
@@ -1832,13 +1831,13 @@ theme(axis.text=element_text(size=6.5,color=&quot;black&quot;),
   plot.margin=margin(4,4,4,4),
   plot.subtitle=element_text(size=6.8,margin=margin(0,0,4,0)),
   plot.title=element_text(size=7.5,face=&quot;bold&quot;,margin=margin(2,0,4,0)))
-ggsave(&quot;0.png&quot;,width=4.3,height=2.8,dpi=400)
+ggsave(&quot;0.png&quot;,width=4.3,height=2.8,dpi=400*4)
 system(&quot;magick 0.png -resize 25% 1.png&quot;)</pre>
 <p>This shows the result of the code above:</p>
 <div class="width7">
 <img src="i/czech-vaet-3.gif">
 </div>
-<p>The reason why the y-axis values in the plots above are so low is because I used the WHO standard population as my standard population. But the WHO standard population doesn't give enough weight to elderly age groups, because it's based on the world population so it includes developing countries that have a much lower percentage of people in elderly age groups than European countries:</p>
+<p>The reason why the y-axis values in the GIF file above are so low is because I used the WHO standard population as my standard population like canceledmouse. But the WHO standard population is a poor fit to the Czech population, because it's based on the world population so it includes developing countries that have a much lower percentage of people in elderly age groups than European countries. So therefore it doesn't give enough weight to the elderly age groups which account for most deaths:</p>
 <pre>&gt; who=fread(&quot;https://github.com/OpenVaet/mongol_asmr/raw/main/data/who_standard_population_age_group_5.csv&quot;)
 &gt; pop=fread(&quot;http://sars2.net/f/czcensus2021pop.csv&quot;)[,.(czech=sum(pop)),.(age=age%/%5*5)][,czech:=czech/sum(czech)*100]
 &gt; pop$who=head(who$who,-1)
