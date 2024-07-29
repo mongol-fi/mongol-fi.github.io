@@ -68,7 +68,9 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Yearly_deaths_in_the_Czech_Republic_by_underlying_cause_of_death>Yearly deaths in the Czech Republic by underlying cause of death</a></li>
 <li><a href=#COVID_ASMR_compared_to_percentage_of_vaccinated_people_by_region>COVID ASMR compared to percentage of vaccinated people by region</a></li>
 <li><a href=#Reply_to_Substack_article_by_canceledmouse>Reply to Substack article by canceledmouse</a></li>
-<li><a href=#Excess_percentage_of_deaths_by_ICD_code_in_2021_2022>Excess percentage of deaths by ICD code in 2021-2022</a></li>
+<li><a href=#Excess_percentage_of_deaths_by_ICD_code_in_2020_2022>Excess percentage of deaths by ICD code in 2020-2022</a></li>
+<li><a href=#Comment_to_Substack_post_by_Kirsch>Comment to Substack post by Kirsch</a></li>
+<li><a href=#Moderna_Pfizer_ratio_by_vaccination_quarter_and_age_group>Moderna-Pfizer ratio by vaccination quarter and age group</a></li>
 </ul>
 
 <h2>
@@ -1228,7 +1230,7 @@ Domov pro seniory Osoblaha, příspěvková organizace  185
 &gt; d=merge(d,d[,.(base=sum(match)/sum(N)),age])[,base:=base*N]
 &gt; d[,.(excess=round((sum(match)/sum(base)-1)*100),match=sum(match),N=sum(N)),vaxtype][,matchpct:=match/N*100][order(-N)][N&gt;1e4]|&gt;print(r=F)
                               vaxtype excess match        N     matchpct
-                            Comirnaty      8  6071 15037534 0.0403723110
+                            Comirnaty      8  6071 15037534 0.0403723110 # excess is normalized for age but matchpct is not
                              SPIKEVAX     50  1111  1634938 0.0679536472
                             VAXZEVRIA    -83   104   887562 0.0117174913
  Comirnaty Original/Omicron BA.4/BA.5    -38   158   436729 0.0361780418
@@ -1869,175 +1871,190 @@ system(&quot;magick 0.png -resize 25% 1.png&quot;)</pre>
  100   0.0 0.0   81.3
  age czech who whopct</pre>
 <h2>
-<a href=#Excess_percentage_of_deaths_by_ICD_code_in_2021_2022 id=Excess_percentage_of_deaths_by_ICD_code_in_2021_2022>Excess percentage of deaths by ICD code in 2021-2022</a>
+<a href=#Excess_percentage_of_deaths_by_ICD_code_in_2020_2022 id=Excess_percentage_of_deaths_by_ICD_code_in_2020_2022>Excess percentage of deaths by ICD code in 2020-2022</a>
 </h2>
-<p>In the following code I calculated an age-normalized excess percentage of deaths by the ICD code for the underlying cause of death, where my baseline number of deaths for each ICD code was derived by multiplying the population size for each age group with the total mortality rate of the age group in 2013-2019.</p>
-<p>I showed only ICD codes with at least 100 total deaths in 2020-2022, but out of them by far the highest total excess mortality percent in 2020-2022 was 2005% for <span class="quote">&quot;viral pneumonia, not elsewhere classified&quot;</span>. The next-highest was 167% for unspecified kidney failure.</p>
-<p>The lowest total excess mortality was about -59% for <span class="quote">&quot;Surgical operation and other surgical procedures as the cause of abnormal reaction of the patient, or of later complication, without mention of misadventure at the time of the procedure&quot;</span>.</p>
-<p>For some reason in 2020 cardiac arrest got one of the highest excess mortality percentages but in 2021 and 2022 it got one of the lowest percentages. But if the high percentage in 2020 was caused by COVID, then I don't understand why there didn't continue to be a high number of cardiac arrest deaths in 2021. Even though it might have been because of some change in policy where the cardiac deaths were classified under another ICD code.</p>
+<p>In the following code I calculated an excess number of deaths relative to the 2013-2019 linear trend. I didn't normalize the results for age, because there were too many combinations of age group and cause of death with too few deaths to calculate a linear trend accurately within age groups.</p>
+<p>I included only ICD codes with at least 100 total deaths in 2020-2022, but out of them by far the highest total excess mortality percent in 2020-2022 was about 2500% for <span class="quote">&quot;viral pneumonia, not elsewhere classified&quot;</span>.</p>
+<p>The top 10 causes of death with the highest excess mortality in 2020-2022 also included suicide by jumping off a high place or by handgun discharge.</p>
+<p>For some reason cardiac arrest had about 5% excess deaths in 2020 but it fell to -73% in 2021 and -69% in 2022. I don't know if it's because cardiac deaths started to be classified under other ICD codes instead.</p>
+<div class="width7">
+<img src="i/czech-icdheat.png">
+</div>
 <pre>library(data.table)
 
-cul=\(x,y)y[cut(x,c(y,Inf),,T,F)]
-dlf=\(x,y,...){if(missing(y))y=sub(&quot;.*/&quot;,&quot;&quot;,x);for(i in 1:length(x))download.file(x[i],y[i],quiet=T,...)}
+pop=fread(&quot;czpopdead.csv&quot;)[,.(pop=sum(pop)),year]
+t=fread(&quot;czicd.csv.gz&quot;)[,.(dead=sum(dead)),.(year,icd)]|&gt;merge(pop)
+t=t[icd%in%t[,.(dead=sum(dead)),icd][dead&gt;=1000,icd]]
 
-dlf(&quot;https://raw.githubusercontent.com/k4m1113/ICD-10-CSV/master/codes.csv&quot;)
-dlf(&quot;http://sars2.net/f/czicd.csv.gz&quot;)
-dlf(&quot;http://sars2.net/f/czpopdead.csv&quot;)
+totaldead=t[year&gt;=2020,.(totaldead=sum(dead)),.(icd)]
 
-pop=fread(&quot;czpopdead.csv&quot;)[,.(pop=sum(pop)),.(year,age=pmin(age,95)%/%5*5)]
-t=fread(&quot;czicd.csv.gz&quot;)[,.(dead=sum(dead)),.(year,icd,age)]|&gt;merge(pop)
-t=merge(t[year&lt;2020,.(base=sum(dead)/sum(pop)),.(age,icd)],t[year&gt;=2020])[,base:=base*pop]
+t=merge(t[year&lt;2020,.(year=2013:2022,base=predict(lm(dead/pop~year),.(year=2013:2022))),icd],t)[,base:=base*pop]
 
-t=t[icd%in%t[,.(dead=sum(dead)),icd][dead&gt;=100,icd]]
+t=rbind(t,t[year&gt;=2020,.(dead=sum(dead),pop=sum(pop),base=sum(base),year=&quot;2020-2022&quot;),icd])
+t[,year:=factor(year,unique(year))]
 
-t=rbind(t,t[,.(base=sum(base),dead=sum(dead),pop=sum(pop),year=&quot;2020-2022&quot;),.(icd,age)])
-
+code=unique(fread(&quot;codes.csv&quot;)[,.(icd=V1,name=V6)],by=&quot;icd&quot;)
 t=merge(unique(fread(&quot;codes.csv&quot;)[,.(icd=V1,name=V6)],by=&quot;icd&quot;),t)
 
-o=t[,.(excess=(sum(dead)/sum(base)-1)*100,dead=sum(dead)),.(year,cause=substr(paste(icd,name),1,80))]
-o=merge(dcast(o,cause~year,value.var=&quot;excess&quot;),o[,.(dead=sum(dead)),cause])
-o[,.(dead,`2020-2022`,`2020`,`2021`,`2022`,cause=sprintf(&quot;%-80s&quot;,cause))]
-o=o[,.(dead,`2020-2022`,`2020`,`2021`,`2022`,cause=sprintf(&quot;%-80s&quot;,cause))]
-o[order(-`2020-2022`)]|&gt;dplyr::mutate_if(is.double,round)|&gt;print(r=F,nrow=Inf)</pre>
-<!-- -->
-<pre>  dead 2020-2022 2020 2021 2022                                                                            cause
-  2350      2005 1771 2213 2030 J12 Viral pneumonia, not elsewhere classified
-  2082       167  214  168  119 R54 Age-related physical debility
-   566       121   50  127  183 N19 Unspecified kidney failure
-   548        87   42  109  110 J69 Pneumonitis due to solids and liquids
-   310        64   37   94   60 D48 Neoplasm of uncertain behavior of other and unspecified sites
- 13452        62   55   69   61 R99 Ill-defined and unknown cause of mortality
-   620        53   63   38   59 D38 Neoplasm of uncertain behavior of middle ear and respiratory and intrathorac
-   386        48   25   46   74 A46 Erysipelas
-   372        45  -10   76   69 I38 Endocarditis, valve unspecified
-  3406        43   37   59   34 N17 Acute kidney failure
-  3434        42   38   45   44 G20 Parkinson&#39;s disease
- 12062        42   44   40   42 I10 Essential (primary) hypertension
- 41110        41   39   35   49 I50 Heart failure
-   286        40   33   36   52 J16 Pneumonia due to other infectious organisms, not elsewhere classified
-  8480        40   33   43   43 I48 Atrial fibrillation and flutter
-   962        37   24   39   47 K92 Other diseases of digestive system
-   220        33   14   35   51 D43 Neoplasm of uncertain behavior of brain and central nervous system
- 14912        29   36   20   32 G30 Alzheimer&#39;s disease
-   212        28   64   38  -18 K75 Other inflammatory liver diseases
-   912        27    0   48   33 C21 Malignant neoplasm of anus and anal canal
- 12772        27   36   21   22 I11 Hypertensive heart disease
-  1502        24   10   31   30 E86 Volume depletion
-  1010        24   13   43   15 K76 Other diseases of liver
-   216        21    7   39   18 Y30 Falling, jumping or pushed from a high place, undetermined intent
-   242        21   20    8   35 R64 Cachexia
-   428        21   11   49    2 D68 Other coagulation defects
- 10496        20   11   24   26 K70 Alcoholic liver disease
-  3542        20   14   25   22 N18 Chronic kidney disease (CKD)
-   254        20   25   19   16 I72 Other aneurysm
-   660        20   20   34    5 I33 Acute and subacute endocarditis
-   204        19   19    2   36 J22 Unspecified acute lower respiratory infection
-   204        18   28   12   15 W69 Accidental drowning and submersion while in natural water
-   900        18   -4   34   24 X31 Exposure to excessive natural cold
-   420        17   33   14    3 C01 Malignant neoplasm of base of tongue
-   620        16   33   29  -15 E41 Nutritional marasmus
-   616        15   -2   19   29 C10 Malignant neoplasm of oropharynx
-   760        15   16    8   22 X72 Intentional self-harm by handgun discharge
-   218        15  -17   36   25 I44 Atrioventricular and left bundle-branch block
-   784        14    4   20   18 G35 Multiple sclerosis
-  2236        14   16   21    5 N39 Other disorders of urinary system
-   376        14   -7   16   31 I82 Other venous embolism and thrombosis
-   210        13   -4   26   16 C11 Malignant neoplasm of nasopharynx
-   596        12   16    4   17 C13 Malignant neoplasm of hypopharynx
-   820        12    9    3   25 C02 Malignant neoplasm of other and unspecified parts of tongue
-   220        11  -12   34   12 G10 Huntington&#39;s disease
-   394        11   11    4   19 K63 Other diseases of intestine
-  1850         9   14    7    5 I13 Hypertensive heart and chronic kidney disease
-   632         8   -7   10   22 N10 Acute pyelonephritis
-   350         8    8    4   12 C45 Mesothelioma
-   216         8    2    8   13 G91 Hydrocephalus
-   222         8  -16   11   28 G80 Cerebral palsy
-  1934         7    2    1   19 K56 Paralytic ileus and intestinal obstruction without hernia
-   674         7   26  -15    9 C17 Malignant neoplasm of small intestine
-   356         6  -10   -3   31 G21 Secondary parkinsonism
-   950         6    2    9    8 X80 Intentional self-harm by jumping from a high place
- 17754         6   12    0    7 J18 Pneumonia, unspecified organism
-   796         6   10    9   -2 C49 Malignant neoplasm of other connective and soft tissue
-  1348         5   -3    8   10 K26 Duodenal ulcer
-   360         3   -3   17   -4 E87 Other disorders of fluid, electrolyte and acid-base balance
-   362         3   -6   -7   23 K22 Other diseases of esophagus
-   246         3   27  -12   -5 K43 Ventral hernia
- 13964         3    4    4    2 C25 Malignant neoplasm of pancreas
-   476         3   -6   -5   20 C48 Malignant neoplasm of retroperitoneum and peritoneum
-  3528         2   -4    4    8 I35 Nonrheumatic aortic valve disorders
-  4348         2    5   -5    7 C71 Malignant neoplasm of brain
-   224         2  -24    1   28 C06 Malignant neoplasm of other and unspecified parts of mouth
-   634         2    1   -1    4 K83 Other diseases of biliary tract
-   572         1  -10   10    3 C51 Malignant neoplasm of vulva
-  3400         0    2    1   -3 C15 Malignant neoplasm of esophagus
-   872         0   -4   -8   11 E43 Unspecified severe protein-calorie malnutrition
-  1038         0   -5    5   -1 I12 Hypertensive chronic kidney disease
-   814        -1    1    2   -5 K65 Peritonitis
-  2526        -1    2   -9    4 C43 Malignant melanoma of skin
-   690        -1   -1   -8    5 C09 Malignant neoplasm of tonsil
-   830        -1    2  -10    4 J43 Emphysema
-  5394        -2   -1   -5    1 C67 Malignant neoplasm of bladder
-  7768        -2    2   -3   -5 C80 Malignant neoplasm without specification of site
-  1228        -2   -3   -3    0 K25 Gastric ulcer
-  3162        -3   -6   -1    0 K74 Fibrosis and cirrhosis of liver
-   476        -3  -26   22   -5 C73 Malignant neoplasm of thyroid gland
-   972        -4    8  -12   -9 C76 Malignant neoplasm of other and ill-defined sites
-   266        -5    0   -7   -6 C68 Malignant neoplasm of other and unspecified urinary organs
-   214        -5  -11   31  -34 I36 Nonrheumatic tricuspid valve disorders
-  8878        -5   -1   -8   -5 C61 Malignant neoplasm of prostate
-  1684        -5  -10   -2   -4 J15 Bacterial pneumonia, not elsewhere classified
-  2760        -5    2   -2  -16 I42 Cardiomyopathy
-   632        -6  -13   -1   -5 C65 Malignant neoplasm of renal pelvis
-  1990        -6   -2   -6  -11 C54 Malignant neoplasm of corpus uteri
-  5258        -6   -6   -6   -7 C22 Malignant neoplasm of liver and intrahepatic bile ducts
-  2292        -8   -4  -11   -8 C24 Malignant neoplasm of other and unspecified parts of biliary tract
-   424        -8   -6  -11   -7 K81 Cholecystitis
-   364        -8   -8    3  -20 K86 Other diseases of pancreas
-   416        -9   -7  -16   -4 C04 Malignant neoplasm of floor of mouth
-   622        -9   -6   -3  -18 G12 Spinal muscular atrophy and related syndromes
-   336       -10  -19   -1   -9 C39 Malignant neoplasm of other and ill-defined sites in the respiratory system
-   234       -10   12  -14  -27 N13 Obstructive and reflux uropathy
- 12164       -10   -6  -13  -13 C18 Malignant neoplasm of colon
- 17480       -11  -12  -15   -7 J44 Other chronic obstructive pulmonary disease
-  1260       -11   -9   -7  -19 I51 Complications and ill-defined descriptions of heart disease
-  1072       -12   -1  -16  -18 D46 Myelodysplastic syndromes
-  3742       -12   -9  -13  -14 C56 Malignant neoplasm of ovary
-   282       -12  -12  -29    5 K71 Toxic liver disease
-   404       -13   -9   -8  -21 C38 Malignant neoplasm of heart, mediastinum and pleura
-  5790       -13  -12  -12  -15 C16 Malignant neoplasm of stomach
-   900       -14  -23   -5  -13 G93 Other disorders of brain
-   364       -14    6  -20  -27 I05 Rheumatic mitral valve diseases
-  2270       -14    7  -28  -22 I24 Other acute ischemic heart diseases
-  6970       -14   -9  -16  -18 I61 Nontraumatic intracerebral hemorrhage
-  1736       -15  -14  -11  -20 C53 Malignant neoplasm of cervix uteri
-  5542       -16  -16  -17  -14 C64 Malignant neoplasm of kidney, except renal pelvis
-  1048       -16  -26   -9  -13 A04 Other bacterial intestinal infections
-   396       -16  -13   -4  -30 I20 Angina pectoris
-   520       -16  -20  -13  -16 C55 Malignant neoplasm of uterus, part unspecified
-   790       -16    5  -24  -31 I08 Multiple valve diseases
-  1302       -17   -3  -25  -22 W19 Unspecified fall
-  5082       -17  -19  -18  -13 C20 Malignant neoplasm of rectum
-   218       -17  -22  -15  -14 C07 Malignant neoplasm of parotid gland
-  1248       -18  -17  -16  -20 C32 Malignant neoplasm of larynx
-   288       -18  -30   -2  -22 A09 Infectious gastroenteritis and colitis, unspecified
-   736       -18  -22  -12  -21 C26 Malignant neoplasm of other and ill-defined digestive organs
-  2218       -19  -13  -20  -23 C19 Malignant neoplasm of rectosigmoid junction
-  8964       -19  -12  -21  -23 I70 Atherosclerosis
-   202       -19  -11   -8  -38 N11 Chronic tubulo-interstitial nephritis
-  4116       -20   50  -60  -49 I46 Cardiac arrest
-   214       -23   -5  -24  -40 C41 Malignant neoplasm of bone and articular cartilage of other and unspecified
-   238       -24   -5  -31  -35 K52 Other and unspecified noninfective gastroenteritis and colitis
-  1550       -28  -25  -32  -27 C23 Malignant neoplasm of gallbladder
-   990       -29  -36  -24  -28 I34 Nonrheumatic mitral valve disorders
-   226       -30    3  -44  -48 I06 Rheumatic aortic valve diseases
-  1024       -30  -26  -31  -34 I27 Other pulmonary heart diseases
-   210       -30   -6  -48  -37 Y84 Other medical procedures as the cause of abnormal reaction of the patient, o
-   230       -33  -10  -51  -37 J41 Simple and mucopurulent chronic bronchitis
-   982       -35  -15  -55  -35 J20 Acute bronchitis
-  6382       -44  -37  -48  -47 I67 Other cerebrovascular diseases
-   408       -45  -40  -56  -38 J42 Unspecified chronic bronchitis
-   244       -59  -30  -74  -73 Y83 Surgical operation and other surgical procedures as the cause of abnormal re
-  dead 2020-2022 2020 2021 2022                                                                            cause</pre>
+t=merge(t,totaldead)
+t[,label:=paste0(icd,&quot;:&quot;,name,&quot; (&quot;,totaldead,&quot;)&quot;)]
+
+m1=t[,tapply(dead,.(label,year),c)]
+m2=t[,tapply(base,.(label,year),c)]
+
+m=(m1-m2)/ifelse(m1&gt;m2,m2,m1)*100
+disp=(m1/m2-1)*100;disp=ifelse(disp&gt;1e3,sprintf(&quot;%.1fk&quot;,disp/1e3),round(disp))
+maxcolor=300;exp=.8
+
+ord=order(-m[,ncol(m)]);m=m[ord,];disp=disp[ord,]
+
+pheatmap::pheatmap(abs(m)^exp*sign(m),filename=&quot;0.png&quot;,display_numbers=disp,
+  gaps_row=nrow(m)-1,gaps_col=ncol(m)-1,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=16,cellheight=16,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;gray90&quot;,
+  number_color=ifelse(abs(m)^exp&gt;maxcolor^exp*.4,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(-maxcolor^exp,maxcolor^exp,,256),
+  colorRampPalette(hsv(rep(c(7/12,0),5:4),c(.9,.75,.6,.3,0,.3,.6,.75,.9),c(.4,.65,1,1,1,1,1,.65,.4)))(256))
+
+system(&quot;w=`identify -format %w 0.png`;pad=22;magick -pointsize 40 -font Arial -interline-spacing -2 \\( -size $[w-pad*2]x caption:&#39;Excess percentage of deaths by ICD code relative to 2013-2019 linear trend. Based on raw deaths and not adjusted for age or population size. The total number of deaths in 2020-2022 is shown in parentheses. Only ICD codes that have at least 100 deaths in 2020-2022 aer included. Source: csu.gov.cz/produkty/zemreli-podle-seznamu-pricin-smrti-pohlavi-a-veku-v-cr-
+krajich-a-okresech-fgjmtyk2qr.&#39; -splice $[pad]x20 \\) 0.png -append 1.png&quot;)</pre>
+<h2>
+<a href=#Comment_to_Substack_post_by_Kirsch id=Comment_to_Substack_post_by_Kirsch>Comment to Substack post by Kirsch</a>
+</h2>
+<p>Steve Kirsch published this Substack post about the Czech data where he included two of my plots: <a href="https://kirschsubstack.com/p/a-summary-of-why-the-czech-republic">https://kirschsubstack.com/p/a-summary-of-why-the-czech-republic</a>. I posted the following comment to his post:</p>
+<blockquote>
+<p>I'm not a data scientist but just a conspiracy theorist, and I don't necessarily believe that vaccines are either safe or effective, and I'm not vaccinated myself. I don't know that much about vaccines because I'm focused on researching other aspects of COVID. [Kirsch said that I'm an <span class="quote">&quot;independent data scientist who believes that the COVID vaccines are safe and effective&quot;</span>.]</p>
+<p>However based on my plot you posted which shows the monthly ASMR by vaccine type, it would seem like Moderna vaccines had high efficacy, because during the COVID wave in November to December 2021, there was almost no increase in ASMR for people who got a Moderna vaccine for the first dose, but the increase was slightly bigger for Pfizer and even bigger for AstraZeneca and Janssen.</p>
+<p>You included this comment about my plot: <span class="quote">&quot;The gap size between the M and P shots didn't widen or narrow during COVID periods meaning both vaccines had the same protection against COVID death&quot;</span>.</p>
+<p>However in my plot if you calculate Moderna ASMR divided by Pfizer ASMR, the ratio falls from about 1.44 in October 2021 to 1.25 in November, because Pfizer had a bigger increase in ASMR at the start of the COVID wave in November 2021:</p>
+<pre>&gt; std=fread(&quot;http://sars2.net/f/czcensus2021pop.csv&quot;)[,.(pop=sum(pop)),.(age=pmin(age,95)%/%5*5)][,pop/sum(pop)]
+&gt; b=fread(&quot;http://sars2.net/f/czbucketskeep.csv.gz&quot;)[dose&lt;=1&amp;type!=&quot;Other&quot;][,age:=pmin(age,95)%/%5*5]
+&gt; a=b[,.(dead=sum(dead),alive=sum(as.double(alive))),.(type,month,age)]
+&gt; a=rbind(a,a[,.(dead=sum(dead),alive=sum(alive),type=&quot;All people&quot;),.(month,age)])
+&gt; p=a[,.(pop=sum(alive),asmr=sum(dead/alive*std[age/5+1]*365e5)),.(month,type)]
+&gt; p[month&gt;=&quot;2021-01&quot;,.(ratio=round(asmr[type==&quot;Moderna&quot;]/asmr[type==&quot;Pfizer&quot;],2)),month]|&gt;print(r=F)
+   month ratio
+ 2021-01  1.74
+ 2021-02  1.62
+ 2021-03  1.84
+ 2021-04  1.48
+ 2021-05  1.28
+ 2021-06  1.34
+ 2021-07  1.49
+ 2021-08  1.37
+ 2021-09  1.48
+ 2021-10  1.44
+ 2021-11  1.25
+ 2021-12  1.26
+ 2022-01  1.25
+ 2022-02  1.26
+ 2022-03  1.28
+ 2022-04  1.35
+ 2022-05  1.33
+ 2022-06  1.23
+ 2022-07  1.28
+ 2022-08  1.27
+ 2022-09  1.29
+ 2022-10  1.31
+ 2022-11  1.34
+ 2022-12  1.35
+   month ratio</pre>
+<p>You also wrote: <span class="quote">&quot;When comorbidities are highest (start of rollout) or lowest (everyone else is added to the mix diluting the comorbidity effect), the separation between the vaccine mortality curves remains constant which means it likely wasn't caused by comorbidities: there is no correlation between comorbidities and MR.&quot;</span></p>
+<p>However in my triangle plot if you look at the age-normalized Moderna-Pfizer ratio by month of vaccination and not month of death, the ratio is about 2.3 for people who got the first dose in January 2021.</p>
+<hr />
+<p>You wrote that <span class="quote">&quot;The result is 1.3 over a wide range of ages and time periods investigated.&quot;</span></p>
+<p>But it's also not 1.3 over wide ranges of other periods, like for example for people who got vaccinated in January 2021.</p>
+<p>My age-normalized Moderna-Pfizer ratio was also about 1.02 for people who got the first dose from October 2021 to January 2022, which included a sample size of about 700,000 people who received a first dose from either a Pfizer or Moderna vaccine:</p>
+<pre>&gt; library(data.table)
+&gt; b=fread(&quot;http://sars2.net/f/czbucketskeep.csv.gz&quot;)[,age:=pmin(age,100)]
+&gt; d=merge(b[dose==1&amp;vaxmonth&gt;=&quot;2021-10&quot;&amp;vaxmonth&lt;=&quot;2022-01&quot;],b[dose&lt;=1,.(base=sum(dead)/sum(alive)),age])[,base:=alive*base]
+&gt; d=d[,.(dead=sum(dead),base=sum(base)),.(type,vaxmonth)]
+&gt; d=rbind(d,d[,.(dead=sum(dead),base=sum(base),vaxmonth=&quot;2021-10 to 2022-01&quot;),type])
+&gt; d[,.(ratio=(dead/base)[type==&quot;Moderna&quot;]/(dead/base)[type==&quot;Pfizer&quot;]),vaxmonth][order(vaxmonth)]|&gt;print(r=F)
+           vaxmonth     ratio
+            2021-10 0.9325833
+            2021-11 1.0229378
+            2021-12 1.0174279
+            2022-01 1.0072136
+ 2021-10 to 2022-01 1.0194936</pre>
+<p>And the same ratio was only about 0.56 for people who got the first dose from February 2022 to December 2022. They had a sample size of about 40,000 people:</p>
+<pre>&gt; rec=fread(&quot;curl -Ls github.com/skirsch/Czech/blob/main/data/CR_records.csv.xz|xz -dc&quot;)
+&gt; rec[grep(&quot;Comirnaty|SPIKEVAX&quot;,OckovaciLatka_1),.N,Datum_1][Datum_1&gt;=&quot;2022-2-1&quot;,sum(N)]
+[1] 43476</pre>
+<hr />
+<p>You wrote: <span class="quote">&quot;There were 110 different data points with sufficient counts to make a determination of the Mortality Rate Ratio (MRR) and Moderna was more deadly in 110/110 opportunities.&quot;</span></p>
+<p>By 110 combinations I believe you were referring to different combinations of month of vaccination and month of death in my triangle plot (where I calculated an age-normalized Moderna-Pfizer ratio so the age group didn't have to be considered as an additional variable).</p>
+<p>However there's over 300,000 people who got a first dose from either a Moderna or Pfizer vaccine in November 2021, so if you calculate the Moderna-Pfizer ratio grouped only by the month of vaccination and not also by the month of death, I think there is a sufficient sample size for people who were vaccinated in November. And their Moderna-Pfizer ratio was about 1.02.</p>
+<hr />
+<p>You wrote: <span class="quote">&quot;There is a healthy vaccinee effect, but it only lasts 3 weeks; after that, you hit baseline mortality if the vaccine is safe.&quot;</span> However in the Czech data the temporal/time-invariant HVE seems to last at least about 15-20 weeks: <a href="http://sars2.net/czech.html#Deaths_by_weeks_after_first_dose">http://sars2.net/czech.html#Deaths_by_weeks_after_first_dose</a>, <a href="http://sars2.net/czech2.html#Excess_mortality_by_weeks_after_vaccination">http://sars2.net/czech2.html#Excess_mortality_by_weeks_after_vaccination</a>. (The <span class="quote">&quot;temporal HVE&quot;</span> was a term coined by Jeffrey Morris, who has now renamed it to the <span class="quote">&quot;time-invariant HVE&quot;</span>.)</p>
+<hr />
+<p>You wrote that <span class="quote">&quot;the VA study showed the COVID shots didn't impact probability of being hospitalized&quot;</span>.</p>
+<p>However when I used hospitalization data published by the Czech MoH to calculate an age-normalized hospitalization ratio relative to a baseline of unvaccinated people, I got about -79% excess hospitalizations among people who got a Pfizer vaccine for the first dose, -77% for Moderna, -71% for AstraZeneca, and -68% for Janssen. So in other words unvaccinated people had about 5 times higher age-normalized hospitalizations per capita than people with a Pfizer vaccine: <a href="http://sars2.net/czech3.html#Efficacy_against_hospitalization_relative_to_a_baseline_of_unvaccinated_people">http://sars2.net/czech3.html#Efficacy_against_hospitalization_relative_to_a_baseline_of_unvaccinated_people</a>.</p>
+<p>In December 2021, unvaccinated people had about 6 times higher age-standardized hospitalization rate than vaccinated people. However the difference between the rates got smaller over time, which may have been because unvaccinated people acquired natural immunity over time. So by December 2022 the rate was only about 1.7 times higher in unvaccinated people than in vaccinated people, and by December 2023 it was only about 1.5 times higher: <a href="http://sars2.net/czech3.html#Age_standardized_hospitalization_rate_by_vaccination_status">http://sars2.net/czech3.html#Age_standardized_hospitalization_rate_by_vaccination_status</a>. But if the reason why unvaccinated people had a higher hospitalization rate was solely due to confounders, you would expect the ratio between the unvaccinated and vaccinated hospitalization rates to remain more stable over time, since the demographics of the vaccinated and unvaccinated cohorts didn't change that much after 2021 because there were few new people getting vaccinated.</p>
+</blockquote>
+<h2>
+<a href=#Moderna_Pfizer_ratio_by_vaccination_quarter_and_age_group id=Moderna_Pfizer_ratio_by_vaccination_quarter_and_age_group>Moderna-Pfizer ratio by vaccination quarter and age group</a>
+</h2>
+<p>Kirsch posted this tweet: <span class="quote">&quot;You have all failed to explain why in every age group where we have sufficient data. Moderna was significantly more deadly than Pfizer. it wasn't comorbidities because those didn't matter. So why was the death rate higher? Why can't you answer that simple question?&quot;</span> [<a href="https://x.com/stkirsch/status/1818053265357160918">https://x.com/stkirsch/status/1818053265357160918</a>]</p>
+<p>I told him that for all age groups here with a sufficient sample size of deaths (so not including ages 0-19 to 40-49), the Moderna-Pfizer ratio was close to 1.0 among people who got the first dose in the 4th quarter of 2021. So did Moderna vaccines start being less deadly in the 4th quarter?</p>
+<div class="width5">
+<img src="i/czech-modpfivaxqvsage.png">
+</div>
+<pre>library(data.table)
+
+agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
+quar=\(x){u=unique(x);paste0(substr(u,1,4),&quot;Q&quot;,(as.numeric(substr(u,6,7))-1)%/%3+1)[match(x,u)]}
+
+ages=c(0,2:9*10)
+
+t=fread(&quot;http://sars2.net/f/czbucketskeep.csv.gz&quot;)[dose&lt;=1][,age:=pmin(age,95)]
+
+t=merge(t[dose==1&amp;vaxmonth&gt;=&quot;2021-01&quot;&amp;vaxmonth&lt;=&quot;2022-03&quot;],t[,.(base=sum(dead)/sum(alive)),age])[,base:=base*alive]
+
+t=t[,.(base=sum(base),dead=sum(dead),alive=sum(as.double(alive))),.(type,vaxmonth=quar(vaxmonth),age=agecut(age,ages))]
+t=rbind(t,t[,.(base=sum(base),dead=sum(dead),alive=sum(alive),vaxmonth=&quot;Total&quot;),.(age,type)])
+t=rbind(t,t[,.(base=sum(base),dead=sum(dead),alive=sum(alive),age=&quot;Total&quot;),.(vaxmonth,type)])
+
+a=t[,tapply(dead/base,.(type,age,vaxmonth),c)]
+m1=a[&quot;Moderna&quot;,,];m2=a[&quot;Pfizer&quot;,,]
+m=(m1-m2)/ifelse(m1&gt;m2,m2,m1)
+
+pop=t[type%in%c(&quot;Moderna&quot;,&quot;Pfizer&quot;),xtabs(alive~age+vaxmonth)]/365
+disp=matrix(sprintf(ifelse(m1/m2&gt;10,&quot;%.1f&quot;,&quot;%.2f&quot;),m1/m2),nrow(m))
+hide=pmin(m1,m2)==0;m[hide]=NA;disp[is.na(m)]=&quot;&quot;
+exp=.7;m=abs(m)^exp*sign(m);maxcolor=10^exp
+
+pheatmap::pheatmap(m,filename=&quot;i1.png&quot;,display_numbers=disp,
+  gaps_row=nrow(m)-1,gaps_col=ncol(m)-1,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;gray90&quot;,
+  number_color=ifelse((abs(m)&gt;.55*maxcolor)&amp;!is.na(m),&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(-maxcolor,maxcolor,,256),
+  colorRampPalette(hsv(rep(c(7/12,0),5:4),c(.9,.75,.6,.3,0,.3,.6,.75,.9),c(.4,.65,1,1,1,1,1,.65,.4)))(256))
+
+rec=fread(&quot;Czech/data/CR_records.csv&quot;,showProgress=F)
+pop=rec[grep(&quot;comirnaty|spikevax&quot;,ignore.case=T,OckovaciLatka_1),.N,.(age=agecut(2021-Rok_narozeni,ages),vaxq=quar(Datum_1))]
+pop=rbind(pop,pop[,.(N=sum(N),age=&quot;Total&quot;),vaxq])
+pop=rbind(pop,pop[,.(N=sum(N),vaxq=&quot;Total&quot;),age])
+pop=xtabs(N~age+vaxq,pop)[rownames(m),colnames(m)]
+
+exp2=.6;maxcolor2=max(pop[-nrow(pop),])
+
+kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;p=!is.na(x)
+  x[p]=paste0(sprintf(paste0(&quot;%.&quot;,ifelse(e[p]%%3==0,1,0),&quot;f&quot;),x[p]/1e3^(e2[p]-1)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2[p]]);x}
+
+exp2=.6;maxcolor2=max(pop[-nrow(pop),-ncol(pop)])
+
+pheatmap::pheatmap(pop^exp2,filename=&quot;i2.png&quot;,display_numbers=kimi(ifelse(pop==0,0,pop)),
+  gaps_row=nrow(m)-1,gaps_col=ncol(m)-1,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;white&quot;,
+  number_color=ifelse(pop^exp2&gt;maxcolor2^exp2*.45,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(0,maxcolor2^exp2,,256),
+  sapply(seq(1,0,,256),\(i)rgb(i,i,i)))
+
+cap=&quot;Czech record-level data: Age-normalized Moderna-Pfizer mortality ratio by vaccination quarter and age group. Only first doses are included. The mortality rate was calculated from the day of the first dose up to the end of 2022. A baseline number of deaths was calculated for each single year of age by multiplying the person-days of the age by the total mortality rate for the age in 2020 to 2022 among all people who are included in the record-level data, and the baseline deaths for all ages within an age group were added together. The ratio was calculated as (Moderna_deaths / Moderna_baseline) / (Pfizer_deaths / Pfizer_baseline). The right side shows the number of people each quarter who received either a Pfizer or Moderna vaccine for their first dose.&quot;
+system(paste0(&quot;magick i[12].png +append 0.png;w=`identify -format %w 0.png`;pad=24;convert -pointsize 42 -interline-spacing -3 -font Arial \\( -size $[w-pad*2]x caption:&#39;&quot;,cap,&quot;&#39; -splice $[pad]x20 \\) 0.png -append 1.png&quot;))</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
