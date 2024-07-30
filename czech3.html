@@ -72,6 +72,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Comment_to_Substack_post_by_Kirsch>Comment to Substack post by Kirsch</a></li>
 <li><a href=#Moderna_Pfizer_ratio_by_vaccination_quarter_and_age_group>Moderna-Pfizer ratio by vaccination quarter and age group</a></li>
 <li><a href=#Moderna_Pfizer_ratio_for_third_doses>Moderna-Pfizer ratio for third doses</a></li>
+<li><a href=#Types_of_vaccination_sites>Types of vaccination sites</a></li>
 </ul>
 
 <h2>
@@ -1845,7 +1846,7 @@ theme(axis.text=element_text(size=6.5,color=&quot;black&quot;),
   plot.title=element_text(size=7.5,face=&quot;bold&quot;,margin=margin(2,0,4,0)))
 ggsave(&quot;0.png&quot;,width=4.3,height=2.8,dpi=400*4)
 system(&quot;magick 0.png -resize 25% 1.png&quot;)</pre>
-<p>The next GIF file shows the result of the code above. When canceledmouse used a 11-day moving average with a backwards window for deaths but no moving average for the population size, the deaths were lagging 5 days behind the population size, so the ASMR of unvaccinated people was underestimated in early 2021 when the population size of vaccinated people was increasing rapidly:</p>
+<p>The next GIF file shows the result of the code above. When canceledmouse used a 11-day moving average with a backwards window for deaths but no moving average for the population size, the deaths were lagging 5 days behind the population size, so the ASMR of vaccinated people was underestimated in early 2021 when the population size of vaccinated people was increasing rapidly:</p>
 <div class="width7">
 <img src="i/czech-vaet-3.gif">
 </div>
@@ -2071,6 +2072,100 @@ system(paste0(&quot;magick i[12].png +append 0.png;w=`identify -format %w 0.png`
 <div class="width8">
 <img src="i/czech-trianglemodpfi-third.png">
 </div>
+<h2>
+<a href=#Types_of_vaccination_sites id=Types_of_vaccination_sites>Types of vaccination sites</a>
+</h2>
+<p>In the file <code>prehled-ockovacich-mist.csv</code> which has information about vaccination sites, the sites are classified under 5 types: [<a href="https://ockodoc.mzcr.cz/wp-content/uploads/2024/01/231230_manual_crs.pdf">https://ockodoc.mzcr.cz/wp-content/uploads/2024/01/231230_manual_crs.pdf</a>]</p>
+<table>
+<tr><th>
+Abbreviation
+</th><th>
+Description
+</th><th>
+Translation
+</th></tr>
+<tr><td>
+OČM
+</td><td>
+standardní očkovací místo
+</td><td>
+OCM standard vaccination site
+</td></tr>
+<tr><td>
+DOČM
+</td><td>
+očkovací místo pro děti
+</td><td>
+vaccination site for children
+</td></tr>
+<tr><td>
+VOČM
+</td><td>
+velkokapacitní očkovací místo
+</td><td>
+large-capacity vaccination site
+</td></tr>
+<tr><td>
+SMPL
+</td><td>
+očkovací místo pro samoplátce
+</td><td>
+vaccination site for self-payers
+</td></tr>
+<tr><td>
+WALKIN
+</td><td>
+mobilní očkovací místo
+</td><td>
+mobile vaccination site
+</td></tr>
+</table>
+<p>In the file <code>ockovani-profese.csv</code> which contains one row for each administered dose, only about 7 million rows could be joined with the file for information about vaccination sites.</p>
+<p>The joined rows didn't include any row for a large-capacity vaccination site. And I further excluded vaccines given to ages below 18 and I excluded vaccination sites for children, becuase children have total effect on overall mortality. It left me with only 3 site types. This shows the site types for the remaining approximately 6.5 million doses:</p>
+<pre>dlf=\(x,y,...){if(missing(y))y=sub(&quot;.*/&quot;,&quot;&quot;,x);for(i in 1:length(x))download.file(x[i],y[i],quiet=T,...)}
+dlf(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-profese.csv&quot;) # about 4 GiB
+dlf(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/prehled-ockovacich-mist.csv&quot;) # about 20 kiB
+
+pro=fread(&quot;ockovani-profese.csv&quot;)
+mist=fread(&quot;prehled-ockovacich-mist.csv&quot;)
+
+d=pro[,.N,.(vaxtype=vakcina,vaccinator=zarizeni_kod,age=vekova_skupina)]
+
+d=d[!d$age%in%c(&quot;0-4&quot;,&quot;05-11&quot;,&quot;12-15&quot;,&quot;16-17&quot;)]
+
+name1=unique(d$vaxtype);name2=rep(&quot;Other&quot;,length(name1))
+name2[name1==&quot;&quot;]=&quot;&quot;
+name2[grep(&quot;comirnaty&quot;,ignore.case=T,name1)]=&quot;Pfizer&quot;
+name2[grep(&quot;spikevax&quot;,ignore.case=T,name1)]=&quot;Moderna&quot;
+name2[grep(&quot;nuvaxovid&quot;,ignore.case=T,name1)]=&quot;Novavax&quot;
+name2[name1==&quot;COVID-19 Vaccine Janssen&quot;]=&quot;Janssen&quot;
+name2[name1==&quot;VAXZEVRIA&quot;]=&quot;AstraZeneca&quot;
+d$vaxtype=name2[match(d$vaxtype,name1)]
+
+d=merge(unique(mist[,.(sitetype=ockovaci_misto_typ,vaccinator=nrpzs_kod)],by=&quot;vaccinator&quot;),d)
+
+m=d[sitetype!=&quot;DOČM&quot;,xtabs(N~vaxtype+sitetype)]
+m=m[order(-rowSums(m)),]
+m # number of doses
+#              sitetype
+# vaxtype           OČM    SMPL  WALKIN
+#   Pfizer      2436034 1644540  397886
+#   Moderna      167197   50107   34785
+#   Janssen       69915   30148    3655
+#   AstraZeneca   23368   21099    6063
+#   Novavax        3059    1491     152
+#   Other           178     195      47
+
+round(m/rowSums(m)*100) # percentage of doses by manufacturer
+#              sitetype
+# vaxtype       OČM SMPL WALKIN
+#   Pfizer       54   37      9
+#   Moderna      66   20     14
+#   Janssen      67   29      4
+#   AstraZeneca  46   42     12
+#   Novavax      65   32      3
+#   Other        42   46     11</pre>
+<p>So Moderna has a higher percentage of standard vaccination sites (OČM) and walkin sites but Pfizer has a higher percentage of vaccination sites for self-payers (SMPL). Which serves as further indication that there are systematic biases in the distribution of vaccine doses by different manufacturers.</p>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
