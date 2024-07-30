@@ -46,6 +46,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
   a{color:#0000EE}a:visited{color:#551A8B}
   h1,h2,h2 a,h3 a,h2 a:visited,h3 a:visited{color:black}
   pre,code{background:#ccc;color:black;font-size:13px}
+  th{background:#}
   blockquote,.quote{color:hsl(30,65%,30%)}
   blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(30,45%,50%)}
   blockquote blockquote blockquote,blockquote .quote .quote,.quote .quote .quote{color:hsl(30,70%,60%)}
@@ -179,7 +180,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 # unique apply (faster for long vectors with many repeated values)
 ua=\(x,y,...){u=unique(x);y(u,...)[match(x,u)]}
 
-# fast way to get age in floored years between dates after 1900 and before 2100
+# fast way to get a floored number of years between dates after 1900 and before 2100
 age=\(x,y){class(x)=class(y)=NULL;(y-x-(y-789)%/%1461+(x-789)%/%1461)%/%365}
 
 mindate=as.Date(&quot;2020-1-1&quot;);maxdate=as.Date(&quot;2022-12-31&quot;)
@@ -208,23 +209,22 @@ rm(rec) # free up memory so the script won&#39;t have to use swap
 buck=data.table()
 for(day in as.list(seq(mindate,maxdate,1))){
   cat(as.character(day),&quot;\n&quot;)
-  buck=rbind(buck,unique(t[date&lt;=day&amp;(is.na(death)|day&lt;=death)&amp;day&gt;=birth],by=&quot;id&quot;)[ # remove under earlier doses
-  # buck=rbind(buck,t[date&lt;=day&amp;(is.na(death)|day&lt;=death)&amp;day&gt;=birth][!(dose==0&amp;id%in%id[dose&gt;0])][ # keep under earlier doses
-    ,.(month=substr(day,1,7),vaxmonth,week=ifelse(type==&quot;&quot;,0,as.numeric(day-date)%/%7),
+  buck=rbind(buck,unique(t[date&lt;=day&amp;(is.na(death)|day&lt;=death)&amp;day&gt;=birth],by=&quot;id&quot;)[,.( # remove under earlier doses
+  # buck=rbind(buck,t[date&lt;=day&amp;(is.na(death)|day&lt;=death)&amp;day&gt;=birth][!(dose==0&amp;id%in%id[dose&gt;0])][,.( # keep under earlier doses
+    month=substr(day,1,7),vaxmonth,week=ifelse(type==&quot;&quot;,0,as.numeric(day-date)%/%7),
     age=age(birth,day),dose,type,alive=1,dead=death==day)])[,.(
-    alive=sum(alive),dead=sum(dead,na.rm=T)),by=.(month,vaxmonth,week,age,dose,type)]
+      alive=sum(alive),dead=sum(dead,na.rm=T)),by=.(month,vaxmonth,week,age,dose,type)]
 }
 
 setorder(buck,month,vaxmonth,week,age,dose,type)
-fwrite(buck,&quot;czbuckets2.csv&quot;,quote=F)</pre>
+fwrite(buck,&quot;czbuckets.csv&quot;,quote=F)</pre>
 <p>Here's different versions of the output produced by the script:</p>
 <ul>
 <li><a href=f/czbuckets.csv.gz>f/czbuckets.csv.gz</a> (6 MiB): Deaths and person-days grouped by ongoing month, month of vaccination, weeks since vaccination, age, dose number, and vaccine type. People are removed under earlier doses after a new dose.</li>
-<li><a href=f/czbucketskeep.csv.gz>f/czbucketskeep.csv.gz</a> (8 MiB): Deaths and person-days grouped by ongoing month, month of vaccination, weeks since vaccination, age, dose number, and vaccine type. People are kept under earlier doses after a new dose.</li>
+<li><a href=f/czbucketskeep.csv.gz>f/czbucketskeep.csv.gz</a> (8 MiB): Same as <code>czbuckets.csv.gz</code> but people are kept under earlier doses after a new dose.</li>
 <li><a href=f/czbucketsbatchkeep.csv.xz>f/czbucketsbatchkeep.csv.xz</a> (38 MiB): Same as <code>czbucketskeep.csv</code> but with an additional column for batch identifier.</li>
 <li><a href=f/czbucketsdaily.csv.gz>f/czbucketsdaily.csv.gz</a> (2 MiB): Deaths and person-days grouped by ongoing day, age, and dose number. People are removed under earlier doses after a new dose.</li>
 </ul>
-<p>In my files only vaccines with the type name <span class="quote">&quot;Comirnaty&quot;</span> are listed under Pfizer, but Pfizer's Omicron vaccines and pediatric vaccines are listed under the <span class="quote">&quot;Other&quot;</span> type, and only vaccines with the type name <span class="quote">&quot;SPIKEVAX&quot;</span> are listed under Moderna but Moderna's Omicron vaccine is listed under the <span class="quote">&quot;Other&quot;</span> type.</p>
 <p>My code is similar to the <code>buckets.py</code> script provided by Kirsch except my code accounts for the aging of people over time correctly. In <code>buckets.py</code> each person has a constant age that is either the age on the day of death for people who died or the age on the day when the script was ran for people who didn't die (and in both cases the age is calculated incorrectly as a floored division of the age in days by 365). [<a href="https://github.com/skirsch/Czech/blob/main/code/buckets.py">https://github.com/skirsch/Czech/blob/main/code/buckets.py</a>] So if for example the <code>buckets.py</code> script is ran in July 2024, the age of someone who was born in January 1950 and who didn't die is treated as 74 even during 2020.</p>
 <h2>
 <a href=#Deaths_and_population_estimates_by_single_year_of_age_from_Eurostat id=Deaths_and_population_estimates_by_single_year_of_age_from_Eurostat>Deaths and population estimates by single year of age from Eurostat</a>
