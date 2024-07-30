@@ -71,6 +71,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Excess_percentage_of_deaths_by_ICD_code_in_2020_2022>Excess percentage of deaths by ICD code in 2020-2022</a></li>
 <li><a href=#Comment_to_Substack_post_by_Kirsch>Comment to Substack post by Kirsch</a></li>
 <li><a href=#Moderna_Pfizer_ratio_by_vaccination_quarter_and_age_group>Moderna-Pfizer ratio by vaccination quarter and age group</a></li>
+<li><a href=#Moderna_Pfizer_ratio_for_third_doses>Moderna-Pfizer ratio for third doses</a></li>
 </ul>
 
 <h2>
@@ -801,7 +802,7 @@ Other             6.53          1.10</pre>
       Pfizer 49.7
      Moderna 56.0
  AstraZeneca 68.4</pre>
-<p>However when I took the average age for the batches from the record-level data, it got a correlation of only about 0.2 with both the rate of deaths per batch and the rate of serious adverse events per batch:</p>
+<p>However when I took the average age for the batches from the record-level data, it got a correlation of only about 0.18 for the rate of deaths per batch and a correlation of about 0.19 for the rate of serious adverse events per batch:</p>
 <pre>download.file(&quot;http://sars2.net/f/czbucketsbatchkeep.csv.xz&quot;,&quot;czbucketsbatchkeep.csv.xz&quot;)
 b=fread(&quot;xz -dc czbucketsbatchkeep.csv.xz&quot;)
 
@@ -818,6 +819,12 @@ me[doses&gt;0,cor(dead/doses,age)]
 
 me[doses&gt;0,cor(serious/doses,age)]
 # [1] 0.1874058 (correlation between age and the rate of serious adverse events)</pre>
+<p>However the reason why the correlation was fairly low was partially because there's a lot of noise for small batches, and when I only looked at batches with at least 100,000 doses, the correlation increased to about 0.33 for deaths and 0.26 for serious adverse events:</p>
+<pre>me[doses&gt;1e5,cor(dead/doses,age)]
+# [1] 0.3297154
+
+me[doses&gt;1e5,cor(serious/doses,age)]
+# [1] 0.2552369</pre>
 <p>In the following code I calculated an age-normalized mortality rate for each batch in the record-level data. Its correlation was about -0.01 with both the rate of deaths in the spreadsheet and the rate of serious adverse events:</p>
 <pre>b=fread(&quot;xz -dc czbucketsbatchkeep.csv.xz&quot;)
 d=b[,.(dead=sum(dead),alive=sum(alive)),.(batch,age=ifelse(age&lt;15,0,pmin(age,95)))]
@@ -2055,6 +2062,15 @@ pheatmap::pheatmap(pop^exp2,filename=&quot;i2.png&quot;,display_numbers=kimi(ife
 
 cap=&quot;Czech record-level data: Age-normalized Moderna-Pfizer mortality ratio by vaccination quarter and age group. Only first doses are included. The mortality rate was calculated from the day of the first dose up to the end of 2022. A baseline number of deaths was calculated for each single year of age by multiplying the person-days of the age by the total mortality rate for the age in 2020 to 2022 among all people who are included in the record-level data, and the baseline deaths for all ages within an age group were added together. The ratio was calculated as (Moderna_deaths / Moderna_baseline) / (Pfizer_deaths / Pfizer_baseline). The right side shows the number of people each quarter who received either a Pfizer or Moderna vaccine for their first dose.&quot;
 system(paste0(&quot;magick i[12].png +append 0.png;w=`identify -format %w 0.png`;pad=24;convert -pointsize 42 -interline-spacing -3 -font Arial \\( -size $[w-pad*2]x caption:&#39;&quot;,cap,&quot;&#39; -splice $[pad]x20 \\) 0.png -append 1.png&quot;))</pre>
+<h2>
+<a href=#Moderna_Pfizer_ratio_for_third_doses id=Moderna_Pfizer_ratio_for_third_doses>Moderna-Pfizer ratio for third doses</a>
+</h2>
+<p>Kirsch has been saying that the Moderna-Pfizer ratio is consistently about 1.3 regardless of the month of vaccination for months with a sufficiently large number of people vaccinated (even though my age-normalized Moderna-Pfizer ratio was about 1.02 for people who got the first dose in November 2021 which included a sample size of about 300,000 people, so I think it's a sufficiently large sample size).</p>
+<p>But he has generally been looking at first doses only. The plot below shows the results of the script in this section for the third dose: <a href=czech2.html#Triangle_plot_of_Moderna_Pfizer_ratio>czech2.html#Triangle_plot_of_Moderna_Pfizer_ratio</a>.</p>
+<p>The total Moderna-Pfizer ratio is below 1.0 for people who got the third dose during each month from March 2022 to August 2022, but it shouldn't just be random noise because there's a total of about 300,000 people who received a third shot from a Moderna or Pfizer vaccine during those months. So there appears to be a similar effect as with first doses, where the late vaccinees have a lower Moderna-Pfizer ratio than the early vaccinees:</p>
+<div class="width8">
+<img src="i/czech-trianglemodpfi-third.png">
+</div>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
