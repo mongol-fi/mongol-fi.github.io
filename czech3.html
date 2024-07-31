@@ -1132,6 +1132,42 @@ t[,pct:=round(administered/shipped*100)][order(pct)]|&gt;print(nrow=Inf)</pre>
 198:    EJ6134                                 COMIRNATY   19500 2021-01-08        33555 172
 199:    EX8680                                 COMIRNATY       0 2021-05-27         1507 Inf
          batch                                      type shipped       date administered pct</pre>
+<p>Here's a plot of the same data:</p>
+<div class="width10">
+<img src="i/czech-batch-admin.png">
+</div>
+<p>WelcomeTheEagle made a Tableau dashboard for Schmeling's data, so I asked him where he got the data, but he replied: <span class="quote">&quot;I never saw the raw data, only this summary. I'm still missing one green lot# (next to last). There is still blue, green, yellow lots coming into VAERS. Yellow lots are not harmless as the Dutch claim. They were just the newest lots at the time....&quot;</span> [<a href="https://x.com/welcometheeagle/status/1818662954604413265">https://x.com/welcometheeagle/status/1818662954604413265</a>] I compiled the data from the screenshot into this file (where there's one batch missing that wasn't visible in the screenshot): <a href=f/schmeling.csv>f/schmeling.csv</a>.</p>
+<p>There's 9 batches that are included in both Schmelling's study and the Czech spreadsheet, which are all Pfizer batches. I thought that if I would've calculated a ratio of adverse event reports per doses administered instead of per doses shipped for the Czech batches, it would've resulted in a big increase in the ratio of the later batches, but actually the results stayed more or less the same. It might be because only 2 of the 9 batches had an authorization date after the first half of 2021, and they both had a very low number of adverse event reports:</p>
+<pre>rec=fread(&quot;CR_records.csv&quot;)
+
+s1=data.table(readxl::read_excel(&quot;SUKL-batches-AE.xlsx&quot;,sheet=1))
+s2=data.table(readxl::read_excel(&quot;SUKL-batches-AE.xlsx&quot;,sheet=2))
+
+t=s1[,.(shipped=sum(doses_per_batch),date=min(date_authorization)),.(batch=batch_id,type=name)]
+t=merge(t,s2[,.(batch,no_reports)])
+
+k=grep(&quot;Datum_&quot;,colnames(rec));k2=k+1
+d=data.table(date=`class&lt;-`(unlist(rec[,..k],,F),&quot;Date&quot;),batch0=unlist(rec[,..k2],,F))[!is.na(date)]
+d=d[,batch:=toupper(trimws(batch0)),batch0][date&lt;=&quot;2025-7-4&quot;,.(administered=.N),batch]
+
+t=merge(t,d)
+t[,pct:=round(administered/shipped*100)]
+
+dk=fread(&quot;http://sars2.net/f/schmeling.csv&quot;)
+t=merge(t,dk[,.(batch,dk=adverse/doses)])
+
+t[,.(batch,czdate=date,czpership=round(no_reports/shipped*1e6),czperadmin=round(no_reports/administered*1e6),dkpership=round(dk*1e6))][order(czdate)]|&gt;print(r=F)</pre>
+<!-- -->
+<pre>  batch     czdate czpership czperadmin dkpership
+ EJ6796 2020-12-23      5538       5119    184615
+ EJ6134 2021-01-08      4359       2533    119319
+ EJ6797 2021-01-08      2190       2320    163825
+ EK9788 2021-01-25      2784       2823    100597
+ EJ6790 2021-02-08      1140       1262     35096
+ ET7205 2021-03-22      1038       1158      6838
+ FD4555 2021-06-15       269        295      2404
+ FN5519 2021-12-30        16         54         0
+ FM9088 2022-01-10        39         74         0</pre>
 <h2>
 <a href=#Monthly_percentage_of_COVID_deaths_in_unvaccinated_people id=Monthly_percentage_of_COVID_deaths_in_unvaccinated_people>Monthly percentage of COVID deaths in unvaccinated people</a>
 </h2>
