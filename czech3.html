@@ -754,7 +754,7 @@ a[,.(excess=(sum(hosp)/sum(base)-1)*100),type][order(-excess),excess:=round(exce
 <h2>
 <a href=#Batch_safety_study_by_authors_from_Palack_University id=Batch_safety_study_by_authors_from_Palack_University>Batch safety study by authors from Palacký University</a>
 </h2>
-<p>In June 2024 the Czech authors who uploaded the record-level data to GitHub published a paper where they analyzed batch safety data they received through a freedom of information response: <a href="https://onlinelibrary.wiley.com/doi/abs/10.1111/eci.14271">https://onlinelibrary.wiley.com/doi/abs/10.1111/eci.14271</a>. The paper is behind a paywall, but I bought access to it and posted screenshots of the paper here: <a href=i/czech-batch-study.jpg>i/czech-batch-study.jpg</a>. The batch data is available from this spreadsheet: <a href="https://github.com/PalackyUniversity/batch-dependent-safety/blob/main/data/SUKL-batches-AE.xlsx">https://github.com/PalackyUniversity/batch-dependent-safety/blob/main/data/SUKL-batches-AE.xlsx</a>.</p>
+<p>In June 2024 the Czech authors who uploaded the record-level data to GitHub published a paper where they analyzed batch safety data they received through a freedom of information response: <a href="https://onlinelibrary.wiley.com/doi/abs/10.1111/eci.14271">https://onlinelibrary.wiley.com/doi/abs/10.1111/eci.14271</a>. The paper is behind a paywall, but I bought access to it and posted screenshots of the paper here: <a href=i/czech-batch-study.jpg>i/czech-batch-study.jpg</a>. The batch data is available from this spreadsheet: <a href="https://github.com/PalackyUniversity/batch-dependent-safety/blob/main/data/SUKL-batches-AE.xlsx">https://github.com/PalackyUniversity/batch-dependent-safety/blob/main/data/SUKL-batches-AE.xlsx</a>. The authors also published a blog post about the paper on the website of the Czech Association of Microbiologists, Immunologists and Statisticians: <a href="https://smis-lab.cz/2024/07/03/znepokojujici-rozdily-mezi-sarzemi-covidovych-vakcin/">https://smis-lab.cz/2024/07/03/znepokojujici-rozdily-mezi-sarzemi-covidovych-vakcin/</a>.</p>
 <p>In the spreadsheet at GitHub and in the original Czech paper, the number of doses is the number of doses shipped and not the number of doses administered. So new batches where all doses have not yet been administered tend to get a lower rate of deaths per dose, and there might also be some older batches where all doses didn't end up being administered. Schmeling et al.'s infamous study of Danish batch data had the same problem, which might partially explain why they found that newer batches tended to get a lower rate of adverse events per dose than older batches. [<a href="https://onlinelibrary.wiley.com/doi/10.1111/eci.13998">https://onlinelibrary.wiley.com/doi/10.1111/eci.13998</a>] Max Schmeling posted this reply to Jessica Rose: <span class="quote">&quot;I just wanted to add, that the lot size data, we obtained from The Danish Serum Institute, is in fact the number of doses pr. batch, that were shipped from the Danish Serum Institute to all the Danish vaccination centers. It is perhaps the data, that comes closest to being the real number of administered doses pr. batch, since the shipped doses exclude any doses, the Serum Institute might have in stock.&quot;</span> [<a href="https://jessicar.substack.com/p/danish-study-on-lot-variation-and">https://jessicar.substack.com/p/danish-study-on-lot-variation-and</a>] However I don't know if in the Czech data the number of doses is the number of doses that some Czech distribution center received from abroad, or the number of doses that Czech distribution center shipped to further locations in Czechia. However the latter option seems more likely based on the file <code>P1_Prehled propustenych sarzi vakcin proti onemocneni covid-19.xlsx</code>, where a column for the date of each batch was translated as <span class="quote">&quot;Released on, not the same as the date of import&quot;</span> (<span class="quote">&quot;Propuštěno dne, není shodné s datem dovozu&quot;</span>), and a total number of doses is titled <span class="quote">&quot;Total released&quot;</span>. The paper about the batch data says that batch data provided by SUKL included <span class="quote">&quot;the date of authorization of the release of each batch&quot;</span>, and that <span class="quote">&quot;the dataset contained all batches of COVID-19 vaccines released for use from the beginning of the vaccination campaign to 1 March, 2023&quot;</span>.</p>
 <p>However with the preceding caveat in mind, if you simply use the number of doses released from each batch as the denominator, then in the spreadsheet posted at GitHub, Pfizer vaccines get a lower rate of deaths than Moderna vaccines but Moderna vaccines get a higher rate of serious adverse events than Pfizer vaccines:</p>
 <pre>library(data.table);library(openxlsx)
@@ -915,6 +915,221 @@ theme(axis.text=element_text(size=8,color=&quot;black&quot;),
   plot.title=element_text(size=9,face=&quot;bold&quot;,margin=margin(2,,5)))
 ggsave(&quot;0.png&quot;,width=7,height=4.8,dpi=380*4)
 system(&quot;magick 0.png -resize 25% 1.png&quot;)</pre>
+<p>In the following code I compared the number of doses administered from each batch in the record-level data to doses shipped in the spreadsheet for SUKL data. I only included doses administered up to July 4th 2023, which was the date when the authors of the batch study said they received the data from SUKL. A couple of batches had multiple rows in the spreadsheet because the batches included multiple sets of packages that were authorized on different dates, but I used the earliest date as the date of each batch. I didn't attempt to resolve incorrectly typed batch IDs, except I only converted all batch IDs to uppercase and I removed extra spaces from the batch IDs.</p>
+<p>About a third of all batches had less than 10% of doses administered. There were less than 20% doses administered in almost all batches with an authorization date in 2022, which probably explains why the new batches got such a low rate of deaths per doses shipped. 15 batches had more doses administered than doses shipped by SUKL:</p>
+<pre>library(data.table)
+
+rec=fread(&quot;Czech/data/CR_records.csv&quot;,showProgress=F)
+
+download.file(&quot;https://github.com/PalackyUniversity/batch-dependent-safety/raw/main/data/SUKL-batches-AE.xlsx&quot;,&quot;SUKL-batches-AE.xlsx&quot;)
+
+t=data.table(readxl::read_excel(&quot;SUKL-batches-AE.xlsx&quot;,sheet=1))
+t=t[,.(shipped=sum(doses_per_batch),date=min(date_authorization)),.(batch=batch_id,type=name)]
+
+t=merge(t,rec[,.(batch=unlist(.SD,,F)),.SDcols=patterns(&quot;Sarze_&quot;)][,.(administered=.N),batch])
+t[,pct:=round(administered/shipped*100)][order(pct)]|&gt;print(nrow=Inf)</pre>
+<!-- -->
+<pre>         batch                                      type shipped       date administered pct
+  1:   000202A                                  SPIKEVAX   39600 2022-01-20           67   0
+  2:   000256A                                  SPIKEVAX   24000 2022-02-16           42   0
+  3:   000382A                                  SPIKEVAX   57600 2022-05-18           33   0
+  4:   000384A                                  SPIKEVAX   56400 2022-05-16            3   0
+  5:   000388A                                  SPIKEVAX   56400 2022-05-09           17   0
+  6:   016G21A                                  SPIKEVAX   51600 2021-10-13          111   0
+  7:   200106A   SPIKEVAX BIVALENT ORIGINAL/OMICRON BA.1  121000 2022-10-05            6   0
+  8:    226011                                  SPIKEVAX   48000 2022-03-30          150   0
+  9:   36660TB                                 COMIRNATY  253890 2022-04-20         1042   0
+ 10:   400056A SPIKEVAX BIVALENT ORIGINAL/OMICRON BA.4-5   20400 2023-01-19           21   0
+ 11:   400057A SPIKEVAX BIVALENT ORIGINAL/OMICRON BA.4-5    8450 2023-01-31            1   0
+ 12: 4301MF012                                 NUVAXOVID   90000 2022-03-07          131   0
+ 13: 4301MF015                                 NUVAXOVID   90000 2022-03-15            1   0
+ 14: 4302MF002                                 NUVAXOVID  120000 2022-07-01          195   0
+ 15: 4302MF016                                 NUVAXOVID  200000 2022-07-22          732   0
+ 16:   ABY4055                                 VAXZEVRIA  122400 2021-06-28           10   0
+ 17:   ACA4541                  COVID-19 VACCINE JANSSEN   55200 2021-09-15            1   0
+ 18:    FL4574                                 COMIRNATY  306540 2021-11-16           15   0
+ 19:    FP9632                                 COMIRNATY  411840 2022-02-03         1245   0
+ 20:    FR8477                            COMIRNATY DISP  455040 2022-04-25            2   0
+ 21:    GG3683                            COMIRNATY BABY   52800 2022-10-31          180   0
+ 22:    GJ2636         COMIRNATY ORIGINAL/OMICRON BA.4-5   57600 2022-11-07           12   0
+ 23:    GJ2638         COMIRNATY ORIGINAL/OMICRON BA.4-5  259200 2022-11-07            1   0
+ 24:    GJ7179         COMIRNATY ORIGINAL/OMICRON BA.4-5  786240 2022-10-31         3090   0
+ 25:    GK4367         COMIRNATY ORIGINAL/OMICRON BA.4-5 1177920 2022-11-14         4615   0
+ 26:    GK7826         COMIRNATY ORIGINAL/OMICRON BA.4-5  126720 2022-10-24            2   0
+ 27:   MV1041A SPIKEVAX BIVALENT ORIGINAL/OMICRON BA.4-5   16900 2023-02-13           23   0
+ 28:   PCA0075                                 COMIRNATY   87750 2022-02-28          273   0
+ 29:   PCA0081                                 COMIRNATY    8190 2022-04-25           11   0
+ 30:   PCA0082                                 COMIRNATY  304200 2022-04-25          106   0
+ 31:   PCB0016                                 COMIRNATY  143910 2022-03-07            6   0
+ 32:   PCB0017                                 COMIRNATY  285480 2022-03-07         1110   0
+ 33:     SDYY1                                 COMIRNATY   36270 2022-05-23           17   0
+ 34:   000162A                                  SPIKEVAX   24600 2022-02-01          144   1
+ 35:    150001                                 COMIRNATY   36270 2022-04-20          249   1
+ 36:   ACA5778                  COVID-19 VACCINE JANSSEN   96000 2021-09-29         1140   1
+ 37:    FN4074                             COMIRNATY PED   32400 2022-01-14          164   1
+ 38:    FR9187                            COMIRNATY DISP  161280 2022-05-23         1871   1
+ 39:    GD6803           COMIRNATY ORIGINAL/OMICRON BA.1  659520 2022-09-12         4414   1
+ 40:    GJ2639         COMIRNATY ORIGINAL/OMICRON BA.4-5  357120 2022-10-18         3430   1
+ 41:    GL6799     COMIRNATY ORIGINAL/OMICRON BA.4-5 PED   28800 2022-11-21          360   1
+ 42:   PCA0003                                 COMIRNATY  212940 2021-10-25         2046   1
+ 43:   000251A                                  SPIKEVAX  108000 2022-04-21         2061   2
+ 44:    GE0694                             COMIRNATY PED   57600 2022-10-03         1148   2
+ 45:   000082A                                  SPIKEVAX  157200 2021-11-16         3979   3
+ 46:   000266A                                  SPIKEVAX   19200 2022-03-23          502   3
+ 47:   000371A                                  SPIKEVAX  159600 2022-06-07         5035   3
+ 48:   000397A                                  SPIKEVAX  158400 2022-06-02         4224   3
+ 49:    210155                                 VAXZEVRIA  148800 2021-06-29         4968   3
+ 50:    223034   SPIKEVAX BIVALENT ORIGINAL/OMICRON BA.1   28000 2022-10-14          706   3
+ 51:    FP8748                            COMIRNATY DISP  354240 2022-03-18        10518   3
+ 52:    FR3566                            COMIRNATY DISP  345600 2022-05-23        11495   3
+ 53:   MV1013A   SPIKEVAX BIVALENT ORIGINAL/OMICRON BA.1   52800 2022-09-26         1472   3
+ 54:   000090A                                  SPIKEVAX   31200 2022-01-26         1325   4
+ 55:    FP9604                                 COMIRNATY  193050 2022-02-03         8588   4
+ 56:    FR5493                            COMIRNATY DISP  247680 2022-02-10        10595   4
+ 57:   000139A                                  SPIKEVAX  117700 2021-12-07         6425   5
+ 58:   1F1053A                                 COMIRNATY   81900 2022-02-28         4371   5
+ 59:    GJ2631         COMIRNATY ORIGINAL/OMICRON BA.4-5  354240 2022-10-11        15942   5
+ 60:   000358A                                  SPIKEVAX   56400 2022-05-02         3122   6
+ 61:   200090A   SPIKEVAX BIVALENT ORIGINAL/OMICRON BA.1   48000 2022-09-14         2945   6
+ 62:   000187A                                  SPIKEVAX   39600 2022-01-14         2931   7
+ 63: 4301MF011                                 NUVAXOVID  132000 2022-02-24         9483   7
+ 64:   000275A                                  SPIKEVAX   19200 2022-03-22         1460   8
+ 65:   200038A   SPIKEVAX BIVALENT ORIGINAL/OMICRON BA.1   40800 2022-09-07         3097   8
+ 66:   1F1045A                                 COMIRNATY  429390 2022-01-31        39278   9
+ 67:    FN5988                             COMIRNATY PED   25200 2022-02-10         2367   9
+ 68:    FP8234                                 COMIRNATY  444600 2022-01-12        42560  10
+ 69:    GJ1988         COMIRNATY ORIGINAL/OMICRON BA.4-5  354240 2022-10-03        33815  10
+ 70:   093F21A                                  SPIKEVAX   52800 2021-11-01         5851  11
+ 71:     XD955                  COVID-19 VACCINE JANSSEN  144000 2021-04-12        16440  11
+ 72:   000239A                                  SPIKEVAX   25200 2022-02-24         2927  12
+ 73:    226004                                  SPIKEVAX   19200 2022-03-09         2487  13
+ 74:    FP8956                            COMIRNATY DISP  587520 2022-02-21        82849  14
+ 75:    1K082A                                 COMIRNATY  236340 2022-02-28        38074  16
+ 76:    GD6798           COMIRNATY ORIGINAL/OMICRON BA.1  662400 2022-09-06       129668  20
+ 77:    GH9851         COMIRNATY ORIGINAL/OMICRON BA.4-5  650880 2022-09-26       132692  20
+ 78:    216046                                  SPIKEVAX  117400 2021-12-15        24119  21
+ 79:    216041                                  SPIKEVAX  116400 2021-11-30        30947  27
+ 80:    FN4071                             COMIRNATY PED   43200 2022-01-10        11736  27
+ 81:    FN5519                                 COMIRNATY  625950 2021-12-30       185131  30
+ 82:   000058A                                  SPIKEVAX  187200 2021-11-05        59856  32
+ 83:   3004738                                  SPIKEVAX   63600 2021-07-26        24769  39
+ 84:   ACA5775                  COVID-19 VACCINE JANSSEN   55200 2021-09-21        21538  39
+ 85:    GH9722         COMIRNATY ORIGINAL/OMICRON BA.4-5  650880 2022-09-19       255011  39
+ 86:    FP1972                            COMIRNATY DISP  233280 2022-01-24        94822  41
+ 87:    216040                                  SPIKEVAX  116400 2021-11-24        53447  46
+ 88:    FN4072                             COMIRNATY PED  187200 2021-12-10        86197  46
+ 89:   000039A                                  SPIKEVAX   30100 2021-11-18        14110  47
+ 90:   3005238                                  SPIKEVAX   62400 2021-07-29        29931  48
+ 91:   ACA6111                  COVID-19 VACCINE JANSSEN   69600 2021-10-06        35290  51
+ 92:    FM9088                                 COMIRNATY  152100 2022-01-10        81589  54
+ 93: 300042698                  COVID-19 VACCINE MODERNA    8400 2021-01-11         4938  59
+ 94:   PCB0001                                 COMIRNATY  305370 2021-11-01       182391  60
+ 95:    FA4597                                 COMIRNATY    7020 2021-05-14         4305  61
+ 96: 300042721                  COVID-19 VACCINE MODERNA   36000 2021-02-01        22193  62
+ 97:   3004218                                  SPIKEVAX   81600 2021-06-29        51654  63
+ 98:   PCA0002                                 COMIRNATY  212940 2021-10-20       136568  64
+ 99:   090F21A                                  SPIKEVAX   52800 2021-10-22        34583  65
+100:    FL4213                                 COMIRNATY  305370 2021-11-11       198003  65
+101:    EW4815                                 COMIRNATY  286650 2021-04-12       198610  69
+102:   ABZ5320                  COVID-19 VACCINE JANSSEN   24000 2021-09-06        16707  70
+103:    FF2832                                 COMIRNATY  391950 2021-08-06       287691  73
+104:   3000493                  COVID-19 VACCINE MODERNA   44400 2021-02-24        32938  74
+105:   3000496                  COVID-19 VACCINE MODERNA   55800 2021-03-09        41458  74
+106:    FA5829                                 COMIRNATY    5850 2021-05-04         4303  74
+107:     XE423                  COVID-19 VACCINE JANSSEN   14400 2021-07-26        11055  77
+108:  21C17-05                  COVID-19 VACCINE JANSSEN   12000 2021-06-08         9371  78
+109:    FE7051                                 COMIRNATY  359190 2021-07-26       278701  78
+110:   3001531                  COVID-19 VACCINE MODERNA   88800 2021-03-23        70452  79
+111:   3004493                                  SPIKEVAX   63600 2021-07-08        50310  79
+112:    FE8244                                 COMIRNATY  359190 2021-07-19       285346  79
+113:    FM7533                                 COMIRNATY 1074060 2021-12-09       846426  79
+114:  21C16-05                  COVID-19 VACCINE JANSSEN   12000 2021-06-01         9552  80
+115:   ABX4044                                 VAXZEVRIA  144000 2021-05-27       115756  80
+116:   ABY1328                                 VAXZEVRIA   28800 2021-06-21        23077  80
+117:    FM7785                                 COMIRNATY   57330 2021-12-06        45638  80
+118:     XD974                  COVID-19 VACCINE JANSSEN   26400 2021-05-26        21512  81
+119:    210105                                 VAXZEVRIA   19200 2021-06-22        15721  82
+120:    FG4509                                 COMIRNATY  391950 2021-08-02       320080  82
+121:     XD986                  COVID-19 VACCINE JANSSEN   38400 2021-05-21        31673  82
+122:   1F1020A                                 COMIRNATY  754650 2021-09-29       623216  83
+123:   3002920                  COVID-19 VACCINE MODERNA   70800 2021-06-03        59077  83
+124:   3003606                  COVID-19 VACCINE MODERNA   75600 2021-06-18        63554  84
+125:     XE393                  COVID-19 VACCINE JANSSEN  174400 2021-06-29       146119  84
+126:    FG3739                                 COMIRNATY  333450 2021-08-31       282062  85
+127:   3003601                  COVID-19 VACCINE MODERNA   70800 2021-06-14        61750  87
+128:   3004670                                  SPIKEVAX   63600 2021-07-15        56079  88
+129:    EL0725                                 COMIRNATY   76050 2021-02-01        67048  88
+130:    EX0893                                 COMIRNATY  129870 2021-04-19       114437  88
+131:    EX3599                                 COMIRNATY   69030 2021-04-14        60465  88
+132:    FF0680                                 COMIRNATY  358020 2021-07-01       315866  88
+133:    FF3318                                 COMIRNATY  359190 2021-07-09       315524  88
+134:    FK0594                                 COMIRNATY  306540 2021-11-23       268872  88
+135:    EY3014                                 COMIRNATY  404820 2021-04-26       361281  89
+136:   3002916                  COVID-19 VACCINE MODERNA   70800 2021-05-27        63606  90
+137:    EJ6790                                 COMIRNATY   77220 2021-02-08        69716  90
+138:    ET7205                                 COMIRNATY  163800 2021-03-22       146818  90
+139:    EW2239                                 COMIRNATY  163800 2021-03-29       146766  90
+140:    210102                                 VAXZEVRIA   38400 2021-06-14        34991  91
+141:   ABW4801                                 VAXZEVRIA  158400 2021-04-23       144504  91
+142:    EW2246                                 COMIRNATY  285480 2021-04-06       258562  91
+143:    FA4598                                 COMIRNATY  431730 2021-05-10       390988  91
+144:    FD4555                                 COMIRNATY  278460 2021-06-15       254568  91
+145:    FE6208                                 COMIRNATY  670410 2021-06-28       607290  91
+146:     SDCN1                                 COMIRNATY   77220 2021-10-05        70208  91
+147:    EP2163                                 COMIRNATY   91260 2021-02-15        84102  92
+148:    EY7015                                 COMIRNATY  424710 2021-05-03       389369  92
+149:    FC2473                                 COMIRNATY  432900 2021-05-24       398696  92
+150:    FD6840                                 COMIRNATY  897390 2021-06-21       823343  92
+151:    FL5324                                 COMIRNATY  211770 2021-10-13       194289  92
+152:  21C11-05                  COVID-19 VACCINE JANSSEN   12000 2021-05-07        11110  93
+153:   ABX3519                                 VAXZEVRIA   38400 2021-05-18        35887  93
+154:    ET1831                                 COMIRNATY  236340 2021-03-01       219680  93
+155:    ET3620                                 COMIRNATY  223470 2021-03-08       208756  93
+156:    ET6956                                 COMIRNATY  156780 2021-04-19       145733  93
+157:    FD1921                                 COMIRNATY  662220 2021-05-31       619097  93
+158:    FE1248                                 COMIRNATY  271440 2021-06-15       252428  93
+159:     SCTR1                                 COMIRNATY  335790 2021-09-06       311533  93
+160:   ABV2856              COVID-19 VACCINE ASTRAZENECA   19200 2021-02-05        18086  94
+161:    EJ6797                                 COMIRNATY  144300 2021-01-08       136208  94
+162:    EP2166                                 COMIRNATY   93600 2021-02-22        88414  94
+163:    FC0681                                 COMIRNATY  423540 2021-05-14       399653  94
+164:    FD0168                                 COMIRNATY  549900 2021-06-07       516021  94
+165:   3001939                  COVID-19 VACCINE MODERNA   52200 2021-04-26        49611  95
+166:   3002546                  COVID-19 VACCINE MODERNA   70800 2021-05-20        67509  95
+167:   31100TB                                 COMIRNATY  134550 2021-10-05       127842  95
+168:   ABX5105                                 VAXZEVRIA   28800 2021-05-11        27236  95
+169:   3001659                  COVID-19 VACCINE MODERNA   74400 2021-04-06        71200  96
+170:   ABV6096              COVID-19 VACCINE ASTRAZENECA   36000 2021-02-24        34691  96
+171:   3002339                  COVID-19 VACCINE MODERNA   70800 2021-05-12        68752  97
+172:     XD975                  COVID-19 VACCINE JANSSEN   19200 2021-05-13        18818  98
+173:   1F1005A                                 COMIRNATY  224640 2021-09-15       222765  99
+174:   1F1006A                                 COMIRNATY  217620 2021-09-21       215683  99
+175:    EK9788                                 COMIRNATY   47775 2021-01-25        47106  99
+176:    FE2296                                 COMIRNATY  124020 2021-06-28       122996  99
+177:   3002330                  COVID-19 VACCINE MODERNA   70800 2021-05-04        71061 100
+178:   3005242                                  SPIKEVAX   62400 2021-08-06        62551 100
+179:   ABV5811              COVID-19 VACCINE ASTRAZENECA   61100 2021-02-16        61223 100
+180:   3001943                  COVID-19 VACCINE MODERNA   48000 2021-04-27        48695 101
+181:   ABV4678              COVID-19 VACCINE ASTRAZENECA   38400 2021-02-10        38961 101
+182:    EL1491                                 COMIRNATY   69225 2021-01-05        69647 101
+183:    FA7082                                 COMIRNATY    2340 2021-05-14         2362 101
+184:   3003659                  COVID-19 VACCINE MODERNA   80400 2021-06-24        82070 102
+185:  21C18-05                  COVID-19 VACCINE JANSSEN   12000 2021-06-16        12449 104
+186:   ABW9941                                 VAXZEVRIA   14400 2021-04-12        15030 104
+187:   ABV7764              COVID-19 VACCINE ASTRAZENECA    9600 2021-03-23        10192 106
+188:   ABW2187              COVID-19 VACCINE ASTRAZENECA   98700 2021-03-29       104137 106
+189:   ABX3502                                 VAXZEVRIA   33600 2021-04-16        35618 106
+190:     SCWF7                                 COMIRNATY    8190 2021-09-21         8660 106
+191:    EL1484                                 COMIRNATY   19500 2020-12-29        20930 107
+192:   ABV5297              COVID-19 VACCINE ASTRAZENECA    9600 2021-03-16        10350 108
+193:   ABV8139              COVID-19 VACCINE ASTRAZENECA   15000 2021-03-08        16178 108
+194:    EJ6796                                 COMIRNATY    9750 2020-12-23        10549 108
+195:   ABW1277              COVID-19 VACCINE ASTRAZENECA   50400 2021-03-03        54872 109
+196:  21C10-05                  COVID-19 VACCINE JANSSEN   12000 2021-04-26        13277 111
+197:   000023A                                  SPIKEVAX    1200 2021-10-15         1463 122
+198:    EJ6134                                 COMIRNATY   19500 2021-01-08        33555 172
+199:    EX8680                                 COMIRNATY       0 2021-05-27         1507 Inf
+         batch                                      type shipped       date administered pct</pre>
 <h2>
 <a href=#Monthly_percentage_of_COVID_deaths_in_unvaccinated_people id=Monthly_percentage_of_COVID_deaths_in_unvaccinated_people>Monthly percentage of COVID deaths in unvaccinated people</a>
 </h2>
