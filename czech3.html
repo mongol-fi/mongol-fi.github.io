@@ -1134,10 +1134,10 @@ t[,pct:=round(administered/shipped*100)][order(pct)]|&gt;print(nrow=Inf)</pre>
          batch                                      type shipped       date administered pct</pre>
 <p>Here's a plot of the same data:</p>
 <div class="width10">
-<img src="i/czech-batch-admin.png">
+<img src="i/czech-batch-admin.jpg">
 </div>
-<p>WelcomeTheEagle made a Tableau dashboard for Schmeling's data, so I asked him where he got the data, but he replied: <span class="quote">&quot;I never saw the raw data, only this summary. I'm still missing one green lot# (next to last). There is still blue, green, yellow lots coming into VAERS. Yellow lots are not harmless as the Dutch claim. They were just the newest lots at the time....&quot;</span> [<a href="https://x.com/welcometheeagle/status/1818662954604413265">https://x.com/welcometheeagle/status/1818662954604413265</a>] I compiled the data from the screenshot into this file (where there's one batch missing that wasn't visible in the screenshot): <a href=f/schmeling.csv>f/schmeling.csv</a>.</p>
-<p>There's 9 batches that are included in both Schmelling's study and the Czech spreadsheet, which are all Pfizer batches. I thought that if I would've calculated a ratio of adverse event reports per doses administered instead of per doses shipped for the Czech batches, it would've resulted in a big increase in the ratio of the later batches, but actually the results stayed more or less the same. It might be because only 2 of the 9 batches had an authorization date after the first half of 2021, and they both had a very low number of adverse event reports:</p>
+<p>WelcomeTheEagle made a Tableau dashboard for Schmeling's data, so I asked him where he got the data, but he posted a screenshot which showed the percentage of adverse event reports per batch and wrote: <span class="quote">&quot;I never saw the raw data, only this summary. I'm still missing one green lot# (next to last). There is still blue, green, yellow lots coming into VAERS. Yellow lots are not harmless as the Dutch claim. They were just the newest lots at the time....&quot;</span> [<a href="https://x.com/welcometheeagle/status/1818662954604413265">https://x.com/welcometheeagle/status/1818662954604413265</a>] I compiled the data from the screenshot into this file (where there's one batch missing that wasn't visible in the screenshot): <a href=f/schmeling.csv>f/schmeling.csv</a>.</p>
+<p>There's only 9 batches that are included in both Schmeling's study and the Czech spreadsheet, which are all Pfizer batches. I thought that if I would've calculated a ratio of adverse event reports per doses administered instead of per doses shipped for the Czech batches, it would've resulted in a big increase in the ratio of the later batches, but actually the results didn't change that much. It might be because only 2 of the 9 batches had an authorization date after the first half of 2021, and they both had a very low number of adverse event reports. But the other 7 batches had a high percentage of doses administered out of doses shipped:</p>
 <pre>rec=fread(&quot;CR_records.csv&quot;)
 
 s1=data.table(readxl::read_excel(&quot;SUKL-batches-AE.xlsx&quot;,sheet=1))
@@ -1156,18 +1156,163 @@ t[,pct:=round(administered/shipped*100)]
 dk=fread(&quot;http://sars2.net/f/schmeling.csv&quot;)
 t=merge(t,dk[,.(batch,dk=adverse/doses)])
 
-t[,.(batch,czdate=date,czpership=round(no_reports/shipped*1e6),czperadmin=round(no_reports/administered*1e6),dkpership=round(dk*1e6))][order(czdate)]|&gt;print(r=F)</pre>
-<!-- -->
-<pre>  batch     czdate czpership czperadmin dkpership
- EJ6796 2020-12-23      5538       5119    184615
- EJ6134 2021-01-08      4359       2533    119319
- EJ6797 2021-01-08      2190       2320    163825
- EK9788 2021-01-25      2784       2823    100597
- EJ6790 2021-02-08      1140       1262     35096
- ET7205 2021-03-22      1038       1158      6838
- FD4555 2021-06-15       269        295      2404
- FN5519 2021-12-30        16         54         0
- FM9088 2022-01-10        39         74         0</pre>
+t[,.(batch,czdate=date,czadminpership=round(administered/shipped*100),czpership=round(no_reports/shipped*1e6),czperadmin=round(no_reports/administered*1e6),dkpership=round(dk*1e6))][order(czdate)]|&gt;print(r=F)</pre>
+<p>Here's the output of the code above formatted as a table:</p>
+<table>
+<tr><th>
+Pfizer<br>batch<br>ID
+</th><th>
+Czech<br>release<br>date
+</th><th>
+Czech doses<br>administered per<br>doses shipped
+</th><th>
+Czech adverse event<br>reports per million<br>doses shipped
+</th><th>
+Czech adverse event<br>reports per million<br>doses administered
+</th><th>
+Danish adverse event<br>reports per million<br>doses shipped
+</th></tr>
+<tr><td>
+EJ6796
+</td><td>
+2020-12-23
+</td><td>
+108%
+</td><td>
+5538
+</td><td>
+5119
+</td><td>
+184615
+</td></tr>
+<tr><td>
+EJ6134
+</td><td>
+2021-01-08
+</td><td>
+172%
+</td><td>
+4359
+</td><td>
+2533
+</td><td>
+119319
+</td></tr>
+<tr><td>
+EJ6797
+</td><td>
+2021-01-08
+</td><td>
+94%
+</td><td>
+2190
+</td><td>
+2320
+</td><td>
+163825
+</td></tr>
+<tr><td>
+EK9788
+</td><td>
+2021-01-25
+</td><td>
+99%
+</td><td>
+2784
+</td><td>
+2823
+</td><td>
+100597
+</td></tr>
+<tr><td>
+EJ6790
+</td><td>
+2021-02-08
+</td><td>
+90%
+</td><td>
+1140
+</td><td>
+1262
+</td><td>
+35096
+</td></tr>
+<tr><td>
+ET7205
+</td><td>
+2021-03-22
+</td><td>
+90%
+</td><td>
+1038
+</td><td>
+1158
+</td><td>
+6838
+</td></tr>
+<tr><td>
+FD4555
+</td><td>
+2021-06-15
+</td><td>
+91%
+</td><td>
+269
+</td><td>
+295
+</td><td>
+2404
+</td></tr>
+<tr><td>
+FN5519
+</td><td>
+2021-12-30
+</td><td>
+30%
+</td><td>
+16
+</td><td>
+54
+</td><td>
+0
+</td></tr>
+<tr><td>
+FM9088
+</td><td>
+2022-01-10
+</td><td>
+54%
+</td><td>
+39
+</td><td>
+74
+</td><td>
+0
+</td></tr>
+</table>
+<p>Previously I calculated the correlation with excess mortality in the record-level data for deaths per doses shipped, but now I looked at deaths per doses administered instead. But the correlation was still only about 0.05, and when I looked at adverse event reports or serious adverse event reports instead of deaths, the correlation became negative:</p>
+<pre>rec=fread(&quot;CR_records.csv&quot;)
+buck=fread(&quot;xz -dc czbucketsbatchkeep.csv.xz&quot;)
+
+t=data.table(readxl::read_excel(&quot;SUKL-batches-AE.xlsx&quot;,sheet=2))
+
+k=grep(&quot;Datum_&quot;,colnames(rec));k2=k+1
+d=data.table(date=`class&lt;-`(unlist(rec[,..k],,F),&quot;Date&quot;),batch0=unlist(rec[,..k2],,F))[!is.na(date)]
+d=d[,batch:=toupper(trimws(batch0)),batch0][date&lt;=&quot;2025-7-4&quot;,.(administered=.N),batch]
+t=merge(t,d)
+
+b=buck[,.(dead=sum(dead),alive=sum(alive)),.(batch,age=ifelse(age&lt;15,0,pmin(age,95)))]
+b=merge(b,b[,.(base=sum(dead)/sum(alive)),.(age)])[,base:=base*alive]
+t=merge(t,b[,.(rate=sum(dead)/sum(base)),batch])
+
+t[,cor(rate,deaths/administered)] # deaths per doses administered
+# [1] 0.05086878
+
+t[,cor(rate,no_reports/administered)] # adverse event reports per doses administered
+# [1] -0.08736063
+
+t[,cor(rate,serious/administered)] # serious adverse event reports per doses administered
+# [1] -0.2521965</pre>
 <h2>
 <a href=#Monthly_percentage_of_COVID_deaths_in_unvaccinated_people id=Monthly_percentage_of_COVID_deaths_in_unvaccinated_people>Monthly percentage of COVID deaths in unvaccinated people</a>
 </h2>
@@ -2324,7 +2469,7 @@ system(paste0(&quot;magick i[12].png +append 0.png;w=`identify -format %w 0.png`
 </h2>
 <p>Kirsch has been saying that for months with a sufficiently large sample size of people, the Moderna-Pfizer ratio is consistently around 1.3 regardless of the month of vaccination (even though my age-normalized Moderna-Pfizer ratio was about 1.02 for people who got the first dose in November 2021 which included a total of about 300,000 people, which I think it's a sufficiently large sample size).</p>
 <p>But Kirsch has generally been looking at first doses only. The plot below shows the results for the third dose instead. I used the same R script as in this section: <a href=czech2.html#Triangle_plot_of_Moderna_Pfizer_ratio>czech2.html#Triangle_plot_of_Moderna_Pfizer_ratio</a>.</p>
-<p>The total Moderna-Pfizer ratio is below 1.0 for people who got the third dose during each month from March 2022 to August 2022, but it shouldn't just be random noise because there's a total of about 300,000 people who received a third shot from a Moderna or Pfizer vaccine during those months. So there appears to be a similar effect as with first doses, where the late vaccinees have a lower Moderna-Pfizer ratio than the early vaccinees:</p>
+<p>The total Moderna-Pfizer ratio is below 1.0 for people who got the third dose during each month from March 2022 to August 2022, but it shouldn't just be random noise because there's a total of about 300,000 people who received a third shot from a Moderna or Pfizer vaccine during those months. So there appears to be a similar effect as with the first dose, where the late vaccinees have a lower Moderna-Pfizer ratio than the early vaccinees:</p>
 <p><img src=i/czech-trianglemodpfi-third.png style=max-width:690px></p>
 <p>The monthly number of 4th doses peaked in October 2022. But for people who got a 4th dose in October 2022, the Moderna-Pfizer ratio was about 0.67:</p>
 <p><img src=i/czech-trianglemodpfi-fourth.png style=max-width:550px></p>
