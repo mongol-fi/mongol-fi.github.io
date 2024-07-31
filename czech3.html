@@ -534,7 +534,7 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   plot.title=element_text(size=7.5,margin=margin(1,0,4.5,0),face=2))
 ggsave(&quot;0.png&quot;,width=4,height=2.2,dpi=300*4)
 system(&quot;magick 0.png -resize 25% 1.png&quot;)</pre>
-<p>This also shows the Moderna-Pfizer ratio by age group and month of vaccination:</p>
+<p>This also shows the Moderna-Pfizer ratio for chronic illness by age group and month of vaccination:</p>
 <p><img src=i/czech-chronic-5.png style=max-width:550px></p>
 <h2>
 <a href=#Hospitalizations_by_vaccine_type id=Hospitalizations_by_vaccine_type>Hospitalizations by vaccine type</a>
@@ -563,9 +563,9 @@ system(&quot;magick 0.png -resize 25% 1.png&quot;)</pre>
       hospitalizace_po_ockovani hospitalized after vaccination
                 jip_po_ockovani ICU after vaccination</pre>
 <p>The types of test are diagnostic, preventative, epidemiological, or other (ostatní). Negative tests are not listed so the type of the test is only shown for positive tests. There's only up to one test before vaccination and one test after vaccination listed for each person, and similarly there's only up to one hospitalization before vaccination and one hospitalization after vaccination listed for each person.</p>
-<p>I used the file to calculate an age-normalized hospitalization rate from the day of the first dose up to the present. The file included data for hospitalizations up the the present month, so I used the date when I downloaded the file as the end of my observation period.</p>
+<p>I used the file to calculate an age-normalized hospitalization rate from the day of the first dose up to the present. I didn't account for aging of people over time, so I treated the age at vaccination as the age of each person. The file included data for hospitalizations up the the present month, so I used the date when I downloaded the file as the end of my observation period.</p>
 <p>In order to calculate the expected number of deaths for each vaccine type, I multiplied the number of person-days the vaccine type had for each age group with the mortality rate of each age group among all people who had a first dose listed in the file.</p>
-<p>My excess percentage of hospitalizations was about -6% for the first dose type <span class="quote">&quot;Comirnaty&quot;</span> and about -4% for the first dose type <span class="quote">&quot;SPIKEVAX&quot;</span>, so there was not much difference, but AstraZeneca and particularly Janssen vaccines had a much higher hospitalization rate:</p>
+<p>My excess percentage of hospitalizations was about -6% for the first dose type <span class="quote">&quot;Comirnaty&quot;</span> and about -4% for the first dose type <span class="quote">&quot;SPIKEVAX&quot;</span>, so there was not much difference, but AstraZeneca and particularly Janssen vaccines had a much higher excess hospitalization rate:</p>
 <pre>&gt; download.file(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-pozitivni-hospitalizovani.csv&quot;,&quot;ockovani-pozitivni-hospitalizovani.csv&quot;)
 &gt; h=fread(&quot;ockovani-pozitivni-hospitalizovani.csv&quot;)
 &gt; d=h[,.(age=vekova_kategorie,date=prvni_davka,type=ockovaci_latka_nazev,hosp=hospitalizace_po_ockovani)][age!=&quot;-&quot;]
@@ -596,7 +596,7 @@ system(&quot;magick 0.png -resize 25% 1.png&quot;)</pre>
                                    Valneva      -100                0        4
                          Nuvaxovid XBB 1.5      -100                0        2
                                       type excesspct hospitalizations   pyears</pre>
-<p>In the code below I additionally normalized the hospitalization rate for the month of vaccination. I now only included first doses given in 2021, because otherwise I would've been more likely to get anomalously high baseline mortality rates for combinations of vaccination month and age group that had a low number of person-days. However now Moderna got a slightly lower excess hospitalization percent than Pfizer which was the opposite of my previous calculation. And now there was a big drop in the excess hospitalization rate of Janssen vaccines, because late vaccinees have a higher hospitalization rate than early vaccinees, and late vaccinees are overrepresented for Janssen vaccines:</p>
+<p>In the code below I additionally normalized the hospitalization rate for the month of vaccination. I now only included first doses given in 2021, because otherwise I would've been more likely to get anomalously high baseline mortality rates for combinations of vaccination month and age group that had a low number of person-days. However now Moderna got a slightly lower excess hospitalization percent than Pfizer which was the opposite of my previous calculation. And now the excess hospitalization percent of Janssen vaccines approximately halved from 57% to 28%, because late vaccinees had a higher hospitalization rate than early vaccinees and late vaccinees were overrepresented for Janssen vaccines:</p>
 <pre>&gt; yemo=\(x){u=unique(x);format(u,&quot;%Y-%m&quot;)[match(x,u)]}
 &gt; d2=d[date&lt;=&quot;2021-12-31&quot;][,month:=yemo(date)]
 &gt; a=d2[,.(hosp=sum(hosp,na.rm=T),pop=sum(as.double(maxdate-date+1))),.(type,age,month)]
@@ -618,7 +618,7 @@ system(&quot;magick 0.png -resize 25% 1.png&quot;)</pre>
 <div class="width9">
 <img src="i/czech-hosprate.png">
 </div>
-<p>The next plot shows the excess hospitalization rate by vaccine type instead of age group. Janssen and AstraZeneca got a much higher total hospitalization rate than Pfizer and Moderna. I didn't normalize the total excess mortality by the month of vaccination so Janssen again got a high percentage of excess hospitalizations (because the late vaccinees who had a high hospitalization rate were overrepresented for Janssen vaccines):</p>
+<p>The next plot shows the excess hospitalization rate by vaccine type instead of age group. Janssen and AstraZeneca got a much higher total hospitalization rate than Pfizer and Moderna. I didn't normalize the total excess mortality by the month of vaccination so Janssen again got a very high total percentage of excess hospitalizations (because the late vaccinees who had a high hospitalization rate were overrepresented for Janssen vaccines):</p>
 <div class="width10">
 <img src="i/czech-hosprate-2.png">
 </div>
@@ -755,7 +755,8 @@ a[,.(excess=(sum(hosp)/sum(base)-1)*100),type][order(-excess),excess:=round(exce
 <a href=#Batch_safety_study_by_authors_from_Palack_University id=Batch_safety_study_by_authors_from_Palack_University>Batch safety study by authors from Palacký University</a>
 </h2>
 <p>In June 2024 the Czech authors who uploaded the record-level data to GitHub published a paper where they analyzed batch safety data they received through a freedom of information response: <a href="https://onlinelibrary.wiley.com/doi/abs/10.1111/eci.14271">https://onlinelibrary.wiley.com/doi/abs/10.1111/eci.14271</a>. The paper is behind a paywall, but I bought access to it and posted screenshots of the paper here: <a href=i/czech-batch-study.jpg>i/czech-batch-study.jpg</a>. The batch data is available from this spreadsheet: <a href="https://github.com/PalackyUniversity/batch-dependent-safety/blob/main/data/SUKL-batches-AE.xlsx">https://github.com/PalackyUniversity/batch-dependent-safety/blob/main/data/SUKL-batches-AE.xlsx</a>.</p>
-<p>In the spreadsheet posted at GitHub, Pfizer vaccines got a lower rate of deaths than Moderna vaccines but a higher rate of serious adverse events:</p>
+<p>In the spreadsheet at GitHub and in the original Czech paper, the number of doses is the number of doses in the shipment and not the number of doses administered. So new batches where all doses have not yet been administered tend to get a lower rate of deaths per dose, and there might also be some older batches where all doses didn't end up being administered. Schmeling et al.'s infamous study of Danish batch data had the same problem, which might partially explain why they found that newer batches tended to get a lower rate of adverse events per dose than older batches. [<a href="https://jessicar.substack.com/p/danish-study-on-lot-variation-and">https://jessicar.substack.com/p/danish-study-on-lot-variation-and</a>]</p>
+<p>However with the preceding caveat in mind, if you simply use the number of doses in the shipment as the denominator, then in the spreadsheet posted at GitHub, Pfizer vaccines get a lower rate of deaths than Moderna vaccines but Moderna vaccines get a higher rate of serious adverse events than Pfizer vaccines:</p>
 <pre>library(data.table);library(openxlsx)
 
 f=&quot;SUKL-batches-AE.xlsx&quot;
@@ -2072,7 +2073,7 @@ system(paste0(&quot;magick i[12].png +append 0.png;w=`identify -format %w 0.png`
 <p>But Kirsch has generally been looking at first doses only. The plot below shows the results for the third dose instead. I used the same R script as in this section: <a href=czech2.html#Triangle_plot_of_Moderna_Pfizer_ratio>czech2.html#Triangle_plot_of_Moderna_Pfizer_ratio</a>.</p>
 <p>The total Moderna-Pfizer ratio is below 1.0 for people who got the third dose during each month from March 2022 to August 2022, but it shouldn't just be random noise because there's a total of about 300,000 people who received a third shot from a Moderna or Pfizer vaccine during those months. So there appears to be a similar effect as with first doses, where the late vaccinees have a lower Moderna-Pfizer ratio than the early vaccinees:</p>
 <p><img src=i/czech-trianglemodpfi-third.png style=max-width:690px></p>
-<p>The monthly number of 4th doses given peaked in October 2022. But for people who got a 4th dose in October 2022, the Moderna-Pfizer ratio was about 0.67:</p>
+<p>The monthly number of 4th doses peaked in October 2022. But for people who got a 4th dose in October 2022, the Moderna-Pfizer ratio was about 0.67:</p>
 <p><img src=i/czech-trianglemodpfi-fourth.png style=max-width:550px></p>
 <p>I had forgotten to make these triangle plots for the third and fourth doses, but now I think these plots have become yet another nail in the coffin of Kirsch's theory that his Moderna-Pfizer ratio proved that Moderna vaccines were more deadly.</p>
 <h2>
@@ -2149,6 +2150,7 @@ d=merge(unique(mist[,.(sitetype=ockovaci_misto_typ,vaccinator=nrpzs_kod)],by=&qu
 
 m=d[sitetype!=&quot;DOČM&quot;,xtabs(N~vaxtype+sitetype)]
 m=m[order(-rowSums(m)),]
+
 m # number of doses
 #              sitetype
 # vaxtype           OČM    SMPL  WALKIN
@@ -2168,7 +2170,7 @@ round(m/rowSums(m)*100) # percentage of site types by manufacturer
 #   AstraZeneca  46   42     12
 #   Novavax      65   32      3
 #   Other        42   46     11</pre>
-<p>So Moderna has a higher percentage of standard vaccination sites (OČM) and walk-in sites but Pfizer has a higher percentage of vaccination sites for self-payers (SMPL). Which serves as a further indication that there are systematic biases in the distribution of vaccine doses by different manufacturers.</p>
+<p>So Moderna has a higher percentage of standard vaccination sites (OČM) and walk-in sites but Pfizer has a higher percentage of vaccination sites for self-payers (SMPL). Which is yet another line of evidence that there are systematic biases in the distribution of vaccine doses by different manufacturers.</p>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
