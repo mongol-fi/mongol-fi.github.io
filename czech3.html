@@ -916,17 +916,19 @@ theme(axis.text=element_text(size=8,color=&quot;black&quot;),
 ggsave(&quot;0.png&quot;,width=7,height=4.8,dpi=380*4)
 system(&quot;magick 0.png -resize 25% 1.png&quot;)</pre>
 <p>In the following code I compared the number of doses administered from each batch in the record-level data to doses shipped in the spreadsheet for SUKL data. I only included doses administered up to July 4th 2023, which was the date when the authors of the batch study said they received the data from SUKL. A couple of batches had multiple rows in the spreadsheet because the batches included multiple sets of packages that were authorized on different dates, but I used the earliest date as the date of each batch. I didn't attempt to resolve incorrectly typed batch IDs, except I only converted all batch IDs to uppercase and I removed extra spaces from the batch IDs.</p>
-<p>About a third of all batches had less than 10% of doses administered. There were less than 20% doses administered in almost all batches with an authorization date in 2022, which probably explains why the new batches got such a low rate of deaths per doses shipped. 15 batches had more doses administered than doses shipped by SUKL:</p>
-<pre>library(data.table)
-
-rec=fread(&quot;Czech/data/CR_records.csv&quot;,showProgress=F)
-
-download.file(&quot;https://github.com/PalackyUniversity/batch-dependent-safety/raw/main/data/SUKL-batches-AE.xlsx&quot;,&quot;SUKL-batches-AE.xlsx&quot;)
+<p>About a third of all batches had less than 10% of doses administered. There were less than 20% doses administered in almost all batches with an authorization date in 2022, which probably explains why the new batches got such a low ratio of deaths per doses shipped. 15 batches had more doses administered than doses shipped by SUKL:</p>
+<pre>download.file(&quot;https://github.com/PalackyUniversity/batch-dependent-safety/raw/main/data/SUKL-batches-AE.xlsx&quot;,&quot;SUKL-batches-AE.xlsx&quot;)
 
 t=data.table(readxl::read_excel(&quot;SUKL-batches-AE.xlsx&quot;,sheet=1))
 t=t[,.(shipped=sum(doses_per_batch),date=min(date_authorization)),.(batch=batch_id,type=name)]
 
-t=merge(t,rec[,.(batch=unlist(.SD,,F)),.SDcols=patterns(&quot;Sarze_&quot;)][,.(administered=.N),batch])
+rec=fread(&quot;CR_records.csv&quot;)
+
+k=grep(&quot;Datum_&quot;,colnames(rec));k2=k+1
+d=data.table(date=`class&lt;-`(unlist(rec[,..k],,F),&quot;Date&quot;),batch0=unlist(rec[,..k2],,F))[!is.na(date)]
+d=d[,batch:=toupper(trimws(batch0)),batch0][date&lt;=&quot;2023-7-4&quot;,.(administered=.N),batch]
+
+t=merge(t,d)
 t[,pct:=round(administered/shipped*100)][order(pct)]|&gt;print(nrow=Inf)</pre>
 <!-- -->
 <pre>         batch                                      type shipped       date administered pct
