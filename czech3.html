@@ -1136,6 +1136,7 @@ t[,pct:=round(administered/shipped*100)][order(pct)]|&gt;print(nrow=Inf)</pre>
 <div class="width10">
 <img src="i/czech-batch-admin.jpg">
 </div>
+<p>The number of doses per vial is listed as 5 for the 8 Pfizer lots with the earliest authorization date but as 6 for all later Pfizer lots (except for some pediatric lots which have 10 doses per vial). The reason why some of the early lots have more doses administered than shipped might be if the vials were divided into 6 instead of 5 doses. A note in a New Mexico COVID dashboard said: <span class="quote">&quot;Doses administered may occasionally exceed doses received; in some cases, providers have been able to use six doses of Pfizer – not five – from each vial (or 11 doses, not 10, for Moderna).&quot;</span> [<a href="http://web.archive.org/web/20210728001738/https://cvvaccine.nmhealth.org/public-dashboard.html">http://web.archive.org/web/20210728001738/https://cvvaccine.nmhealth.org/public-dashboard.html</a>] A Canadian article from April 2021 said: <span class="quote">&quot;One positive report Thursday is that provinces have had no trouble getting six doses out of every vial of Pfizer instead of five. Health Canada adjusted the number of doses per vial at Pfizer's request in February, but getting the extra doses requires the use of a special syringe that lets less vaccine go to waste.&quot;</span> [<a href="http://web.archive.org/web/20210401223024/https://www.ctvnews.ca/health/coronavirus/five-million-canadians-now-have-at-least-one-dose-as-vaccine-rollout-gathers-steam-1.5371919">http://web.archive.org/web/20210401223024/https://www.ctvnews.ca/health/coronavirus/five-million-canadians-now-have-at-least-one-dose-as-vaccine-rollout-gathers-steam-1.5371919</a>] In February 2021 it was reported that <span class="quote">&quot;Canada agrees to relabel Pfizer vaccine to say each vial contains six doses, rather than five&quot;</span>. [<a href="https://x.com/OttawaCitizen/status/1359363070435471360">https://x.com/OttawaCitizen/status/1359363070435471360</a>]</p>
 <p>WelcomeTheEagle made a Tableau dashboard for Schmeling's data, so I asked him where he got the data, but he posted a screenshot which showed the percentage of adverse event reports per batch and wrote: <span class="quote">&quot;I never saw the raw data, only this summary. I'm still missing one green lot# (next to last). There is still blue, green, yellow lots coming into VAERS. Yellow lots are not harmless as the Dutch claim. They were just the newest lots at the time....&quot;</span> [<a href="https://x.com/welcometheeagle/status/1818662954604413265">https://x.com/welcometheeagle/status/1818662954604413265</a>] I compiled the data from the screenshot into this file (where there's one batch missing that wasn't visible in the screenshot): <a href=f/schmeling.csv>f/schmeling.csv</a>.</p>
 <p>There's only 9 batches that are included in both Schmeling's study and the Czech spreadsheet, which are all Pfizer batches. I thought that if I would've calculated a ratio of adverse event reports per doses administered instead of per doses shipped for the Czech batches, it would've resulted in a big increase in the ratio of the later batches, but actually the results didn't change that much. It might be because only 2 of the 9 batches had an authorization date after the first half of 2021, and they both had a very low number of adverse event reports. But the other 7 batches had a high percentage of doses administered out of doses shipped:</p>
 <pre>rec=fread(&quot;CR_records.csv&quot;)
@@ -1290,7 +1291,7 @@ FM9088
 0
 </td></tr>
 </table>
-<p>Previously I calculated the correlation with excess mortality in the record-level data for deaths per doses shipped, but now I looked at deaths per doses administered instead. But the correlation was still only about 0.05, and when I looked at adverse event reports or serious adverse event reports instead of deaths, the correlation became negative:</p>
+<p>Previously I calculated the correlation with excess mortality in the record-level data for deaths per doses shipped, but now I looked at deaths per doses administered instead. But the correlation was still only about 0.05, and when I looked at adverse event reports or serious adverse event reports instead of deaths, the correlation became negative. The authors of the batch study wrote that they received the data from SUKL on July 4th 2023, so I only included doses administered up to that date:</p>
 <pre>rec=fread(&quot;CR_records.csv&quot;)
 buck=fread(&quot;xz -dc czbucketsbatchkeep.csv.xz&quot;)
 
@@ -1298,7 +1299,7 @@ t=data.table(readxl::read_excel(&quot;SUKL-batches-AE.xlsx&quot;,sheet=2))
 
 k=grep(&quot;Datum_&quot;,colnames(rec));k2=k+1
 d=data.table(date=`class&lt;-`(unlist(rec[,..k],,F),&quot;Date&quot;),batch0=unlist(rec[,..k2],,F))[!is.na(date)]
-d=d[,batch:=toupper(trimws(batch0)),batch0][date&lt;=&quot;2025-7-4&quot;,.(administered=.N),batch]
+d=d[,batch:=toupper(trimws(batch0)),batch0][date&lt;=&quot;2023-7-4&quot;,.(administered=.N),batch]
 t=merge(t,d)
 
 b=buck[,.(dead=sum(dead),alive=sum(alive)),.(batch,age=ifelse(age&lt;15,0,pmin(age,95)))]
@@ -1306,13 +1307,13 @@ b=merge(b,b[,.(base=sum(dead)/sum(alive)),.(age)])[,base:=base*alive]
 t=merge(t,b[,.(rate=sum(dead)/sum(base)),batch])
 
 t[,cor(rate,deaths/administered)] # deaths per doses administered
-# [1] 0.05086878
+# [1] 0.050869
 
 t[,cor(rate,no_reports/administered)] # adverse event reports per doses administered
-# [1] -0.08736063
+# [1] -0.08735131
 
 t[,cor(rate,serious/administered)] # serious adverse event reports per doses administered
-# [1] -0.2521965</pre>
+# [1] -0.2521826</pre>
 <h2>
 <a href=#Monthly_percentage_of_COVID_deaths_in_unvaccinated_people id=Monthly_percentage_of_COVID_deaths_in_unvaccinated_people>Monthly percentage of COVID deaths in unvaccinated people</a>
 </h2>
@@ -2517,7 +2518,7 @@ mobile vaccination site
 mobilní očkovací místo
 </td></tr>
 </table>
-<p>The file <code>ockovani-profese.csv</code> contains about 19 million rows with one row for each administered dose, but when I tried joining the file with the file for information about vaccination sites, only about 7 million rows could be joined by the vaccinator ID. The joined rows didn't include any row for a large-capacity vaccination site. And I further excluded vaccination sites for children and I excluded vaccines given to ages below 18, because children have little effect on overall mortality but the pediatric vaccination sites distorted the overall percentages of site types. But this shows the distribution of the remaining 3 types of vaccination sites:</p>
+<p>The file <code>ockovani-profese.csv</code> contains about 19 million rows with one row for each administered dose, but when I tried joining the file with the file for information about vaccination sites, only about 7 million rows could be joined by the vaccinator ID. The joined rows didn't include any row for a large-capacity vaccination site. And I further excluded vaccination sites for children and I excluded vaccines given to ages below 18, because children have little effect on overall mortality but the pediatric vaccination sites distorted the overall percentages of site types. This shows the distribution of the remaining 3 types of vaccination sites:</p>
 <pre>dlf=\(x,y,...){if(missing(y))y=sub(&quot;.*/&quot;,&quot;&quot;,x);for(i in 1:length(x))download.file(x[i],y[i],quiet=T,...)}
 dlf(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-profese.csv&quot;) # about 4 GiB
 dlf(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/prehled-ockovacich-mist.csv&quot;) # about 20 kiB
