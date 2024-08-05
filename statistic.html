@@ -2014,10 +2014,12 @@ system(paste0(&quot;f=0.png;mar=70;w=`identify -format %w $f`;convert \\( $f -gr
 <img src="i/statistic-kirsch-cataract-2.jpg">
 </div>
 <p>However H28 isn't even a very comon diagnosis. And other more common eye-related diagnoses have remained more stable in England (even though there seems to be a clear increase above the pre-COVID trend for the diagnosis H26, <span class="quote">&quot;Other cataract&quot;</span>, and the total number of diagnoses under the ICD chapter H also seems to be higher in 2022 than the pre-COVID linear trend): [<a href="https://digital.nhs.uk/data-and-information/publications/statistical/hospital-admitted-patient-care-activity">https://digital.nhs.uk/data-and-information/publications/statistical/hospital-admitted-patient-care-activity</a>.]</p>
-<div class="width7">
+<div class="width10">
 <img src="i/statistic-kirsch-cataract.png">
 </div>
-<pre>dlf=\(x,y,...){if(missing(y))y=sub(&quot;.*/&quot;,&quot;&quot;,x);for(i in 1:length(x))download.file(x[i],y[i],quiet=T,...)}
+<pre>library(data.table)
+
+dlf=\(x,y,...){if(missing(y))y=sub(&quot;.*/&quot;,&quot;&quot;,x);for(i in 1:length(x))download.file(x[i],y[i],quiet=T,...)}
 dlf(&quot;https://files.digital.nhs.uk/0E/E70963/hosp-epis-stat-admi-diag-2021-22-tab.xlsx&quot;)
 dlf(&quot;https://files.digital.nhs.uk/5B/AD892C/hosp-epis-stat-admi-diag-2020-21-tab.xlsx&quot;)
 dlf(&quot;https://files.digital.nhs.uk/37/8D9781/hosp-epis-stat-admi-diag-2019-20-tab%20supp.xlsx&quot;)
@@ -2027,27 +2029,40 @@ dlf(&quot;https://files.digital.nhs.uk/publication/7/d/hosp-epis-stat-admi-diag-
 dlf(&quot;https://files.digital.nhs.uk/publicationimport/pub22xxx/pub22378/hosp-epis-stat-admi-diag-2015-16-tab.xlsx&quot;)
 
 r=do.call(rbind,lapply(2015:2022,\(i){
-  t=as.data.frame(readxl::read_excel(Sys.glob(paste0(&quot;hosp-epis-stat-admi-diag-&quot;,i,&quot;*&quot;)),sheet=3))
-  t=t[grep(&quot;^H&quot;,t[,1]),c(1,2,8)]|&gt;`colnames&lt;-`(c(&quot;icd&quot;,&quot;name&quot;,&quot;count&quot;));t$year=i;t}))
+  t=data.table(readxl::read_excel(Sys.glob(paste0(&quot;hosp-epis-stat-admi-diag-&quot;,i,&quot;*&quot;)),sheet=3))
+  t[grep(&quot;^H[0-9]&quot;,t[[1]]),.(cause=paste0(.SD[[1]],&quot;: &quot;,.SD[[2]]),count=as.integer(.SD[[8]]),year=i)]}))
 
-m=xtabs(as.integer(count)~paste0(icd,&quot;: &quot;,name)+year,r)
-m=rbind(m,Total=colSums(m))
+r[,cause:=factor(cause)]
+r=rbind(r,r[,.(count=sum(count),cause=&quot;Total&quot;),year])
+r=merge(r,r[year&lt;2020,.(year=2015:2022,base=predict(lm(count~year),.(year=2015:2022))),cause])
+
+m1=xtabs(count~cause+year,r)
+m2=xtabs(pmax(0,base)~cause+year,r)
+
+m=(m1-m2)/ifelse(m1&gt;m2,m2,m1)*100
+disp=round((m1/m2-1)*100)
+hide=is.infinite(m);m[hide]=disp[hide]=NA;disp[is.nan(disp)]=NA
+maxcolor=300;exp=.8
+
+pheatmap::pheatmap(abs(m)^exp*sign(m),filename=&quot;i1.png&quot;,display_numbers=disp,gaps_row=nrow(m)-1,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=18,cellheight=14,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;gray90&quot;,
+  number_color=ifelse(!is.na(m)&amp;abs(m)^exp&gt;maxcolor^exp*.4,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(-maxcolor^exp,maxcolor^exp,,256),
+  colorRampPalette(hsv(rep(c(7/12,0),5:4),c(.9,.75,.6,.3,0,.3,.6,.75,.9),c(.4,.65,1,1,1,1,1,.65,.4)))(256))
 
 kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;x[]=ifelse(abs(x)&lt;1e3,round(x),paste0(sprintf(paste0(&quot;%.&quot;,ifelse(e%%3==0,1,0),&quot;f&quot;),x/1e3^(e2-1)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2]));x}
 
-disp=kimi(m)
-m=m/max(m[-nrow(m),])
-exp=.6
+m=m1;disp=kimi(m);m=m/max(m[-nrow(m),]);exp=.6
 
-pal=hsv(c(21,21,21,16,11,6,3,0,0,0)/36,c(0,.25,rep(.5,8)),c(rep(1,8),.5,0))
-
-pheatmap::pheatmap(m^exp,filename=&quot;0.png&quot;,display_numbers=disp,gaps_row=nrow(m)-1,
+pheatmap::pheatmap(m^exp,filename=&quot;i2.png&quot;,display_numbers=disp,gaps_row=nrow(m)-1,
   cluster_rows=F,cluster_cols=F,legend=F,cellwidth=18,cellheight=14,fontsize=9,fontsize_number=8,
   border_color=NA,number_color=ifelse(m^exp&gt;.8,&quot;white&quot;,&quot;black&quot;),
-  breaks=seq(0,1,,256),colorRampPalette(pal)(256))
+  breaks=seq(0,1,,256),
+  colorRampPalette(hsv(c(21,21,21,16,11,6,3,0,0,0)/36,c(0,.25,rep(.5,8)),c(rep(1,8),.5,0)))(256))
 
-cap=&quot;Finished consultant episodes by ICD code in England. Source: digital.nhs.uk/data-and-information/publications/statistical/hospital-admitted-patient-care-activity, yearly spreadsheets with titles like \&quot;Hospital Admitted Patient Care Activity, 2022-23: Diagnosis\&quot;.&quot;
-
+system(&quot;magick \\( i1.png -extent 632x \\) \\( i2.png -chop 18x \\) +append 0.png&quot;)
+cap=&quot;Finished consultant episodes by ICD code in England. The left side shows an excess percentage relative to a 2015-2019 linear trend. Source: digital.nhs.uk/data-and-information/publications/statistical/hospital-admitted-patient-care-activity, yearly spreadsheets with titles like \&quot;Hospital Admitted Patient Care Activity, 2022-23: Diagnosis\&quot;.&quot;
 system(paste0(&quot;w=`identify -format %w 0.png`;pad=20;magick -pointsize 42 -interline-spacing -2 -font Arial \\( -size $[w-pad*2]x caption:&#39;&quot;,cap,&quot;&#39; -splice $[pad]x20 \\) 0.png -append 1.png&quot;))</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
