@@ -74,6 +74,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Moderna_Pfizer_ratio_by_vaccination_quarter_and_age_group>Moderna-Pfizer ratio by vaccination quarter and age group</a></li>
 <li><a href=#Triangle_plots_of_Moderna_Pfizer_ratio_for_third_and_fourth_doses>Triangle plots of Moderna-Pfizer ratio for third and fourth doses</a></li>
 <li><a href=#Types_of_vaccination_sites>Types of vaccination sites</a></li>
+<li><a href=#Ratio_of_deaths_per_adverse_event_reports_in_VAERS_calculated_by_Hans_Joachim_Kremer>Ratio of deaths per adverse event reports in VAERS calculated by Hans-Joachim Kremer</a></li>
 </ul>
 
 <h2>
@@ -756,14 +757,14 @@ a[,.(excess=(sum(hosp)/sum(base)-1)*100),type][order(-excess),excess:=round(exce
 </h2>
 <p>In June 2024 the Czech authors who uploaded the record-level data to GitHub published a paper where they analyzed data for adverse event reports they received through a freedom of information response: <a href="https://onlinelibrary.wiley.com/doi/abs/10.1111/eci.14271">https://onlinelibrary.wiley.com/doi/abs/10.1111/eci.14271</a>. The paper is behind a paywall, but I bought access to it and posted screenshots of the paper here: <a href=i/czech-batch-study.jpg>i/czech-batch-study.jpg</a>. The batch data is available from this spreadsheet: <a href="https://github.com/PalackyUniversity/batch-dependent-safety/blob/main/data/SUKL-batches-AE.xlsx">https://github.com/PalackyUniversity/batch-dependent-safety/blob/main/data/SUKL-batches-AE.xlsx</a>. The authors also published a blog post about the paper on the website of the Czech Association of Microbiologists, Immunologists and Statisticians: <a href="https://smis-lab.cz/2024/07/03/znepokojujici-rozdily-mezi-sarzemi-covidovych-vakcin/">https://smis-lab.cz/2024/07/03/znepokojujici-rozdily-mezi-sarzemi-covidovych-vakcin/</a>.</p>
 <p>In the spreadsheet at GitHub and in the original Czech paper, the number of doses is the number of doses shipped and not the number of doses administered. So new batches where all doses have not yet been administered tend to get a lower rate of deaths per dose, and there might also be some older batches where all doses didn't end up being administered. Schmeling et al.'s infamous study of Danish batch data had the same problem, which might partially explain why they found that newer batches tended to get a lower rate of adverse events per dose than older batches. [<a href="https://onlinelibrary.wiley.com/doi/10.1111/eci.13998">https://onlinelibrary.wiley.com/doi/10.1111/eci.13998</a>] Max Schmeling posted this reply to Jessica Rose: <span class="quote">&quot;I just wanted to add, that the lot size data, we obtained from The Danish Serum Institute, is in fact the number of doses pr. batch, that were shipped from the Danish Serum Institute to all the Danish vaccination centers. It is perhaps the data, that comes closest to being the real number of administered doses pr. batch, since the shipped doses exclude any doses, the Serum Institute might have in stock.&quot;</span> [<a href="https://jessicar.substack.com/p/danish-study-on-lot-variation-and">https://jessicar.substack.com/p/danish-study-on-lot-variation-and</a>] However I don't know if in the Czech data the number of doses is the number of doses that some Czech distribution center received from abroad, or the number of doses that a Czech distribution center shipped to further locations in Czechia. However the latter option seems more likely based on one of the Excel files in the GitHub repository of Palacký University (<code>P1_Prehled propustenych sarzi vakcin proti onemocneni covid-19.xlsx</code>), where a column for the date of each batch was translated as <span class="quote">&quot;Released on, not the same as the date of import&quot;</span> (<span class="quote">&quot;Propuštěno dne, není shodné s datem dovozu&quot;</span>), and a total number of doses is titled <span class="quote">&quot;Total released&quot;</span>. The paper about the batch data says that batch data provided by SUKL included <span class="quote">&quot;the date of authorization of the release of each batch&quot;</span>, and that <span class="quote">&quot;the dataset contained all batches of COVID-19 vaccines released for use from the beginning of the vaccination campaign to 1 March, 2023&quot;</span>.</p>
-<p>However with the preceding caveat in mind, if you simply use the number of doses released from each batch as the denominator, then in the spreadsheet posted at GitHub, Pfizer vaccines get a lower rate of deaths than Moderna vaccines but Moderna vaccines get a higher rate of serious adverse events than Pfizer vaccines:</p>
-<pre>library(data.table);library(openxlsx)
+<p>However with the preceding caveat in mind, if you simply use the number of doses released from each batch as the denominator, then in the spreadsheet posted at GitHub, Moderna gets a higher rate of adverse event reports and deaths per million than Pfizer, but Pfizer gets a higher rate of serious adverse event reports per million than Moderna:</p>
+<pre>library(data.table);library(readxl)
 
 f=&quot;SUKL-batches-AE.xlsx&quot;
 download.file(&quot;https://github.com/PalackyUniversity/batch-dependent-safety/raw/main/data/SUKL-batches-AE.xlsx&quot;,f)
 
-s1=data.table(read.xlsx(f))[,.(doses=sum(doses_per_batch)),name]
-s2=data.table(read.xlsx(f,sheet=2))[,.(dead=sum(deaths),serious=sum(serious)),name]
+s1=data.table(read_excel(f))[,.(doses=sum(doses_per_batch)),name]
+s2=data.table(read_excel(f,sheet=2))[,.(reports=sum(no_reports),dead=sum(deaths),serious=sum(serious)),name]
 
 me=merge(s1,s2,all=T)
 name=rep(&quot;Other&quot;,nrow(me))
@@ -775,27 +776,27 @@ name[grep(&quot;VAXZEVRIA|ASTRAZENECA&quot;,me$name)]=&quot;AstraZeneca&quot;
 me$name=name
 
 me[is.na(me)]=0
-me=me[,.(dead=sum(dead),serious=sum(serious),doses=sum(doses)),name]
+me=me[,.(dead=sum(dead),reports=sum(reports),serious=sum(serious),doses=sum(doses)),name]
 
-me=me[,.(doses,name,dead,serious,deadpermil=dead/doses*1e6,seriouspermil=serious/doses*1e6)]
+me=me[,.(name,doses,reports,serious,dead,reportspermil=reports/doses*1e6,seriouspermil=serious/doses*1e6,deadpermil=dead/doses*1e6)]
 me[order(-doses)]|&gt;dplyr::mutate_if(is.double,round,1)|&gt;print(r=F)</pre>
 <!-- -->
-<pre>        name    doses dead serious deadpermil seriouspermil
-      Pfizer 28343760  134    5183        4.7         182.9
-     Moderna  3798150   26     583        6.8         153.5
- AstraZeneca  1113200   44     695       39.5         624.3
-     Janssen   776800   10     241       12.9         310.2
-     Novavax   632000    0       4        0.0           6.3
-       Other    64800    2      13       30.9         200.6</pre>
+<pre>        name    doses reports serious dead reportspermil seriouspermil deadpermil
+      Pfizer 28343760   10712    5183  134         377.9         182.9        4.7
+     Moderna  3798150    1575     583   26         414.7         153.5        6.8
+ AstraZeneca  1113200    1512     695   44        1358.2         624.3       39.5
+     Janssen   776800     555     241   10         714.5         310.2       12.9
+     Novavax   632000      14       4    0          22.2           6.3        0.0
+       Other    64800      18      13    2         277.8         200.6       30.9</pre>
 <p>If Pfizer is used as the baseline, the number of deaths per dose was about 8 times higher for AstraZeneca and about 3 times higher for Janssen:</p>
-<pre>&gt; x=data.frame(me,row.names=1);t((t(x)/unlist(x[&quot;Pfizer&quot;,])))[,4:5]|&gt;round(2)
-            deadpermil seriouspermil
-Pfizer            1.00          1.00
-AstraZeneca       8.36          3.41
-Janssen           2.72          1.70
-Moderna           1.45          0.84
-Novavax           0.00          0.03
-Other             6.53          1.10</pre>
+<pre>&gt; x=data.frame(me,row.names=1);t((t(x)/unlist(x[&quot;Pfizer&quot;,])))[,5:7]|&gt;round(2)
+            reportspermil seriouspermil deadpermil
+Pfizer               1.00          1.00       1.00
+AstraZeneca          3.59          3.41       8.36
+Janssen              1.89          1.70       2.72
+Moderna              1.10          0.84       1.45
+Novavax              0.06          0.03       0.00
+Other                0.73          1.10       6.53</pre>
 <p>The spreadsheet for the batch data didn't contain information about age or other confounding variables. But in the record-level data when I assigned a random birthday for each person and I counted the person-days for each age up to the end of 2022, the average age was about 50 for people who got a Pfizer vaccine for the first dose but about 56 for Moderna and 68 for AstraZeneca:</p>
 <pre>&gt; b=fread(&quot;http://sars2.net/f/czbucketskeep.csv.gz&quot;)
 &gt; b[dose==1,.(alive=sum(as.double(alive))),.(age,type)][,.(age=weighted.mean(age,alive)),type][order(age)]|&gt;print(r=F)
@@ -806,7 +807,7 @@ Other             6.53          1.10</pre>
       Pfizer 49.7
      Moderna 56.0
  AstraZeneca 68.4</pre>
-<p>However when I took the average age for the batches from the record-level data, it got a correlation of only about 0.18 for the rate of deaths per batch and a correlation of about 0.19 for the rate of serious adverse events per batch:</p>
+<p>However when I took the average age for the batches from the record-level data, I got a correlation of only about 0.18 between age and the number of adverse event reports, about 0.19 between age and the number of serious adverse event reports, and about 0.18 between age and the rate of deaths in the adverse event reports:</p>
 <pre>download.file(&quot;http://sars2.net/f/czbucketsbatchkeep.csv.xz&quot;,&quot;czbucketsbatchkeep.csv.xz&quot;)
 b=fread(&quot;xz -dc czbucketsbatchkeep.csv.xz&quot;)
 
@@ -818,11 +819,14 @@ s2=data.table(read.xlsx(f,sheet=2))[,.(dead=sum(deaths),serious=sum(serious)),ba
 me=merge(merge(s1,ages,all=T),s2,all=T)
 me[is.na(me)]=0
 
-me[doses&gt;0,cor(dead/doses,age)]
-# [1] 0.1825102 (correlation between age and the rate of deaths)
+me[doses&gt;0,cor(reports/doses,age)]
+# [1] 0.1784564 (correlation between age and the rate of adverse event reports)
 
 me[doses&gt;0,cor(serious/doses,age)]
-# [1] 0.1874058 (correlation between age and the rate of serious adverse events)</pre>
+# [1] 0.1874058 (correlation between age and the rate of serious adverse event reports)
+
+me[doses&gt;0,cor(dead/doses,age)]
+# [1] 0.1825102 (correlation between age and the rate of deaths in adverse event reports)</pre>
 <p>However the reason why the correlation was fairly low was partially because there's a lot of noise for small batches, and when I only looked at batches with at least 100,000 doses, the correlation increased to about 0.33 for deaths and 0.26 for serious adverse events:</p>
 <pre>me[doses&gt;1e5,cor(dead/doses,age)]
 # [1] 0.3297154
@@ -867,7 +871,7 @@ s2=data.table(read.xlsx(f,sheet=2))[,.(x=sum(serious)),batch]
 p=merge(d,merge(s1,s2)[doses&gt;0,.(x=x/doses*1e6,doses),batch])
 
 xstart=0;xend=max(p$x);ystart=-100;yend=max(p$y)*1.02;ystep=20
-xbreak=seq(xstart,xend,xstep);ybreak=seq(ystart,yend,ystep)
+ybreak=seq(ystart,yend,ystep)
 
 p$type=factor(p$type,p[,sum(as.double(doses)),type][order(-V1)]$type)
 
@@ -1136,9 +1140,9 @@ t[,pct:=round(administered/shipped*100)][order(pct)]|&gt;print(nrow=Inf)</pre>
 <div class="width10">
 <img src="i/czech-batch-admin.jpg">
 </div>
-<p>The number of doses per vial is listed as 5 for the 8 Pfizer lots with the earliest authorization date but as 6 for all later Pfizer lots (except for some pediatric lots which have 10 doses per vial). The reason why some of the early lots have more doses administered than shipped might be if the vials were divided into 6 instead of 5 doses. A note in a New Mexico COVID dashboard said: <span class="quote">&quot;Doses administered may occasionally exceed doses received; in some cases, providers have been able to use six doses of Pfizer – not five – from each vial (or 11 doses, not 10, for Moderna).&quot;</span> [<a href="http://web.archive.org/web/20210728001738/https://cvvaccine.nmhealth.org/public-dashboard.html">http://web.archive.org/web/20210728001738/https://cvvaccine.nmhealth.org/public-dashboard.html</a>] A Canadian article from April 2021 said: <span class="quote">&quot;One positive report Thursday is that provinces have had no trouble getting six doses out of every vial of Pfizer instead of five. Health Canada adjusted the number of doses per vial at Pfizer's request in February, but getting the extra doses requires the use of a special syringe that lets less vaccine go to waste.&quot;</span> [<a href="http://web.archive.org/web/20210401223024/https://www.ctvnews.ca/health/coronavirus/five-million-canadians-now-have-at-least-one-dose-as-vaccine-rollout-gathers-steam-1.5371919">http://web.archive.org/web/20210401223024/https://www.ctvnews.ca/health/coronavirus/five-million-canadians-now-have-at-least-one-dose-as-vaccine-rollout-gathers-steam-1.5371919</a>] In February 2021 it was reported that <span class="quote">&quot;Canada agrees to relabel Pfizer vaccine to say each vial contains six doses, rather than five&quot;</span>. [<a href="https://x.com/OttawaCitizen/status/1359363070435471360">https://x.com/OttawaCitizen/status/1359363070435471360</a>]</p>
+<p>The number of doses per vial is listed as 5 for the 8 Pfizer lots with the earliest authorization date but as 6 for all later Pfizer lots (except for some pediatric lots which have 10 doses per vial). The reason why some of the early lots have more doses administered than shipped might be if the vials were divided into 6 instead of 5 doses. A note in a New Mexico COVID dashboard said: <span class="quote">&quot;Doses administered may occasionally exceed doses received; in some cases, providers have been able to use six doses of Pfizer – not five – from each vial (or 11 doses, not 10, for Moderna).&quot;</span> [<a href="http://web.archive.org/web/20210728001738/https://cvvaccine.nmhealth.org/public-dashboard.html">http://web.archive.org/web/20210728001738/https://cvvaccine.nmhealth.org/public-dashboard.html</a>] A Canadian article from April 2021 said: <span class="quote">&quot;One positive report Thursday is that provinces have had no trouble getting six doses out of every vial of Pfizer instead of five. Health Canada adjusted the number of doses per vial at Pfizer's request in February, but getting the extra doses requires the use of a special syringe that lets less vaccine go to waste.&quot;</span> [<a href="http://web.archive.org/web/20210401223024/https://www.ctvnews.ca/health/coronavirus/five-million-canadians-now-have-at-least-one-dose-as-vaccine-rollout-gathers-steam-1.5371919">http://web.archive.org/web/20210401223024/https://www.ctvnews.ca/health/coronavirus/five-million-canadians-now-have-at-least-one-dose-as-vaccine-rollout-gathers-steam-1.5371919</a>] A New York Times article from December 2020 said: <span class="quote">&quot;Pharmacists have found that they can squeeze an additional dose from some of the glass vials that were supposed to contain five doses of the Pfizer vaccine&quot;</span>. [<a href="https://www.nytimes.com/2020/12/16/health/Covid-Pfizer-vaccine-extra-doses.html">https://www.nytimes.com/2020/12/16/health/Covid-Pfizer-vaccine-extra-doses.html</a>] However there might also be other reasons why some batches have more doses administered than shipped, because Europe CDC's vaccine tracker included this note under Czechia: <span class="quote">&quot;The number of doses administered may be greater than the number of doses distributed to the country, possibly due to under-reporting of vaccine supplies by healthcare providers.&quot;</span> [<a href="https://thedailybeagle.substack.com/p/solving-the-swedish-mystery?open=false#§countries-admit-to-fraudulent-shot-administration-data">https://thedailybeagle.substack.com/p/solving-the-swedish-mystery?open=false#§countries-admit-to-fraudulent-shot-administration-data</a>]</p>
 <p>WelcomeTheEagle made a Tableau dashboard for Schmeling's data, so I asked him where he got the data, but he posted a screenshot which showed the percentage of adverse event reports per batch and wrote: <span class="quote">&quot;I never saw the raw data, only this summary. I'm still missing one green lot# (next to last). There is still blue, green, yellow lots coming into VAERS. Yellow lots are not harmless as the Dutch claim. They were just the newest lots at the time....&quot;</span> [<a href="https://x.com/welcometheeagle/status/1818662954604413265">https://x.com/welcometheeagle/status/1818662954604413265</a>] I compiled the data from the screenshot into this file (where there's one batch missing that wasn't visible in the screenshot): <a href=f/schmeling.csv>f/schmeling.csv</a>.</p>
-<p>There's only 9 batches that are included in both Schmeling's study and the Czech spreadsheet, which are all Pfizer batches. I thought that if I would've calculated a ratio of adverse event reports per doses administered instead of per doses shipped for the Czech batches, it would've resulted in a big increase in the ratio of the later batches, but actually the results didn't change that much. It might be because only 2 of the 9 batches had an authorization date after the first half of 2021, and they both had a very low number of adverse event reports. But the other 7 batches had a high percentage of doses administered out of doses shipped:</p>
+<p>There's only 9 batches that are included in both Schmeling's study and the Czech spreadsheet, which are all Pfizer batches. I thought that if I would've calculated a ratio of adverse event reports per doses administered instead of per doses shipped for the Czech batches, it would've resulted in a big increase in the ratio of the newer batches, but actually the results didn't change that much. It might be because only 2 of the 9 batches had an authorization date after the first half of 2021, and they both had a very low number of adverse event reports. But the other 7 batches had a high percentage of doses administered out of doses shipped:</p>
 <pre>rec=fread(&quot;CR_records.csv&quot;)
 
 s1=data.table(readxl::read_excel(&quot;SUKL-batches-AE.xlsx&quot;,sheet=1))
@@ -2136,7 +2140,7 @@ system(&quot;magick 0.png -resize 25% 1.png&quot;)</pre>
 <p>That might be the case, but the yearly number of deaths and yearly number of vaccinations in the record-level data are both identical or nearly identical to other sources.</p>
 <p>The Czech Statistical Office has published Excel files which show the yearly number of deaths by ICD code, age group, and region: <a href="https://csu.gov.cz/produkty/zemreli-podle-seznamu-pricin-smrti-pohlavi-a-veku-v-cr-krajich-a-okresech-fgjmtyk2qr">https://csu.gov.cz/produkty/zemreli-podle-seznamu-pricin-smrti-pohlavi-a-veku-v-cr-krajich-a-okresech-fgjmtyk2qr</a>. I combined the Excel files into a single CSV file here: <a href="http://sars2.net/czech2.html#Deaths_by_ICD_code_region_age_group_and_year">http://sars2.net/czech2.html#Deaths_by_ICD_code_region_age_group_and_year</a>.</p>
 <p>The yearly number of deaths in the Excel files was identical to yearly number of deaths at Eurostat in 2020-2022. And both were otherwise identical to the record-level data except the record-level data was only missing a single death in 2021:</p>
-<pre>&gt; rec=fread(&quot;curl -Ls github.com/skirsch/Czech/blob/main/data/CR_records.csv.xz|xz -dc&quot;)
+<pre>&gt; rec=fread(&quot;curl -Ls github.com/skirsch/Czech/raw/main/data/CR_records.csv.xz|xz -dc&quot;)
 &gt; reclev=rec[,.(reclev=.N),.(year=year(DatumUmrti))]
 &gt; eurostat=fread(&quot;http://sars2.net/f/czpopdead.csv&quot;)[,.(eurostat=sum(dead)),year]
 &gt; icd=fread(&quot;http://sars2.net/f/czicd.csv.gz&quot;)[,.(icd=sum(dead)),year]
@@ -2383,7 +2387,7 @@ krajich-a-okresech-fgjmtyk2qr.&#39; -splice $[pad]x20 \\) 0.png -append 1.png&qu
             2022-01 1.0072136
  2021-10 to 2022-01 1.0194936</pre>
 <p>And the same ratio was only about 0.56 for people who got the first dose from February 2022 to December 2022. They had a sample size of about 40,000 people:</p>
-<pre>&gt; rec=fread(&quot;curl -Ls github.com/skirsch/Czech/blob/main/data/CR_records.csv.xz|xz -dc&quot;)
+<pre>&gt; rec=fread(&quot;curl -Ls github.com/skirsch/Czech/raw/main/data/CR_records.csv.xz|xz -dc&quot;)
 &gt; rec[grep(&quot;Comirnaty|SPIKEVAX&quot;,OckovaciLatka_1),.N,Datum_1][Datum_1&gt;=&quot;2022-2-1&quot;,sum(N)]
 [1] 43476</pre>
 <hr />
@@ -2554,6 +2558,86 @@ round(m/rowSums(m)*100) # percentage of site types by manufacturer
 #   Novavax      65   32      3
 #   Other        42   46     11</pre>
 <p>So Pfizer has a higher percentage of vaccination sites for self-payers than Moderna (SMPL), but Moderna has a higher percentage of standard vaccination sites (OČM) and walk-in sites. Which is yet another line of evidence that there are systematic biases in the distribution of vaccine doses by different manufacturers.</p>
+<h2>
+<a href=#Ratio_of_deaths_per_adverse_event_reports_in_VAERS_calculated_by_Hans_Joachim_Kremer id=Ratio_of_deaths_per_adverse_event_reports_in_VAERS_calculated_by_Hans_Joachim_Kremer>Ratio of deaths per adverse event reports in VAERS calculated by Hans-Joachim Kremer</a>
+</h2>
+<p>In this blog post where Hans-Joachim Kremer looked at US VAERS data, he got a higher ratio of deaths per adverse event reports for Pfizer than Moderna vaccines, so he pointed out that it conflicted with Kirsch's analysis of the Czech data: <a href="https://tkp.at/2024/08/06/spikevax-gefaehrlicher-als-comirnaty-steve-kirsch-greift-daneben/">https://tkp.at/2024/08/06/spikevax-gefaehrlicher-als-comirnaty-steve-kirsch-greift-daneben/</a>.</p>
+<p>However it could be that Moderna had both a higher number of adverse event reports per dose than Pfizer and a higher number of deaths per dose than Pfizer, but the ratio of deaths per adverse event reports could've still been higher for Pfizer than Moderna. So he could've repeated the calculation so that he would've used doses administered instead of adverse event reports as the denominator.</p>
+<p>I took the number of adverse event reports in Czechia per vaccine manufacturer from this spreadsheet: <a href="https://github.com/PalackyUniversity/batch-dependent-safety/blob/main/data/SUKL-batches-AE.xlsx">https://github.com/PalackyUniversity/batch-dependent-safety/blob/main/data/SUKL-batches-AE.xlsx</a>. The spreadsheet only included the number of doses shipped but not the number of doses administered, so I calculated the number of doses administered from the record-level data. I only included doses administered up to July 4th 2023, which was the date when the authors who published the batch data wrote they received the data. But anyway, Moderna got a higher ratio than Pfizer for both deaths per doses administered and adverse event reports per doses administered:</p>
+<pre>rename=\(x){u=unique(x);o=rep(&quot;Other&quot;,length(u))
+  o[grep(&quot;COMIRNATY&quot;,u,T)]=&quot;Pfizer&quot;
+  o[grep(&quot;MODERNA|SPIKEVAX&quot;,u,T)]=&quot;Moderna&quot;
+  o[grep(&quot;NUVAXOVID&quot;,u,T)]=&quot;Novavax&quot;
+  o[grep(&quot;JANSSEN&quot;,u,T)]=&quot;Janssen&quot;
+  o[grep(&quot;VAXZEVRIA|ASTRAZENECA&quot;,u,T)]=&quot;AstraZeneca&quot;
+  o[match(x,u)]}
+
+rec=fread(&quot;curl -Ls github.com/skirsch/Czech/raw/main/data/CR_records.csv.xz|xz -dc&quot;)
+k=grep(&quot;Datum_&quot;,names(rec));k2=k+3
+d=data.table(date=`class&lt;-`(unlist(rec[,..k],,F),&quot;Date&quot;),type=rename(unlist(rec[,..k2],,F)))[!is.na(date)]
+d=d[date&lt;=&quot;2023-7-4&quot;,.(doses=.N),type]
+
+f=&quot;SUKL-batches-AE.xlsx&quot;
+download.file(&quot;https://github.com/PalackyUniversity/batch-dependent-safety/raw/main/data/SUKL-batches-AE.xlsx&quot;,f)
+s2=data.table(readxl::read_excel(f,sheet=2))
+s2=s2[,.(reports=sum(no_reports),serious=sum(serious),dead=sum(deaths)),.(type=rename(name))]
+
+o=merge(s2,d)
+o[,deadpermildose:=dead/doses*1e6]
+o[,reportspermildose:=reports/doses*1e6]
+o[,deadpermilreport:=dead/reports*1e6]
+
+dplyr::mutate_if(o[type!=&quot;Other&quot;],is.double,round)[order(-doses)]|&gt;print(r=F)</pre>
+<!-- -->
+<pre>        type reports serious dead    doses deadpermildose reportspermildose deadpermilreport
+      Pfizer   10712    5183  134 15680944              9               683            12509
+     Moderna    1575     583   26  1643159             16               959            16508
+ AstraZeneca    1512     695   44   887601             50              1703            29101
+     Janssen     555     241   10   415077             24              1337            18018
+     Novavax      14       4    0    11190              0              1251                0</pre>
+<p>When I used Pfizer as the baseline, Moderna got about 1.9 times higher deaths per dose and about 1.4 times higher adverse event reports per dose, so the ratio of deaths per reports also ended up being higher for Moderna than Pfizer:</p>
+<pre>&gt; round(o[type==&quot;Moderna&quot;,-1]/o[type==&quot;Pfizer&quot;,-1],3)
+   reports serious  dead doses deadpermildose reportspermildose deadpermilreport
+1:   0.147   0.112 0.194 0.105          1.852             1.403             1.32</pre>
+<p>The spreadsheet didn't include information about age so I wasn't able to look at only specific age groups or normalize my calculation by age. In the record-level data the average age is about 6 years higher for people who got a Moderna vaccine for the first dose than people who got a Pfizer vaccine for the first dose. But earlier I got a correlation of only about 0.18 between the average age of people under a batch and the rate of deaths per batch that had been reported as adverse events: <a href=#Batch_study_by_authors_from_Palack_University>#Batch_study_by_authors_from_Palack_University</a>.</p>
+<p>But anyway, next I tried looking at US VAERS data: <a href="https://vaers.hhs.gov/data/datasets.html">https://vaers.hhs.gov/data/datasets.html</a>. I got about 40% more total reports than Kremer, so I don't know what explains the difference.</p>
+<p>I got doses administered per manufacturer from this JSON file: <a href="https://covid.cdc.gov/covid-data-tracker/COVIDData/getAjaxData?id=vaccination_data">https://covid.cdc.gov/covid-data-tracker/COVIDData/getAjaxData?id=vaccination_data</a>. It only included the cumulative number of doses administered up to May 10th 2023 which was when the data stopped being updated, when there were about 367 million doses administered for Pfizer and 232 million for Moderna. But I didn't find any source which showed the number of doses grouped by both vaccine manufacturer and age.</p>
+<p>However now like in the Czech data, Moderna again got a higher rate of both deaths per dose and reports per dose than Pfizer. But unlike in the case of the Czech data, the Moderna-Pfizer ratio for deaths per dose was now lower than the ratio for reports per dose, so Pfizer got a higher ratio of deaths per reports:</p>
+<pre>names=read.csv(text=&quot;name,vaers,doses
+Pfizer,PFIZER\\BIONTECH,366979906
+Moderna,MODERNA,232147784
+Janssen,JANSSEN,19007537
+Novavax,NOVAVAX,89195
+Unknown,UNKNOWN MANUFACTURER,890835&quot;)
+
+# # the table above uses hard-coded numbers of administered doses from the API in case the API stops working
+# con=url(&quot;https://covid.cdc.gov/covid-data-tracker/COVIDData/getAjaxData?id=vaccination_data&quot;)
+# j=jsonlite::fromJSON(readLines(con))$vaccination_data;close(con)
+# names$doses=j[1,paste0(&quot;Administered_&quot;,ifelse(names$name==&quot;Unknown&quot;,&quot;Unk_Manuf&quot;,names$name))]
+
+d=do.call(rbind,lapply(2021:2024,\(i)fread(paste0(i,&quot;VAERSDATA.csv&quot;))))
+v=do.call(rbind,lapply(2021:2024,\(i)fread(paste0(i,&quot;VAERSVAX.csv&quot;))))
+s=do.call(rbind,lapply(2021:2024,\(i)fread(paste0(i,&quot;VAERSSYMPTOMS.csv&quot;))))
+
+me=merge(s[,1:2],merge(v,d[STATE!=&quot;&quot;,.(VAERS_ID,DIED,VAX_DATE,AGE_YRS)]))
+o=me[VAX_TYPE==&quot;COVID19&quot;,.(reports=.N,deaths=sum(DIED==&quot;Y&quot;)),.(vaers=VAX_MANU)]
+
+o=merge(o,names)[,.(name,reports,doses,deaths)]
+o[,reportspermildose:=reports/doses*1e6]
+o[,deathspermildose:=deaths/doses*1e6]
+o[,deathspermilreport:=deaths/reports*1e6]
+o[order(-doses)]|&gt;dplyr::mutate_if(is.double,round)|&gt;print(r=F)</pre>
+<!-- -->
+<pre>    name reports     doses deaths reportspermildose deathspermildose deathspermilreport
+  Pfizer  546094 366979906  14642              1488               40              26812
+ Moderna  536671 232147784  12749              2312               55              23756
+ Janssen   91297  19007537   2358              4803              124              25828
+ Unknown    6324    890835    108              7099              121              17078
+ Novavax     605     89195      6              6783               67               9917</pre>
+<p>This shows that the Moderna-Pfizer ratio is about 1.55 for reports per dose, 1.37 for deaths per dose, and 0.89 for deaths per report:</p>
+<pre>&gt; round(o[name==&quot;Moderna&quot;,-1]/o[name==&quot;Pfizer&quot;,-1],3)
+   reports doses deaths reportspermildose deathspermildose deathspermilreport
+1:   0.983 0.633  0.871             1.554            1.376              0.886</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
