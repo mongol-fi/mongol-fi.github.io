@@ -2775,8 +2775,8 @@ dplyr::mutate_if(o[type!=&quot;Other&quot;],is.double,round)[order(-doses)]|&gt;
    reports serious  dead doses deadpermildose reportspermildose deadpermilreport
 1:   0.147   0.112 0.194 0.105          1.852             1.403             1.32</pre>
 <p>The spreadsheet didn't include information about age so I wasn't able to look at only specific age groups or normalize my calculation by age. In the record-level data the average age is about 7 years higher for people who got a Moderna vaccine for the first dose than people who got a Pfizer vaccine for the first dose. But earlier I got a correlation of only about 0.18 between the average age of people under a batch and the rate of deaths per batch that had been reported as adverse events: <a href=#Batch_study_by_authors_from_Palack_University>#Batch_study_by_authors_from_Palack_University</a>.</p>
-<p>But anyway, next I tried looking at VAERS data: <a href="https://vaers.hhs.gov/data/datasets.html">https://vaers.hhs.gov/data/datasets.html</a>. I got more total reports than Kremer, but I don't know if it's because Kremer looked at only US data but I also included non-US reports. I was using a new version of the VAERS data where the country codes had been scrubbed so I wasn't able to filter the results by country. When I selected reports where the field for the US state was not missing, I got less total reports than Kremer.</p>
-<p>I got doses administered per manufacturer from this JSON file: <a href="https://covid.cdc.gov/covid-data-tracker/COVIDData/getAjaxData?id=vaccination_data">https://covid.cdc.gov/covid-data-tracker/COVIDData/getAjaxData?id=vaccination_data</a>. It only included the cumulative number of doses administered up to May 10th 2023 which was when the data stopped being updated, when there were about 367 million doses administered for Pfizer and 232 million for Moderna. But I didn't find any source which showed the number of doses grouped by both vaccine manufacturer and age.</p>
+<p>But anyway, next I tried looking at US VAERS data: <a href="https://vaers.hhs.gov/data/datasets.html">https://vaers.hhs.gov/data/datasets.html</a>.</p>
+<p>I got the number of doses administered per manufacturer in the United States from this JSON file: <a href="https://covid.cdc.gov/covid-data-tracker/COVIDData/getAjaxData?id=vaccination_data">https://covid.cdc.gov/covid-data-tracker/COVIDData/getAjaxData?id=vaccination_data</a>. It only included the cumulative number of doses administered up to May 10th 2023 which was when the data stopped being updated, when there were about 367 million doses administered for Pfizer and 232 million for Moderna. But I didn't find any source which showed the number of doses grouped by both vaccine manufacturer and age, so I wasn't able to adjust my calculation for age.</p>
 <p>Moderna again got a higher rate of both deaths per dose and reports per dose than Pfizer. But unlike in the case of the Czech data, the Moderna-Pfizer ratio for deaths per dose was now lower than the ratio for reports per dose, so Pfizer got a higher ratio of deaths per reports:</p>
 <pre>names=read.csv(text=&quot;name,vaers,doses
 Pfizer,PFIZER\\BIONTECH,366979906
@@ -2785,7 +2785,7 @@ Janssen,JANSSEN,19007537
 Novavax,NOVAVAX,89195
 Unknown,UNKNOWN MANUFACTURER,890835&quot;)
 
-# # the table above includes hard-coded numbers of doses from the API in case the API stops working
+# # this code is not needed because I added the number of doses from the API to the table above
 # con=url(&quot;https://covid.cdc.gov/covid-data-tracker/COVIDData/getAjaxData?id=vaccination_data&quot;)
 # j=jsonlite::fromJSON(readLines(con))$vaccination_data;close(con)
 # names$doses=j[1,paste0(&quot;Administered_&quot;,ifelse(names$name==&quot;Unknown&quot;,&quot;Unk_Manuf&quot;,names$name))]
@@ -2896,7 +2896,7 @@ o[,crude:=reports/doses*1e6][order(-doses)]|&gt;print(r=F)</pre>
  Janssen      84   397696  205.40   211.22
    Other       2      180 2590.57 11111.11</pre>
 <p>At first when I tried to select Czech VAERS reports by picking rows where the age field was not missing and the <code>SYMPTOM_TEXT</code> field matched <code>\bCZ-</code>, I got 199 reports for Moderna but 1210 for Pfizer. But now when I picked rows where the <code>SPLTTYPE</code> field started with <code>CZ</code> instead, I got 415 reports for Moderna but 1369 for Pfizer, so it approximately doubled the ratio of Moderna reports to Pfizer reports. It might be because many of the reports for Pfizer vaccines included an identifier like <code>CZ-PFIZER INC-2021285400</code> in the <code>SYMPTOM_TEXT</code> field, but there wasn't a similar identifier for Moderna vaccines. However it might also be a sign that there's somehow a different reporting structure used for Pfizer vaccines and Moderna vaccines.</p>
-<p>In the previous code I only included VAERS reports where the age field was not missing. But now when I also included the reports where the age field was missing, Pfizer got a higher crude rate of reports per dose than Moderna:</p>
+<p>In the previous code I only included VAERS reports where the age field was not missing. But now when I also included the reports where the age field was missing, Pfizer got about 9% higher crude rate of reports per dose than Moderna:</p>
 <pre>&gt; allage=merge(d[,.(doses=sum(doses)),type],va[,.(reports=.N),.(type=rename(VAX_MANU))])
 &gt; allage[,crude:=reports/doses*1e6][order(-doses)]|&gt;print(r=F)
     type    doses reports   crude
@@ -2904,7 +2904,7 @@ o[,crude:=reports/doses*1e6][order(-doses)]|&gt;print(r=F)</pre>
  Moderna  1639762     441   268.9
  Janssen   414410     244   588.8
    Other      764      14 18324.6</pre>
-<p>In the output above Pfizer got about 10.3 times as many reports as Moderna but in the block of output before it the ratio was about 3.3. In the spreadsheet from the GitHub account of Palacký University I got an intermediate ratio of about 6.8. The Palacký spreadsheet has about 2.7 times as many total reports as VAERS, so there might be some kind of a bias for which reports end up being included at VAERS:</p>
+<p>In the output above Pfizer got about 10.3 times as many reports as Moderna but in the block of output before it the ratio was about 3.3. In the spreadsheet from the GitHub account of Palacký University I got an intermediate ratio of about 6.8. The Palacký spreadsheet includes about 2.7 times as many total reports as VAERS, so there might be some kind of a bias for which reports end up being submitted to VAERS:</p>
 <pre>&gt; s2=data.table(readxl::read_excel(&quot;SUKL-batches-AE.xlsx&quot;,sheet=2))
 &gt; s2[,.(reports=sum(no_reports)),type=rename(name)][order(-reports)]|&gt;print(r=F)
         type reports
@@ -2925,10 +2925,9 @@ o[,crude:=reports/doses*1e6][order(-doses)]|&gt;print(r=F)</pre>
               JANSSEN     244        65.574
  UNKNOWN MANUFACTURER      14        78.571</pre>
 <p>In the whole VAERS data the percentage of records that was missing the age field was about 8.9% for Moderna but 9.7% for Pfizer (so it's not a major difference, but it might have still introduced a slight bias to Kremer's analysis where he only included records within a certain age range):</p>
-<pre>&gt; d=do.call(rbind,lapply(2020:2024,\(i)fread(paste0(i,&quot;VAERSDATA.csv&quot;))))
-&gt; v=do.call(rbind,lapply(2020:2024,\(i)fread(paste0(i,&quot;VAERSVAX.csv&quot;))))
-&gt; me=merge(v,d)[VAX_TYPE==&quot;COVID19&quot;]
-&gt; me[,.(records=.N,missingagepct=mean(is.na(AGE_YRS))*100),VAX_MANU][order(-records)]|&gt;print(r=F)
+<pre>&gt; va=do.call(rbind,lapply(2020:2024,\(i)fread(paste0(i,&quot;VAERSDATA.csv&quot;))))
+&gt; va=merge(va,do.call(rbind,lapply(2020:2024,\(i)fread(paste0(i,&quot;VAERSVAX.csv&quot;)))))
+&gt; va[VAX_TYPE==&quot;COVID19&quot;,.(records=.N,missingagepct=mean(is.na(AGE_YRS))*100),VAX_MANU][order(-records)]|&gt;print(r=F)
              VAX_MANU records missingagepct
      PFIZER\\BIONTECH  481402         9.738
               MODERNA  469655         8.871
