@@ -2790,11 +2790,10 @@ Unknown,UNKNOWN MANUFACTURER,890835&quot;)
 # j=jsonlite::fromJSON(readLines(con))$vaccination_data;close(con)
 # names$doses=j[1,paste0(&quot;Administered_&quot;,ifelse(names$name==&quot;Unknown&quot;,&quot;Unk_Manuf&quot;,names$name))]
 
-va1=do.call(rbind,lapply(2020:2024,\(i)fread(paste0(i,&quot;VAERSDATA.csv&quot;))))
-va2=do.call(rbind,lapply(2020:2024,\(i)fread(paste0(i,&quot;VAERSVAX.csv&quot;))))
-va=merge(va2,va1)[VAX_TYPE==&quot;COVID19&quot;]
+va=do.call(rbind,lapply(2020:2024,\(i)fread(paste0(i,&quot;VAERSDATA.csv&quot;))))
+va=merge(va,do.call(rbind,lapply(2020:2024,\(i)fread(paste0(i,&quot;VAERSVAX.csv&quot;)))))
 
-o=va[,.(reports=.N,dead=sum(DIED==&quot;Y&quot;)),.(vaers=VAX_MANU)]
+o=va[VAX_TYPE==&quot;COVID19&quot;,.(reports=.N,dead=sum(DIED==&quot;Y&quot;)),.(vaers=VAX_MANU)]
 o=merge(o,names)[,.(name,reports,dead,doses)]
 o[,deadpermildose:=dead/doses*1e6]
 o[,reportspermildose:=reports/doses*1e6]
@@ -2811,17 +2810,13 @@ o[order(-doses)]|&gt;dplyr::mutate_if(is.double,round)|&gt;print(r=F)</pre>
 <pre>&gt; round(o[name==&quot;Moderna&quot;,-1]/o[name==&quot;Pfizer&quot;,-1],3)
    reports dead doses deadpermildose reportspermildose deadpermilreport
 1:    0.97 0.88 0.633           1.39              1.53            0.907</pre>
-<p>However ideally I should've adjusted these calculations for age. In VAERS the ratio of deaths per reports seems to be approximately double between each 10-year age group from 30-39 up to 90+ (even though it's similar in ages 10-19, 20-29, and 30-39):</p>
-<pre>va1=do.call(rbind,lapply(2020:2024,\(i)fread(paste0(i,&quot;VAERSDATA.csv&quot;))))
-va2=do.call(rbind,lapply(2020:2024,\(i)fread(paste0(i,&quot;VAERSVAX.csv&quot;))))
-
-agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
-
-va=merge(va2,va1[,.(VAERS_ID,DIED,AGE_YRS)])
-o=va[!is.na(AGE_YRS)&amp;VAX_TYPE==&quot;COVID19&quot;,.(dead=sum(DIED==&quot;Y&quot;),reports=.N),.(age=agecut(AGE_YRS,0:9*10))]
-o[order(age)][,deadper10kreport:=round(dead/reports*1e4)][]|&gt;print(r=F)</pre>
-<!-- -->
-<pre>   age dead reports deadper10kreport
+<p>However ideally I should've adjusted these calculations for age. In VAERS the ratio of deaths per reports seems to approximately double between each 10-year age group from 30-39 up to 90+ (even though it's similar in ages 10-19, 20-29, and 30-39):</p>
+<pre>&gt; va=do.call(rbind,lapply(2020:2024,\(i)fread(paste0(i,&quot;VAERSDATA.csv&quot;))))
+&gt; va=merge(va,do.call(rbind,lapply(2020:2024,\(i)fread(paste0(i,&quot;VAERSVAX.csv&quot;)))))
+&gt; agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
+&gt; o=va[!is.na(AGE_YRS)&amp;VAX_TYPE==&quot;COVID19&quot;,.(dead=sum(DIED==&quot;Y&quot;),reports=.N),.(age=agecut(AGE_YRS,0:9*10))]
+&gt; o[order(age)][,deadper10kreport:=round(dead/reports*1e4)][]|&gt;print(r=F)
+   age dead reports deadper10kreport
    0-9   20   16389               12
  10-19  107   54171               20
  20-29  201   86426               23
@@ -2832,7 +2827,7 @@ o[order(age)][,deadper10kreport:=round(dead/reports*1e4)][]|&gt;print(r=F)</pre>
  70-79 5910  117297              504
  80-89 5445   48294             1127
    90+ 2446   12197             2005</pre>
-<p>Kremer divided the VAERS data into only two age groups of 18-64 and 65+. However when I calculated a Moderna-Pfizer ratio for deaths per reports, the ratio was below 1 in all 5-year age groups between 40-44 and 85-89, even though the ratio was slightly above 1 in ages 90-94:</p>
+<p>Kremer divided the VAERS data into only two age groups of 18-64 and 65+. However when I calculated a Moderna-Pfizer ratio for deaths per reports, the ratio was below 1 in most 5-year age groups except 50-54 and some younger age groups, but they also had high confidence intervals:</p>
 <pre>&gt; o=va[!is.na(AGE_YRS)&amp;VAX_TYPE==&quot;COVID19&quot;,.(dead=sum(DIED==&quot;Y&quot;),reports=.N),.(age=agecut(AGE_YRS,0:19*5),type=VAX_MANU)][order(age)]
 &gt; o1=o[type==&quot;MODERNA&quot;];o2=o[type==&quot;PFIZER\\BIONTECH&quot;]
 &gt; rate=(o1$dead/o1$reports)/(o2$dead/o2$reports)
@@ -2859,9 +2854,9 @@ o[order(age)][,deadper10kreport:=round(dead/reports*1e4)][]|&gt;print(r=F)</pre>
  85-89 0.78 0.72 0.84
  90-94 0.94 0.86 1.03
    95+ 0.91 0.80 1.02</pre>
-<p>VAERS also contains reports from European countries, but several fields including the country codes were removed from European reports in November 2022. WelcomeTheEagle posted a version of the VAERS data here that was downloaded before the country codes were removed: <a href="https://www.vaersaware.com/post/vaers-nov-11th-downloadable-files">https://www.vaersaware.com/post/vaers-nov-11th-downloadable-files</a>. I used the data to calculate an age-normalized rate of adverse event reports in the Czech Republic, where I took the number of doses administered in each age group from the record-level data. I only included doses administered up to November 11th 2022 which is when the data from VAERS was downloaded.</p>
-<p>In the old VAERS data you can select Czech reports by selecting rows where the first two characters of the <code>SPLTTYPE</code> field are <code>CZ</code>. At first I tried selecting rows where the <code>SYMPTOM_TEXT</code> field matched identifiers like <code>CZ-CZSUKL-21010694</code>, but it missed about 16% of all reports.</p>
-<p>There were only 5,247 rows where the <code>SPLTTYPE</code> column started with <code>CZ</code> and the <code>VAX_TYPE</code> column was <code>COVID19</code>, and about two thirds of the rows were missing the age. But among the remaining 1,871 rows, the age-standardized rate of adverse event reports per doses administered was about 3.0 times higher for Moderna than Pfizer, and the crude rate that was not adjusted for age was about 2.9 times higher for Moderna than Pfizer:</p>
+<p>VAERS also contains reports from European countries, but several fields including the country codes were scrubbed from European reports in November 2022. WelcomeTheEagle posted a version of the VAERS data here that was downloaded before the country codes were removed: <a href="https://www.vaersaware.com/post/vaers-nov-11th-downloadable-files">https://www.vaersaware.com/post/vaers-nov-11th-downloadable-files</a>. I used the data to calculate an age-normalized rate of adverse event reports in the Czech Republic, where I took the number of doses administered in each age group from the record-level data. I only included doses administered up to November 11th 2022 which is when the data from VAERS was downloaded.</p>
+<p>In the old VAERS data you can select Czech reports by selecting rows where the first two characters of the <code>SPLTTYPE</code> field are <code>CZ</code>. At first I tried selecting rows where the <code>SYMPTOM_TEXT</code> field matched identifiers like <code>CZ-CZSUKL-21010694</code>, but it missed about 16% of all reports where the <code>SPLTTYPE</code> field started with <code>CZ</code>.</p>
+<p>There were only 5,247 rows where the <code>SPLTTYPE</code> column started with <code>CZ</code> and the <code>VAX_TYPE</code> column was <code>COVID19</code>, and about two thirds of the rows were missing the age field. But among the remaining 1,871 rows, the age-standardized rate of adverse event reports per doses administered was about 3.0 times higher for Moderna than Pfizer, and the crude rate that was not adjusted for age was about 2.9 times higher for Moderna than Pfizer:</p>
 <pre>age=\(x,y){class(x)=class(y)=NULL;(y-x-(y-789)%/%1461+(x-789)%/%1461)%/%365}
 ua=\(x,y,...){u=unique(x);y(u,...)[match(x,u)]}
 
@@ -2878,7 +2873,7 @@ rename=\(x){u=unique(x);o=rep(&quot;Other&quot;,length(u))
 
 va=fread(&quot;AllVAERSDataCSVS/NonDomesticVAERSDATA.csv&quot;)
 va=merge(va,fread(&quot;AllVAERSDataCSVS/NonDomesticVAERSVAX.csv&quot;))
-va=va[grepl(&quot;^CZ&quot;,SPLTTYPE)&amp;VAX_TYPE==&quot;COVID19&quot;]
+vae=va[grepl(&quot;^CZ&quot;,SPLTTYPE)&amp;VAX_TYPE==&quot;COVID19&quot;]
 
 rec=fread(&quot;Czech/data/CR_records.csv&quot;)
 k=grep(&quot;Datum_&quot;,names(rec));k2=k+3
@@ -2891,7 +2886,7 @@ d=d[,.(doses=.N),.(type,age=agecut(pmax(age,0),ages))]
 
 std=fread(&quot;http://sars2.net/f/czcensus2021pop.csv&quot;)[,.(std=sum(pop)),.(age=agecut(age,ages))][,std:=std/sum(std)]
 
-a=merge(d,va[!is.na(AGE_YRS),.(reports=.N),.(type=rename(VAX_MANU),age=agecut(AGE_YRS,ages))])
+a=merge(d,vae[!is.na(AGE_YRS),.(reports=.N),.(type=rename(VAX_MANU),age=agecut(AGE_YRS,ages))])
 o=merge(std,a)[,.(reports=sum(reports),doses=sum(doses),agestd=sum(reports/doses*std*1e6)),type]
 o[,crude:=reports/doses*1e6][order(-doses)]|&gt;print(r=F)</pre>
 <!-- -->
@@ -2900,8 +2895,8 @@ o[,crude:=reports/doses*1e6][order(-doses)]|&gt;print(r=F)</pre>
  Moderna     415  1639762  258.43   253.09
  Janssen      84   397696  205.40   211.22
    Other       2      180 2590.57 11111.11</pre>
-<p>Previously when I tried to select Czech VAERS reports by picking rows where the <code>SYMPTOM_TEXT</code> field matched <code>\bCZ-</code>, I got 199 reports for Moderna but 1210 for Pfizer. But now when I picked rows where the <code>SPLTTYPE</code> field started with <code>CZ</code>, I got 415 reports for Moderna but 1369 for Pfizer, so it approximately doubled the ratio of Moderna reports to Pfizer reports. It might be because many of the reports for Pfizer vaccines included an identifier like <code>CZ-PFIZER INC-2021285400</code> in the <code>SYMPTOM_TEXT</code> field, but there wasn't a similar identifier for Moderna vaccines. However it might also mean that there's somehow a different reporting structure used for Pfizer vaccines and Moderna vaccines.</p>
-<p>In the code above I only included VAERS reports that were not missing an age. But when I also included the reports that were missing an age, Pfizer now got a higher crude rate of reports per dose than Moderna:</p>
+<p>At first when I tried to select Czech VAERS reports by picking rows where the age field was not missing and the <code>SYMPTOM_TEXT</code> field matched <code>\bCZ-</code>, I got 199 reports for Moderna but 1210 for Pfizer. But now when I picked rows where the <code>SPLTTYPE</code> field started with <code>CZ</code> instead, I got 415 reports for Moderna but 1369 for Pfizer, so it approximately doubled the ratio of Moderna reports to Pfizer reports. It might be because many of the reports for Pfizer vaccines included an identifier like <code>CZ-PFIZER INC-2021285400</code> in the <code>SYMPTOM_TEXT</code> field, but there wasn't a similar identifier for Moderna vaccines. However it might also be a sign that there's somehow a different reporting structure used for Pfizer vaccines and Moderna vaccines.</p>
+<p>In the previous code I only included VAERS reports where the age field was not missing. But now when I also included the reports where the age field was missing, Pfizer got a higher crude rate of reports per dose than Moderna:</p>
 <pre>&gt; allage=merge(d[,.(doses=sum(doses)),type],va[,.(reports=.N),.(type=rename(VAX_MANU))])
 &gt; allage[,crude:=reports/doses*1e6][order(-doses)]|&gt;print(r=F)
     type    doses reports   crude
@@ -2909,7 +2904,7 @@ o[,crude:=reports/doses*1e6][order(-doses)]|&gt;print(r=F)</pre>
  Moderna  1639762     441   268.9
  Janssen   414410     244   588.8
    Other      764      14 18324.6</pre>
-<p>In the output above Pfizer got about 10.3 times as many reports as Moderna but in the previous block of output the ratio was about 3.3. In the spreadsheet from the GitHub account of Palacký University I got an intermediate ratio of about 6.8. The Palacký spreadsheet has about 2.7 times as many total reports as VAERS, so there might be some kind of a bias for which reports end up being included at VAERS:</p>
+<p>In the output above Pfizer got about 10.3 times as many reports as Moderna but in the block of output before it the ratio was about 3.3. In the spreadsheet from the GitHub account of Palacký University I got an intermediate ratio of about 6.8. The Palacký spreadsheet has about 2.7 times as many total reports as VAERS, so there might be some kind of a bias for which reports end up being included at VAERS:</p>
 <pre>&gt; s2=data.table(readxl::read_excel(&quot;SUKL-batches-AE.xlsx&quot;,sheet=2))
 &gt; s2[,.(reports=sum(no_reports)),type=rename(name)][order(-reports)]|&gt;print(r=F)
         type reports
@@ -2919,17 +2914,17 @@ o[,crude:=reports/doses*1e6][order(-doses)]|&gt;print(r=F)</pre>
      Janssen     555
        Other      18
      Novavax      14</pre>
-<p>For some reason in the Czech VAERS data, the percentage of records that was missing the age field was about 6% for Moderna but 70% for Pfizer (even though in many of the records where the age was missing, the age was still mentioned in the <code>SYMPTOM_TEXT</code> field):</p>
+<p>For some reason in the Czech VAERS data, the percentage of records that was missing the age field was about 6% for Moderna but 70% for Pfizer (even though in many of the records where the age field was missing, the age was still mentioned in the <code>SYMPTOM_TEXT</code> field):</p>
 <pre>&gt; va=fread(&quot;AllVAERSDataCSVS/NonDomesticVAERSDATA.csv&quot;)
 &gt; va=merge(va,fread(&quot;AllVAERSDataCSVS/NonDomesticVAERSVAX.csv&quot;))
-&gt; va=va[grepl(&quot;^CZ&quot;,SPLTTYPE)&amp;VAX_TYPE==&quot;COVID19&quot;]
-&gt; va[,.(records=.N,missingagepct=mean(is.na(AGE_YRS))*100),VAX_MANU][order(-records)]|&gt;print(r=F)
+&gt; vae=va[grepl(&quot;^CZ&quot;,SPLTTYPE)&amp;VAX_TYPE==&quot;COVID19&quot;]
+&gt; vae[,.(records=.N,missingagepct=mean(is.na(AGE_YRS))*100),VAX_MANU][order(-records)]|&gt;print(r=F)
              VAX_MANU records missingagepct
      PFIZER\\BIONTECH    4548        69.899
               MODERNA     441         5.896
               JANSSEN     244        65.574
  UNKNOWN MANUFACTURER      14        78.571</pre>
-<p>In the whole VAERS data the percentage of records that was missing the age field was about 8.9% for Moderna but 9.7% for Pfizer (so it's not a major difference, but it may have still introduced a slight bias to Kremer's analysis where he only included records within a certain age range):</p>
+<p>In the whole VAERS data the percentage of records that was missing the age field was about 8.9% for Moderna but 9.7% for Pfizer (so it's not a major difference, but it might have still introduced a slight bias to Kremer's analysis where he only included records within a certain age range):</p>
 <pre>&gt; d=do.call(rbind,lapply(2020:2024,\(i)fread(paste0(i,&quot;VAERSDATA.csv&quot;))))
 &gt; v=do.call(rbind,lapply(2020:2024,\(i)fread(paste0(i,&quot;VAERSVAX.csv&quot;))))
 &gt; me=merge(v,d)[VAX_TYPE==&quot;COVID19&quot;]
