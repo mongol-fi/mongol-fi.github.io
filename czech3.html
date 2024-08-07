@@ -11,7 +11,7 @@ h3{font-size:1.3em}
 h4{font-size:1.1em}
 a{color:hsl(220,100%,75%)}
 a:visited{color:hsl(270,100%,75%)}
-pre,code{white-space:pre-wrap;word-wrap:break-word;font:14px Menlo,'DejaVu Sans Mono','Liberation Mono',Consolas,monospace;background:#464646;color:white}
+pre,code{white-space:pre-wrap;word-wrap:break-word;font:14px Menlo,'DejaVu Sans Mono','Liberation Mono',Consolas,monospace;background:#555;color:white}
 pre{padding:4px}
 code{padding:1px}
 table{border-collapse:collapse}
@@ -2853,27 +2853,43 @@ o[order(-doses)]|&gt;dplyr::mutate_if(is.double,round)|&gt;print(r=F)</pre>
  85-89 0.78 0.72 0.84
  90-94 0.94 0.86 1.03
    95+ 0.91 0.80 1.02</pre>
-<p>Kremer's <span class="quote">&quot;proportional rate ratio&quot;</span> values were expressed as the ratio for Pfizer divided by the ratio for Moderna. His PRR value was about 1.014 for ages 18-64 and 1.278 for ages 65+:</p>
-<div class="width5">
+<p>Kremer's <span class="quote">&quot;proportional rate ratio&quot;</span> values were expressed as the ratio for Pfizer divided by the ratio for Moderna, so it's the opposite of the Moderna-Pfizer ratios that have been calculated by me and Kirsh. His PRR value for deaths divided by reports was about 1.014 for ages 18-64 and 1.278 for ages 65+:</p>
+<div class="width4">
 <img src="i/czech-kremer.jpg">
 </div>
-<p>In ages 65+, I got about 27% more deaths than Kremer but only about 4% more reports. It might be because I counted reports where the <code>DIED</code> column had the value <code>Y</code> as deaths, but Kremer might have only counted reports where the fields for the symptoms included death (which also gave me about 18% fewer deaths). I don't know which approach is more correct, but here I simply counted the reports where the value of the <code>DIED</code> column was <code>Y</code>:</p>
-<pre>&gt; o=va[AGE_YRS%in%18:64&amp;VAX_TYPE==&quot;COVID19&quot;,.(dead=sum(DIED==&quot;Y&quot;),reports=.N),.(type=VAX_MANU)]
+<p>At first I got about 27% more deaths in ages 65+ than Kremer but only about 4% more reports. It might be because I counted reports where the <code>DIED</code> column had the value <code>Y</code> as deaths, but Kremer might have only counted reports where the fields for the symptoms included death (which also gave me about 18% fewer deaths in ages 65+ for Moderna and Pfizer combined):</p>
+<pre>&gt; va=do.call(rbind,lapply(2020:2024,\(i)fread(paste0(i,&quot;VAERSDATA.csv&quot;))))
+&gt; va=merge(va,do.call(rbind,lapply(2020:2024,\(i)fread(paste0(i,&quot;VAERSVAX.csv&quot;)))))
+&gt; symp=do.call(rbind,lapply(2020:2024,\(i)fread(paste0(i,&quot;VAERSSYMPTOMS.csv&quot;))))
+&gt; va$dead=va$VAERS_ID%in%symp$VAERS_ID[rowSums(symp[,..k]==&quot;Death&quot;)&gt;0]
+&gt; vae=va[AGE_YRS&gt;=65&amp;VAX_TYPE==&quot;COVID19&quot;&amp;grepl(&quot;MOD|PFI&quot;,VAX_MANU)]
+&gt; vae[DIED==&quot;Y&quot;,.N,VAX_MANU] # DIED column is Y
+           VAX_MANU    N
+1:          MODERNA 7598
+2: PFIZER\\BIONTECH 7520
+&gt; vae[dead==T,.N,VAX_MANU] # symptoms include death
+           VAX_MANU    N
+1:          MODERNA 6285
+2: PFIZER\\BIONTECH 6138</pre>
+<p>I don't know which approach is more correct, but here when I counted reports where the symptoms included death, I got similar PRR values as Kramer:</p>
+<pre>&gt; o=va[AGE_YRS%in%18:64&amp;VAX_TYPE==&quot;COVID19&quot;,.(dead=sum(dead),reports=.N),.(type=VAX_MANU)]
 &gt; o=o[match(c(&quot;PFIZER\\BIONTECH&quot;,&quot;MODERNA&quot;),type)]
 &gt; o
                type dead reports
-1: PFIZER\\BIONTECH 1962  283324
-2:          MODERNA 1844  273126
+1: PFIZER\\BIONTECH 1503  283324
+2:          MODERNA 1458  273126
+
 &gt; o[1,dead/reports]/o[2,dead/reports]
-[1] 1.0257
-&gt; o=va[AGE_YRS&gt;=65&amp;VAX_TYPE==&quot;COVID19&quot;,.(dead=sum(DIED==&quot;Y&quot;),reports=.N),.(type=VAX_MANU)]
+[1] 0.99376
+&gt; o=va[AGE_YRS&gt;=65&amp;VAX_TYPE==&quot;COVID19&quot;,.(dead=sum(dead),reports=.N),.(type=VAX_MANU)]
+&gt; o=o[match(c(&quot;PFIZER\\BIONTECH&quot;,&quot;MODERNA&quot;),type)]
 &gt; o
                type dead reports
-1: PFIZER\\BIONTECH 7520  105769
-2:          MODERNA 7598  142616
+1: PFIZER\\BIONTECH 6138  105769
+2:          MODERNA 6285  142616
 &gt; o[1,dead/reports]/o[2,dead/reports]
-[1] 1.3345</pre>
-<p>VAERS also contains reports from European countries, but several fields including the country codes were scrubbed from European reports in November 2022. WelcomeTheEagle posted a version of the VAERS data here that was downloaded before the country codes were removed: <a href="https://www.vaersaware.com/post/vaers-nov-11th-downloadable-files">https://www.vaersaware.com/post/vaers-nov-11th-downloadable-files</a>. I used the data to calculate an age-normalized rate of adverse event reports in the Czech Republic, where I took the number of doses administered in each age group from the record-level data. I only included doses administered up to November 11th 2022 which is when the data from VAERS was downloaded.</p>
+[1] 1.3168</pre>
+<p>VAERS also contains reports from European countries, but several fields including the country codes were scrubbed from European reports in November 2022. WelcomeTheEagle posted a version of the VAERS data here that was downloaded before the country codes were removed: <a href="https://www.vaersaware.com/post/vaers-nov-11th-downloadable-files">https://www.vaersaware.com/post/vaers-nov-11th-downloadable-files</a>. I used the data to calculate an age-normalized rate of adverse event reports in the Czech Republic. I took the number of doses administered in each age group from the record-level data, so that I only included doses administered up to November 11th 2022 which is when the data from VAERS was downloaded.</p>
 <p>In the old VAERS data you can select Czech reports by selecting rows where the first two characters of the <code>SPLTTYPE</code> field are <code>CZ</code>. At first I tried selecting rows where the <code>SYMPTOM_TEXT</code> field matched identifiers like <code>CZ-CZSUKL-21010694</code>, but it missed about 16% of all reports where the <code>SPLTTYPE</code> field started with <code>CZ</code>.</p>
 <p>There were only 5,247 rows where the <code>SPLTTYPE</code> column started with <code>CZ</code> and the <code>VAX_TYPE</code> column was <code>COVID19</code>, and about two thirds of the rows were missing the age field. But among the remaining 1,871 rows, the age-standardized rate of adverse event reports per doses administered was about 3.0 times higher for Moderna than Pfizer, and the crude rate that was not adjusted for age was about 2.9 times higher for Moderna than Pfizer:</p>
 <pre>age=\(x,y){class(x)=class(y)=NULL;(y-x-(y-789)%/%1461+(x-789)%/%1461)%/%365}
