@@ -11,12 +11,12 @@ h3{font-size:1.3em}
 h4{font-size:1.1em}
 a{color:hsl(220,100%,75%)}
 a:visited{color:hsl(270,100%,75%)}
-pre,code{white-space:pre-wrap;word-wrap:break-word;font:14px Menlo,'DejaVu Sans Mono','Liberation Mono',Consolas,monospace;background:#464646;color:white}
+pre,code{white-space:pre-wrap;word-wrap:break-word;font:14px Menlo,'DejaVu Sans Mono','Liberation Mono',Consolas,monospace;background:#4a4a4a;color:white}
 pre{padding:4px}
 code{padding:1px}
 table{border-collapse:collapse}
 td,th{border:1px solid #555;padding:2px 4px}
-th{background:#3a3a3a;text-align:left;font-weight:bold}
+th{background:#444;text-align:left;font-weight:bold}
 img{max-width:100%}
 blockquote{margin-left:40px;margin-right:0}
 blockquote p{max-width:480px}
@@ -46,7 +46,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
   a{color:#0000EE}a:visited{color:#551A8B}
   h1,h2,h2 a,h3 a,h2 a:visited,h3 a:visited{color:black}
   pre,code{background:#ccc;color:black;font-size:13px}
-  th{background:#}
+  th{background:#ddd}
   blockquote,.quote{color:hsl(30,65%,30%)}
   blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(30,45%,50%)}
   blockquote blockquote blockquote,blockquote .quote .quote,.quote .quote .quote{color:hsl(30,70%,60%)}
@@ -75,6 +75,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Triangle_plots_of_Moderna_Pfizer_ratio_for_third_and_fourth_doses>Triangle plots of Moderna-Pfizer ratio for third and fourth doses</a></li>
 <li><a href=#Types_of_vaccination_sites>Types of vaccination sites</a></li>
 <li><a href=#Ratio_of_deaths_per_adverse_event_reports_in_VAERS_calculated_by_Hans_Joachim_Kremer>Ratio of deaths per adverse event reports in VAERS calculated by Hans-Joachim Kremer</a></li>
+<li><a href=#Adverse_event_reports_at_EudraVigilance>Adverse event reports at EudraVigilance</a></li>
 </ul>
 
 <h2>
@@ -2697,7 +2698,7 @@ mobile vaccination site
 mobilní očkovací místo
 </td></tr>
 </table>
-<p>The file <code>ockovani-profese.csv</code> contains about 19 million rows with one row for each administered dose, but when I tried joining the file with the file for information about vaccination sites, only about 7 million rows could be joined by the vaccinator ID. The joined rows didn't include any row for a large-capacity vaccination site. And I further excluded vaccination sites for children and I excluded vaccines given to ages below 18, because children have little effect on overall mortality but the pediatric vaccination sites distorted the overall percentages of site types. This shows the distribution of the remaining 3 types of vaccination sites:</p>
+<p>The file <code>ockovani-profese.csv</code> contains about 19 million rows with one row for each administered dose, but when I tried joining the file with the file for information about vaccination sites, only about 7 million rows could be joined by the vaccinator ID. The joined rows didn't include any row for a large-capacity vaccination site. And I further excluded vaccination sites for children and I excluded vaccines given to ages below 18, because children have little effect on overall mortality but the pediatric vaccination sites distorted the overall percentages of site types. But this shows the distribution of the remaining 3 types of vaccination sites:</p>
 <pre>dlf=\(x,y,...){if(missing(y))y=sub(&quot;.*/&quot;,&quot;&quot;,x);for(i in 1:length(x))download.file(x[i],y[i],quiet=T,...)}
 dlf(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-profese.csv&quot;) # about 4 GiB
 dlf(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/prehled-ockovacich-mist.csv&quot;) # about 20 kiB
@@ -2723,15 +2724,16 @@ d=merge(unique(mist[,.(sitetype=ockovaci_misto_typ,vaccinator=nrpzs_kod)],by=&qu
 m=d[sitetype!=&quot;DOČM&quot;,xtabs(N~vaxtype+sitetype)]
 m=m[order(-rowSums(m)),]
 
-round(m/rowSums(m)*100) # percentage of site types by manufacturer
-#              sitetype
-# vaxtype       OČM SMPL WALKIN
-#   Pfizer       54   37      9
-#   Moderna      66   20     14
-#   Janssen      67   29      4
-#   AstraZeneca  46   42     12
-#   Novavax      65   32      3
-#   Other        42   46     11</pre>
+round(m/rowSums(m)*100)</pre>
+<!-- -->
+<pre>             sitetype
+vaxtype       OČM SMPL WALKIN # percentage of site types by manufacturer
+  Pfizer       54   37      9
+  Moderna      66   20     14
+  Janssen      67   29      4
+  AstraZeneca  46   42     12
+  Novavax      65   32      3
+  Other        42   46     11</pre>
 <p>So Pfizer has a higher percentage of vaccination sites for self-payers than Moderna (SMPL), but Moderna has a higher percentage of standard vaccination sites (OČM) and walk-in sites. Which is yet another line of evidence that there are systematic biases in the distribution of vaccine doses by different manufacturers.</p>
 <h2>
 <a href=#Ratio_of_deaths_per_adverse_event_reports_in_VAERS_calculated_by_Hans_Joachim_Kremer id=Ratio_of_deaths_per_adverse_event_reports_in_VAERS_calculated_by_Hans_Joachim_Kremer>Ratio of deaths per adverse event reports in VAERS calculated by Hans-Joachim Kremer</a>
@@ -2857,11 +2859,11 @@ o[order(-doses)]|&gt;dplyr::mutate_if(is.double,round)|&gt;print(r=F)</pre>
 <div class="width4">
 <img src="i/czech-kremer.jpg">
 </div>
-<p>At first I got about 27% more deaths in ages 65+ than Kremer but only about 4% more reports. It might be because I counted reports where the <code>DIED</code> column had the value <code>Y</code> as deaths, but Kremer might have only counted reports where the fields for the symptoms included death (which also gave me about 18% fewer deaths in ages 65+ for Moderna and Pfizer combined):</p>
+<p>At first I got about 27% more deaths in ages 65+ than Kremer but only about 4% more reports. Then I realized it was probably because I counted reports where the <code>DIED</code> column had the value <code>Y</code> as deaths, but Kremer might have only counted reports where the fields for the symptoms included death (which also gave me about 18% fewer deaths in ages 65+ for Moderna and Pfizer combined):</p>
 <pre>&gt; va=do.call(rbind,lapply(2020:2024,\(i)fread(paste0(i,&quot;VAERSDATA.csv&quot;))))
 &gt; va=merge(va,do.call(rbind,lapply(2020:2024,\(i)fread(paste0(i,&quot;VAERSVAX.csv&quot;)))))
 &gt; symp=do.call(rbind,lapply(2020:2024,\(i)fread(paste0(i,&quot;VAERSSYMPTOMS.csv&quot;))))
-&gt; va$dead=va$VAERS_ID%in%symp$VAERS_ID[rowSums(symp[,..k]==&quot;Death&quot;)&gt;0]
+&gt; va$dead=va$VAERS_ID%in%symp$VAERS_ID[rowSums(symp[,c(1:5*2)]==&quot;Death&quot;)==1]
 &gt; vae=va[AGE_YRS&gt;=65&amp;VAX_TYPE==&quot;COVID19&quot;&amp;grepl(&quot;MOD|PFI&quot;,VAX_MANU)]
 &gt; vae[DIED==&quot;Y&quot;,.N,VAX_MANU] # DIED column is Y
            VAX_MANU    N
@@ -2889,8 +2891,8 @@ o[order(-doses)]|&gt;dplyr::mutate_if(is.double,round)|&gt;print(r=F)</pre>
 2:          MODERNA 6285  142616
 &gt; o[1,dead/reports]/o[2,dead/reports]
 [1] 1.3168</pre>
-<p>VAERS also contains reports from European countries, but several fields including the country codes were scrubbed from European reports in November 2022. WelcomeTheEagle posted a version of the VAERS data here that was downloaded before the country codes were removed: <a href="https://www.vaersaware.com/post/vaers-nov-11th-downloadable-files">https://www.vaersaware.com/post/vaers-nov-11th-downloadable-files</a>. I used the data to calculate an age-normalized rate of adverse event reports in the Czech Republic. I took the number of doses administered in each age group from the record-level data, so that I only included doses administered up to November 11th 2022 which is when the data from VAERS was downloaded.</p>
-<p>In the old VAERS data you can select Czech reports by selecting rows where the first two characters of the <code>SPLTTYPE</code> field are <code>CZ</code>. At first I tried selecting rows where the <code>SYMPTOM_TEXT</code> field matched identifiers like <code>CZ-CZSUKL-21010694</code>, but it missed about 16% of all reports where the <code>SPLTTYPE</code> field started with <code>CZ</code>.</p>
+<p>VAERS also contains reports from European countries, but several fields including the country codes were scrubbed from European reports in November 2022. WelcomeTheEagle posted a version of the VAERS data here that was downloaded before the country codes were removed: <a href="https://www.vaersaware.com/post/vaers-nov-11th-downloadable-files">https://www.vaersaware.com/post/vaers-nov-11th-downloadable-files</a>. I used the data to calculate an age-normalized rate of adverse event reports in the Czech Republic. I took the number of doses administered in each age group from the record-level data, so that I only included doses administered up to November 11th 2022 which was the date of the old snapshot of VAERS.</p>
+<p>In the old VAERS data you can select Czech reports by selecting rows where the first two characters of the <code>SPLTTYPE</code> field are <code>CZ</code>. At first I tried selecting rows where the <code>SYMPTOM_TEXT</code> field matched identifiers like <code>CZ-CZSUKL-21010694</code>, but it missed about 16% of all reports where the <code>SPLTTYPE</code> field started with <code>CZ</code>. There were only two reports where <code>SYMPTOM_TEXT</code> matched <code>\bCZ-</code> but <code>SPLTTYPE</code> didn't start with <code>CZ</code>, but one of them was a Belgian report that was linked to an earlier Czech report of the same patient, and the other report was missing the <code>SPLTTYPE</code> field.</p>
 <p>There were only 5,247 rows where the <code>SPLTTYPE</code> column started with <code>CZ</code> and the <code>VAX_TYPE</code> column was <code>COVID19</code>, and about two thirds of the rows were missing the age field. But among the remaining 1,871 rows, the age-standardized rate of adverse event reports per doses administered was about 3.0 times higher for Moderna than Pfizer, and the crude rate that was not adjusted for age was about 2.9 times higher for Moderna than Pfizer:</p>
 <pre>age=\(x,y){class(x)=class(y)=NULL;(y-x-(y-789)%/%1461+(x-789)%/%1461)%/%365}
 ua=\(x,y,...){u=unique(x);y(u,...)[match(x,u)]}
@@ -2930,7 +2932,7 @@ o[,crude:=reports/doses*1e6][order(-doses)]|&gt;print(r=F)</pre>
  Moderna     415  1639762  258.43   253.09
  Janssen      84   397696  205.40   211.22
    Other       2      180 2590.57 11111.11</pre>
-<p>At first when I tried to select Czech VAERS reports by picking rows where the age field was not missing and the <code>SYMPTOM_TEXT</code> field matched <code>\bCZ-</code>, I got 199 reports for Moderna but 1210 for Pfizer. But now when I picked rows where the <code>SPLTTYPE</code> field started with <code>CZ</code> instead, I got 415 reports for Moderna but 1369 for Pfizer, so it approximately doubled the ratio of Moderna reports to Pfizer reports. It might be because many of the reports for Pfizer vaccines included an identifier like <code>CZ-PFIZER INC-2021285400</code> in the <code>SYMPTOM_TEXT</code> field, but there wasn't a similar identifier for Moderna vaccines. However it might also be a sign that there's somehow a different reporting structure used for Pfizer vaccines and Moderna vaccines.</p>
+<p>At first when I tried to select Czech VAERS reports by picking rows where the age field was not missing and the <code>SYMPTOM_TEXT</code> field matched <code>\bCZ-</code>, I got 199 reports for Moderna but 1210 for Pfizer. But now when I picked rows where the <code>SPLTTYPE</code> field started with <code>CZ</code> instead, I got 415 reports for Moderna but 1369 for Pfizer, so it approximately doubled the ratio of Moderna reports to Pfizer reports. It might be because many of the reports for Pfizer vaccines included an identifier like <code>CZ-PFIZER INC-2021285400</code> in the <code>SYMPTOM_TEXT</code> field, but there wasn't a similar identifier for Moderna vaccines. However it also seems to be a sign that there was somehow a different reporting procedure used for Pfizer vaccines and Moderna vaccines.</p>
 <p>In the previous code I only included VAERS reports where the age field was not missing. But now when I also included the reports where the age field was missing, Pfizer got about 9% higher crude rate of reports per dose than Moderna:</p>
 <pre>&gt; allage=merge(d[,.(doses=sum(doses)),type],va[,.(reports=.N),.(type=rename(VAX_MANU))])
 &gt; allage[,crude:=reports/doses*1e6][order(-doses)]|&gt;print(r=F)
@@ -2949,26 +2951,219 @@ o[,crude:=reports/doses*1e6][order(-doses)]|&gt;print(r=F)</pre>
      Janssen     555
        Other      18
      Novavax      14</pre>
-<p>For some reason in the Czech VAERS data, the percentage of records that was missing the age field was about 6% for Moderna but 70% for Pfizer (even though in many of the records where the age field was missing, the age was still mentioned in the <code>SYMPTOM_TEXT</code> field):</p>
+<p>For some reason in the Czech VAERS data, the percentage of reports that was missing the age field was about 6% for Moderna but 70% for Pfizer (even though in many of the reports where the age field was missing, the age was still mentioned in the <code>SYMPTOM_TEXT</code> field):</p>
 <pre>&gt; va=fread(&quot;AllVAERSDataCSVS/NonDomesticVAERSDATA.csv&quot;)
 &gt; va=merge(va,fread(&quot;AllVAERSDataCSVS/NonDomesticVAERSVAX.csv&quot;))
 &gt; vae=va[grepl(&quot;^CZ&quot;,SPLTTYPE)&amp;VAX_TYPE==&quot;COVID19&quot;]
-&gt; vae[,.(records=.N,missingagepct=mean(is.na(AGE_YRS))*100),VAX_MANU][order(-records)]|&gt;print(r=F)
-             VAX_MANU records missingagepct
+&gt; vae[,.(reports=.N,missingagepct=mean(is.na(AGE_YRS))*100),VAX_MANU][order(-reports)]|&gt;print(r=F)
+             VAX_MANU reports missingagepct
      PFIZER\\BIONTECH    4548        69.899
               MODERNA     441         5.896
               JANSSEN     244        65.574
  UNKNOWN MANUFACTURER      14        78.571</pre>
-<p>In the whole VAERS data the percentage of records that was missing the age field was about 8.9% for Moderna but 9.7% for Pfizer (so it's not a major difference, but it might have still introduced a slight bias to Kremer's analysis where he only included records within a certain age range):</p>
+<p>In the whole VAERS data the percentage of reports that was missing the age field was about 8.9% for Moderna but 9.7% for Pfizer (so it's not a major difference, but it might have still introduced a slight bias to Kremer's analysis where he only included reports within a certain age range):</p>
 <pre>&gt; va=do.call(rbind,lapply(2020:2024,\(i)fread(paste0(i,&quot;VAERSDATA.csv&quot;))))
 &gt; va=merge(va,do.call(rbind,lapply(2020:2024,\(i)fread(paste0(i,&quot;VAERSVAX.csv&quot;)))))
-&gt; va[VAX_TYPE==&quot;COVID19&quot;,.(records=.N,missingagepct=mean(is.na(AGE_YRS))*100),VAX_MANU][order(-records)]|&gt;print(r=F)
-             VAX_MANU records missingagepct
+&gt; va[VAX_TYPE==&quot;COVID19&quot;,.(reports=.N,missingagepct=mean(is.na(AGE_YRS))*100),VAX_MANU][order(-reports)]|&gt;print(r=F)
+             VAX_MANU reports missingagepct
      PFIZER\\BIONTECH  481402         9.738
               MODERNA  469655         8.871
               JANSSEN   73454        18.101
  UNKNOWN MANUFACTURER    7363        27.774
               NOVAVAX     492         3.862</pre>
+<h2>
+<a href=#Adverse_event_reports_at_EudraVigilance id=Adverse_event_reports_at_EudraVigilance>Adverse event reports at EudraVigilance</a>
+</h2>
+<p>Steve Kirsch posted this tweet: [<a href="https://x.com/stkirsch/status/1820990897565397423">https://x.com/stkirsch/status/1820990897565397423</a>]</p>
+<div class="width5">
+<img src="i/czech-eudra.jpg">
+</div>
+<p>He got the table from a Substack post from 2022 by Peter Halligan: <a href="https://peterhalligan.substack.com/p/eudra-shows-4-5-times-more-deaths">https://peterhalligan.substack.com/p/eudra-shows-4-5-times-more-deaths</a>. The Substack post gave this blog post as the source for the EudraVigilance data, which in turn linked to a portal on the website of European Medicines Agency (EMA): <a href="https://vaccineimpact.com/2022/48817-dead-and-5107883-injured-following-covid-19-vaccines-in-european-database-of-adverse-reactions/">https://vaccineimpact.com/2022/48817-dead-and-5107883-injured-following-covid-19-vaccines-in-european-database-of-adverse-reactions/</a>.</p>
+<p>However when I tried opening the links to the EMA portal, the total number of reports per vaccine manufacturer was about 50-60% lower than in Halligan's table. For example I got only 1,266,039 instead of 2,667,243 adverse event reports for Pfizer vaccines. So I don't know if there's some option I'm missing, or if part of the reports have been removed since 2022 in the same way that various fields were scrubbed from the EudraVigilance reports at VAERS.</p>
+<p>EudraVigilance data is also available from here: <a href="https://howbad.info">https://howbad.info</a>. I tried downloading the file linked under <span class="quote">&quot;Download prepared data&quot;</span> and counting how many reports there were for each vaccine type, but now I got about 46-65% more reports than in Halligan's table for the three main manufacturers (but I got about 98% less reports for Janssen):</p>
+<pre>$ csvtk cut -f4 total-25-06-2024.csv|awk &#39;{a[$0]++}END{for(i in a)print a[i],i}&#39;|sort -n&gt;temp
+$ for x in comirnaty\|tozinameran moderna\|spikevax astrazeneca\|vaxzevria janssen\|jcovden;do grep -Ei $x temp|awk &#39;{x+=$1}END{print x}&#39;;done|paste -d\  - &lt;(printf %s\\n Pfizer Moderna AstraZeneca Janssen)
+3982978 Pfizer
+1471724 Moderna
+2169253 AstraZeneca
+4359 Janssen</pre>
+<p>This shows the number of reports from all three sources:</p>
+<table>
+<tr><th>
+Manufacturer
+</th><th>
+OWID<br>doses
+</th><th>
+Halligan<br>reports
+</th><th>
+EMA<br>reports
+</th><th>
+howbad.info<br>reports
+</th><th>
+Halligan reports per<br>million doses
+</th><th>
+EMA reports per<br>million doses
+</th><th>
+howbad.info reports<br>per million doses
+</th></tr>
+<tr><td>
+Pfizer
+</td><td>
+669096300
+</td><td>
+2667243
+</td><td>
+1266039
+</td><td>
+3982978
+</td><td>
+4079
+</td><td>
+1892.2
+</td><td>
+5952.8
+</td></tr>
+<tr><td>
+Moderna
+</td><td>
+157229390
+</td><td>
+870106
+</td><td>
+387461
+</td><td>
+1471724
+</td><td>
+5665
+</td><td>
+2464.3
+</td><td>
+9360.4
+</td></tr>
+<tr><td>
+AstraZeneca
+</td><td>
+67183321
+</td><td>
+1388494
+</td><td>
+554153
+</td><td>
+2169253
+</td><td>
+20677
+</td><td>
+8248.4
+</td><td>
+32288.6
+</td></tr>
+<tr><td>
+Janssen
+</td><td>
+18699991
+</td><td>
+178053
+</td><td>
+72635
+</td><td>
+4359
+</td><td>
+9537
+</td><td>
+3884.2
+</td><td>
+110.7
+</td></tr>
+</table>
+<p>This shows the numbers as ratios relative to Halligan's table:</p>
+<table>
+<tr><th>
+Manufacturer
+</th><th>
+OWID<br>doses
+</th><th>
+Halligan<br>reports
+</th><th>
+EMA<br>reports
+</th><th>
+howbad.info<br>reports
+</th><th>
+Halligan reports per<br>million doses
+</th><th>
+EMA reports per<br>million doses
+</th><th>
+howbad.info reports<br>per million doses
+</th></tr>
+<tr><td>
+Pfizer
+</td><td>
+669096300
+</td><td>
+1.00
+</td><td>
+0.47
+</td><td>
+1.49
+</td><td>
+1.00
+</td><td>
+0.46
+</td><td>
+1.46
+</td></tr>
+<tr><td>
+Moderna
+</td><td>
+157229390
+</td><td>
+1.00
+</td><td>
+0.45
+</td><td>
+1.69
+</td><td>
+1.00
+</td><td>
+0.44
+</td><td>
+1.65
+</td></tr>
+<tr><td>
+AstraZeneca
+</td><td>
+67183321
+</td><td>
+1.00
+</td><td>
+0.40
+</td><td>
+1.56
+</td><td>
+1.00
+</td><td>
+0.40
+</td><td>
+1.56
+</td></tr>
+<tr><td>
+Janssen
+</td><td>
+18699991
+</td><td>
+1.00
+</td><td>
+0.41
+</td><td>
+0.02
+</td><td>
+1.00
+</td><td>
+0.41
+</td><td>
+0.02
+</td></tr>
+</table>
+<p>I took the number of administered doses in the EU from OWID like Halligan: <a href="https://ourworldindata.org/grapher/covid-vaccine-doses-by-manufacturer?country=%7eEuropean+Union">https://ourworldindata.org/grapher/covid-vaccine-doses-by-manufacturer?country=%7eEuropean+Union</a>.</p>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
