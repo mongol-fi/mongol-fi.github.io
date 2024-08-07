@@ -11,7 +11,7 @@ h3{font-size:1.3em}
 h4{font-size:1.1em}
 a{color:hsl(220,100%,75%)}
 a:visited{color:hsl(270,100%,75%)}
-pre,code{white-space:pre-wrap;word-wrap:break-word;font:14px Menlo,'DejaVu Sans Mono','Liberation Mono',Consolas,monospace;background:#404040;color:white}
+pre,code{white-space:pre-wrap;word-wrap:break-word;font:14px Menlo,'DejaVu Sans Mono','Liberation Mono',Consolas,monospace;background:#464646;color:white}
 pre{padding:4px}
 code{padding:1px}
 table{border-collapse:collapse}
@@ -2862,8 +2862,8 @@ o[order(age)][,deadper10kreport:=round(dead/reports*1e4)][]|&gt;print(r=F)</pre>
  85-89 0.79 0.75 0.83
  90-94 1.02 0.95 1.09
    95+ 0.91 0.83 1.01</pre>
-<p>VAERS also contains reports from European countries but the country codes were removed in November 2022. WelcomeTheEagle posted a version of the VAERS data here that was downloaded before the country codes were removed: <a href="https://www.vaersaware.com/post/vaers-nov-11th-downloadable-files">https://www.vaersaware.com/post/vaers-nov-11th-downloadable-files</a>. I used the data to calculate an age-normalized rate of adverse event reports in the Czech Republic, where I took the number of doses administered to each age group from the record-level data so that I only included doses administered up to November 11th 2022 which is when the data from VAERS was downloaded.</p>
-<p>You can select Czech reports by selecting rows where the first two characters of the <code>SPLTTYPE</code> field are <code>CZ</code>. At first I tried selecting rows where the <code>SYMPTOM_TEXT</code> field matched identifiers like <code>CZ-CZSUKL-21010694</code>, but it missed about 16% of all reports.</p>
+<p>VAERS also contains reports from European countries, but several fields including the country codes were removed from European reports in November 2022. WelcomeTheEagle posted a version of the VAERS data here that was downloaded before the country codes were removed: <a href="https://www.vaersaware.com/post/vaers-nov-11th-downloadable-files">https://www.vaersaware.com/post/vaers-nov-11th-downloadable-files</a>. I used the data to calculate an age-normalized rate of adverse event reports in the Czech Republic, where I took the number of doses administered in each age group from the record-level data. I only included doses administered up to November 11th 2022 which is when the data from VAERS was downloaded.</p>
+<p>In the old VAERS data you can select Czech reports by selecting rows where the first two characters of the <code>SPLTTYPE</code> field are <code>CZ</code>. At first I tried selecting rows where the <code>SYMPTOM_TEXT</code> field matched identifiers like <code>CZ-CZSUKL-21010694</code>, but it missed about 16% of all reports.</p>
 <p>There were only 5,247 rows where the <code>SPLTTYPE</code> column started with <code>CZ</code> and the <code>VAX_TYPE</code> column was <code>COVID19</code>, and about two thirds of the rows were missing the age. But among the remaining 1,871 rows, the age-standardized rate of adverse event reports per doses administered was about 3.0 times higher for Moderna than Pfizer, and the crude rate that was not adjusted for age was about 2.9 times higher for Moderna than Pfizer:</p>
 <pre>age=\(x,y){class(x)=class(y)=NULL;(y-x-(y-789)%/%1461+(x-789)%/%1461)%/%365}
 ua=\(x,y,...){u=unique(x);y(u,...)[match(x,u)]}
@@ -2903,7 +2903,16 @@ o[,crude:=reports/doses*1e6][order(-doses)]|&gt;print(r=F)</pre>
  Moderna     415  1639762  258.43   253.09
  Janssen      84   397696  205.40   211.22
    Other       2      180 2590.57 11111.11</pre>
-<p>However you have to take the results in the table above with a grain of salt, because it shows that Pfizer has about 3.3 times as many reports as Moderna, even though the ratio is about 6.8 in the spreadsheet from the GitHub account of Palacký University. The Palacký spreadsheet has about 10 times as many total reports as VAERS, so there might be some kind of a bias for which reports end up being included at VAERS:</p>
+<p>Previously when I tried to select Czech VAERS reports by picking rows where the <code>SYMPTOM_TEXT</code> field matched <code>\bCZ-</code>, I got 199 reports for Moderna but 1210 for Pfizer. But now when I picked rows where the <code>SPLTTYPE</code> field started with <code>CZ</code>, I got 415 reports for Moderna but 1369 for Pfizer, so it approximately doubled the ratio of Moderna reports to Pfizer reports. It might be because many of the reports for Pfizer vaccines included an identifier like <code>CZ-PFIZER INC-2021285400</code> in the <code>SYMPTOM_TEXT</code> field, but there wasn't a similar identifier for Moderna vaccines. However it might also mean that there's somehow a different reporting structure used for Pfizer vaccines and Moderna vaccines.</p>
+<p>In the code above I only included VAERS reports that were not missing an age. But when I also included the reports that were missing an age, Pfizer now got a higher crude rate of reports per dose than Moderna:</p>
+<pre>&gt; allage=merge(d[,.(doses=sum(doses)),type],va[,.(reports=.N),.(type=rename(VAX_MANU))])
+&gt; allage[,crude:=reports/doses*1e6][order(-doses)]|&gt;print(r=F)
+    type    doses reports   crude
+  Pfizer 15526217    4548   292.9 # Pfizer has about 10.3 times as many reports as Moderna
+ Moderna  1639762     441   268.9
+ Janssen   414410     244   588.8
+   Other      764      14 18324.6</pre>
+<p>In the first block of output above Pfizer got about 3.3 times as many reports as Moderna but in the second block the ratio was about 10.3. In the spreadsheet from the GitHub account of Palacký University I got an intermediate ratio of about 6.8. The Palacký spreadsheet has about 2.7 times as many total reports as VAERS, so there might be some kind of a bias for which reports end up being included at VAERS:</p>
 <pre>&gt; s2=data.table(readxl::read_excel(&quot;SUKL-batches-AE.xlsx&quot;,sheet=2))
 &gt; s2[,.(reports=sum(no_reports)),type=rename(name)][order(-reports)]|&gt;print(r=F)
         type reports
@@ -2913,7 +2922,6 @@ o[,crude:=reports/doses*1e6][order(-doses)]|&gt;print(r=F)</pre>
      Janssen     555
        Other      18
      Novavax      14</pre>
-<p>Previously when I tried to select Czech VAERS reports by picking rows where the <code>SYMPTOM_TEXT</code> field matched <code>\bCZ-</code>, I got 199 reports for Moderna but 1210 for Pfizer. But now when I picked rows where the <code>SPLTTYPE</code> field started with <code>CZ</code>, I got 415 reports for Moderna but 1369 for Pfizer, so it approximately doubled the ratio of Moderna reports to Pfizer reports. It might be because many of the reports for Pfizer vaccines included an identifier like <code>CZ-PFIZER INC-2021285400</code> in the <code>SYMPTOM_TEXT</code> field, but there wasn't a similar identifier for Moderna vaccines. However it might also mean that there's somehow a different reporting structure used for Pfizer vaccines and Moderna vaccines, which might explain why reports for Moderna vaccines seem to be overrepresented at VAERS.</p>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
