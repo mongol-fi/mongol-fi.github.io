@@ -1,0 +1,168 @@
+<!doctype html>
+<meta charset=utf-8>
+<style>
+body{background:#292929;color:white;margin:6px 6px 6px max(6px, min(50vw - 270px, 100vw - 1100px))}
+body,td,th{font:14.5px/1.3 Arial,Helvetica,'Liberation Sans',sans-serif}
+p{max-width:540px}
+h1,h2,h2 a,h3 a,h2 a:visited,h3 a:visited{font-weight:normal;color:white}
+h1{font-size:2.1em;margin-top:.9em}
+h2{font-size:1.7em}
+h3{font-size:1.3em}
+h4{font-size:1.1em}
+a{color:hsl(220,100%,75%)}
+a:visited{color:hsl(270,100%,75%)}
+pre,code{white-space:pre-wrap;word-wrap:break-word;font:14px Menlo,'DejaVu Sans Mono','Liberation Mono',Consolas,monospace;background:#4a4a4a;color:white}
+pre{padding:4px}
+code{padding:1px}
+table{border-collapse:collapse}
+td,th{border:1px solid #555;padding:2px 4px}
+th{background:#444;text-align:left;font-weight:bold}
+img{max-width:100%}
+blockquote{margin-left:40px;margin-right:0}
+blockquote p{max-width:480px}
+blockquote blockquote p{max-width:440px}
+blockquote blockquote blockquote p{max-width:400px}
+blockquote,.quote,blockquote h1,blockquote h2,blockquote h3{color:hsl(50,100%,85%)}
+blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(45,55%,65%)}
+blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote .quote,.quote .quote .quote{color:hsl(40,40%,50%)}
+.width1{max-width:100px}
+.width2{max-width:200px}
+.width3{max-width:300px}
+.width4{max-width:400px}
+.width5{max-width:500px}
+.width6{max-width:600px}
+.width7{max-width:700px}
+.width8{max-width:800px}
+.width9{max-width:900px}
+.width10{max-width:1000px}
+.width11{max-width:1100px}
+.width12{max-width:1200px}
+.width13{max-width:1300px}
+.width14,.width0{max-width:1400px}
+.width00{margin-left:calc(-1 * max(0px, min(50vw - 270px, 100vw - 1100px)) + 6px)}
+.width00 img,.width0 img{margin:0 -1.5px -1.5px 0;vertical-align:bottom}
+@media print{
+  body{background:white;color:black;margin:0px;zoom:.75;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+  a{color:#0000EE}a:visited{color:#551A8B}
+  h1,h2,h2 a,h3 a,h2 a:visited,h3 a:visited{color:black}
+  pre,code{background:#ccc;color:black;font-size:13px}
+  th{background:#ddd}
+  blockquote,.quote{color:hsl(30,65%,30%)}
+  blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(30,45%,50%)}
+  blockquote blockquote blockquote,blockquote .quote .quote,.quote .quote .quote{color:hsl(30,70%,60%)}
+}
+</style>
+<title>Czech record-level mortality data by vaccination status (part 4)</title>
+<h1>Czech record-level mortality data by vaccination status (part 4) - <a href=index.html>sars2.net</a></h1>
+<p>Links to earlier parts: <a href=czech.html>czech.html</a>, <a href=czech2.html>czech2.html</a>, <a href=czech3.html>czech3.html</a>.</p>
+<h2 id=Contents><a href=#Contents>Contents</a></h2>
+<ul>
+<li><a href=#Adverse_event_reports_by_country_at_EudraVigilance>Adverse event reports by country at EudraVigilance</a></li>
+</ul>
+
+<h2>
+<a href=#Adverse_event_reports_by_country_at_EudraVigilance id=Adverse_event_reports_by_country_at_EudraVigilance>Adverse event reports by country at EudraVigilance</a>
+</h2>
+<p>The raw data for EudraVigilance that can be downloaded from howbad.info doesn't show the country of the reports. But you can see the number of reports for each country from the EMA portal for EudraVigilance, if you go here, click <span class="quote">&quot;C&quot;</span>, scroll to COVID vaccines, open the page for one vaccine, and click <span class="quote">&quot;Number of Individual Cases by EEA countries&quot;</span>: <a href="https://www.adrreports.eu/en/search_subst.html">https://www.adrreports.eu/en/search_subst.html</a>. I collected the data into this CSV file (as of August 8th 2024 UTC): <a href=f/eudracountry.csv>f/eudracountry.csv</a>. However I didn't find a way to get the number of deaths or serious reports grouped by both country and manufacturer.</p>
+<p>I got the number of doses administered by manufacturer and country from OWID: <a href="https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/vaccinations/vaccinations-by-manufacturer.csv">https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/vaccinations/vaccinations-by-manufacturer.csv</a>. (The same data can also downloaded in a slightly different CSV format from here: <a href="https://ourworldindata.org/grapher/covid-vaccine-doses-by-manufacturer">https://ourworldindata.org/grapher/covid-vaccine-doses-by-manufacturer</a>.)</p>
+<p>In most countries Moderna got a higher rate of reports per doses than Pfizer, but exceptions to the pattern are Italy, Netherlands, and Portugal, and a few small countries which have a small sample size:</p>
+<div class="width5">
+<img src="i/czech-eudracountry.png">
+</div>
+<pre>library(data.table)
+
+kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;x[]=ifelse(abs(x)&lt;1e3,round(x),paste0(sprintf(paste0(&quot;%.&quot;,ifelse(e%%3==0,1,0),&quot;f&quot;),x/1e3^(e2-1)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2]));x}
+
+owid=fread(&quot;https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/vaccinations/vaccinations-by-manufacturer.csv&quot;)
+owid=unique(owid[order(-date)],by=&quot;location&quot;)[,.(country=location,doses=total_vaccinations,type=vaccine)]
+owid$type[owid$type==&quot;Pfizer/BioNTech&quot;]=&quot;Pfizer&quot;
+owid$type[owid$type==&quot;Oxford/AstraZeneca&quot;]=&quot;AstraZeneca&quot;
+owid$type[owid$type==&quot;Johnson&amp;Johnson&quot;]=&quot;Janssen&quot;
+
+eu=fread(&quot;http://sars2.net/f/eudracountry.csv&quot;)
+eu$country[eu$country==&quot;Czech Republic&quot;]=&quot;Czechia&quot;
+
+me=merge(eu,owid)
+me[,country:=factor(country,me[,.(sum(doses)),country][order(-V1),country])]
+me[,type:=factor(type,me[,.(sum(doses)),type][order(-V1),type])]
+me=rbind(me,me[,.(reports=sum(reports),doses=sum(doses),country=&quot;Total&quot;),type])
+me=rbind(me,me[,.(reports=sum(reports),doses=sum(doses),type=&quot;Total&quot;),country])
+
+m=me[doses&gt;0,xtabs(reports/doses*1e6~country+type)]
+disp=kimi(m);exp=.7;maxcolor=2e4
+hide=m&gt;1e6;m[hide]=disp[hide]=NA
+pal=hsv(c(21,21,21,16,11,6,3,0,0,0)/36,c(0,.25,rep(.5,8)),c(rep(1,8),.5,0))
+
+pheatmap::pheatmap(m^exp,filename=&quot;i1.png&quot;,display_numbers=disp,
+  gaps_row=nrow(m)-1,gaps_col=ncol(m)-1,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=20,cellheight=20,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;gray90&quot;,
+  number_color=ifelse(!is.na(m)&amp;m^exp&gt;maxcolor^exp*.8,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(0,maxcolor^exp,,256),
+  colorRampPalette(pal)(256))
+
+m=me[,xtabs(doses~country+type)]
+disp=kimi(m);exp=.7;maxcolor=max(m[-nrow(m),-ncol(m)])
+pal=sapply(seq(1,0,,256),\(i)rgb(i,i,i))
+
+pheatmap::pheatmap(m^exp,filename=&quot;i2.png&quot;,display_numbers=disp,
+  gaps_row=nrow(m)-1,gaps_col=ncol(m)-1,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=20,cellheight=20,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;gray90&quot;,
+  number_color=ifelse(!is.na(m)&amp;m^exp&gt;maxcolor^exp*.45,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(0,maxcolor^exp,,256),
+  colorRampPalette(pal)(256))
+
+cap=&quot;Number of adverse event reports at EudraVigilance per million doses administered at OWID. The right side shows the number of doses administered. Source: adrreports.eu/en/search_subst.html (letter C, links for COVID vaccines), ourworldindata.org/grapher/covid-vaccine-doses-by-manufacturer (download CSV data).&quot;
+system(paste0(&quot;magick \\( i1.png -gravity east -chop 10x \\) \\( i2.png -gravity west -chop 10x \\) +append 0.png;w=`identify -format %w 0.png`;pad=20;magick -pointsize 42 -interline-spacing -2 -font Arial \\( -size $[w-pad*2]x caption:&#39;&quot;,cap,&quot;&#39; -splice $[pad]x20 \\) 0.png -append 1.png&quot;))</pre>
+<p>However this analysis was not adjusted for age. In VAERS reports most EEA countries have a higher average age for Moderna than Pfizer, even though in most countries the difference isn't as big as in the Czech Republic:</p>
+<pre>va=fread(&quot;AllVAERSDataCSVS/NonDomesticVAERSDATA.csv&quot;)
+va=merge(va,fread(&quot;AllVAERSDataCSVS/NonDomesticVAERSVAX.csv&quot;))
+
+va[,country:=substr(SPLTTYPE,1,2)]
+vae=va[VAX_TYPE==&quot;COVID19&quot;,.(age=mean(AGE_YRS,na.rm=T),.N),.(type=VAX_MANU,country)]
+
+o=vae[type==&quot;MODERNA&quot;,.(country,Moderna_age=age,Moderna_N=N)]
+o=merge(o,vae[type==&quot;PFIZER\\BIONTECH&quot;,.(country,Pfizer_age=age,Pfizer_N=N)])
+o$diff=o[,2]-o[,4]
+
+o=o[country%in%strsplit(&quot;AT BE BG HR CY CZ DK EE FI FR DE GR HU IE IT LV LT LU MT NL PL PT RO SK SI ES SE IS LI NO&quot;,&quot; &quot;)[[1]]]
+
+o[order(-Pfizer_N)][,c(1,2,4,6,3,5)]|&gt;mutate_if(is.double,round,1)|&gt;print(r=F)</pre>
+<!-- -->
+<pre> country Moderna_age Pfizer_age  diff Moderna_N Pfizer_N
+      AT        46.8       46.1   0.7      7179    85854
+      DE        49.7       49.4   0.3      9772    54896
+      FR        51.3       50.2   1.2      6781    41596
+      IT        49.2       48.0   1.2      5161    19949
+      NL        51.3       47.5   3.8      1743    11278
+      SE        49.9       49.7   0.3      2190     9454
+      ES        45.3       48.0  -2.7      2232     8977
+      BE        42.1       42.6  -0.5      2871     8285
+      PT        44.6       44.9  -0.3       885     6337
+      NO        44.5       46.3  -1.8      1563     5934
+      FI        45.6       47.1  -1.5      1059     5555
+      GR        49.6       47.8   1.8       676     5125
+      CZ        54.3       48.7   5.6       441     4548
+      IE        47.5       42.1   5.4       794     4408
+      PL        47.5       44.2   3.3       500     4300
+      DK        47.6       51.5  -3.9       861     4250
+      RO        46.5       41.2   5.3       180     1978
+      EE        55.7       49.4   6.3       104     1143
+      HR        47.7       44.7   3.0       178     1118
+      HU        61.8       49.2  12.6        93     1064
+      IS        41.2       47.6  -6.4        76     1048
+      SK        52.8       46.1   6.8       120      857
+      LT        53.1       47.8   5.4        63      830
+      SI        62.8       50.6  12.2        58      518
+      LU        45.7       43.4   2.3       117      457
+      LV        53.0       40.8  12.2       149      417
+      CY        43.2       45.5  -2.3        26      214
+      BG        46.2       46.5  -0.3        33      185
+      MT        43.2       50.9  -7.7        23      137
+      LI        44.0       72.0 -28.0         2        5
+ country Moderna_age Pfizer_age  diff Moderna_N Pfizer_N</pre>
+<script>
+let q=document.querySelectorAll('a,code,pre')
+for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
+</script>

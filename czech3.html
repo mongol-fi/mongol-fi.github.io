@@ -54,7 +54,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 </style>
 <title>Czech record-level mortality data by vaccination status (part 3)</title>
 <h1>Czech record-level mortality data by vaccination status (part 3) - <a href=index.html>sars2.net</a></h1>
-<p>Parts 1 and 2 are here: <a href=czech.html>czech.html</a>, <a href=czech2.html>czech2.html</a>.</p>
+<p>Links to other parts: <a href=czech.html>czech.html</a>, <a href=czech2.html>czech2.html</a>, <a href=czech4.html>czech4.html</a>.</p>
 <h2 id=Contents><a href=#Contents>Contents</a></h2>
 <ul>
 <li><a href=#People_who_were_indicated_to_have_a_chronic_illness>People who were indicated to have a chronic illness</a></li>
@@ -2855,9 +2855,7 @@ o[order(-doses)]|&gt;dplyr::mutate_if(is.double,round)|&gt;print(r=F)</pre>
  90-94 0.94 0.86 1.03
    95+ 0.91 0.80 1.02</pre>
 <p>Kremer's <span class="quote">&quot;proportional rate ratio&quot;</span> values were expressed as the ratio for Pfizer divided by the ratio for Moderna, so it's the opposite of the Moderna-Pfizer ratios that have been calculated by me and Kirsch. His PRR value for deaths divided by reports was about 1.014 for ages 18-64 and 1.278 for ages 65+:</p>
-<div class="width4">
-<img src="i/czech-kremer.jpg">
-</div>
+<p><img src=i/czech-kremer.jpg style=max-width:450px></p>
 <p>At first I got about 27% more deaths in ages 65+ than Kremer but only about 4% more reports. Then I realized it was probably because I counted reports where the <code>DIED</code> column had the value <code>Y</code> as deaths, but Kremer might have only counted reports where the fields for the symptoms included death (which also gave me about 18% fewer deaths in ages 65+ for Moderna and Pfizer combined):</p>
 <pre>&gt; va=do.call(rbind,lapply(2020:2024,\(i)fread(paste0(i,&quot;VAERSDATA.csv&quot;))))
 &gt; va=merge(va,do.call(rbind,lapply(2020:2024,\(i)fread(paste0(i,&quot;VAERSVAX.csv&quot;)))))
@@ -2970,6 +2968,158 @@ o[,crude:=reports/doses*1e6][order(-doses)]|&gt;print(r=F)</pre>
               JANSSEN   73454        18.101
  UNKNOWN MANUFACTURER    7363        27.774
               NOVAVAX     492         3.862</pre>
+<p>I also tried downloading the raw EudraVigilance data from here: <a href="https://howbad.info">https://howbad.info</a> (direct link <a href="https://www.dropbox.com/scl/fi/mrzkrrg5391kevsrwex0e/eudra-vigilance3.zip?rlkey=eqg628elz9lqufpehh2ni3o9w">https://www.dropbox.com/scl/fi/mrzkrrg5391kevsrwex0e/eudra-vigilance3.zip?rlkey=eqg628elz9lqufpehh2ni3o9w</a>). I ran this code to get the number of deaths and reports grouped by age, date, and manufacturer:</p>
+<pre>awk -F\\t &#39;{sub(&quot; .*&quot;,&quot;&quot;,$3);sub(&quot;More than 85 Years&quot;,85,$7);sub(&quot;Not Specified&quot;,&quot;&quot;,$7);sub(&quot;[- ].*&quot;,&quot;&quot;,$7);x=&quot;&quot;}$12~/SPIKEVAX|MODERNA/{x=&quot;Moderna&quot;}$12~/COMIRNATY|TOZINAMERAN/{x=&quot;Pfizer&quot;}$12~/COVID-19 VACCINE ASTRAZENECA|VAXZEVRIA/{x=&quot;AstraZeneca&quot;}$12~/COVID-19 VACCINE JANSSEN|JCOVDEN/{x=&quot;Janssen&quot;}x{k=$3&quot;,&quot;x&quot;,&quot;$7;a[k]++;dead[k]+=$11~/Fatal - Results in Death/}END{for(i in a)print i&quot;,&quot;a[i]&quot;,&quot;dead[i]}&#39; eudra-vigilance3/*|(echo date,type,age,reports,dead;sort -nk3|sort -sk2,2|sort -sk1,1)&gt;eudra.csv</pre>
+<p>However in the EudraVigilance data Moderna got a higher rate of deaths per reports than Pfizer in all age groups:</p>
+<pre>eu=fread(&quot;http://sars2.net/f/eudra.csv&quot;)
+
+eu=eu[,.(reports=sum(reports),dead=sum(dead)),.(age=ifelse(age&lt;10,0,age),type)][order(age)]
+eu=rbind(eu,eu[,.(reports=sum(reports),dead=sum(dead),age=&quot;Total&quot;),type])
+
+o=eu[type==&quot;Moderna&quot;,.(age,Moderna_dead=dead,Moderna_reports=reports)]
+o=cbind(o,eu[type==&quot;Pfizer&quot;,.(Pfizer_dead=dead,Pfizer_reports=reports)])
+o$Moderna_rate=o[,2]/o[,3]*1e6
+o$Pfizer_rate=o[,4]/o[,5]*1e6
+o$Moderna_Pfizer_ratio=o[,6]/o[,7]
+o</pre>
+<table>
+<tr><th>
+Age
+</th><th>
+Moderna<br>dead
+</th><th>
+Moderna<br>reports
+</th><th>
+Pfizer<br>dead
+</th><th>
+Pfizer<br>reports
+</th><th>
+Moderna<br>rate
+</th><th>
+Pfizer<br>rate
+</th><th>
+Moderna-Pfizer<br>ratio
+</th></tr>
+<tr><td>
+0
+</td><td>
+13
+</td><td>
+511
+</td><td>
+74
+</td><td>
+6436
+</td><td>
+25440
+</td><td>
+11498
+</td><td>
+2.21
+</td></tr>
+<tr><td>
+12
+</td><td>
+26
+</td><td>
+2553
+</td><td>
+158
+</td><td>
+30958
+</td><td>
+10184
+</td><td>
+5104
+</td><td>
+2.00
+</td></tr>
+<tr><td>
+18
+</td><td>
+1832
+</td><td>
+292765
+</td><td>
+3034
+</td><td>
+920149
+</td><td>
+6258
+</td><td>
+3297
+</td><td>
+1.90
+</td></tr>
+<tr><td>
+65
+</td><td>
+3139
+</td><td>
+53245
+</td><td>
+5937
+</td><td>
+152645
+</td><td>
+58954
+</td><td>
+38894
+</td><td>
+1.52
+</td></tr>
+<tr><td>
+85
+</td><td>
+1367
+</td><td>
+6259
+</td><td>
+4104
+</td><td>
+26633
+</td><td>
+218405
+</td><td>
+154095
+</td><td>
+1.42
+</td></tr>
+<tr><td>
+NA
+</td><td>
+280
+</td><td>
+16845
+</td><td>
+1098
+</td><td>
+74500
+</td><td>
+16622
+</td><td>
+14738
+</td><td>
+1.13
+</td></tr>
+<tr><td>
+Total
+</td><td>
+6657
+</td><td>
+372178
+</td><td>
+14405
+</td><td>
+1211321
+</td><td>
+17887
+</td><td>
+11892
+</td><td>
+1.50
+</td></tr>
+</table>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
