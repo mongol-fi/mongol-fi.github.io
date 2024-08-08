@@ -619,10 +619,12 @@ Total
 </div>
 <pre>library(data.table)
 
-kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;x[]=ifelse(abs(x)&lt;1e3,round(x),paste0(sprintf(paste0(&quot;%.&quot;,ifelse(e%%3==0,1,0),&quot;f&quot;),x/1e3^(e2-1)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2]));x}
+kimi=\(x){na=is.na(x);x[na]=0;e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;x[]=ifelse(abs(x)&lt;1e3,round(x),paste0(sprintf(paste0(&quot;%.&quot;,ifelse(e%%3==0,1,0),&quot;f&quot;),x/1e3^(e2-1)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2]));x[na]=&quot;NA&quot;;x}
 
 owid=fread(&quot;https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/vaccinations/vaccinations-by-manufacturer.csv&quot;)
-owid=unique(owid[order(-date)],by=&quot;location&quot;)[,.(country=location,doses=total_vaccinations,type=vaccine)]
+owid=unique(owid[order(-date)],by=c(&quot;location&quot;,&quot;vaccine&quot;))
+owid=owid[,.(country=location,doses=total_vaccinations,type=vaccine)]
+
 owid$type[owid$type==&quot;Pfizer/BioNTech&quot;]=&quot;Pfizer&quot;
 owid$type[owid$type==&quot;Oxford/AstraZeneca&quot;]=&quot;AstraZeneca&quot;
 owid$type[owid$type==&quot;Johnson&amp;Johnson&quot;]=&quot;Janssen&quot;
@@ -631,14 +633,15 @@ eu=fread(&quot;http://sars2.net/f/eudracountry.csv&quot;)
 eu$country[eu$country==&quot;Czech Republic&quot;]=&quot;Czechia&quot;
 
 me=merge(eu,owid)
+
 me[,country:=factor(country,me[,.(sum(doses)),country][order(-V1),country])]
 me[,type:=factor(type,me[,.(sum(doses)),type][order(-V1),type])]
+
 me=rbind(me,me[,.(reports=sum(reports),doses=sum(doses),country=&quot;Total&quot;),type])
 me=rbind(me,me[,.(reports=sum(reports),doses=sum(doses),type=&quot;Total&quot;),country])
 
-m=me[doses&gt;0,xtabs(reports/doses*1e6~country+type)]
-disp=kimi(m);exp=.7;maxcolor=2e4
-hide=m&gt;1e6;m[hide]=disp[hide]=NA
+m=me[,tapply(reports/doses*1e4,.(country,type),c)]
+m[is.infinite(m)]=NA;disp=kimi(m);exp=.7;maxcolor=200
 pal=hsv(c(21,21,21,16,11,6,3,0,0,0)/36,c(0,.25,rep(.5,8)),c(rep(1,8),.5,0))
 
 pheatmap::pheatmap(m^exp,filename=&quot;i1.png&quot;,display_numbers=disp,
@@ -661,7 +664,7 @@ pheatmap::pheatmap(m^exp,filename=&quot;i2.png&quot;,display_numbers=disp,
   breaks=seq(0,maxcolor^exp,,256),
   colorRampPalette(pal)(256))
 
-cap=&quot;Number of adverse event reports at EudraVigilance per million doses administered at OWID. The right side shows the number of doses administered. Source: adrreports.eu/en/search_subst.html (letter C, links for COVID vaccines), ourworldindata.org/grapher/covid-vaccine-doses-by-manufacturer (download CSV data).&quot;
+cap=&quot;Number of adverse event reports at EudraVigilance per 10,000 doses administered at OWID. The right side shows the number of doses administered. Source: adrreports.eu/en/search_subst.html (letter C, links for COVID vaccines), ourworldindata.org/grapher/covid-vaccine-doses-by-manufacturer (download CSV data).&quot;
 system(paste0(&quot;magick \\( i1.png -gravity east -chop 10x \\) \\( i2.png -gravity west -chop 10x \\) +append 0.png;w=`identify -format %w 0.png`;pad=20;magick -pointsize 42 -interline-spacing -2 -font Arial \\( -size $[w-pad*2]x caption:&#39;&quot;,cap,&quot;&#39; -splice $[pad]x20 \\) 0.png -append 1.png&quot;))</pre>
 <p>However this analysis was not adjusted for age. In VAERS reports most EEA countries have a higher average age for Moderna than Pfizer, even though in most countries the difference isn't as big as in the Czech Republic:</p>
 <pre>va=fread(&quot;AllVAERSDataCSVS/NonDomesticVAERSDATA.csv&quot;)
