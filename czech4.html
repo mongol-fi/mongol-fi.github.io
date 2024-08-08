@@ -608,12 +608,82 @@ Total
 1.50
 </td></tr>
 </table>
+<p>This plot also shows that there's a lot of variance in the <span class="quote">&quot;proportional rate ratio&quot;</span> across European countries (even if you only look at the sums for all age groups and you look at the countries at the top of the plot with the highest number of reports):</p>
+<div class="width8">
+<img src="i/czech-kremer-eea.png">
+</div>
+<pre>library(data.table)
+
+kimi=\(x){na=is.na(x);x[na]=0;e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;x[]=ifelse(abs(x)&lt;1e3,round(x),paste0(sprintf(paste0(&quot;%.&quot;,ifelse(e%%3==0,1,0),&quot;f&quot;),x/1e3^(e2-1)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2]));x[na]=&quot;NA&quot;;x}
+
+agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
+
+iso2=fread(&quot;https://raw.githubusercontent.com/lukes/ISO-3166-Countries-with-Regional-Codes/master/all/all.csv&quot;)
+iso2=setNames(iso2$name,iso2$`alpha-2`)
+iso2[&quot;NL&quot;]=&quot;Netherlands&quot;
+
+va=fread(&quot;AllVAERSDataCSVS/NonDomesticVAERSDATA.csv&quot;)
+va=merge(va,fread(&quot;AllVAERSDataCSVS/NonDomesticVAERSVAX.csv&quot;))
+symp=fread(&quot;AllVAERSDataCSVS/NonDomesticVAERSSYMPTOMS.csv&quot;)
+
+va$dead=va$VAERS_ID%in%symp$VAERS_ID[rowSums(symp[,c(1:5*2)]==&quot;Death&quot;)==1]
+va[,country:=substr(SPLTTYPE,1,2)]
+eea=strsplit(&quot;AT BE BG HR CY CZ DK EE FI FR DE GR HU IE IT LV LT LU MT NL PL PT RO SK SI ES SE IS LI NO&quot;,&quot; &quot;)[[1]]
+va=va[VAX_TYPE==&quot;COVID19&quot;&amp;country%in%eea]
+
+ages=c(0,40,60,80)
+vae=va[,.(dead=sum(dead),reports=.N),.(type=VAX_MANU,country=iso2[country],age=agecut(AGE_YRS,ages))]
+vae[is.na(age),age:=&quot;Missing&quot;]
+vae=vae[country%in%vae[,sum(reports),country][V1&gt;=5e3,country]]
+
+vae[,country:=factor(country,vae[,sum(reports),country][order(-V1),country])]
+vae[,type:=factor(type,vae[,sum(reports),type][order(-V1),type])]
+vae=rbind(vae,vae[,.(dead=sum(dead),reports=sum(reports),age=&quot;Total&quot;),.(type,country)])
+vae=rbind(vae,vae[,.(dead=sum(dead),reports=sum(reports),country=&quot;Total&quot;),.(type,age)])
+
+a=vae[,tapply(dead/reports*1e5,.(type,country,age),c)]
+
+type1=&quot;MODERNA&quot;;type2=&quot;PFIZER\\BIONTECH&quot;
+m1=a[type1,,];m2=a[type2,,];m=(m1-m2)/ifelse(m1&gt;m2,m2,m1)
+disp=m1/m2;disp[]=sprintf(&quot;%.*f&quot;,ifelse(!is.na(disp)&amp;disp&gt;=10,1,2),disp);disp[is.na(m)]=&quot;NA&quot;
+maxcolor=10
+zero=m1&gt;0&amp;m2==0;m[zero]=-maxcolor;disp[zero]=&quot;0.00&quot;
+inf=m1==0&amp;m2&gt;0;m[inf]=maxcolor;disp[inf]=&quot;Inf&quot;
+
+pal=hsv(rep(c(7/12,0),4:5),c(.9,.75,.6,.3,0,.3,.6,.75,.9),c(.4,.65,1,1,1,1,1,.65,.4))
+
+pheatmap::pheatmap(m,filename=&quot;i1.png&quot;,display_numbers=disp,
+  gaps_col=ncol(m)-1,gaps_row=nrow(m)-1,cluster_rows=F,cluster_cols=F,legend=F,
+  cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,border_color=NA,na_col=&quot;gray90&quot;,
+  number_color=ifelse(!is.na(m)&amp;abs(m)&gt;.5*maxcolor,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(-maxcolor,maxcolor,,256),colorRampPalette(pal)(256))
+
+mpop=vae[type%in%c(type1,type2),xtabs(reports~country+age)]
+exp2=.6;maxcolor2=max(mpop[-nrow(mpop),-ncol(mpop)])
+
+pheatmap::pheatmap(mpop^exp2,filename=&quot;i2.png&quot;,display_numbers=kimi(mpop),
+  gaps_row=nrow(m)-1,gaps_col=ncol(m)-1,cluster_rows=F,cluster_cols=F,legend=F,
+  cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,border_color=NA,na_col=&quot;white&quot;,
+  number_color=ifelse(mpop^exp2&gt;maxcolor2^exp2*.45,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(0,maxcolor2^exp2,,256),sapply(seq(1,0,,256),\(i)rgb(i,i,i)))
+
+mdead=vae[type%in%c(type1,type2),xtabs(dead~country+age)]
+exp3=.6;maxcolor3=max(mdead[-nrow(mdead),-ncol(mdead)])
+
+pheatmap::pheatmap(mdead^exp3,filename=&quot;i3.png&quot;,display_numbers=kimi(mdead),
+  gaps_row=nrow(m)-1,gaps_col=ncol(m)-1,cluster_rows=F,cluster_cols=F,legend=F,
+  cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,border_color=NA,na_col=&quot;white&quot;,
+  number_color=ifelse(mdead^exp3&gt;maxcolor3^exp3*.45,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(0,maxcolor3^exp3,,256),sapply(seq(1,0,,256),\(i)rgb(i,i,i)))
+
+cap=&quot;VAERS reports in EEA up to November 2022: Ratio of deaths per reports for Moderna divided by Pfizer. For example 2.0 means that the ratio of deaths per reports was twice as high for Moderna as Pfizer. Only countries with at least 5,000 total reports were included. An old snapshot of VAERS data where country codes had not been removed was downloaded from here: vaersaware.com/post/vaers-nov-11th-downloadable-files.&quot;
+system(paste0(&quot;pad=20;pad2=30;w=`identify -format %w i1.png`;magick -font Arial-Bold -pointsize 42 -size $[w-pad*2]x \\( caption:&#39;Moderna-Pfizer ratio&#39; -splice $[pad]x20 i1.png -append \\) \\( caption:&#39;Reports for Pfizer and Moderna&#39; -splice $[pad]x20 i2.png -append \\) \\( caption:&#39;Deaths for Pfizer and Moderna&#39; -splice $[pad]x20 i3.png -append \\) -shave 14x +append -trim -bordercolor white -border $pad2 0.png;w=`identify -format %w 0.png`;magick -pointsize 42 -font Arial -interline-spacing -2 \\( -size $[w-pad2*2]x caption:&#39;&quot;,cap,&quot;&#39; -splice $[pad2]x24 \\) 0.png -append 1.png&quot;))</pre>
 <h2>
 <a href=#Adverse_event_reports_by_country_at_EudraVigilance id=Adverse_event_reports_by_country_at_EudraVigilance>Adverse event reports by country at EudraVigilance</a>
 </h2>
-<p>The raw data for EudraVigilance that can be downloaded from howbad.info doesn't show the country of the reports. But you can see the number of reports for each country from the EMA portal for EudraVigilance, if you go here, click <span class="quote">&quot;C&quot;</span>, scroll to COVID vaccines, open the page for one vaccine, and click <span class="quote">&quot;Number of Individual Cases by EEA countries&quot;</span>: <a href="https://www.adrreports.eu/en/search_subst.html">https://www.adrreports.eu/en/search_subst.html</a>. I collected the data into this CSV file (as of August 8th 2024 UTC): <a href=f/eudracountry.csv>f/eudracountry.csv</a>. However I didn't find a way to get the number of deaths or serious reports grouped by both country and manufacturer.</p>
-<p>I got the number of doses administered by manufacturer and country from OWID: <a href="https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/vaccinations/vaccinations-by-manufacturer.csv">https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/vaccinations/vaccinations-by-manufacturer.csv</a>. (The same data can also downloaded in a slightly different CSV format from here: <a href="https://ourworldindata.org/grapher/covid-vaccine-doses-by-manufacturer">https://ourworldindata.org/grapher/covid-vaccine-doses-by-manufacturer</a>.)</p>
-<p>In most countries Moderna got a higher rate of reports per doses than Pfizer, but exceptions to the pattern are Italy, Netherlands, and Portugal, and a few small countries which have a small sample size:</p>
+<p>The raw data for EudraVigilance that can be downloaded from howbad.info doesn't show the country of the reports. But you can see the number of reports for each country from EMA's portal for EudraVigilance, if you go here, click <span class="quote">&quot;C&quot;</span>, scroll to COVID vaccines, open the page for one vaccine, and click <span class="quote">&quot;Number of Individual Cases by EEA countries&quot;</span>: <a href="https://www.adrreports.eu/en/search_subst.html">https://www.adrreports.eu/en/search_subst.html</a>. I collected the data into this CSV file on August 8th 2024 UTC: <a href=f/eudracountry.csv>f/eudracountry.csv</a>. However I didn't find a way to get the number of deaths or serious reports grouped by both country and manufacturer.</p>
+<p>I got the number of doses administered by manufacturer and country from OWID: <a href="https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/vaccinations/vaccinations-by-manufacturer.csv">https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/vaccinations/vaccinations-by-manufacturer.csv</a>. OWID was missing data for Greece and UK, and I excluded Iceland because it was missing most administered doses at OWID.</p>
+<p>In most countries Moderna got a higher rate of reports per doses than Pfizer, except for Italy, Netherlands, Portugal, and a few small countries that have a small sample size:</p>
 <div class="width5">
 <img src="i/czech-eudracountry.png">
 </div>
@@ -632,7 +702,7 @@ owid$type[owid$type==&quot;Johnson&amp;Johnson&quot;]=&quot;Janssen&quot;
 eu=fread(&quot;http://sars2.net/f/eudracountry.csv&quot;)
 eu$country[eu$country==&quot;Czech Republic&quot;]=&quot;Czechia&quot;
 
-me=merge(eu,owid)
+me=merge(eu,owid)[country!=&quot;Iceland&quot;]
 
 me[,country:=factor(country,me[,.(sum(doses)),country][order(-V1),country])]
 me[,type:=factor(type,me[,.(sum(doses)),type][order(-V1),type])]
@@ -666,7 +736,7 @@ pheatmap::pheatmap(m^exp,filename=&quot;i2.png&quot;,display_numbers=disp,
 
 cap=&quot;Number of adverse event reports at EudraVigilance per 10,000 doses administered at OWID. The right side shows the number of doses administered. Source: adrreports.eu/en/search_subst.html (letter C, links for COVID vaccines), ourworldindata.org/grapher/covid-vaccine-doses-by-manufacturer (download CSV data).&quot;
 system(paste0(&quot;magick \\( i1.png -gravity east -chop 10x \\) \\( i2.png -gravity west -chop 10x \\) +append 0.png;w=`identify -format %w 0.png`;pad=20;magick -pointsize 42 -interline-spacing -2 -font Arial \\( -size $[w-pad*2]x caption:&#39;&quot;,cap,&quot;&#39; -splice $[pad]x20 \\) 0.png -append 1.png&quot;))</pre>
-<p>However this analysis was not adjusted for age. In VAERS reports most EEA countries have a higher average age for Moderna than Pfizer, even though in most countries the difference isn't as big as in the Czech Republic:</p>
+<p>However this analysis was not adjusted for age. In the VAERS reports that are not missing the age field, most EEA countries have a higher average age for Moderna than Pfizer, even though in most countries the difference isn't as big as in the Czech Republic:</p>
 <pre>va=fread(&quot;AllVAERSDataCSVS/NonDomesticVAERSDATA.csv&quot;)
 va=merge(va,fread(&quot;AllVAERSDataCSVS/NonDomesticVAERSVAX.csv&quot;))
 
@@ -678,7 +748,6 @@ o=merge(o,vae[type==&quot;PFIZER\\BIONTECH&quot;,.(country,Pfizer_age=age,Pfizer
 o$diff=o[,2]-o[,4]
 
 o=o[country%in%strsplit(&quot;AT BE BG HR CY CZ DK EE FI FR DE GR HU IE IT LV LT LU MT NL PL PT RO SK SI ES SE IS LI NO&quot;,&quot; &quot;)[[1]]]
-
 o[order(-Pfizer_N)][,c(1,2,4,6,3,5)]|&gt;mutate_if(is.double,round,1)|&gt;print(r=F)</pre>
 <!-- -->
 <pre> country Moderna_age Pfizer_age  diff Moderna_N Pfizer_N
