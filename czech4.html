@@ -18,7 +18,7 @@ table{border-collapse:collapse}
 td,th{border:1px solid #555;padding:2px 4px}
 th{background:#444;text-align:left;font-weight:bold}
 img{max-width:100%}
-blockquote{margin-left:40px;margin-right:0}
+blockquote{margin-left:0px;padding-left:40px;margin-right:0;width:calc(min(50vw - 270px, 100vw - 1100px) - 46px)}
 blockquote p{max-width:480px}
 blockquote blockquote p{max-width:440px}
 blockquote blockquote blockquote p{max-width:400px}
@@ -41,6 +41,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 .width14,.width0{max-width:1400px}
 .width00{margin-left:calc(-1 * max(0px, min(50vw - 270px, 100vw - 1100px)) + 6px)}
 .width00 img,.width0 img{margin:0 -1.5px -1.5px 0;vertical-align:bottom}
+.blockimg{max-width:calc(100vw - min(50vw - 270px, 100vw - 1100px) - 40px - 6px)}
 @media print{
   body{background:white;color:black;margin:0px;zoom:.75;print-color-adjust:exact;-webkit-print-color-adjust:exact}
   a{color:#0000EE}a:visited{color:#551A8B}
@@ -62,6 +63,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Types_of_vaccination_sites>Types of vaccination sites</a></li>
 <li><a href=#Ratio_of_deaths_per_adverse_event_reports_in_VAERS_calculated_by_Hans_Joachim_Kremer>Ratio of deaths per adverse event reports in VAERS calculated by Hans-Joachim Kremer</a></li>
 <li><a href=#Adverse_event_reports_by_country_at_EudraVigilance>Adverse event reports by country at EudraVigilance</a></li>
+<li><a href=#ASMR_when_people_are_classified_as_unvaccinated_until_three_weeks_from_vaccination>ASMR when people are classified as unvaccinated until three weeks from vaccination</a></li>
 </ul>
 
 <h2>
@@ -782,6 +784,71 @@ o[order(-Pfizer_N)][,c(1,2,4,6,3,5)]|&gt;mutate_if(is.double,round,1)|&gt;print(
       MT        43.2       50.9  -7.7        23      137
       LI        44.0       72.0 -28.0         2        5
  country Moderna_age Pfizer_age  diff Moderna_N Pfizer_N</pre>
+<h2>
+<a href=#ASMR_when_people_are_classified_as_unvaccinated_until_three_weeks_from_vaccination id=ASMR_when_people_are_classified_as_unvaccinated_until_three_weeks_from_vaccination>ASMR when people are classified as unvaccinated until three weeks from vaccination</a>
+</h2>
+<p>In February 2024 the Dutch Central Bureau of Statistics published a dataset for COVID and non-COVID ASMR by vaccination status: <a href="https://www.cbs.nl/nl-nl/longread/rapportages/2024/covid-vaccinatiestatus-en-sterfte/3-resultaten">https://www.cbs.nl/nl-nl/longread/rapportages/2024/covid-vaccinatiestatus-en-sterfte/3-resultaten</a>.</p>
+<p>They included one set of data where people were classified as vaccinated immediately after the first dose, and another set of data where people were generall yonly classified as vaccinated 2 weeks after the second dose (or 4 weeks after the first dose in the case of vaccine brands like Johnson &amp; Johnson which had only one primary course dose).</p>
+<p>The classification delay actually gave a big advantage to unvaccinated people during the main rollout of the primary course doses from March to July 2021, so that it reduced unvaccinated ASMR. In January and February 2021 the classification delay gave an advantage to vaccinated people because vulnerable groups of people were priorized during early rollout, but there were so few people had been vaccinated in the first two months of 2021 that they don't have much impact on the total ASMR of vaccinated people:</p>
+<div class="width7">
+<img src="i/czech-cheap-1.png">
+</div>
+<p>Similarly in the Czech record-level data when I classified people as unvaccinated until 3 weeks from the first dose, it reduced the ASMR of unvaccinated people and increased the ASMR of vaccinated people:</p>
+<div class="width7">
+<img src="i/czech-cheap-2.png">
+</div>
+<pre>library(data.table);library(ggplot2)
+
+b=fread(&quot;http://sars2.net/f/czbucketskeep.csv.gz&quot;)[dose&lt;=1]
+std=fread(&quot;http://sars2.net/f/czcensus2021pop.csv&quot;)[,.(std=sum(pop)),.(age=pmin(age,95)%/%5*5)][,std:=std/sum(std)]
+
+p=copy(b)[,dose:=ifelse(dose==1,&quot;Vaccinated&quot;,&quot;Unvaccinated&quot;)]
+p=rbind(p,copy(b)[week&lt;3,dose:=0][,dose:=ifelse(dose==1,&quot;Vaccinated at least 21 days ago&quot;,&quot;Unvaccinated or vaccinated less than 21 days ago&quot;)])
+
+p=p[,.(cmr=sum(dead)/sum(alive)*365e5),.(dose,age=pmin(age,95)%/%5*5,month)]
+p=merge(std,p)[,.(asmr=sum(cmr*std)),.(dose,month)]
+p[,dose:=factor(dose,unique(dose))]
+
+p[,month:=as.Date(paste0(month,&quot;-1&quot;))]
+xstart=as.Date(&quot;2020-12-1&quot;);xend=as.Date(&quot;2023-1-1&quot;)
+p=p[month&gt;=xstart&amp;month&lt;=xend]
+
+xbreak=seq(as.Date(&quot;2021-1-1&quot;),xend,&quot;6 month&quot;);xlab=c(rbind(&quot;&quot;,2021:2022),&quot;&quot;)
+ystep=500;ystart=0;yend=max(p$asmr,na.rm=T);ybreak=seq(ystart,yend,ystep)
+
+color=c(hcl(c(210,0)+15,130,60),hcl(c(210,0)+15,80,40))
+
+label=data.frame(x=xstart+.98*(xend-xstart),y=seq(.94*yend,,yend/-14,nlevels(p$dose)),label=levels(p$dose))
+
+sub=&quot;The unit on the y-axis is deaths per 100,000 person-years. The standard population is the 2021 census population by 5-year age groups.&quot;|&gt;stringr::str_wrap(90)
+
+ggplot(p,aes(x=month+15,y=asmr))+
+geom_hline(yintercept=seq(ystart,yend,ystep),linewidth=.3,color=&quot;gray84&quot;)+
+geom_vline(xintercept=seq(as.Date(&quot;2021-1-1&quot;),as.Date(&quot;2023-1-1&quot;),&quot;3 month&quot;),linewidth=.3,color=&quot;gray84&quot;)+
+geom_vline(xintercept=seq(as.Date(&quot;2021-1-1&quot;),as.Date(&quot;2023-1-1&quot;),&quot;year&quot;),linewidth=.3)+
+geom_vline(xintercept=c(xstart,xend),linewidth=.3,lineend=&quot;square&quot;)+
+geom_hline(yintercept=c(ystart,yend),linewidth=.3,lineend=&quot;square&quot;)+
+geom_line(aes(color=dose),linewidth=.4)+
+geom_point(aes(color=dose),size=.6)+
+geom_label(data=label,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.85),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.04,&quot;lines&quot;),label.size=0,size=2.75,hjust=1,color=color)+
+labs(x=NULL,y=NULL,title=&quot;Czech record-level data: All-cause ASMR by vaccination status&quot;,subtitle=sub)+
+scale_x_date(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,labels=\(x)ifelse(x&lt;1000,x,paste0(x/1e3,&quot;k&quot;)))+
+scale_color_manual(values=color)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.ticks=element_line(linewidth=.3),
+  axis.ticks.x=element_line(color=alpha(&quot;black&quot;,c(1,0))),
+  axis.ticks.length=unit(3,&quot;pt&quot;),
+  axis.title=element_text(size=8),
+  legend.position=&quot;none&quot;,
+  panel.background=element_blank(),
+  panel.grid=element_blank(),
+  plot.subtitle=element_text(size=6.8,margin=margin(,,5)),
+  plot.title=element_text(size=7.5,face=&quot;bold&quot;,margin=margin(2,,4)),
+  plot.margin=margin(4,5,4,4))
+ggsave(&quot;1.png&quot;,width=4.3,height=2.8,dpi=350*4)
+system(&quot;mogrify -resize 25% 1.png&quot;)</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
