@@ -2076,11 +2076,11 @@ system(paste0(&quot;w=`identify -format %w 0.png`;pad=20;magick -pointsize 42 -i
 <div class="width3">
 <img src="i/statistic-kirsch-cataract-3.jpg">
 </div>
-<p>From the sheet for the 4-letter codes in the spreadsheet titled <span class="quote">&quot;Hospital Admitted Patient Care Activity, 2022-23: Diagnosis&quot;</span>, you can that H28.0 (diabetic cataract) accounted for virtually all primary H28 diagnoses:</p>
+<p>From the sheet for the 4-letter codes in the spreadsheet titled <span class="quote">&quot;Hospital Admitted Patient Care Activity, 2022-23: Diagnosis&quot;</span>, you can that there are three subcodes under H28. Out of 15,528 finished consultant episodes with the primary diagnosis H28, diabetic cataract (H28.0) accounted for 15,516 episodes, and the other two codes accounted for only 12 episodes combined:</p>
 <div class="width6">
 <img src="i/statistic-kirsch-cataract-4.jpg">
 </div>
-<p>A reason why diagnoses for cataracts have increased might also be because more people decided to get diagnosed in order to get a cataract surgery, and not necessarily because the prevalence of cataracts has increased. A Guardian article from 2024 said that there has been a boom in cataract surgeries in recent years: [<a href="https://www.theguardian.com/society/article/2024/jun/16/boom-in-cataract-surgery-in-england-as-private-clinics-eye-huge-profits">https://www.theguardian.com/society/article/2024/jun/16/boom-in-cataract-surgery-in-england-as-private-clinics-eye-huge-profits</a>]</p>
+<p>A reason why diagnoses for cataracts have increased might be because more people decided to get diagnosed in order to get a cataract surgery, and not necessarily because the prevalence of cataracts has increased. A Guardian article from 2024 said that there has been a boom in cataract surgeries in the past few years: [<a href="https://www.theguardian.com/society/article/2024/jun/16/boom-in-cataract-surgery-in-england-as-private-clinics-eye-huge-profits">https://www.theguardian.com/society/article/2024/jun/16/boom-in-cataract-surgery-in-england-as-private-clinics-eye-huge-profits</a>]</p>
 <blockquote>
 <p>Hundreds of thousands more NHS patients a year are having cataracts removed in England in a boom driven by private clinics - but funded by taxpayers.</p>
 <p>Doctors say the trend, which now means nearly 60% of NHS cataract operations are outsourced to private providers - up from 24% five years ago - is piling pressure on already stretched NHS finances and sapping the funds needed for more serious conditions that can lead to blindness.</p>
@@ -2094,7 +2094,7 @@ system(paste0(&quot;w=`identify -format %w 0.png`;pad=20;magick -pointsize 42 -i
 <p><span class="quote">&quot;Free NHS cataract surgery in four weeks.&quot;</span> This tempting offer appears on Google when you search for SpaMedica, the biggest private provider of cataract surgery to the health service. It advises patients to ask their optician or GP to refer them for treatment at a hospital of their choice and says they should hear back within two to three weeks.</p>
 <p>The top five companies providing cataract surgery to the NHS have opened 101 new eye clinics between them over the past five years, taking the total to 126 in England. In 2022, they collectively made pretax profits of more than £100m, according to figures filed at Companies House, with SpaMedica earning £72m.</p>
 </blockquote>
-<p>The reason why diagnoses for diabetic cataract (H28.0) suddenly skyrocketed in the financial year 2022-2023 might be if NHS provided a higher payment for diabetic cataract surgeries. The Guardian article said that the NHS coding system allowed private providers of cataract surgeries to claim a higher payment in cases where the patient had comorbidities, and that NHS had to change the payment scheme in 2024 due to widespread abuse:</p>
+<p>The reason why diagnoses for diabetic cataracts (H28.0) suddenly skyrocketed in the financial year 2022-2023 might be if NHS provided a higher payment for diabetic cataract surgeries than other cataract surgeries. The Guardian article said that the NHS coding system allowed private providers of cataract surgeries to claim a higher payment in cases where the patient had comorbidities, and that NHS had to change the payment scheme in 2024 due to widespread abuse:</p>
 <blockquote>
 <p>NHS England has recently taken private contractors to task over a marked increase in <span class="quote">&quot;complex&quot;</span> cataract procedures, for which the charges were as much as £400 higher. Complex cases have risen 144% in five years and the CHPI estimates this has cost the NHS £29m extra over the last two years alone.</p>
 <p>An NHS England consultation raised concerns about the rise in December 2022, saying it could not be explained by changes in patient complexity. In an official response to the consultation the following month, the royal college suggested the increase could be down to a practice known as <span class="quote">&quot;upcoding&quot;</span>.</p>
@@ -2103,6 +2103,33 @@ system(paste0(&quot;w=`identify -format %w 0.png`;pad=20;magick -pointsize 42 -i
 <p>Hare of the IHPN said: <span class="quote">&quot;Robust checks, including external audits, are in place and local NHS integrated care systems, who commission healthcare activity, work closely with providers to ensure that coding is accurate.&quot;</span></p>
 <p>NHS England changed the tariffs in April this year so there is only a £30 difference between routine and complex cataract treatments - £868 for a routine operation and £898 for a complex cataract.</p>
 </blockquote>
+<p>Relative to the average of the business years starting in 2015 to 2019, the average number of diagnoses in the business years starting in 2021 and 2022 was about 300% higher for the diagnosis H26.8 (other specified cataract) and about 400% higher for H25.2 (senile cataract, morgagnian type):</p>
+<pre>r=do.call(rbind,lapply(2015:2022,\(i){
+  t=readxl::read_excel(Sys.glob(paste0(&quot;hosp-epis-stat-admi-diag-&quot;,i,&quot;*&quot;)),sheet=4)
+  t=t[grep(&quot;^H2[568]&quot;,t[[1]]),]
+  data.table(code=t[[1]],name=t[[2]],year=i,count=as.numeric(t[[8]]))}))
+
+base=r[year&lt;2020,.(base=mean(count)),.(code,name)]
+me=merge(base,r[year&gt;2020,.(postvax=mean(count)),.(code,name)])
+me=me[,.(excesspct=(postvax/base-1)*100,postvax,base),.(name,code)][order(excesspct)]
+print(mutate_if(me,is.double,round),r=F)</pre>
+<!-- -->
+<pre>                                                            name  code excesspct postvax   base
+                                    Senile cataract, unspecified H25.9       -42   12538  21590
+                      Infantile, juvenile and presenile cataract H26.0       -28      82    114
+                                           Drug-induced cataract H26.3       -22      68     87
+                                           Cataract, unspecified H26.9       -15  166821 196133
+                                            Complicated cataract H26.2        -2     228    232
+                                              Traumatic cataract H26.1         6     474    446
+                 Cataract in other diseases classified elsewhere H28.2        12       6      6
+                                         Senile nuclear cataract H25.1        18  160459 136152
+                                       Senile incipient cataract H25.0        33   24143  18128
+ Cataract in other endocrine, nutritional and metabolic diseases H28.1        43       5      4
+                                                  After-cataract H26.4       118   37522  17202
+                                           Other senile cataract H25.8       187  103294  36012
+                                        Other specified cataract H26.8       315   72776  17546
+                                Senile cataract, morgagnian type H25.2       388     964    198
+                                               Diabetic cataract H28.0       924    8216    802</pre>
 <h2>
 <a href=#Pierre_Kory_Excess_deaths_in_young_age_groups_in_fall_of_2021 id=Pierre_Kory_Excess_deaths_in_young_age_groups_in_fall_of_2021>Pierre Kory: Excess deaths in young age groups in fall of 2021</a>
 </h2>
