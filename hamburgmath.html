@@ -105,6 +105,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Why_MEGAHIT_contigs_dont_include_the_full_33_base_poly_A_tail>Why MEGAHIT contigs don't include the full 33-base poly(A) tail</a></li>
 <li><a href=#FOIA_request_to_CDC>FOIA request to CDC</a></li>
 <li><a href=#Japanese_study_which_sequenced_the_ends_of_SARS_CoV_2_without_using_RACE>Japanese study which sequenced the ends of SARS-CoV-2 without using RACE</a></li>
+<li><a href=#Purpose_of_extra_3_5_bases_at_the_ends_of_reads>Purpose of extra 3-5 bases at the ends of reads</a></li>
 </ul></li>
 </ul>
 
@@ -1878,6 +1879,51 @@ awk &#39;$4==1&#39; DRR428582.sam|head|cut -f1,10|seqkit tab2fx|cat &lt;(seqkit 
 $ fmt=&#39;pident qcovs qlen qstart qend sstart send&#39;;samtools fasta DRR428582.sam|seqkit sort -lr|seqkit head -n1|blastn -db sars2.fa -outfmt &quot;6 $fmt&quot;|(echo $fmt;cat)|column -t
 pident  qcovs  qlen  qstart  qend  sstart  send
 89.885  98     8454  112     8402  21321   29890</pre>
+<h3>
+<a href=#Purpose_of_extra_3_5_bases_at_the_ends_of_reads id=Purpose_of_extra_3_5_bases_at_the_ends_of_reads>Purpose of extra 3-5 bases at the ends of reads</a>
+</h3>
+<p>One reason why USMortality says that the genome has not been validated is because when he aligns Wu et al.'s reads against Wuhan-Hu-1, he cannot find any read which has a perfect match to the 5' end, but there's always 3-5 extra bases at the start of reads that don't match Wuhan-Hu-1.</p>
+<p>McKernan explained the purpose of the bases in this tweet: [<a href="https://x.com/Kevin_McKernan/status/1674577464184512513">https://x.com/Kevin_McKernan/status/1674577464184512513</a>]</p>
+<blockquote>
+<p>Do you know what random priming means? It means the hexamer that primes the second strand synthesis, is 5'-NNNNNN-3OH. The kit uses a strand flipping enzyme which adds bases on the watson strand of the 5' end. These become adaptors.</p>
+<div class="width0">
+<img src=i/hamburgmath-randomprimer-1.png class=width6><img src=i/hamburgmath-randomprimer-2.jpg class=width6>
+</div>
+</blockquote>
+<p>McKernan's screenshots are from the manual of the Takara SMARTer Stranded Total RNA-Seq kit v.2 that was used by Wu et al. [<a href="https://www.takarabio.com/documents/User+Manual/SMARTer+Stranded+Total+RNA/SMARTer+Stranded+Total+RNA-Seq+Kit+v2+-+Pico+Input+Mammalian+User+Manual_050619.pdf">https://www.takarabio.com/documents/User+Manual/SMARTer+Stranded+Total+RNA/SMARTer+Stranded+Total+RNA-Seq+Kit+v2+-+Pico+Input+Mammalian+User+Manual_050619.pdf</a>]</p>
+<p>Actually the 5' template switching oligo is the key feature of the SMART method developed by Takara (and it's even where the name SMART comes from): [<a href="https://www.idtdna.com/pages/education/decoded/article/use-of-template-switching-oligos-%28ts-oligos-tsos%29-for-efficient-cdna-library-construction">https://www.idtdna.com/pages/education/decoded/article/use-of-template-switching-oligos-%28ts-oligos-tsos%29-for-efficient-cdna-library-construction</a>]</p>
+<div class="width7">
+<img src="i/hamburgmath-smart.jpg">
+</div>
+<p>When I asked ChatGPT <span class="quote">&quot;are template switching bases that end with ggg part of adapter or not&quot;</span>, it said:</p>
+<blockquote>
+<p>Template switching bases that end with <span class="quote">&quot;GGG&quot;</span> are typically part of the template-switching oligonucleotide (TSO), not the adapter.</p>
+<p>In template switching, an enzyme like reverse transcriptase adds several nucleotides to the 3' end of the cDNA, typically consisting of cytosines (CCC). The TSO, which usually contains a sequence starting with <span class="quote">&quot;GGG,&quot;</span> hybridizes to these cytosines, allowing the enzyme to continue synthesizing the cDNA. This <span class="quote">&quot;GGG&quot;</span> sequence is a crucial component of the TSO and not part of the adapter sequence.</p>
+<p>The adapter sequence, on the other hand, is usually added during a later stage of library preparation and is used for subsequent PCR amplification and sequencing. The adapter does not typically include the <span class="quote">&quot;GGG&quot;</span> sequence used for template switching.</p>
+</blockquote>
+<p>I wasn't sure what the difference between nontemplated bases and the G bases was, and I wasn't sure if the G bases are part of the TSO or not. But ChatGPT answered that the G bases are part of the TSO but the term <span class="quote">&quot;nontemplated bases&quot;</span> refers to the C bases that are added by reverse transcriptase and not to the G bases in the TSO:</p>
+<blockquote>
+<ol style="list-style-type: decimal">
+<li><strong>Non-Templated Bases</strong>:</li>
+</ol>
+<ul>
+<li>During reverse transcription, the reverse transcriptase enzyme sometimes adds a few non-templated cytosine bases (<span class="quote">&quot;C&quot;</span>) at the 3' end of the newly synthesized cDNA. This addition is a key part of the template-switching process.</li>
+</ul>
+<ol start="2" style="list-style-type: decimal">
+<li><strong>Template-Switching Oligonucleotide (TSO)</strong>:</li>
+</ol>
+<ul>
+<li>The TSO is a short synthetic sequence that contains a few guanine bases (<span class="quote">&quot;G&quot;</span>) at its 3' end. The <span class="quote">&quot;G&quot;</span> bases in the TSO are designed to pair with the non-templated <span class="quote">&quot;C&quot;</span> bases added to the cDNA.</li>
+<li>Once the non-templated <span class="quote">&quot;C&quot;</span> bases are added to the cDNA, the TSO anneals to these bases, allowing the reverse transcriptase to continue copying the TSO sequence into the cDNA.</li>
+</ul>
+<ol start="3" style="list-style-type: decimal">
+<li><strong>Sequence Incorporation</strong>:</li>
+</ol>
+<ul>
+<li>The non-templated <span class="quote">&quot;C&quot;</span> bases and the complementary <span class="quote">&quot;G&quot;</span> bases from the TSO are incorporated into the final cDNA product. As a result, the beginning of your cDNA (and subsequently your sequencing reads) will contain the TSO sequence, often preceded by these non-templated bases.</li>
+</ul>
+</blockquote>
+<p>When I asked ChatGPT how I can trim TSO sequences from the start of reads that consist of up to 5 bases and that usually end in a G base, it told me to use <code>fastp --trim_front1=5</code> (which is exactly what I did to get rid of the two extra G bases at the start of my MEGAHIT contig, even though I also trimmed 5 bases from the back end of reverse reads).</p>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
