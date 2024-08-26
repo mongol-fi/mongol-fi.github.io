@@ -73,7 +73,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Jikkyleaks_ASMR_in_people_with_two_doses_in_the_ONS_dataset>Jikkyleaks: ASMR in people with two doses in the ONS dataset</a></li>
 <li><a href=#Steve_Kirsch_Diagnoses_for_cataracts_in_England>Steve Kirsch: Diagnoses for cataracts in England</a></li>
 <li><a href=#Clare_Craig_Email_by_ONS_about_missing_vaccination_entries>Clare Craig: Email by ONS about missing vaccination entries</a></li>
-<li><a href=#Steve_Kirsch_Lancet_paper_about_excess_deaths_in_UK>Steve Kirsch: Lancet paper about excess deaths in UK</a></li>
+<li><a href=#Steve_Kirsch_Lancet_letter_which_said_there_was_about_8_excess_deaths_in_the_UK_in_2022_and_2023>Steve Kirsch: Lancet letter which said there was about 8% excess deaths in the UK in 2022 and 2023</a></li>
 </ul>
 
 <h2>
@@ -254,52 +254,55 @@ round(colSums(d[d$year%in%2016:2019,-1]))
 </div>
 <p>People were speculating that ONS adopted the new method of calculating the baseline in order to diminish the number of excess deaths caused by the vaccines. But my plot above shows that the new ONS baseline is likely far too low in the years 2021 and 2022, which would mean that it actually exaggerates excess deaths during the years when the most vaccines were given.</p>
 <p>Here's R code for generating the plot above:</p>
-<pre>download.file(&quot;https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/healthandsocialcare/causesofdeath/datasets/estimatingexcessdeathsintheukmethodologychanges/current/dataset20240220.xlsx&quot;,&quot;dataset20240220.xlsx&quot;)
+<pre>library(readxl);library(data.table);library(ggplot2)
 
-t=as.data.frame(readxl::read_excel(&quot;dataset20240220.xlsx&quot;,skip=4,sheet=5))
-t=t[t$Geography==&quot;England and Wales, including non-residents&quot;,]
-a=aggregate(list(dead=t$Death,pop=t$Pop),list(age=as.numeric(sub(&quot; .*&quot;,&quot;&quot;,sub(&quot;Less.*&quot;,0,t$Age))),year=t$Year),sum)
+download.file(&quot;https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/healthandsocialcare/causesofdeath/datasets/estimatingexcessdeathsintheukmethodologychanges/current/dataset20240220.xlsx&quot;,&quot;dataset20240220.xlsx&quot;)
 
-a$trend=c(t(sapply(split(a,a$age),\(x)lm(dead/pop~year,x[x$year%in%2010:2019,])|&gt;predict(list(year=unique(a$year))))))
+t=data.table(read_excel(&quot;dataset20240220.xlsx&quot;,skip=4,sheet=6))
+t=t[Geography==&quot;England and Wales, including non-residents&quot;]
+t[,pop:=`Population estimate`*lubridate::days_in_month(paste0(Year,&quot;-&quot;,match(Month,month.name),&quot;-1&quot;))]
+t[,age:=as.numeric(sub(&quot; .*&quot;,&quot;&quot;,sub(&quot;Less.*&quot;,0,`Age group`)))]
 
-d=aggregate(a[,&quot;dead&quot;,drop=F],a[,&quot;year&quot;,drop=F],sum)
+a=t[,.(dead=sum(`Death registrations`),pop=sum(pop)),.(age,year=Year)]
+years=unique(a$year)
+a=merge(a,a[year%in%2010:2019,.(year=years,base=predict(lm(dead/pop~year),.(year=years))),age])[,base:=base*pop]
+p=a[,.(dead=sum(dead),base=sum(base)),year]
 
-t4=as.data.frame(readxl::read_excel(&quot;dataset20240220.xlsx&quot;,skip=4,sheet=7))
-t4=t4[t4$Country==&quot;England and Wales, including non-residents&quot;&amp;t4$Sex==&quot;Both sexes&quot;&amp;t4$Age==&quot;All ages&quot;,]
-d=merge(d,aggregate(list(oons=t4$&quot;Expected deaths&quot;),list(year=t4$Year),sum),all=T)
+t2=data.table(read_excel(&quot;dataset20240220.xlsx&quot;,skip=4,sheet=8))
+t2=t2[Country==&quot;England and Wales, including non-residents&quot;&amp;Sex==&quot;Both sexes&quot;&amp;`Age group`==&quot;All ages&quot;]
+p=merge(t2[,.(newons=sum(`Expected deaths`)),.(year=Year)],p,all=T)
 
-d$average=c(rep(NA,5),sapply(2010:2023,\(i)mean(tail(d$dead[d$year&lt;i&amp;d$year!=2020],5))))
-d$base=tapply(a$pop*a$trend,a$year,sum)
-d$base[d$year&lt;2010]=NA
+p$oldons=c(rep(NA,5),sapply(2010:2023,\(i)mean(tail(p$dead[p$year&lt;i&amp;p$year!=2020],5))))
 
-xy=data.frame(x=d$year,y=unlist(d[-1]),z=rep(colnames(d)[-1],each=nrow(d)))
-xy$z=factor(xy$z,unique(xy$z))
+p$base[p$year&lt;2010]=NA
 
-xstart=2005;xend=2023;xbreak=seq(xstart,xend)
+p=p[,.(x=year,y=unlist(p[,-1]),z=rep(names(p)[-1],each=.N))]
+
+p[,z:=factor(z,c(&quot;dead&quot;,&quot;newons&quot;,&quot;oldons&quot;,&quot;base&quot;))]
+color=c(&quot;black&quot;,&quot;#dd0000&quot;,&quot;gray50&quot;,&quot;#00aa00&quot;)
+lab=c(&quot;Actual deaths&quot;,&quot;New ONS baseline (quasi-Poisson regression by age, sex, and location)&quot;,&quot;Old ONS baseline (average of past 5 years with 2020 excluded)&quot;,&quot;My baseline (derived from 2010-2019 trend in CMR by age group)&quot;)
+
+xstart=2005;xend=2023;xbreak=xstart:xend
 xlab=c(rbind(&quot;&quot;,xstart:xend),&quot;&quot;)
-ymin=min(xy$y,na.rm=T);ymax=max(xy$y,na.rm=T)
+ymin=min(p$y,na.rm=T);ymax=max(p$y,na.rm=T)
 cand=c(sapply(c(1,2,5),\(year)year*10^c(-10:10)))
 ystep=cand[which.min(abs(cand-(ymax-ymin)/5))]
-yend=ystep*ceiling(ymax/ystep)
 ystart=ystep*floor(ymin/ystep)
+yend=ystep*ceiling(ymax/ystep)
 ybreak=seq(ystart,yend,ystep)
 
-color=c(&quot;black&quot;,&quot;#dd0000&quot;,&quot;gray50&quot;,&quot;#00aa00&quot;)
+leg=data.frame(x=xstart+(xend-xstart)*.027-.5,y=ystart+(yend-ystart)*seq(.94,0,-1/15)[1:nlevels(p$z)],label=lab)
 
-lab=c(&quot;Actual deaths&quot;,&quot;New ONS baseline (quasi-Poisson regression by age, sex, and location)&quot;,&quot;Old ONS method (average of past 5 years with 2020 excluded)&quot;,&quot;Baseline derived from 2010-2019 trend in CMR by age group&quot;)
-
-leg=data.frame(x=xstart+(xend-xstart)*.03-.5,y=ystart+(yend-ystart)*seq(.94,0,-1/15)[1:nlevels(xy$z)],label=lab)
-
-library(ggplot2);ggplot(xy,aes(x=x,y=y))+
+ggplot(p,aes(x=x,y=y))+
 geom_hline(yintercept=c(ystart,yend),color=&quot;gray65&quot;,linewidth=.3)+
 geom_vline(xintercept=c(xstart-.5,xend+.5),color=&quot;gray65&quot;,linewidth=.3)+
 geom_line(aes(color=z),linewidth=.4)+
-geom_point(data=subset(xy,z==&quot;dead&quot;),aes(color=z),size=.5)+
+geom_point(data=subset(p,z==&quot;dead&quot;),aes(color=z),size=.5)+
 geom_label(data=leg,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.8),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.04,&quot;lines&quot;),label.size=0,color=color,size=2.7,hjust=0)+
 labs(title=&quot;Deaths in England and Wales by registration date&quot;,x=NULL,y=NULL)+
-coord_cartesian(clip=&quot;off&quot;,expand=F)+
 scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=seq(xstart-.5,xend+.5,.5),labels=xlab)+
 scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,labels=\(x)paste0(x/1e3,&quot;k&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
 scale_color_manual(values=color)+
 theme(axis.text=element_text(size=7.5,color=&quot;black&quot;),
   axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
@@ -314,13 +317,13 @@ theme(axis.text=element_text(size=7.5,color=&quot;black&quot;),
   plot.margin=margin(.4,.6,.4,.4,&quot;lines&quot;),
   plot.subtitle=element_text(size=7.2),
   plot.title=element_text(size=8.8))
-ggsave(&quot;0.png&quot;,width=4.5,height=3,dpi=450)
+ggsave(&quot;0.png&quot;,width=4.5,height=3,dpi=400*4)
 
-sub=&quot;Source: ons.gov.uk/peoplepopulationandcommunity/healthandsocialcare/causesofdeath/\ndatasets/estimatingexcessdeathsintheukmethodologychanges, tables 2 and 4. Includes non-residents.
+sub=&quot;\u00a0     Source: ons.gov.uk/peoplepopulationandcommunity/healthandsocialcare/causesofdeath/\ndatasets/estimatingexcessdeathsintheukmethodologychanges, tables 2 and 4. Includes non-residents.
       The green baseline was calculated by first taking the linear trend in CMR by five-year age groups in 2010-2019, and then the projected trend was multiplied by the population size of each age group to get the expected deaths, and the expected deaths for each age group were added together to get the yearly total expected deaths.
       The gray baseline is a simple average of the past five years with 2020 excluded, so for example the baseline for 2023 consists of the years 2017-2019 and 2021-2022.&quot;
 
-system(paste0(&quot;mogrify -trim 0.png;convert 0.png -gravity northwest \\( -size `identify -format %w 0.png`x -font Arial -interline-spacing -3 -pointsize 46 caption:&#39;&quot;,sub,&quot;&#39; -gravity north -splice x30 \\) -append -bordercolor white -border 36 1.png&quot;))</pre>
+system(paste0(&quot;magick 0.png -resize 25% -trim 1.png;magick 1.png \\( -size `identify -format %w 1.png`x -font Arial -interline-spacing -3 -pointsize 42 caption:&#39;&quot;,sub,&quot;&#39; -splice x30 \\) -append -bordercolor white -border 36 1.png&quot;))</pre>
 <p>Craig also wrote: <span class="quote">&quot;However, you can't hide the truth forever. All that is needed is the calculation of an age-standardised mortality rate. This is a way of mapping mortality from a real population to one that has a standard age structure so different regions can be fairly compared with each other and across time. Using that methodology it is impossible to hide the issue of excess mortality.&quot;</span> In the code below I calculated ASMR for England and Wales using the spreadsheet that accompanied the methodology article by the ONS. I used the 2020 population as the standard population, and I used the 2005-2019 second-degree polynomial trend in ASMR as the baseline, which gave me only about 0.12% excess ASMR in the years 2016-2019 (so it's closer to the new ONS baseline than to the old ONS baseline):</p>
 <div class="width5">
 <img src="i/covidstat-onsbase-5.png">
@@ -1183,19 +1186,41 @@ print(mutate_if(me,is.double,round),r=F)</pre>
 </blockquote>
 <p>However the ONS had already fixed the issue of the missing vaccination entries in 2022, but it didn't have much effect on the overall mortality rates of vaccinated and unvaccinated people. Unvaccinated people still have a big spike in non-COVID deaths in early 2021, there's still low mortality in the first 3 weeks after vaccination, and the ASMR of people with n-1 doses still shoots up when the nth dose is rolled out. So the various phenomena which Fenton and Neil attempted to explain in their preprints are still present in the ONS dataset even though the error of the missing vaccination records was already fixed. So the error was not sufficient to explain the phenomena, so Fenton and Neil still need to come up with some other way to explain them.</p>
 <h2>
-<a href=#Steve_Kirsch_Lancet_paper_about_excess_deaths_in_UK id=Steve_Kirsch_Lancet_paper_about_excess_deaths_in_UK>Steve Kirsch: Lancet paper about excess deaths in UK</a>
+<a href=#Steve_Kirsch_Lancet_letter_which_said_there_was_about_8_excess_deaths_in_the_UK_in_2022_and_2023 id=Steve_Kirsch_Lancet_letter_which_said_there_was_about_8_excess_deaths_in_the_UK_in_2022_and_2023>Steve Kirsch: Lancet letter which said there was about 8% excess deaths in the UK in 2022 and 2023</a>
 </h2>
-<p>Steve Kirsch posted this Substack post:</p>
+<p>Steve Kirsch posted this Substack post about a short letter that was published in The Lancet: [<a href="https://kirschsubstack.com/p/uk-ons-excess-deaths-in-the-uk-cannot">https://kirschsubstack.com/p/uk-ons-excess-deaths-in-the-uk-cannot</a>]</p>
 <div class="width6">
 <img src="i/uk-lancet.jpg">
 </div>
-<p>The paper said: <span class="quote">&quot;The UK Office for National Statistics (ONS) has calculated that there were 7.2% or 44,255 more deaths registered in the UK in 2022 based on comparison with the five-year average (excluding 2020). This persisted into 2023 with 8.6% or 28,024 more deaths registered in the first six months of the year than expected.&quot;</span> [<a href="https://www.thelancet.com/journals/lanepe/article/PIIS2666-7762%2823%2900221-1/fulltext">https://www.thelancet.com/journals/lanepe/article/PIIS2666-7762%2823%2900221-1/fulltext</a>]</p>
-<p>However the five-year average baseline overestimates excess deaths because of the aging baby boomer population. There is an increasing trend in the number of deaths per year, and the five-year average baseline is lagging three years behind the trend.</p>
-<p>In the plot below I used a more accurate method to calculate the baseline for excess deaths. I first calculated a linear trend in CMR by 5-year age groups in 2010-2019, then I projected the trend for each age group to 2020-2023, and I multiplied the population size of each age group with the projected trend to get the expected deaths, and I added together the expected deaths for all age groups to get the total expected deaths for each year. It gave me only about 4.3% excess deaths in England and Wales in 2022 and about 3.9% excess deaths in 2023:</p>
+<p>The letter said: <span class="quote">&quot;The UK Office for National Statistics (ONS) has calculated that there were 7.2% or 44,255 more deaths registered in the UK in 2022 based on comparison with the five-year average (excluding 2020). This persisted into 2023 with 8.6% or 28,024 more deaths registered in the first six months of the year than expected.&quot;</span> [<a href="https://www.thelancet.com/journals/lanepe/article/PIIS2666-7762%2823%2900221-1/fulltext">https://www.thelancet.com/journals/lanepe/article/PIIS2666-7762%2823%2900221-1/fulltext</a>]</p>
+<p>The letter was published in December 2023 before the ONS had published their new methodology for calculating excess deaths, so the letter still used the old 5-year average method to calculate the baseline number of deaths. However the 5-year average baseline overestimates excess deaths because of the aging baby boomer population, because there is an increasing trend in the yearly number of deaths but the 5-year average baseline is lagging 3 years behind the trend.</p>
+<p>In the plot below I used a more accurate method to calculate the baseline for excess deaths. I first calculated a linear trend in CMR by 5-year age groups in 2010-2019, then I projected the trend for each age group to 2020-2023, and I multiplied the population size of each age group with the projected trend to get the expected deaths, and I added together the expected deaths for all age groups to get the total expected deaths for each year. It gave me only about 3.9% excess deaths in England and Wales in 2022 and about 3.3% excess deaths in 2023:</p>
 <div class="width6">
 <img src="i/covidstat-onsbase-4.png">
 </div>
-<p>I posted the R code for the plot around the middle of this section: <a href=#Clare_Craig_New_baseline_used_by_ONS_to_calculate_excess_deaths>#Clare_Craig_New_baseline_used_by_ONS_to_calculate_excess_deaths</a>.</p>
+<p>In the plot above I used data from the spreadsheet which accompanied the article by the ONS about the new baseline methodology, which has data for monthly deaths and population estimates grouped by region and 5-year age groups: <a href="https://www.ons.gov.uk/peoplepopulationandcommunity/healthandsocialcare/causesofdeath/articles/estimatingexcessdeathsintheukmethodologychanges/february2024">https://www.ons.gov.uk/peoplepopulationandcommunity/healthandsocialcare/causesofdeath/articles/estimatingexcessdeathsintheukmethodologychanges/february2024</a>. I posted R code for making the plot here: <a href=#Clare_Craig_New_baseline_used_by_ONS_to_calculate_excess_deaths>#Clare_Craig_New_baseline_used_by_ONS_to_calculate_excess_deaths</a>. Here's a simplified version of the code which only calculates the yearly percentage of excess deaths:</p>
+<pre>download.file(&quot;https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/healthandsocialcare/causesofdeath/datasets/estimatingexcessdeathsintheukmethodologychanges/current/dataset20240220.xlsx&quot;,&quot;dataset20240220.xlsx&quot;)
+
+library(data.table)
+t=data.table(readxl::read_excel(&quot;dataset20240220.xlsx&quot;,skip=4,sheet=6))
+t=t[Geography==&quot;England and Wales, including non-residents&quot;]
+t[,pop:=`Population estimate`*lubridate::days_in_month(paste0(Year,&quot;-&quot;,match(Month,month.name),&quot;-1&quot;))]
+
+a=t[,.(dead=sum(`Death registrations`),pop=sum(pop)),.(age=`Age group`,year=Year)]
+years=unique(a$year)
+a=merge(a,a[year%in%2010:2019,.(year=years,base=predict(lm(dead/pop~year),.(year=years))),age])[,base:=base*pop]
+a[year&gt;=2015,.(excesspct=round((sum(dead)/sum(base)-1)*100,1)),year]|&gt;print(r=F)</pre>
+<!-- -->
+<pre> year excesspct
+ 2015       2.2
+ 2016       0.0
+ 2017       0.8
+ 2018       1.4
+ 2019      -1.8
+ 2020      11.6
+ 2021       7.0
+ 2022       3.9
+ 2023       3.3</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
