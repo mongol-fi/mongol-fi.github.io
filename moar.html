@@ -7859,7 +7859,7 @@ a[grep(2022,date),t.test(asmr[dose==0],asmr[dose==1])$p.value] # 2.392584e-126</
 <p>As you can see from the chart below, the slope isn't changing at all after week 20 when people started to migrate to the next dose; it just kept climbing at the same rate. If the <span class="quote">&quot;unhealthy were being left behind&quot;</span> then we'd expect a shift upwards. If we compute the HVE effect magnitude for Dose 4, it's around 150 that were <span class="quote">&quot;left behind&quot;</span> in the Dose 3 cohort that would artificially increase the mortality rate. Those 150 are roughly evenly distributed over time so let's be very conservative and assume it was distributed over 7 weeks. This would add 21 deaths to each of the weeks. So Week 30 with 2,061,416 man days and 235 deaths should really be 214 deaths which gives a mortality rate of 214/2,061,416<em>365</em>100000=3789. So 2.19 becomes 1.96 which is still a 30% increase over the expected 50% seasonality increase in mortality (which is very conservative since it would never be as large as the peak to trough since the vaccines were given over time which would tend to diminish the seasonality extremes).</p>
 </blockquote>
 <p>Kirsch said that the baseline mortality rate was 1,936 which was the mortality rate on week 3. However among the total NZ population in ages 60 and above, a typical mortality rate is about 2,600 to 3,000 deaths per 100,000 people:</p>
-<pre>&gt; t=fread(&quot;http://sars2.net/f/nzpopdead.csv&quot;);t[age&gt;=60&amp;year&gt;=2015,sum(dead)/sum(pop,na.rm=T)*1e5,year]`.
+<pre>&gt; t=fread(&quot;http://sars2.net/f/nzpopdead.csv&quot;)
 &gt; t[age&gt;=60&amp;year&gt;=2015,.(cmr=sum(dead)/sum(pop,na.rm=T)*1e5),year]|&gt;print(r=F)
  year      cmr
  2015 2953.224
@@ -7871,7 +7871,23 @@ a[grep(2022,date),t.test(asmr[dose==0],asmr[dose==1])$p.value] # 2.392584e-126</
  2021 2708.756
  2022 2947.953
  2023 2807.310</pre>
-<p>In the code below I used a more sophisticated method to calculate the baseline mortality rate, where I first interpolated monthly age-specific mortality rates for 5-year age groups among the general NZ population into daily mortality rates, and then I multiplied the number of person-days for each combination of age group and day with the baseline mortality rate, and then I added together the results for all ages and I divided it with the population size. My baseline mortality rate ranged between about 2,500 and 3,500 during the first 90 weeks from vaccination (even though after that it fell down, but the mortality rates were also unreliable because there were only a few people remaining in the cohort after week 90):</p>
+<p>In the code below I compared the percentage of people in each 5-year age group among the 2022 NZ resident population estimates against people in Barry's dataset. The people Barry's dataset have a mostly similar age distribution as the general NZ population, except there's less people in ages 60-64, 65-69, and 95+. So Kirsch was not justified in picking a much lower baseline mortality rate than the mortality rate of ages 60 and above in the general NZ population:</p>
+<pre>&gt; pop=fread(&quot;http://sars2.net/f/nzpopdead.csv&quot;)[year==2022&amp;age&gt;=60,.(pop=sum(pop,na.rm=T)),.(age=age%/%5*5)]
+&gt; ppd=fread(&quot;http://sars2.net/f/bucketskeep.gz&quot;)[week==0&amp;dose==3&amp;age&gt;=60]
+&gt; ppd=ppd[,.(alive=sum(alive)),.(age=pmin(age,95)%/%5*5)]
+&gt; o=merge(ppd[,.(ppdpct=alive/sum(alive)*100,age)],pop[,.(nzpct=pop/sum(pop)*100,age)])
+&gt; o[,ppdofnzpct:=ppdpct/nzpct*100]
+&gt; print(round(o[age&gt;=60],1),r=F)
+ age ppdpct nzpct ppdofnzpct
+  60   23.6  26.6       88.9
+  65   21.7  22.5       96.3
+  70   20.2  19.2      104.9
+  75   14.9  14.0      106.5
+  80   10.7   9.6      111.6
+  85    5.7   5.1      112.2
+  90    2.6   2.3      111.0
+  95    0.7   0.7       92.1</pre>
+<p>In the code below I calculated the baseline mortality rate by first interpolating monthly age-specific mortality rates for 5-year age groups among the general NZ population into daily mortality rates, and then I multiplied the number of person-days for each combination of age group and day with the baseline mortality rate, and then I added together the results for all ages and I divided it with the population size. My baseline mortality rate ranged between about 2,500 and 3,500 during the first 90 weeks from vaccination (even though after that it fell down, but the mortality rates were also unreliable because there were only a few people remaining in the cohort after week 90):</p>
 <div class="width7">
 <img src="i/moar-sep23-2.png">
 </div>
