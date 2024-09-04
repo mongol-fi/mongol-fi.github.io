@@ -66,13 +66,14 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#ASMR_when_people_are_classified_as_unvaccinated_until_three_weeks_from_vaccination>ASMR when people are classified as unvaccinated until three weeks from vaccination</a></li>
 <li><a href=#Kirschs_claim_that_people_were_not_allowed_to_choose_if_they_got_a_Moderna_or_Pfizer_vaccine>Kirsch's claim that people were not allowed to choose if they got a Moderna or Pfizer vaccine</a></li>
 <li><a href=#Mortality_rate_of_people_born_before_1930_calculated_by_Tomas_F_rst>Mortality rate of people born before 1930 calculated by Tomas Fürst</a></li>
+<li><a href=#Plot_for_raw_deaths_by_weeks_after_vaccination>Plot for raw deaths by weeks after vaccination</a></li>
 </ul>
 
 <h2>
 <a href=#Moderna_Pfizer_ratio_by_vaccination_quarter_and_age_group id=Moderna_Pfizer_ratio_by_vaccination_quarter_and_age_group>Moderna-Pfizer ratio by vaccination quarter and age group</a>
 </h2>
 <p>Kirsch posted a tweet which said: <span class="quote">&quot;You have all failed to explain why in every age group where we have sufficient data. Moderna was significantly more deadly than Pfizer. it wasn't comorbidities because those didn't matter. So why was the death rate higher? Why can't you answer that simple question?&quot;</span> [<a href="https://x.com/stkirsch/status/1818053265357160918">https://x.com/stkirsch/status/1818053265357160918</a>]</p>
-<p>I told him that in the plot below if you look at the age groups 50-59 and above that have a sufficient sample size of deaths, the Moderna-Pfizer ratio was close to 1.0 among people who got the first dose in the 4th quarter of 2021. So did Moderna vaccines start being less deadly in the 4th quarter?</p>
+<p>I told him that in the plot below if you look at the age groups 50-59 and above where there's a sufficient sample size of deaths, the Moderna-Pfizer ratio was close to 1.0 among people who got the first dose in the 4th quarter of 2021. So did Moderna vaccines start being less deadly in the 4th quarter?</p>
 <div class="width5">
 <img src="i/czech-modpfivaxqvsage.png">
 </div>
@@ -348,7 +349,7 @@ o[order(-doses)]|&gt;dplyr::mutate_if(is.double,round)|&gt;print(r=F)</pre>
    95+ 0.91 0.80 1.02</pre>
 <p>Kremer's <span class="quote">&quot;proportional rate ratio&quot;</span> values were expressed as the ratio for Pfizer divided by the ratio for Moderna, so it's the opposite of the Moderna-Pfizer ratios that have been calculated by me and Kirsch. His PRR value for deaths divided by reports was about 1.014 for ages 18-64 and 1.278 for ages 65+:</p>
 <p><img src=i/czech-kremer.jpg style=max-width:450px></p>
-<p>At first I got about 27% more deaths in ages 65+ than Kremer but only about 4% more reports. Then I realized it was probably because I counted reports where the <code>DIED</code> column had the value <code>Y</code> as deaths, but Kremer might have only counted reports where the fields for the symptoms included death (which also gave me about 18% fewer deaths in ages 65+ for Moderna and Pfizer combined):</p>
+<p>At first I got about 27% more deaths in ages 65+ than Kremer but only about 4% more reports. But then I realized it was probably because I counted reports where the <code>DIED</code> column had the value <code>Y</code> as deaths, but Kremer might have only counted reports where one of the symptom fields included death, which also gave me about 18% fewer deaths in ages 65+ for Moderna and Pfizer combined:</p>
 <pre>&gt; va=do.call(rbind,lapply(2020:2024,\(i)fread(paste0(i,&quot;VAERSDATA.csv&quot;))))
 &gt; va=merge(va,do.call(rbind,lapply(2020:2024,\(i)fread(paste0(i,&quot;VAERSVAX.csv&quot;)))))
 &gt; symp=do.call(rbind,lapply(2020:2024,\(i)fread(paste0(i,&quot;VAERSSYMPTOMS.csv&quot;))))
@@ -358,28 +359,27 @@ o[order(-doses)]|&gt;dplyr::mutate_if(is.double,round)|&gt;print(r=F)</pre>
            VAX_MANU    N
 1:          MODERNA 7598
 2: PFIZER\\BIONTECH 7520
-&gt; vae[dead==T,.N,VAX_MANU] # symptoms include death
+&gt; vae[dead==T,.N,VAX_MANU] # symptom columns include death
            VAX_MANU    N
 1:          MODERNA 6285
 2: PFIZER\\BIONTECH 6138</pre>
-<p>I don't know which approach is more correct, but here when I counted reports where the symptoms included death, I got similar PRR values as Kremer:</p>
-<pre>&gt; o=va[AGE_YRS%in%18:64&amp;VAX_TYPE==&quot;COVID19&quot;,.(dead=sum(dead),reports=.N),.(type=VAX_MANU)]
-&gt; o=o[match(c(&quot;PFIZER\\BIONTECH&quot;,&quot;MODERNA&quot;),type)]
-&gt; o
+<p>I don't know which approach is better, but here when I counted reports where the symptom columns included death, I got similar PRR values as Kremer:</p>
+<pre>&gt; young=va[AGE_YRS%in%18:64&amp;VAX_TYPE==&quot;COVID19&quot;,.(dead=sum(dead),reports=.N),.(type=VAX_MANU)]
+&gt; young=young[match(c(&quot;PFIZER\\BIONTECH&quot;,&quot;MODERNA&quot;),type)]
+&gt; young
                type dead reports
 1: PFIZER\\BIONTECH 1503  283324
 2:          MODERNA 1458  273126
-
-&gt; o[1,dead/reports]/o[2,dead/reports]
-[1] 0.99376
-&gt; o=va[AGE_YRS&gt;=65&amp;VAX_TYPE==&quot;COVID19&quot;,.(dead=sum(dead),reports=.N),.(type=VAX_MANU)]
-&gt; o=o[match(c(&quot;PFIZER\\BIONTECH&quot;,&quot;MODERNA&quot;),type)]
-&gt; o
+&gt; young[1,dead/reports]/young[2,dead/reports]
+[1] 0.99376 # PRR for ages 18 to 64 (Pfizer divided by Moderna)
+&gt; old=va[AGE_YRS&gt;=65&amp;VAX_TYPE==&quot;COVID19&quot;,.(dead=sum(dead),reports=.N),.(type=VAX_MANU)]
+&gt; old=old[match(c(&quot;PFIZER\\BIONTECH&quot;,&quot;MODERNA&quot;),type)]
+&gt; old
                type dead reports
 1: PFIZER\\BIONTECH 6138  105769
 2:          MODERNA 6285  142616
-&gt; o[1,dead/reports]/o[2,dead/reports]
-[1] 1.3168</pre>
+&gt; old[1,dead/reports]/old[2,dead/reports]
+[1] 1.3168 # PRR for ages 65 and above (Pfizer divided by Moderna)</pre>
 <p>VAERS also contains reports from European countries, but several fields including the country codes were scrubbed from European reports in November 2022. WelcomeTheEagle posted a version of the VAERS data here that was downloaded before the country codes were removed: <a href="https://www.vaersaware.com/post/vaers-nov-11th-downloadable-files">https://www.vaersaware.com/post/vaers-nov-11th-downloadable-files</a>. I used the data to calculate an age-normalized rate of adverse event reports in the Czech Republic. I took the number of doses administered in each age group from the record-level data, so that I only included doses administered up to November 11th 2022 which was the date of the old snapshot of VAERS.</p>
 <p>In the old VAERS data you can select Czech reports by selecting rows where the first two characters of the <code>SPLTTYPE</code> field are <code>CZ</code>. At first I tried selecting rows where the <code>SYMPTOM_TEXT</code> field matched identifiers like <code>CZ-CZSUKL-21010694</code>, but it missed about 16% of all reports where the <code>SPLTTYPE</code> field started with <code>CZ</code>. There were only two reports where <code>SYMPTOM_TEXT</code> matched <code>\bCZ-</code> but <code>SPLTTYPE</code> didn't start with <code>CZ</code>, but one of them was a Belgian report that was linked to an earlier Czech report of the same patient, and the other report was missing the <code>SPLTTYPE</code> field.</p>
 <p>There were only 5,247 rows where the <code>SPLTTYPE</code> column started with <code>CZ</code> and the <code>VAX_TYPE</code> column was <code>COVID19</code>, and about two thirds of the rows were missing the age field. But among the remaining 1,871 rows, the age-standardized rate of adverse event reports per doses administered was about 3.0 times higher for Moderna than Pfizer, and the crude rate that was not adjusted for age was about 2.9 times higher for Moderna than Pfizer:</p>
@@ -858,8 +858,8 @@ system(&quot;mogrify -resize 25% 1.png&quot;)</pre>
 <h2>
 <a href=#Kirschs_claim_that_people_were_not_allowed_to_choose_if_they_got_a_Moderna_or_Pfizer_vaccine id=Kirschs_claim_that_people_were_not_allowed_to_choose_if_they_got_a_Moderna_or_Pfizer_vaccine>Kirsch's claim that people were not allowed to choose if they got a Moderna or Pfizer vaccine</a>
 </h2>
-<p>On August 28th 2024 UTC when Kirsch was on InfoWars, he resurrected his old claim that people weren't allowed to choose if they got a Moderna or Pfizer vaccine: <span class="quote">&quot;The only difference in the Czech Republic between getting a Pfizer shot and a Moderna shot is just pure luck. It was... you weren't allowed to choose, you were just assigned a brand. So it's effectively like the world's largest randomized trial.&quot;</span> [<a href="https://x.com/RealAlexJones/status/1828912865107231096">https://x.com/RealAlexJones/status/1828912865107231096</a>, 45:51]</p>
-<p>When Kirsch asked me to show evidence that people were allowed to choose which vaccine type they got, I showed him that there was a dropdown for choosing your preferred vaccine type in a form for registering a vaccination appointment: [<a href="https://ockodoc.mzcr.cz/wp-content/uploads/2023/07/manual_crs.pdf">https://ockodoc.mzcr.cz/wp-content/uploads/2023/07/manual_crs.pdf</a>; translated with Yandex]</p>
+<p>On August 28th 2024 UTC when Kirsch was on InfoWars, he resurrected his old claim that people were not allowed to choose if they got a Moderna or Pfizer vaccine: <span class="quote">&quot;The only difference in the Czech Republic between getting a Pfizer shot and a Moderna shot is just pure luck. It was... you weren't allowed to choose, you were just assigned a brand. So it's effectively like the world's largest randomized trial.&quot;</span> [<a href="https://x.com/RealAlexJones/status/1828912865107231096">https://x.com/RealAlexJones/status/1828912865107231096</a>, time 45:51]</p>
+<p>When Kirsch asked me to show evidence that people were allowed to choose which vaccine type they got, I showed him that there was a dropdown menu for choosing your preferred vaccine type in a form for registering a vaccination appointment: [<a href="https://ockodoc.mzcr.cz/wp-content/uploads/2023/07/manual_crs.pdf">https://ockodoc.mzcr.cz/wp-content/uploads/2023/07/manual_crs.pdf</a>; translated with Yandex]</p>
 <div class="width6">
 <img src="i/czech-preferred-form-2.jpg">
 </div>
@@ -871,13 +871,13 @@ system(&quot;mogrify -resize 25% 1.png&quot;)</pre>
 <div class="width8">
 <img src="i/czech-furst-1.png">
 </div>
-<p>In the following code I took data from one of my buckets files where I had assigned a random birthday for each person so I could account for the aging of people over time. From the last column which shows the total mortality rate in 2021-2022, you can see that unvaccinated people had higher mortality than vaccinated people up to age 94, but in ages 95 and above vaccinated people had higher mortality:</p>
+<p>In the following code I took data from one of my buckets files where I had assigned a random birthday for each person so I could account for the aging of people over time with a sub-year precision. From the last column which shows the total mortality rate in 2021-2022, you can see that unvaccinated people had higher mortality than vaccinated people up to age 94, but in ages 95 and above vaccinated people had higher mortality:</p>
 <div class="width8">
 <img src="i/czech-furst-2.png">
 </div>
-<p>However I don't know if for example elderly people who live in a senior home are more likely to be vaccinated than age-matched elderly people who live on their own. And of course elderly people who are able to live on their own have much lower mortality than people the same age who live in a senior home.</p>
+<p>However for example elderly people who live in a senior home have higher ASMR than elderly people who live on their own, and I don't know if for example elderly people who live in a senior home are more likely to be vaccinated than age-matched elderly people who live on their own.</p>
 <p>The plot above shows that for some reason in ages 104 and 105+ vaccinated people had more than 10 times as high mortality as unvaccinated people. For people who were born in 1917 so they turned 104 in 2022, people who were born near the end of the year were much more likely to be alive in 2022 than people who were born near the beginning of the year, but my code for assigning a random birthday distributed the birthdays evenly across the year which resulted in a fairly large bias. However it shouldn't matter that much here because I'm simply comparing vaccinated mortality rate against unvaccinated mortality rate. So I don't know how to explain the extremely high percentages in ages 104 and 105+.</p>
-<p>But in any case Fürst could've mentioned that there was a sharp increase in the ratio of unvaccinated to vaccinated CMR around the age of 94-95, and in younger ages unvaccinated people had higher mortality.</p>
+<p>But in any case Fürst could've mentioned that there was a sharp increase in the ratio of unvaccinated to vaccinated CMR around the age of 94-95, but in younger ages unvaccinated people had higher mortality.</p>
 <p>Here's code for making the heatmap:</p>
 <pre>b=fread(&quot;http://sars2.net/f/czbucketsdaily.csv.gz&quot;)
 
@@ -903,6 +903,60 @@ pheatmap::pheatmap(abs(m)^exp*sign(m),filename=&quot;0.png&quot;,display_numbers
 
 cap=&quot;Czech record-level data: Vaccinated CMR as percentage of unvaccinated CMR&quot;
 system(paste0(&quot;w=`identify -format %w 0.png`;pad=24;convert -pointsize 42 -interline-spacing -3 -font Arial-Bold \\( -size $[w-pad*2]x caption:&#39;&quot;,cap,&quot;&#39; -splice $[pad]x20 \\) 0.png -append 1.png&quot;))</pre>
+<h2>
+<a href=#Plot_for_raw_deaths_by_weeks_after_vaccination id=Plot_for_raw_deaths_by_weeks_after_vaccination>Plot for raw deaths by weeks after vaccination</a>
+</h2>
+<p>If you look at the raw number of deaths by weeks after vaccination but you don't normalize it for the background mortality rate, dose 1 seems to have a bump in deaths around weeks 2 to 10 that's missing for doses 2 and 3. But that's because during the first weeks after dose 1 the background mortality rate was falling rapidly because the COVID wave in early 2021 was passing by. So therefore the baseline for dose 15 also has a bigger drop during the first weeks after vaccination than the baselines of doses 2 and 3:</p>
+<div class="width7">
+<img src="i/czech-rawweek.png">
+</div>
+<p>In the United States first doses were also given at a time when the COVID wave in early 2021 was passing by, which I think explains why the temporal HVE appears to last only about 3 weeks in Kirsch's Medicare data for 2021. But it seems to last longer in the Medicare data for 2022 which was missing the bump around the third week: [<a href=moar.html#US_Medicare_data>moar.html#US_Medicare_data</a>]</p>
+<div class="width6">
+<img src="i/moar-medicare-15.png">
+</div>
+<pre>library(data.table);library(ggplot2);library(stringr)
+
+b=fread(&quot;http://sars2.net/f/czbucketskeep.csv.gz&quot;)[,age:=pmin(age,95)%/%5*5]
+d=merge(b[dose%in%1:4],b[dose&lt;=1,.(base=sum(dead)/sum(alive)),.(month,age)])[,base:=base*alive]
+p=d[,.(y=sum(dead),base=sum(base),pop=sum(alive)),.(x=week,z=paste0(&quot;Dose &quot;,dose))]
+
+xstart=0;xend=105;xstep=5;ystart=0;yend=3000;ystep=500
+
+color=hsv(c(12,21,24,30)/36,c(.4,.6,.8,.8),c(.9,1,.7,.6))
+
+sub=paste0(&quot;      &quot;,&quot;The dashed line is a baseline which was calculated by multiplying the number of person-days for each combination of 5-year age group and ongoing month with the mortality rate among all people who are included in the record-level data for the same combination of age group and ongoing month.&quot;|&gt;str_wrap(90))
+sub=paste0(sub,&quot;\n      &quot;,&quot;People are kept under earlier doses after a new dose. Week 0 consists of the day of vaccination and the next 6 days.&quot;|&gt;str_wrap(90))
+
+ggplot(p,aes(x,y))+
+geom_hline(yintercept=c(ystart,0,yend),linewidth=.3,lineend=&quot;square&quot;)+
+geom_vline(xintercept=c(xstart,xend),linewidth=.3,lineend=&quot;square&quot;)+
+geom_line(aes(color=z),linewidth=.4)+
+geom_line(aes(y=base,color=z),linetype=2,linewidth=.4)+
+labs(title=&quot;Czech record-level data: Deaths by weeks after vaccination&quot;,subtitle=sub,x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart,xend),breaks=seq(xstart,xend,xstep))+
+scale_y_continuous(limits=c(ystart,yend),breaks=seq(ystart,yend,ystep))+
+scale_color_manual(values=color)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.ticks=element_line(linewidth=.3),
+  axis.ticks.length=unit(3,&quot;pt&quot;),
+  legend.background=element_rect(fill=&quot;white&quot;,color=&quot;black&quot;,linewidth=.3),
+  legend.justification=c(1,1),
+  legend.key.height=unit(11,&quot;pt&quot;),
+  legend.key.width=unit(15,&quot;pt&quot;),
+  legend.key=element_rect(fill=&quot;white&quot;),
+  legend.margin=margin(-2,7,3,6),
+  legend.position=c(1,1),
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.text=element_text(size=7),
+  legend.title=element_blank(),
+  panel.grid.major=element_line(linewidth=.3,color=&quot;gray90&quot;),
+  panel.background=element_rect(fill=&quot;white&quot;),
+  plot.margin=margin(4,10,4,4),
+  plot.subtitle=element_text(size=7,margin=margin(0,0,4,0)),
+  plot.title=element_text(size=7.5,face=&quot;bold&quot;,margin=margin(2,0,4,0)))
+ggsave(&quot;0.png&quot;,width=4.5,height=3.2,dpi=400*4)
+system(&quot;magick 0.png -filter lanczos2 -resize 25% 1.png&quot;)</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
