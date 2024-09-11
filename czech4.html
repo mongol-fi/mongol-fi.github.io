@@ -1000,13 +1000,14 @@ d=rec[,.(date=as.IDate(unlist(rec[,..k],,F)),dead=DatumUmrti,age=2021-Rok_naroze
 d[,batch0:=unlist(rec[,..k2],,F)][,batch:=toupper(trimws(batch0)),batch0]
 d[,dose:=rep(1:7,each=nrow(rec))]
 
-o=d[dose==2&amp;date&gt;=&quot;2021-06-01&quot;&amp;date&lt;&quot;2021-07-01&quot;]
-o=o[,.(dead=sum(!is.na(dead)&amp;dead-date&lt;365),doses=.N),.(batch,age=pmin(age,95)%/%5*5)]
-o1=o[batch==&quot;FC2473&quot;,.(age,dead1=dead,doses1=doses,rate1=dead/doses*1e5)]
-o2=o[batch==&quot;FD0168&quot;,.(age,dead2=dead,doses2=doses,rate2=dead/doses*1e5)]
-o=merge(o1,o2)
-o[,rate1vs2:=rate1/rate2]
+a=d[dose==2&amp;date&gt;=&quot;2021-06-01&quot;&amp;date&lt;&quot;2021-07-01&quot;]
+a=a[,.(dead=sum(!is.na(dead)&amp;dead-date&lt;365),doses=.N),.(batch,age=pmin(age,95)%/%5*5)]
 
+a1=a[batch==&quot;FC2473&quot;,.(age,dead1=dead,doses1=doses,rate1=dead/doses*1e5)]
+a2=a[batch==&quot;FD0168&quot;,.(age,dead2=dead,doses2=doses,rate2=dead/doses*1e5)]
+o=merge(o1,o2)
+
+o[,rate1vs2:=rate1/rate2]
 o[,low:=exp(log(rate1vs2)-qnorm(.975)*sqrt(1/dead1+1/dead2))]
 o[,high:=exp(log(rate1vs2)+qnorm(.975)*sqrt(1/dead1+1/dead2))]
 
@@ -1031,8 +1032,12 @@ print(round(o,2),row.names=F)</pre>
   85    44    440 10000.00   115   1017 11307.77     0.88 0.62  1.25
   90    36    160 22500.00    59    335 17611.94     1.28 0.84  1.93
   95    18     46 39130.43    14     50 28000.00     1.40 0.70  2.81</pre>
-<p>My ratio in ages 60-65 was only about 2.33 and not 3.15 like in Kirsch's table. But that's because Kirsch treated the age of each person as the year of birth subtracted from 2024 and not 2021 like me. When I ran the previous code again but I changed 2021 to 2024, my ratio increased to about 3.07. Kirsch also looked at deaths during the first 366 days from vaccination if the day of vaccination is included, but when I changed my code from 365 days to 366 days, the ratio remained at about 3.07 so it still wasn't the same as Kirsch's ratio. But I don't know why.</p>
-<p>2021 minus the year of birth is the age of each person on December 31st 2021, so it's roughly the average age of people during an observation period that lasts from the start of 2021 until the end of 2022. But when Kirsch subtracted the year of birth from 2024, he overestimated the age of people by 3 or 4 years on the day of vaccination.</p>
+<p>My ratio in ages 60-65 was only about 2.33 and not 3.15 like in Kirsch's table. By reading through Kirsch's code, I realized it was because of three reasons:</p>
+<ol style="list-style-type: decimal">
+<li>The first reason was that Kirsch treated the age of each person as the year of birth subtracted from 2024 and not 2021 like me. When I ran the previous code again but I changed 2021 to 2024, my ratio increased to about 3.07. 2021 minus the year of birth is the age of each person on December 31st 2021, so it's roughly the average age of people during an observation period that lasts from the start of 2021 until the end of 2022. But when Kirsch subtracted the year of birth from 2024, he overestimated the age of people by 3 or 4 years on the day of vaccination.</li>
+<li>The second reason was that Kirsch looked at deaths during the first 366 days from vaccination if the day of vaccination is included, but when I changed my code from 365 days to 366 days, the ratio remained at about 3.07.</li>
+<li>The third reason was that Kirsch's code has a bug where it counts how many people died within a year from the first dose even when it generates the column that is supposed to show how many people died within a year from the second dose, because this line has <code>df['date_1_']</code> regardless of the dose number: <code>df['days_until_death'] = (df[dod_col] - df['date_1_']).dt.days.round(0)</code>. [<a href="https://github.com/skirsch/Czech/blob/main/code/vax.py#L117">https://github.com/skirsch/Czech/blob/main/code/vax.py#L117</a>]</li>
+</ol>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
