@@ -992,38 +992,45 @@ system(&quot;magick 0.png -filter lanczos2 -resize 25% 1.png&quot;)</pre>
 &gt; c(-1,1)*margin_error+p_hat
 [1] 0.005526301 0.009863247</pre>
 <p>In the following block of code I picked people who got a second dose from the FC or FD batch in June 2021 and I divided the number of deaths in the 365 days starting from the day of vaccination with the number of doses from the batch. I treated the age of each person as their year of birth subtracted from 2021. I kept people included under a batch even after they got a dose from another batch, and if a person got multiple doses from the same batch then I counted the person multiple times under the batch.</p>
+<p>I converted the batch IDs to uppercase and stripped trailing spaces, which is what Kirsch also did. [<a href="https://github.com/skirsch/Czech/blob/main/code/vax.py#L59">https://github.com/skirsch/Czech/blob/main/code/vax.py#L59</a>]</p>
 <p>When I calculated the ratio of deaths per doses for each 5-year age group, the FD batch actually got a higher mortality rate than the FC batch in each age group from 65-69 to 85-89 (which all had a fairly large sample size of deaths):</p>
 <pre>rec=fread(&quot;CR_records.csv&quot;)
 k=grep(&quot;Datum_&quot;,names(rec));k2=k+1
 d=rec[,.(date=as.IDate(unlist(rec[,..k],,F)),dead=DatumUmrti,age=2021-Rok_narozeni)]
-d$batch=unlist(rec[,..k2],,F)
+d[,batch0:=unlist(rec[,..k2],,F)][,batch:=toupper(trimws(batch0)),batch0]
+d[,dose:=rep(1:7,each=nrow(rec))]
 
-o=d[date&gt;=&quot;2021-06-01&quot;&amp;date&lt;&quot;2021-07-01&quot;]
+o=d[dose==2&amp;date&gt;=&quot;2021-06-01&quot;&amp;date&lt;&quot;2021-07-01&quot;]
 o=o[,.(dead=sum(!is.na(dead)&amp;dead-date&lt;365),doses=.N),.(batch,age=pmin(age,95)%/%5*5)]
 o1=o[batch==&quot;FC2473&quot;,.(age,dead1=dead,doses1=doses,rate1=dead/doses*1e5)]
 o2=o[batch==&quot;FD0168&quot;,.(age,dead2=dead,doses2=doses,rate2=dead/doses*1e5)]
 o=merge(o1,o2)
-print(round(o[,rate1vs2:=rate1/rate2][],2),r=F)</pre>
+print(round(o[,rate1vs2:=rate1/rate2][],2),r=F)
+
+o[,low:=exp(log(rate1vs2)-qnorm(.975)*sqrt(1/dead1+1/dead2))]
+o[,high:=exp(log(rate1vs2)+qnorm(.975)*sqrt(1/dead1+1/dead2))]
+
+print(round(o,2),row.names=F)</pre>
 <!-- -->
-<pre>     # FC                  # FD                  # FC vs FD
- age dead1 doses1    rate1 dead2 doses2    rate2 rate1vs2
-  15     1    179   558.66     1    709   141.04     3.96
-  20     1    970   103.09     2   2280    87.72     1.18
-  25     0   1706     0.00     1   3469    28.83     0.00
-  30     2   2069    96.67     5   4877   102.52     0.94
-  35     1   2682    37.29     1   6452    15.50     2.41
-  40     8   4111   194.60    11  11006    99.95     1.95
-  45    16   4993   320.45    19  19186    99.03     3.24
-  50    29   4482   647.03    66  28524   231.38     2.80
-  55    38   5404   703.18   148  65597   225.62     3.12
-  60    84   8560   981.31   318  75389   421.81     2.33
-  65   240  31491   762.12   474  58382   811.89     0.94
-  70   203  16682  1216.88   301  17613  1708.96     0.71
-  75   109   3595  3031.99   213   6880  3095.93     0.98
-  80    54    934  5781.58   156   2365  6596.19     0.88
-  85    44    440 10000.00   115   1017 11307.77     0.88
-  90    36    160 22500.00    59    335 17611.94     1.28
-  95    18     46 39130.43    14     50 28000.00     1.40</pre>
+<pre>     # FC2473              # FD0168              # FC vs FD with 95% CI
+ age dead1 doses1    rate1 dead2 doses2    rate2 rate1vs2  low  high
+  15     1    185   540.54     1    731   136.80     3.95 0.25 63.17
+  20     1   1018    98.23     2   2355    84.93     1.16 0.10 12.76
+  25     0   1786     0.00     1   3585    27.89     0.00 0.00   NaN
+  30     2   2171    92.12     5   5030    99.40     0.93 0.18  4.78
+  35     1   2812    35.56     1   6684    14.96     2.38 0.15 38.00
+  40     8   4277   187.05    11  11360    96.83     1.93 0.78  4.80
+  45    16   5184   308.64    19  19675    96.57     3.20 1.64  6.21
+  50    29   4643   624.60    67  29741   225.28     2.77 1.79  4.29
+  55    39   5600   696.43   153  68404   223.67     3.11 2.19  4.43
+  60    89   8811  1010.10   331  77851   425.17     2.38 1.88  3.00
+  65   247  32698   755.40   492  60216   817.06     0.92 0.79  1.08
+  70   213  17241  1235.43   318  18230  1744.38     0.71 0.60  0.84
+  75   114   3795  3003.95   221   7123  3102.63     0.97 0.77  1.21
+  80    58    980  5918.37   169   2440  6926.23     0.85 0.63  1.15
+  85    46    452 10176.99   118   1050 11238.10     0.91 0.64  1.27
+  90    38    166 22891.57    61    347 17579.25     1.30 0.87  1.95
+  95    18     47 38297.87    15     52 28846.15     1.33 0.67  2.63</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
