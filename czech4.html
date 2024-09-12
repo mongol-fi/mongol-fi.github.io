@@ -1034,10 +1034,58 @@ print(round(o,2),row.names=F)</pre>
   95    18     46 39130.43    14     50 28000.00     1.40 0.70  2.81</pre>
 <p>My ratio in ages 60-65 was only about 2.33 and not 3.15 like in Kirsch's table. But I eventually figured out it was because of three reasons:</p>
 <ol style="list-style-type: decimal">
-<li>Kirsch treated the age of each person as the year of birth subtracted from 2024 and not 2021 like me. When I ran the previous code again but I changed 2021 to 2024, my ratio increased to about 3.07. When you subtract the year of birth from 2021, you get the age of each person on December 31st 2021, so it's roughly the average age of people during an observation period that lasts from the start of 2021 until the end of 2022. But when Kirsch subtracted the year of birth from 2024, he overestimated the age of people by 3 or 4 years on the day of vaccination.</li>
+<li>Kirsch treated the age of each person as the year of birth subtracted from 2024 and not from 2021 like me. When I changed 2021 to 2024, my ratio increased to about 3.07. When the year of birth is subtracted from 2021, it gives the age of each person on December 31st 2021, so it's roughly the average age of people during an observation period that lasts from the start of 2021 until the end of 2022. But when Kirsch subtracted the year of birth from 2024, he overestimated the age of people by 3 or 4 years on the day of vaccination.</li>
 <li>Kirsch looked at deaths during the first 366 days from vaccination if the day of vaccination is included. However when I changed my code from 365 days to 366 days, the ratio remained at about 3.07.</li>
 <li>Kirsch's code has a bug where it counts how many people died within a year from the first dose even when it generates the column that is supposed to show how many people died within a year from the second dose. It's because this line has <code>df['date_1_']</code> regardless of the dose number: <code>df['days_until_death'] = (df[dod_col] - df['date_1_']).dt.days.round(0)</code>. [<a href="https://github.com/skirsch/Czech/blob/eb8406c7c160f3951d798f5cd72a7c84901a60c4/code/vax.py#L117">https://github.com/skirsch/Czech/blob/eb8406c7c160f3951d798f5cd72a7c84901a60c4/code/vax.py#L117</a>]</li>
 </ol>
+<p>Kirsch later added this section to his Substack post:</p>
+<div class="width6">
+<img src="i/czech-kirschbatch-3.jpg">
+</div>
+<p>The plot above is a histogram where the y-axis values are always integers, so it's confusing how the y-axis labels include values like 0.5 and 1.5.</p>
+<p>Kirsch wrote that <span class="quote">&quot;if the vaccines were safe, the mortality rates of the batches I looked at (given to a given group in a specific time period) must have a normal distribution&quot;</span>. But it's not necessarily the case if there's confounding factors that vary across batches even after age and month of vaccination are controlled for.</p>
+<p>Kirsch's plot had so few batches that it was difficult to even tell if they followed a normal distribution or not. His sample size of total deaths was also fairly small, but he could'e increased his sample size if he would've included batches given during all months and not only in March 2021. In the next plot I calculated a normalized mortality rate for each batch the same way as earlier, except I plotted the mortality rate as a percentage of the baseline and not as excess mortality relative to the baseline (so the values are the same as excess mortality values plus 100). I included only batches with at least 10,000 total person-years. But now in my histogram the distribution of mortality rates looks closer to a normal distribution than in Kirsch's plot (even though in plots like this which show excess mortality as percentage of a baseline, the distribution is typically skewed because the values below 100% have a more narrow distribution than the values above 100%):</p>
+<div class="width5">
+<img src="i/czech-kirschbatch-4.png">
+</div>
+<pre>b=fread(&quot;xz -dc czbucketsbatchkeep.csv.xz&quot;)[,age:=pmin(age,95)%/%5*5]
+
+a=merge(b[dose&gt;0&amp;batch!=&quot;&quot;&amp;type!=&quot;Other&quot;],b[dose&lt;=1,.(base=sum(dead)/sum(alive)),.(age,month)])[,base:=base*alive]
+a=a[,.(alive=sum(alive),dead=sum(dead),base=sum(base)),.(batch,age,type)]
+keep=a[,sum(alive),batch][V1/365&gt;=1e4,batch]
+a=a[batch%in%keep,.(mort=sum(dead)/sum(base)*100),batch]
+
+lev=seq(0,max(a$mort),10)
+p=data.table(x=paste0(&quot;[&quot;,lev,&quot;,&quot;,lev+10,&quot;)&quot;),y=as.integer(table(factor(a$mort%/%10*10,lev))))
+p[,x:=factor(x,unique(x))]
+
+png(&quot;1.png&quot;,1300,800,res=200)
+par(mar=c(5,2.3,1.9,0),mgp=c(0,0.6,0))
+tit=&quot;Histogram of batch mortality percentage relative to baseline&quot;
+barx=barplot(p$y,names.arg=p$x,main=tit,cex.main=1.1,xlab=NA,ylab=NA,lwd=1.5,las=2,space=0,ylim=c(0,30))
+text(x=barx,y=p$y-.4,labels=p$y,pos=3,cex=0.8)
+dev.off()</pre>
+<p>In the next plot I calculated ASMR using 5-year age groups but I didn't normalize it in any way for ongoing month or month of vaccination. However now the distribution looked less similar to a normal distribution:</p>
+<div class="width5">
+<img src="i/czech-kirschbatch-5.png">
+</div>
+<pre>b=fread(&quot;xz -dc czbucketsbatchkeep.csv.xz&quot;)
+b[,age:=ifelse(age&lt;25,0,pmin(age,95)%/%5*5)]
+
+std=fread(&quot;czcensus2021pop.csv&quot;)[,.(std=sum(pop)),.(age=ifelse(age&lt;25,0,pmin(age,95)%/%5*5))][,std:=std/sum(std)]
+a=b[dose&gt;0&amp;batch!=&quot;&quot;&amp;type!=&quot;Other&quot;,.(dead=sum(dead),alive=sum(alive)),.(batch,age)]
+a=merge(std,a)[alive/365&gt;=1e4,.(asmr=sum(dead/alive*std*365e5)),batch]
+
+step=50;max=max(a$asmr);lev=seq(0,max,step)
+p=data.table(x=paste0(&quot;[&quot;,lev,&quot;,&quot;,lev+step,&quot;)&quot;),y=as.integer(table(factor(a$asmr%/%step*step,lev))))
+p[,x:=factor(x,unique(x))]
+
+png(&quot;1.png&quot;,1300,800,res=200)
+par(mar=c(5,2.3,1.9,0),mgp=c(0,0.6,0))
+tit=&quot;Histogram of batch ASMR&quot;
+barx=barplot(p$y,names.arg=p$x,main=tit,cex.main=1.1,xlab=NA,ylab=NA,lwd=1.5,las=2,space=0,ylim=c(0,10))
+text(x=barx,y=p$y-.4,labels=p$y,pos=3,cex=0.8)
+dev.off()</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
