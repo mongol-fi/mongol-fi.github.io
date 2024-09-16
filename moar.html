@@ -8121,13 +8121,14 @@ age      38  34
 <p>And the lower bound of the 95% CI for ages 20-24 is between Kirsch's mortality rates for ages 15-19 and 25-29:</p>
 <pre>&gt; as.numeric(prop.test(129,227888)$conf)
 [1] 0.0004744636 0.0006748858</pre>
-<p>The distribution is skewed to the left because most batches have negative excess mortality, at least relative to a baseline of the whole NZ population during the same period or time:</p>
+<p>In histograms for batch mortality rate the distribution is skewed to the left because most batches have negative excess mortality (at least relative to a baseline of the whole NZ population during the same period or time):</p>
 <div class="width5">
 <img src="i/moar-batchyear-3.png">
 </div>
 <pre>library(data.table)
 
 b=fread(&quot;http://sars2.net/f/bucketsbatchkeep&quot;)
+b=b[batch%in%b[,.(sum(alive)/365),batch][V1&gt;=1e3,batch]]
 
 dead=fread(&quot;http://sars2.net/f/nz_monthly_deaths_by_age.csv&quot;)[ethnicity==&quot;Total&quot;&amp;year_reg&gt;=2021]
 dead=dead[,.(dead=sum(count)),.(month=sprintf(&quot;%d-%02d&quot;,year_reg,month_reg),age=as.integer(substr(age_group,1,2)))]
@@ -8147,12 +8148,12 @@ p=data.table(x=paste0(&quot;[&quot;,lev,&quot;,&quot;,lev+step,&quot;)&quot;),y=
 yend=max(p$y)*1.13
 p[,x:=factor(x,unique(x))]
 
-sub=&quot;The baseline number of deaths was calculated by multiplying the number of person-days for each combination of 5-year age group and month with the mortality rate among the general NZ population for the same combination of age group and month.&quot;|&gt;stringr::str_wrap(88)
+sub=&quot;The baseline number of deaths was calculated by multiplying the number of person-days for each combination of 5-year age group and month with the mortality rate among the general NZ population for the same combination of age group and month. Batches with less than 1,000 person-years are excluded.&quot;|&gt;stringr::str_wrap(84)
 
 png(&quot;1.png&quot;,1300,800,res=200)
-par(mar=c(5,2.3,4.8,0),mgp=c(0,0.6,0))
+par(mar=c(5,2.3,5.8,0),mgp=c(0,0.6,0))
 barx=barplot(p$y,names.arg=p$x,cex.main=1.1,xlab=NA,ylab=NA,lwd=1.5,las=2,space=0,ylim=c(0,yend))
-title(main=&quot;Histogram of batch excess mortality percentage&quot;,adj=0,line=3.4)
+title(main=&quot;Histogram of batch excess mortality percentage&quot;,adj=0,line=4.4,cex=.94)
 mtext(text=sub,side=3,line=.2,cex=.9,adj=0)
 text(x=barx,y=p$y-.01*yend,labels=p$y,pos=3,cex=0.8)
 dev.off()</pre>
