@@ -176,6 +176,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#USMortalitys_calculation_for_mean_monthly_ASMR_based_on_Chris_Johnstons_OIA_response>USMortality's calculation for mean monthly ASMR based on Chris Johnston's OIA response</a></li>
 <li><a href=#Substack_summary_post_by_Kirsch_from_September_2024>Substack summary post by Kirsch from September 2024</a></li>
 <li><a href=#Kirschs_histogram_of_batch_mortality_rates>Kirsch's histogram of batch mortality rates</a></li>
+<li><a href=#Kirschs_calculation_for_mortality_rate_of_batches_38_and_34_during_the_first_year_from_vaccination>Kirsch's calculation for mortality rate of batches 38 and 34 during the first year from vaccination</a></li>
 </ul></li>
 </ul>
 
@@ -7983,12 +7984,12 @@ system(&quot;qlmanage -p 1.png&amp;&gt;/dev/null&quot;)</pre>
 <pre>&gt; library(data.table)
 &gt; nz=fread(&quot;https://github.com/skirsch/NewZealand/raw/main/data/nz-record-level-data-4M-records.csv.gz&quot;)
 &gt; for(k in grep(&quot;date&quot;,names(nz)))nz[[k]]=as.Date(nz[[k]],&quot;%m-%d-%Y&quot;)
-&gt; nz[age%in%70:74,.(dead=sum(date_of_death-date_time_of_service&lt;365,na.rm=T),pop=.N),batch_id][dead&gt;=10]
+&gt; nz[age%in%70:74,.(dead=sum(date_of_death-date_time_of_service&lt;365,na.rm=T),pop=.N),batch_id][dead&gt;=10,.N]
 [1] 77</pre>
 <p>However when I excluded doses that were given after September 2022, I got only 58 batches with 10 or more deaths:</p>
 <pre>&gt; nz[date_time_of_service&lt;as.Date(&quot;2022-10-1&quot;)&amp;age%in%70:74,.(dead=sum(date_of_death-date_time_of_service&lt;365,na.rm=T),pop=.N),batch_id][dead&gt;=10,.N]
 [1] 58</pre>
-<p>The 8 batches in the leftmost bar of Kirsch's plot are all batches that have an average date of vaccination in April 2023 or later. So it explains why his plot has a bimodal distribution with a second peak at the leftmost bar. This shows the average date of vaccination for the 10 batches with the lowest mortality rate:</p>
+<p>The 8 batches in the leftmost bar of Kirsch's plot are all batches that have an average date of vaccination in April 2023 or later. So it explains why his plot has a bimodal distribution with a second peak for the leftmost bar. This shows the average date of vaccination for the 10 batches with the lowest mortality rate:</p>
 <pre>&gt; nz[age%in%70:74,.(dead=sum(date_of_death-date_time_of_service&lt;365,na.rm=T),pop=.N,date=mean(date_time_of_service)),batch_id][dead&gt;=10][,cmr:=dead/pop*1e5][order(cmr)][1:10]
     batch_id dead   pop       date       cmr
  1:      107   12  3558 2023-05-23  337.2681
@@ -8032,6 +8033,129 @@ text(x=barx,y=p$y-.01*yend,labels=p$y,pos=3,cex=0.8)
 dev.off()</pre>
 <p>The highest bar in my histogram is the bar for the range <code>[100,110)</code>. But if my baseline would've included unvaccinated people and not only vaccinated people, then the highest bar would've probably been under 100% like in a similar analysis I did for the Czech record-level data where the highest bar was <code>[80,90)</code>: sars2.net/czech4.html#Kirschs_calculation_for_mortality_rate_by_batch.</p>
 <p>In the plot above I excluded batches that had less than 10,000 person-years. A minor problem with Kirsch's analysis is that he excluded batches with less than 10 deaths, which is biased towards excluding batches with a low mortality rate.</p>
+<h3>
+<a href=#Kirschs_calculation_for_mortality_rate_of_batches_38_and_34_during_the_first_year_from_vaccination id=Kirschs_calculation_for_mortality_rate_of_batches_38_and_34_during_the_first_year_from_vaccination>Kirsch's calculation for mortality rate of batches 38 and 34 during the first year from vaccination</a>
+</h3>
+<p>Kirsch wrote: [<a href="https://kirschsubstack.com/p/the-new-zealand-data-released-by">https://kirschsubstack.com/p/the-new-zealand-data-released-by</a>]</p>
+<blockquote>
+<h3>Batches vary by over 2X in mortality rate, even if they are given in the same month to the same age range of people</h3>
+<p>You can't have a 2X variation in the 1-year mortality rate for a given vaccination date and 5 year age range. That suggests that the vaccine is not safe. We can do a Fisher exact test to prove our point.</p>
+<p><img src=i/moar-batchyear.jpg class=blockimg></p>
+<p>Let's take the 80-84 year old line because there are lots of deaths there so it's easier to show the differences between the batches are statistically significant (which should never happen if the vaccines are all safe).</p>
+<p>Statistics for batch 34 vs. batch 38 for ages 80 to 84 given Jan 1, 2022 to Feb 28, 2022. The Fisher matrix is (5381 2859 139 194 8573).</p>
+<pre>One-sided p-value 7.956587575710554e-18
+Max likelihood estimate of the Odds ratio= 2.6265352736010104
+95% Confidence Interval(low=2.091, high=3.305)</pre>
+<p>So we're done. You can try values higher than 34 and you'll see this wasn't cherry picked. The 2X variation is easy to find and is statistically significant when we have enough data in the batches.</p>
+</blockquote>
+<p>I think his contingency matrix accidentally included a 5th value which was a sum of the other 4 values, because the contingency matrix for Fisher's exact test should have only 4 values like this:</p>
+<table>
+<tr><th></th><th>
+Survived
+</th><th>
+Died
+</th></tr>
+<tr><th>
+Batch 34
+</th><td>
+5381
+</td><td>
+139
+</td></tr>
+<tr><th>
+Batch 38
+</th><td>
+2859
+</td><td>
+194
+</td></tr>
+</table>
+<p>The p-value of Fisher's exact text indicates how likely it would be that the two batches would have the given number of deaths and survived people if the deaths were distributed randomly. But the reason why the p-value is so low is because the deaths are not actually distributed randomly. Even though it's not necessarily because some batches are less safe than others like Kirsch suggested, but the mortality rate of batches depends on many confounding factors which Kirsch did not control for in his analysis, because he only controlled for the age group and the time of vaccination.</p>
+<p>But anyway, Kirsch's table showed that batch 38 had higher mortality rate in ages 55-59 and above but lower mortality rate in ages 50-54 and below. When someone in the comments said it might have meant that the data was corrupt, Kirsch answered that <span class="quote">&quot;The data is pretty noisy which is normal and there are lots of factors at play here. Not everything is going to align perfectly.&quot;</span> So if his <span class="quote">&quot;lots of factors&quot;</span> can explain why the mortality rate varies across age groups, then couldn't the same factors explain why the mortality rate varies across batches?</p>
+<p>Someone else posted this comment: [<a href="https://kirschsubstack.com/p/the-new-zealand-data-released-by/comment/69061049">https://kirschsubstack.com/p/the-new-zealand-data-released-by/comment/69061049</a>]</p>
+<blockquote>
+<p>Something is weird about the data if they are annual all-cause mortality data.</p>
+<p>For simplicity look at the age group 64-69 for the highest death rate batch. It is 7.32 per 1000. The normal death rate for this age group should be 9.9 per 1,000.</p>
+<p>What am I missing?</p>
+</blockquote>
+<p>But I pointed out that vaccinated people often have lower than baseline mortality because of the healthy vaccinee effect. The number of deaths is reduced even further during approximately the first 2-3 months after vaccination because of the temporal/time-varying HVE, so people spent a fairly large part of the 1-year observation period being impacted by the temporal HVE.</p>
+<p>Kirsch took the age of each person from the age column of his 4M CSV file, which is the age on either December 2nd 2023 for people who didn't die or the day of death for people who died (which was in both cases calculated incorrectly as a floored division of the age in days by 365). However the age in the age column is on average about 1.4 years higher than the age of people during the 1-year observation period.</p>
+<p>In the following code I treated the age of each person as their age 182 days after vaccination, which was roughly the average age during the observation period. I used the total mortality rate of each age group in 2015-2019 as the baseline. However I still got negative excess mortality for ages 65-69 in batch 38:</p>
+<pre>nz=fread(&quot;https://github.com/skirsch/NewZealand/raw/main/data/nz-record-level-data-4M-records.csv.gz&quot;)
+for(k in grep(&quot;date&quot;,names(nz)))nz[[k]]=as.Date(nz[[k]],&quot;%m-%d-%Y&quot;)
+
+age=\(x,y){class(x)=class(y)=NULL;(y-x-(y-789)%/%1461+(x-789)%/%1461)%/%365}
+
+nz[,vaxage:=age(date_of_birth,date_time_of_service+182)]
+
+a=nz[,.(cmr=sum(date_of_death-date_time_of_service&lt;365,na.rm=T)/.N),.(batch=batch_id,age=agecut(vaxage,ages))]
+a=merge(pop[year%in%2015:2019,.(base=sum(dead)/sum(pop,na.rm=T)),.(age=agecut(age,ages))],a)
+a[batch%in%c(34,38),xtabs(round((cmr/base-1)*100)~age+batch)[,2:1]]</pre>
+<!-- -->
+<pre>        batch
+age      38  34
+  0-39  -25  80
+  40-44 -41  74
+  45-49   8  14
+  50-54 -41   5
+  55-59  -3 -25
+  60-64  -4 -35
+  65-69 -14 -40 # batch 38 got -14% excess mortality in ages 65-69
+  70-74   1 -42
+  75-79  16 -35
+  80-84  24 -50
+  85-89   2 -41
+  90+     0 -37</pre>
+<p>Kirsch sent me this DM, where he referred to my histogram for CMR when I excluded doses given after September 2022:</p>
+<div class="width4">
+<img src="i/moar-batchyear-2.jpg">
+</div>
+<p>However 2400 is only about 0.6 SD above average:</p>
+<pre>&gt; nz=fread(&quot;https://github.com/skirsch/NewZealand/raw/main/data/nz-record-level-data-4M-records.csv.gz&quot;)
+&gt; for(k in grep(&quot;date&quot;,names(nz)))nz[[k]]=as.Date(nz[[k]],&quot;%m-%d-%Y&quot;)
+&gt; a=nz[date_time_of_service&lt;&quot;2022-10-1&quot;&amp;age%in%70:74]
+&gt; a=a[,.(dead=sum(date_of_death-date_time_of_service&lt;365,na.rm=T),pop=.N),batch_id][dead&gt;=10]
+&gt; a[,cmr:=dead/pop*1e5]
+&gt; (2400-mean(a$cmr))/sd(a$cmr)
+[1] 0.6465083</pre>
+<p>And the lower bound of the 95% CI for ages 20-24 is between Kirsch's mortality rates for ages 15-19 and 25-29:</p>
+<pre>&gt; as.numeric(prop.test(129,227888)$conf)
+[1] 0.0004744636 0.0006748858</pre>
+<p>The distribution is skewed to the left because most batches have negative excess mortality, at least relative to a baseline of the whole NZ population during the same period or time:</p>
+<div class="width5">
+<img src="i/moar-batchyear-3.png">
+</div>
+<pre>library(data.table)
+
+b=fread(&quot;http://sars2.net/f/bucketsbatchkeep&quot;)
+
+dead=fread(&quot;http://sars2.net/f/nz_monthly_deaths_by_age.csv&quot;)[ethnicity==&quot;Total&quot;&amp;year_reg&gt;=2021]
+dead=dead[,.(dead=sum(count)),.(month=sprintf(&quot;%d-%02d&quot;,year_reg,month_reg),age=as.integer(substr(age_group,1,2)))]
+dates=seq(as.Date(&quot;2021-1-1&quot;),as.Date(&quot;2023-9-30&quot;),1)
+pop=fread(&quot;http://sars2.net/f/nz_infoshare_population_quarterly.csv&quot;,header=T)
+pop=pop[,.(date=year,pop=unlist(pop[,-1]),age=rep(0:95,each=.N))]
+pop$date=as.Date(paste0(substr(pop$date,1,4),&quot;-&quot;,(as.numeric(substr(pop$date,6,6))-1)*3+2,&quot;-15&quot;))
+pop=pop[,spline(date,pop,xout=dates),age][,.(month=substr(`class&lt;-`(x,&quot;Date&quot;),1,7),pop=y,age)]
+pop=pop[,.(pop=sum(pop)),.(month,age=age%/%5*5)]
+base=merge(pop,dead)[,.(month,age,base=dead/pop)]
+
+a=merge(b,base)[,base:=base*alive]
+a=a[,.(excess=(sum(dead)/sum(base)-1)*100),batch]
+
+step=10;lev=seq(-100,max(a$excess),step)
+p=data.table(x=paste0(&quot;[&quot;,lev,&quot;,&quot;,lev+step,&quot;)&quot;),y=as.integer(table(factor(a$excess%/%step*step,lev))))
+yend=max(p$y)*1.13
+p[,x:=factor(x,unique(x))]
+
+sub=&quot;The baseline number of deaths was calculated by multiplying the number of person-days for each combination of 5-year age group and month with the mortality rate among the general NZ population for the same combination of age group and month.&quot;|&gt;stringr::str_wrap(88)
+
+png(&quot;1.png&quot;,1300,800,res=200)
+par(mar=c(5,2.3,4.8,0),mgp=c(0,0.6,0))
+barx=barplot(p$y,names.arg=p$x,cex.main=1.1,xlab=NA,ylab=NA,lwd=1.5,las=2,space=0,ylim=c(0,yend))
+title(main=&quot;Histogram of batch excess mortality percentage&quot;,adj=0,line=3.4)
+mtext(text=sub,side=3,line=.2,cex=.9,adj=0)
+text(x=barx,y=p$y-.01*yend,labels=p$y,pos=3,cex=0.8)
+dev.off()</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
