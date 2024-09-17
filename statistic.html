@@ -90,6 +90,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Steve_Kirsch_30_excess_deaths_in_the_Seychelles_in_2021_2023>Steve Kirsch: 30% excess deaths in the Seychelles in 2021-2023</a></li>
 <li><a href=#Pierre_Kory_Excess_deaths_in_young_age_groups_in_the_fall_of_2021>Pierre Kory: Excess deaths in young age groups in the fall of 2021</a></li>
 <li><a href=#Steve_Kirsch_Cardiac_failure_deaths_in_children_at_CDC_WONDER>Steve Kirsch: Cardiac failure deaths in children at CDC WONDER</a></li>
+<li><a href=#Clare_Craig_Sustained_excess_deaths_in_Sweden>Clare Craig: Sustained excess deaths in Sweden</a></li>
 </ul>
 
 <h2>
@@ -952,7 +953,7 @@ ggsave(&quot;1.png&quot;,width=4.3,height=3.5,dpi=450)</pre>
 <div class="width5">
 <img src="i/debunk-dowd-1.jpg">
 </div>
-<p>When I tried replicating the plot, my mortality rate for 2022 was about 1009 and not about 1090 like in Dowd's paper, as is shown by the green cross here:</p>
+<p>When I tried replicating the plot, my mortality rate for 2022 was about 1009 and not about 1090 like in Dowd's paper, like you can see from the green crosses here:</p>
 <div class="width5">
 <img src="i/debunk-dowd-2.jpg">
 </div>
@@ -1040,7 +1041,7 @@ sed 1d old|cut -d, -f2-5|awk -F, &#39;$2!=2021&amp;&amp;($2!=2020||$1&lt;4)&#39;
 <div class="width6">
 <img src="i/statistic-seychelles.jpg">
 </div>
-<p>A README file for the World Mortality Dataset says that they got data for deaths in the Seychelles through <span class="quote">&quot;Email correspondence with Seychelles National Bureau of Statistics&quot;</span>. [<a href="https://github.com/akarlinsky/world_mortality">https://github.com/akarlinsky/world_mortality</a>] Based on their data I got only about 3% excess deaths in 2021-2023 when I used the 2015-2019 linear trend as the baseline:</p>
+<p>A README file for the World Mortality Dataset says that they got data for deaths in the Seychelles through <span class="quote">&quot;email correspondence with Seychelles National Bureau of Statistics&quot;</span>. [<a href="https://github.com/akarlinsky/world_mortality">https://github.com/akarlinsky/world_mortality</a>] Based on their data I got only about 3% excess deaths in 2021-2023 when I used the 2015-2019 linear trend as the baseline:</p>
 <pre>&gt; t=fread(&quot;https://github.com/akarlinsky/world_mortality/raw/main/world_mortality.csv&quot;)
 &gt; t=t[country_name==&quot;Seychelles&quot;,.(dead=sum(deaths)),year]
 &gt; t$trend=t[year&lt;2020,predict(lm(dead~year),t)]
@@ -1134,6 +1135,76 @@ sed 1d old|cut -d, -f2-5|awk -F, &#39;$2!=2021&amp;&amp;($2!=2020||$1&lt;4)&#39;
 <p>But anyway, there was an approximately 20% increase in deaths with UCD I46 if the average of 2018 to 2020 is compared against the average of 2021 to 2023. Some of it might be due to COVID or recreational drugs, because there has also been a big increase in opioid deaths since the start of the pandemic.</p>
 <p>Kirsch wrote that <span class="quote">&quot;VSRF's Nurse Angela knows of 15 kids, under 20, who died from cardiac arrest.&quot;</span> So if we assume that the 20% increase could be entirely attributed to vaccines, then in an alternate universe where no kids got a COVID shot, would Nurse Angela know 12.5 kids who died of a cardiac arrest over the same period of time when now there were 15 deaths? (Because 15 divided by 1.2 is 12.5.)</p>
 <p>Kirsch didn't specify if Nurse Angela knew the kids personally or if she just heard about them on social media or something, but the latter seems more likely, so she wouldn't necessarily have heard about them if she wasn't following the news about deaths that might potentially be attributed to vaccines. Or Kirsch or Nurse Angela could've just made up the number.</p>
+<h2>
+<a href=#Clare_Craig_Sustained_excess_deaths_in_Sweden id=Clare_Craig_Sustained_excess_deaths_in_Sweden>Clare Craig: Sustained excess deaths in Sweden</a>
+</h2>
+<p>Clare Craig quoted this plot posted by USMortality that was taken from a paper by Denis Rancourt, and she said that Sweden had incessant excess deaths above the baseline: [<a href="https://x.com/ClareCraigPath/status/1836037409940627724">https://x.com/ClareCraigPath/status/1836037409940627724</a>]</p>
+<div class="width6">
+<img src="i/statistic-craig-rancourt-1.jpg">
+</div>
+<p>Rancourt's paper said: <span class="quote">&quot;In practice, our reference period is 2015 through 2019, except in the few countries for which the mortality data does not extend as far back as 2015 and may begin in 2017 and 2019, for example. We least-squares fit a straight line to the same week or month in each of the five (or less) reference years as the week or month of interest, where the slope of this fitted line is constrained to always (for every week or month of interest) be equal to the slope of a least-squares fitted line to all of the all-cause mortality data (all weeks or months) in the full 5-year (or less) reference period, for each given country.&quot;</span> [<a href="https://correlation-canada.org/covid-excess-mortality-125-countries/">https://correlation-canada.org/covid-excess-mortality-125-countries/</a>]</p>
+<p>I'm not sure if Rancourt's baseline was calculated based on raw deaths like at OWID or based on CMR. But in either case it's inaccurate for Sweden because of the aging boomer population and because Sweden had an unusually low number of deaths in 2015. In the plot below I think my green baseline is more accurate, but it's a lot higher than the blue baseline especially in 2023 and 2022:</p>
+<div class="width6">
+<img src="i/statistic-craig-rancourt-2.png">
+</div>
+<pre>library(data.table);library(ggplot2)
+
+cul=\(x,y)y[cut(x,c(y,Inf),,T,F)]
+
+t=fread(&quot;http://sars2.net/f/swedenpopdead.csv&quot;)
+
+p=cmr=t[year&gt;=2000,.(y=sum(dead)/sum(pop)*1e5,z=&quot;Actual mortality rate&quot;),.(x=year)]
+
+a=t[year&gt;=2000,.(dead=sum(dead),pop=sum(pop)),.(age=cul(age,c(0:10*5,51:100)),year)]
+a=merge(a,a[year%in%2010:2019,.(year=2000:2023,base=predict(lm(dead/pop~year),.(year=2000:2023))),age])
+p=rbind(p,a[,.(y=sum(base*pop)/sum(pop)*1e5,z=&quot;2010-2019 trend in age-specific CMR&quot;),.(x=year)])
+
+p=rbind(p,cmr[x%in%2015:2019,.(x=cmr$x,y=predict(lm(y~x),cmr),z=&quot;2015-2019 linear trend&quot;)])
+
+p[,z:=factor(z,unique(z))]
+
+cand=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
+ystep=cand[which.min(abs(cand-(max(p$y)-min(p$y))/6))]
+ystart=ystep*floor(min(p$y)/ystep)
+yend=ystep*ceiling(max(p$y)/ystep)
+ybreak=seq(ystart,yend,ystep)
+xstart=min(p$x);xend=max(p$x)
+
+color=c(&quot;black&quot;,&quot;#00aa00&quot;,hsv(22/36,1,.8))
+
+ggplot(p,aes(x,y,color=z,linetype=z))+
+geom_hline(yintercept=c(ystart,0,yend),linewidth=.3,lineend=&quot;square&quot;)+
+geom_vline(xintercept=c(xstart-.5,xend+.5),linewidth=.3,lineend=&quot;square&quot;)+
+geom_line(linewidth=.3)+
+labs(title=&quot;Yearly deaths per 100,000 people in Sweden&quot;,subtitle=&quot;In order to calculate the green baseline, first a linear regression for CMR was done for each age group in 2010-2019, and then the yearly population sizes of each age group were multiplied by the value of the projected trend to get the expected deaths for each age group, and then the results for all ages were added together and divided it by the population size of all ages. Five-year age groups were used for ages 0 to 49, single-year ages were used for ages 50 and above, and ages 100 and above were aggregated together. Source: statistikdatabasen.scb.se/pxweb/en/ssd/START__BE / sars2.net/f/swedenpopdead.csv.&quot;|&gt;stringr::str_wrap(80),x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=seq(xstart,xend,2))+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
+scale_color_manual(values=color)+
+scale_linetype_manual(values=c(1,2,2))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.ticks=element_line(linewidth=.3,color=&quot;black&quot;),
+  axis.ticks.length=unit(.2,&quot;lines&quot;),
+  axis.title=element_text(size=8),
+  legend.background=element_blank(),
+  legend.box.just=&quot;left&quot;,
+  legend.justification=c(1,1),
+  legend.key=element_blank(),
+  legend.key.height=unit(10,&quot;pt&quot;),
+  legend.key.width=unit(17,&quot;pt&quot;),
+  legend.position=c(1,1),
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.box.background=element_rect(fill=&quot;white&quot;,color=&quot;black&quot;,linewidth=.3),
+  legend.margin=margin(-2,5,4,4,&quot;pt&quot;),
+  legend.text=element_text(size=7,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.grid.major=element_blank(),
+  plot.margin=margin(5,5,5,5,&quot;pt&quot;),
+  plot.subtitle=element_text(size=7,margin=margin(,,4)),
+  plot.title=element_text(size=8,face=2,margin=margin(1,,5)))
+ggsave(&quot;1.png&quot;,width=4,height=3.5,dpi=400*4)
+system(&quot;mogrify -resize 25% 1.png&quot;)</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
