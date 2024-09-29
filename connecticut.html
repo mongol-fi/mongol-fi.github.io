@@ -1,0 +1,367 @@
+<!doctype html>
+<meta charset=utf-8>
+<style>
+body{background:#292929;color:white;margin:6px 6px 6px max(6px, min(50vw - 270px, 100vw - 1100px))}
+body,td,th{font:14.5px/1.3 Arial,Helvetica,'Liberation Sans',sans-serif}
+p{max-width:540px}
+h1,h2,h2 a,h3 a,h2 a:visited,h3 a:visited{font-weight:normal;color:white}
+h1{font-size:2.1em;margin-top:.9em}
+h2{font-size:1.7em}
+h3{font-size:1.3em}
+h4{font-size:1.1em}
+a{color:hsl(220,100%,75%)}
+a:visited{color:hsl(270,100%,75%)}
+pre,code{white-space:pre-wrap;word-wrap:break-word;font:14px Menlo,'DejaVu Sans Mono','Liberation Mono',Consolas,monospace;background:#4a4a4a;color:white}
+pre{padding:4px}
+code{padding:1px}
+table{border-collapse:collapse}
+td,th{border:1px solid #555;padding:2px 4px}
+th{background:#444;text-align:left;font-weight:bold}
+img{max-width:100%}
+blockquote{margin-left:0px;padding-left:40px;margin-right:0}
+blockquote p{max-width:480px}
+blockquote blockquote p{max-width:440px}
+blockquote blockquote blockquote p{max-width:400px}
+blockquote,.quote,blockquote h1,blockquote h2,blockquote h3{color:hsl(50,100%,85%)}
+blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(45,55%,65%)}
+blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote .quote,.quote .quote .quote{color:hsl(40,40%,50%)}
+.spoiler button{width:90px;border:0;font-family:inherit;font-size:inherit;color:inherit;margin:0;background:#4a4a4a;padding:4px 0px;outline:none;cursor:pointer}
+.spoiler pre{display:none;margin-top:0}
+.red{color:hsl(0,100%,75%)}
+.width1{max-width:100px}
+.width2{max-width:200px}
+.width3{max-width:300px}
+.width4{max-width:400px}
+.width5{max-width:500px}
+.width6{max-width:600px}
+.width7{max-width:700px}
+.width8{max-width:800px}
+.width9{max-width:900px}
+.width10{max-width:1000px}
+.width11{max-width:1100px}
+.width12{max-width:1200px}
+.width13{max-width:1300px}
+.width14,.width0{max-width:1400px}
+.width00{margin-left:calc(-1 * max(0px, min(50vw - 270px, 100vw - 1100px)) + 6px)}
+.width00 img,.width0 img{margin:0 -1.5px -1.5px 0;vertical-align:bottom}
+.blockimg{max-width:calc(100vw - min(50vw - 270px, 100vw - 1100px) - 40px - 6px)}
+@media print{
+  body{background:white;color:black;margin:0px;zoom:1;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+  a{color:#0000EE}a:visited{color:#551A8B}
+  h1,h2,h2 a,h3 a,h2 a:visited,h3 a:visited{color:black}
+  pre,code{background:#ccc;color:black;font-size:13px}
+  th{background:#ddd}
+  blockquote,.quote{color:hsl(30,65%,30%)}
+  blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(30,45%,50%)}
+  blockquote blockquote blockquote,blockquote .quote .quote,.quote .quote .quote{color:hsl(30,70%,60%)}
+}
+</style>
+<title>Record-level Medicare data from Connecticut published by Steve Kirsch</title>
+<h1>Record-level Medicare data from Connecticut published by Steve Kirsch - <a href=index.html>sars2.net</a></h1>
+<h2 id=Contents><a href=#Contents>Contents</a></h2>
+<ul>
+<li><a href=#Converting_the_data_to_CSV>Converting the data to CSV</a></li>
+<li><a href=#Bucket_analysis>Bucket analysis</a></li>
+<li><a href=#Triangle_plot_for_Moderna_Pfizer_ratio_by_month_of_vaccination_and_ongoing_month>Triangle plot for Moderna-Pfizer ratio by month of vaccination and ongoing month</a></li>
+<li><a href=#Deaths_by_weeks_since_vaccination>Deaths by weeks since vaccination</a></li>
+<li><a href=#ASMR_by_vaccine_brand_and_month>ASMR by vaccine brand and month</a></li>
+<li><a href=#Plot_of_excess_deaths_COVID_cases_and_deaths_PCR_positivity_and_vaccine_doses_in_Connecticut>Plot of excess deaths, COVID cases and deaths, PCR positivity, and vaccine doses in Connecticut</a></li>
+</ul>
+
+<h2>
+<a href=#Converting_the_data_to_CSV id=Converting_the_data_to_CSV>Converting the data to CSV</a>
+</h2>
+<p>In September 2024 Steve Kirsch published a spreadsheet for Medicare data from Connecticut that contains rows for a total of about 500,000 people. The file has columns for sex, date of death, vaccine brand, the dates of the first 3 vaccine doses, and age at dose 1: <a href="https://kirschsubstack.com/p/i-have-been-fully-vindicated-by-the">https://kirschsubstack.com/p/i-have-been-fully-vindicated-by-the</a>. The vaccine brand is presumably the brand of the first dose.</p>
+<p>Kirsch obfuscated the vaccine brand names in his spreadsheet in order to do his ChatGPT analysis, but this code converts the spreadsheet to a CSV file with unobfuscated vaccine brand names, ISO date format, and shorter column names:</p>
+<pre>download.file(&quot;https://www.skirsch.com/covid/ct_mortality.xlsx&quot;,&quot;ct_mortality.xlsx&quot;)
+t=data.table(readxl::read_excel(&quot;ct_mortality.xlsx&quot;))
+
+t[BRAND==&quot;PURPLE&quot;,BRAND:=&quot;Pfizer&quot;]
+t[BRAND==&quot;MIXED&quot;,BRAND:=&quot;Moderna&quot;]
+t[BRAND==&quot;CHERRY&quot;,BRAND:=&quot;Janssen&quot;]
+t[BRAND==&quot;MODERNA&quot;,BRAND:=&quot;Moderna&quot;] # the last two rows for Moderna were accidentally not obfuscated
+
+o=t[,.(id=PERSON_ID,sex=Sex,dead=as.Date(`Date of death`),brand=BRAND,date1=as.Date(SHOTDATE_1),date2=as.Date(SHOTDATE_2),date3=as.Date(SHOTDATE_3),age=AGE_AT_DOSE1)]
+
+fwrite(o,&quot;ctmort.csv.gz&quot;,na=&quot;&quot;)</pre>
+<p>I uploaded the output here: <a href=f/ctmort.csv.gz>f/ctmort.csv.gz</a>.</p>
+<p>Medicare is generally available to only ages 65 and above, but it's also available to people under the age of 65 with disabilities: <a href="https://medicareadvocacy.org/under-65-project/">https://medicareadvocacy.org/under-65-project/</a>. Therefore if for example you calculate a mortality rate within a year from the first dose, it's much higher for ages 60-64 than 65-69:</p>
+<pre>&gt; ct=fread(&quot;http://sars2.net/f/ctmort.csv.gz&quot;)
+&gt; ct[,.(cmr=round(mean(!is.na(dead)&amp;dead-date1&lt;365,na.rm=T)*1e5),.N),.(age=age%/%5*5)][order(age)]|&gt;print(r=F)
+ age    cmr      N
+  10      0      2
+  15      0      1
+  20    621    483
+  25    190   1055
+  30    306   1633
+  35    934   2034
+  40   1163   2494
+  45   1333   3151
+  50   2436   5624
+  55   2675   9681
+  60   2988  14925 # ages 60-64 have almost 3 times as high CMR as ages 65-69
+  65   1169 121444
+  70   1724 113601
+  75   2911  87246
+  80   5014  56220
+  85   8739  35681
+  90  15787  19168
+  95  23483   5932
+ 100  32071    792
+ 105  41379     29
+ 110 100000      1
+ 115 100000      2
+ age    cmr      N</pre>
+<h2>
+<a href=#Bucket_analysis id=Bucket_analysis>Bucket analysis</a>
+</h2>
+<p>The following script generates a buckets file for the Connecticut data, where people are grouped by the month of vaccination, ongoing month, weeks since vaccination, dose number, age, sex, and vaccine type. I assigned a random birthday to each person in order to account for the aging of people over time with a daily precision:</p>
+<pre>library(data.table);library(lubridate)
+
+# fast way to get difference in floored years for a pair of dates after 1900 and before 2100
+age=\(x,y){class(x)=class(y)=NULL;(y-x-(y-789)%/%1461+(x-789)%/%1461)%/%365}
+
+rec=fread(&quot;http://sars2.net/f/ctmort.csv.gz&quot;)
+
+mindate=as.Date(&quot;2020-12-1&quot;);maxdate=as.Date(&quot;2024-07-31&quot;)
+
+t=rec[,.(id,sex,dead,type=brand,date=c(date1,date2,date3),dose=rep(1:3,each=.N),age)]
+t$vaxmonth=substr(t$date,1,7)
+set.seed(0);t$birth=as.Date(t$date)-years(t$age)-sample(0:364,nrow(t),T)
+
+buck=data.table()
+for(day in as.list(seq(mindate,maxdate,1))){
+  cat(as.character(day),&quot;\n&quot;)
+  ## buck=rbind(buck,unique(t[date&lt;=day&amp;(is.na(death)|day&lt;=death)&amp;day&gt;=birth],by=&quot;id&quot;)[,.( # remove under earlier doses
+  buck=rbind(buck,t[date&lt;=day&amp;(is.na(dead)|day&lt;=dead)&amp;day&gt;=birth][,.( # keep under earlier doses
+    month=substr(day,1,7),vaxmonth,week=as.numeric(day-date)%/%7,
+    age=age(birth,day),dose,type,sex,alive=1,dead=dead==day)])[,.(
+      alive=sum(alive),dead=sum(dead,na.rm=T)),by=.(month,vaxmonth,week,age,dose,type,sex)]
+}
+
+setorder(buck,month,vaxmonth,week,age,dose,type,sex)
+fwrite(buck,&quot;ctbucketskeep.csv.gz&quot;,quote=F)</pre>
+<p>I uploaded the output here: <a href=f/ctbucketskeep.csv.gz>f/ctbucketskeep.csv.gz</a>. In the file people are kept under earlier doses after a new dose.</p>
+<h2>
+<a href=#Triangle_plot_for_Moderna_Pfizer_ratio_by_month_of_vaccination_and_ongoing_month id=Triangle_plot_for_Moderna_Pfizer_ratio_by_month_of_vaccination_and_ongoing_month>Triangle plot for Moderna-Pfizer ratio by month of vaccination and ongoing month</a>
+</h2>
+<p>In Kirsch's analysis of the Czech record-level data, his main argument why Moderna was more unsafe than Pfizer was that when he calculated age-specific mortality rates during the first year from the first dose, Moderna got about 1.3 higher mortality rate than Pfizer in different age groups. However I pointed out to him that it might have been due to some confounders he didn't adjust for in his analysis, and when I calculated an age-normalized Moderna-Pfizer mortality ratio, my total ratio for all months of vaccination was about 1.3 like in Kirsch's analysis, but my ratio fell close to 1.0 among people who were vaccinated in the fourth quarter of 2021: [<a href=czech2.html#Triangle_plot_of_Moderna_Pfizer_ratio>czech2.html#Triangle_plot_of_Moderna_Pfizer_ratio</a>]</p>
+<div class="width8">
+<img src="i/czech-mrr-triangle.png">
+</div>
+<p>In the new Connecticut data Kirsch now got about 10% higher mortality rate for Pfizer than Moderna, but he again attributed the difference to a difference in vaccine safety, even though this time Pfizer got higher mortality rates than Moderna. When someone asked Kirsch to explain it in his Substack comments, Kirsch replied: <span class="quote">&quot;it's a QA issue. Moderna is more deadly, but the batches are even a greater problem.&quot;</span> [<a href="https://kirschsubstack.com/p/i-have-been-fully-vindicated-by-the/comment/70688177">https://kirschsubstack.com/p/i-have-been-fully-vindicated-by-the/comment/70688177</a>]</p>
+<p>In the following code I calculated age-normalized mortality rates for each combination of vaccination month, ongoing month, and vaccine brand. And when I divided the rate for Moderna with the rate for Pfizer, the total ratio for all months of vaccination was about 0.79. Moderna got a higher rate among people who got the first dose in March, April, May, June, July, or September 2021, even though during other months the age-normalized rate was higher for Pfizer. So I think it shows that people who got Pfizer and Moderna vaccines had different profiles of confounders during different months of vaccination, even though I guess Kirsch might argue it was because some batches were more deadly than others:</p>
+<div class="width14">
+<img src="i/ct-triangle.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table)
+
+kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1
+  x[]=ifelse(abs(x)&lt;10,round(x),paste0(round(x/1e3^(e2-1),ifelse(e%%3==0,1,0)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2]));x}
+
+type1=&quot;Moderna&quot;;type2=&quot;Pfizer&quot;
+
+b=fread(&quot;s/f/ctbucketskeep.csv.gz&quot;)
+
+a=b[age&gt;=65&amp;dose==1,.(dead=sum(dead),alive=sum(alive)),.(type,month,vaxmonth,age=pmin(age,100))]
+
+pop=fread(&quot;s/f/uspopdead.csv&quot;)
+a=merge(a,pop[,.(month=date,age,base=dead/persondays)])[,base:=base*alive]
+a=a[month&gt;=&quot;2020-12&quot;&amp;vaxmonth&gt;=&quot;2020-12&quot;&amp;vaxmonth&lt;=&quot;2021-12&quot;]
+
+a=rbind(a,a[,.(dead=sum(dead),alive=sum(alive),base=sum(base),month=&quot;Total&quot;),.(age,vaxmonth,type)])
+a=rbind(a,a[,.(dead=sum(dead),alive=sum(alive),base=sum(base),vaxmonth=&quot;Total&quot;),.(age,month,type)])
+a=a[,.(rat=sum(dead)/sum(base),alive=sum(alive)),.(type,vaxmonth,month)]
+
+ar=tapply(a$rat,a[,1:3],c)
+m1=ar[type1,,];m2=ar[type2,,]
+m=(m1-m2)/ifelse(m1&gt;m2,m2,m1)
+disp=m1/m2;disp=ifelse(disp&gt;=10,sprintf(&quot;%.1f&quot;,disp),sprintf(&quot;%.2f&quot;,disp))
+disp[lower.tri(disp)&amp;row(disp)!=nrow(disp)]=&quot;&quot;
+exp=.9;m=abs(m)^exp*sign(m)
+maxcolor=4^exp
+m[m==Inf]=maxcolor;m[m==-Inf]=-maxcolor
+
+pheatmap::pheatmap(m,filename=&quot;mort.png&quot;,display_numbers=disp,
+  gaps_col=ncol(m)-1,gaps_row=nrow(m)-1,cluster_rows=F,cluster_cols=F,legend=F,
+  cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,border_color=NA,na_col=&quot;white&quot;,
+  number_color=ifelse(!is.na(m)&amp;abs(m)&gt;.5*maxcolor,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(-maxcolor,maxcolor,,256),
+  colorRampPalette(hsv(rep(c(7/12,0),4:5),c(.9,.75,.6,.3,0,.3,.6,.75,.9),c(.4,.65,1,1,1,1,1,.65,.4)))(256))
+
+mort=fread(&quot;s/f/ctmort.csv.gz&quot;)
+pop=mort[age&gt;=65&amp;date1&lt;&quot;2022-1-1&quot;,table(format(date1,&quot;%Y-%m&quot;),brand)][,c(&quot;Pfizer&quot;,&quot;Moderna&quot;)]
+pop=rbind(pop,Total=colSums(pop))
+
+exp2=.6;maxcolor2=max(pop[-nrow(pop),])
+
+pheatmap::pheatmap(pop^exp2,filename=&quot;pop.png&quot;,display_numbers=kimi(pop),
+  gaps_row=nrow(m)-1,cluster_rows=F,cluster_cols=F,legend=F,
+  cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,border_color=NA,na_col=&quot;white&quot;,
+  number_color=ifelse(pop^exp2&gt;maxcolor2^exp2*.45,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(0,maxcolor2^exp2,,256),sapply(seq(1,0,,256),\(i)rgb(i,i,i)))
+
+system(&quot;magick mort.png \\( pop.png -chop 14x -splice x5 \\) +append 0.png;w=`identify -format %w 0.png`;pad=22;magick -pointsize 46 -font Arial-Bold -interline-spacing -2 \\( -size $[w-pad*2]x caption:&#39;Connecticut record-level data from Medicare, ages 65 and above: Moderna-Pfizer mortality ratio from day of first dose until July 2024&#39; -splice $[pad]x20 \\) \\( -pointsize 42 -font Arial caption:&#39;The y-axis shows the month of vaccination and the x-axis shows the month of death. The two columns on the right show the number of people who got a first dose each month. The baseline number of deaths was calculated by multiplying the number of person-days for each combination of month and age with the mortality rate among the general US population for the same combination of month and age. The displayed ratio was calculated as `(Moderna_deaths / Moderna_baseline) / (Pfizer_deaths / Pfizer_baseline)`.&#39; -splice $[pad]x14 \\) 0.png -append 1.png&quot;)</pre>
+</div>
+<h2>
+<a href=#Deaths_by_weeks_since_vaccination id=Deaths_by_weeks_since_vaccination>Deaths by weeks since vaccination</a>
+</h2>
+<p>Kirsch has been saying that the temporal healthy vaccinee effect only lasts about 3 weeks because in his earlier Medicare datasets when he has plotted the number of deaths by weeks since vaccination, the period when there was clearly reduced mortality seemed to last only about 3 weeks: [<a href="https://kirschsubstack.com/p/game-over-medicare-data-shows-the#%C2%A7the-medicare-data-that-i-received">https://kirschsubstack.com/p/game-over-medicare-data-shows-the#%C2%A7the-medicare-data-that-i-received</a>]</p>
+<div class="width7">
+<img src="i/czech-weekafter-2.jpg">
+</div>
+<p>However the Medicare data for 2021 has a bump around days 20 to 25 that is missing from the Medicare data for 2022:</p>
+<div class="width7">
+<img src="i/moar-medicare-15.png">
+</div>
+<p>Kirsch's old Medicare data only included the earliest known vaccine dose for each person, which was generally the first dose. And in the elderly age groups which account for most deaths, many people got the first dose in the first two months of 2021 when the US had a rapidly decreasing background mortality rate because the COVID wave in winter 2020-2021 was passing by. So I think it explains why there's the bump around days 20 to 25 in 2021 but not 2022.</p>
+<p>In the Czech Republic first doses were also rolled out in early 2021 when there was a rapidly decreasing trend in mortality rate because the COVID wave in winter 2020-2021 was passing by. In the plots below for Czech record-level data, I calculated the light gray baseline by multiplying the number of person-days for each combination of age and month by the mortality rate for the same combination of age and month among the general Czech population, so the there's a huge drop in the light gray baseline during the first 10 weeks from vaccination. But in the dark gray baseline I didn't use a different mortality rate for each month but I simply used the total mortality rate for each age in 2021-2022 as the baseline. Based on the dark gray baseline which is only normalized for age but not ongoing month, it would seem like the temporal healthy vaccinee effect only lasts about 2 or 3 weeks, but based on the light gray baseline the temporal HVE seems to last much longer: [<a href=czech.html#Deaths_by_weeks_after_first_dose>czech.html#Deaths_by_weeks_after_first_dose</a>]</p>
+<p class=width0>
+<img src=i/czech-weekafter-3.png class=width5><img src=i/czech-weekafter-4.png class=width5>
+</p>
+<p>However now the new Medicare data makes it possible to make similar plots for US data. And in fact there's a massive drop in the light gray baseline during the first few weeks after vaccination, even though the baseline started to increase after week 6 so there wasn't a very long extension to the period that seems to be impacted by the temporal HVE:</p>
+<p class=width0>
+<img src=i/ct-weekbase.png class=width5><img src=i/ct-weekbase-2.png class=width5>
+</p>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>b=fread(&quot;http://sars2.net/f/ctbucketskeep.csv.gz&quot;)[dose==1]
+
+a=b[age&gt;=65,.(dead=sum(dead),alive=sum(alive)),.(month,age,week)]
+
+pop=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)
+
+a=merge(a,pop[,.(base=dead/persondays,month=date,age)])
+
+rate1=a[,.(rate1=sum(dead)/sum(alive)),age]
+rate2=a[,.(rate2=sum(dead)/sum(alive)),.(month,age)]
+a=merge(rate2,merge(rate1,a),by=c(&quot;month&quot;,&quot;age&quot;))
+
+p=a[,.(excess1=(sum(dead)/sum(rate1*alive)-1)*100,excess2=(sum(dead)/sum(rate2*alive)-1)*100),week]
+
+p=a[,.(dead=sum(dead),base1=sum(rate1*alive),base2=sum(rate2*alive)),week][order(week)]
+p=p[week&lt;=100]
+
+leg=c(&quot;Deaths&quot;,&quot;Same baseline for each month&quot;,&quot;Different baseline for each month&quot;)
+col=c(&quot;black&quot;,&quot;gray50&quot;,&quot;gray80&quot;)
+
+png(&quot;1.png&quot;,1200,800,res=200)
+par(mar=c(2.3,3,2.1,1.8),mgp=c(0,.6,0))
+tit=&quot;CT: Deaths by weeks after first dose&quot;
+plot(p$week,p$dead,type=&quot;l&quot;,col=col[1],main=tit,xlab=NA,ylab=NA,lwd=1.5,xaxs=&quot;i&quot;,yaxs=&quot;i&quot;,las=1,ylim=c(0,500))
+lines(p$week,p$base1,type=&quot;l&quot;,col=col[2],lwd=1.5)
+lines(p$week,p$base2,type=&quot;l&quot;,col=col[3],lwd=1.5)
+legend(&quot;bottom&quot;,legend=leg,col=col,lty=1,lwd=1.5)
+dev.off()
+
+png(&quot;2.png&quot;,1200,800,res=200)
+par(mar=c(2.3,3,2.1,1.8),mgp=c(0,.6,0))
+tit=&quot;CT: Excess mortality percent by weeks after first dose&quot;
+leg=leg[-1];col=col[-1]
+plot(p$week,(p$dead/p$base1-1)*100,type=&quot;l&quot;,col=col[1],main=tit,xlab=NA,ylab=NA,lwd=1.5,xaxs=&quot;i&quot;,las=1)
+lines(p$week,(p$dead/p$base2-1)*100,type=&quot;l&quot;,col=col[2],lwd=1.5)
+abline(h=0,lwd=1.5,lty=2)
+legend(&quot;bottom&quot;,legend=leg,col=col,lty=1,lwd=1.5)
+dev.off()</pre>
+</div>
+<p>In the plots above for the Connecticut data, there's close to 0% excess mortality from week 20 onwards if you look at the light gray line where each month has a different baseline. But in the plot before it for the Czech data there was about -20% to -10% from around week 20 onwards. In both plots the baseline was derived from the mortality rate of the general population which included both unvaccinated and vaccinated people, but in the US plot vaccinated people who were not on Medicare were included in the baseline but not in the actual deaths. I included all ages in the Czech plots but only ages 65 and above in the Medicare plots, but it shouldn't make much difference.</p>
+<p>At first I thought the reason why the plots for Connecticut had close to 0% excess deaths might have been if vaccinated people who are on Medicare had higher ASMR than vaccinated people in the general US population, which might have been if people on Medicare have lower SES than the general US population. But actually about 95-98% of the US population in ages 65 and above are enrolled on Medicare according to ChatGPT.</p>
+<p>However then I realized that the percentage of unvaccinated people is lower in the United States than the Czech Republic, and it's even lower in northeastern states like Connecticut than in the US as a whole. So my baseline for Connecticut contains a smaller percentage of unvaccinated people than the baseline for the Czech Republic, which explains why vaccinated people in Connecticut would have similar mortality as the whole population of Connecticut.</p>
+<h2>
+<a href=#ASMR_by_vaccine_brand_and_month id=ASMR_by_vaccine_brand_and_month>ASMR by vaccine brand and month</a>
+</h2>
+<p>In the Czech record-level data during the COVID wave in November to December 2021, unvaccinated people had a much higher spike in ASMR than vaccinated people. The spike was higher for people who got a Janssen or AstraZeneca vaccine for their first dose but lower for Moderna and Pfizer, which might mean that the mRNA vaccines had higher efficacy than Janssen which is a viral vector vaccine: [<a href=czech2.html#ASMR_by_month_and_vaccine_type>czech2.html#ASMR_by_month_and_vaccine_type</a>]</p>
+<div class="width7">
+<img src="i/czech-asmrtype.png">
+</div>
+<p>Connecticut didn't have any major wave of COVID deaths after the winter of 2020-2021, even though there was a smaller spike in COVID deaths around January 2022. In the plot below the spike around January 2022 seems to be higher for Jansssen than Moderna or AstraZeneca, which again might mean that Janssen had lower efficacy than the mRNA vaccines (even though Janssen also has wide confidence intervals because of a small sample size):</p>
+<div class="width8">
+<img src="i/ct-asmrtype.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2)
+
+std=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2020-2022/national/asrh/nc-est2022-agesex-res.csv&quot;)
+std=std[SEX==0&amp;AGE!=999,.(std=POPESTIMATE2021,age=AGE)][,std:=std/sum(std)]
+
+b=fread(&quot;http://sars2.net/f/ctbucketskeep.csv.gz&quot;)[dose==1&amp;age&gt;=65][,age:=pmin(age,100)]
+a=b[,.(dead=sum(dead),alive=sum(alive)),.(type,month,age)]
+a=rbind(a,a[,.(dead=sum(dead),alive=sum(alive),type=&quot;All vaccine types&quot;),.(month,age)])
+p=merge(a,std)[,.(pop=sum(alive),asmr=sum(dead/alive*std*365e5)),.(month,type)]
+
+p[,month:=as.Date(paste0(month,&quot;-1-15&quot;))]
+
+p$type=factor(p$type,c(&quot;All vaccine types&quot;,&quot;Pfizer&quot;,&quot;Moderna&quot;,&quot;Janssen&quot;))
+
+xstart=as.Date(&quot;2020-12-1&quot;);xend=as.Date(&quot;2024-7-1&quot;)
+xbreak=sort(c(as.Date(&quot;2024-4-1&quot;),seq(as.Date(&quot;2021-1-1&quot;),xend,&quot;6 month&quot;)))
+xlab=c(rbind(&quot;&quot;,2021:2024),&quot;&quot;)
+ystart=0;ystep=500;yend=max(p$asmr);ybreak=seq(ystart,yend,ystep)
+
+color=c(&quot;black&quot;,hsv(c(240,355,204)/360,c(.94,.75,.67),c(.76,.82,.87)))
+
+ggplot(p,aes(x=month+15,y=asmr))+
+geom_vline(xintercept=seq(as.Date(&quot;2021-1-1&quot;),xend,&quot;3 month&quot;),color=&quot;gray85&quot;,linewidth=.3,lineend=&quot;square&quot;)+
+geom_vline(xintercept=seq(as.Date(&quot;2021-1-1&quot;),xend,&quot;year&quot;),color=&quot;gray65&quot;,linewidth=.3,lineend=&quot;square&quot;)+
+geom_vline(xintercept=c(xstart,xend),linewidth=.3,lineend=&quot;square&quot;)+
+geom_hline(yintercept=c(ystart,0,yend),linewidth=.3,lineend=&quot;square&quot;)+
+geom_line(aes(color=type),linewidth=.4)+
+geom_point(aes(color=type),stroke=0,size=1,show.legend=F)+
+labs(title=&quot;Connecticut Medicare data, ages 65+: ASMR by month and brand of first vaccine dose&quot;,subtitle=paste0(&quot;People are kept included under the first dose after subsequent doses. The 2021 US resident population estimates were used as the standard population.&quot;)|&gt;stringr::str_wrap(90),x=NULL,y=&quot;ASMR per 100,000 person-years&quot;)+
+scale_x_date(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
+scale_y_continuous(limits=c(ystart,yend),breaks=seq(ystart,yend,ystep))+
+scale_color_manual(values=color)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.title=element_text(size=7),
+  axis.ticks=element_line(linewidth=.3),
+  axis.ticks.x=element_line(color=alpha(&quot;black&quot;,c(1,0))),
+  axis.ticks.length=unit(3,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.background=element_rect(fill=&quot;white&quot;,color=&quot;black&quot;,linewidth=.3),
+  legend.key.height=unit(11,&quot;pt&quot;),
+  legend.key.width=unit(18,&quot;pt&quot;),
+  legend.key=element_rect(fill=&quot;white&quot;),
+  legend.margin=margin(-1,6,4,4),
+  legend.justification=c(1,1),
+  legend.position=c(1,1),
+  legend.spacing.x=unit(1.5,&quot;pt&quot;),
+  legend.text=element_text(size=7),
+  legend.title=element_blank(),
+  panel.grid.major=element_blank(),
+  panel.background=element_rect(fill=&quot;white&quot;),
+  plot.margin=margin(4,6,4,6),
+  plot.subtitle=element_text(size=7,margin=margin(0,0,4,0)),
+  plot.title=element_text(size=7.4,face=&quot;bold&quot;,margin=margin(2,0,4,0)))
+ggsave(&quot;1.png&quot;,width=4.8,height=2.7,dpi=400)</pre>
+</div>
+<h2>
+<a href=#Plot_of_excess_deaths_COVID_cases_and_deaths_PCR_positivity_and_vaccine_doses_in_Connecticut id=Plot_of_excess_deaths_COVID_cases_and_deaths_PCR_positivity_and_vaccine_doses_in_Connecticut>Plot of excess deaths, COVID cases and deaths, PCR positivity, and vaccine doses in Connecticut</a>
+</h2>
+<p>This shows that in April 2021 when new vaccine doses peaked, the seasonality-adjusted excess mortality was negative. And spikes in exces sdeaths coincided with spikes in PCR positivity rate so it's difficult to blame the excess deaths on vaccines:</p>
+<div class="width7">
+<img src="i/ct-quad.png">
+</div>
+<p>My plot used data from these datasets:</p>
+<ul>
+<li><a href="https://data.cdc.gov/NCHS/Excess-Deaths-Associated-with-COVID-19/xkkf-xrst/about_data">https://data.cdc.gov/NCHS/Excess-Deaths-Associated-with-COVID-19/xkkf-xrst/about_data</a></li>
+<li><a href="https://data.cdc.gov/Case-Surveillance/Weekly-United-States-COVID-19-Cases-and-Deaths-by-/pwn4-m3yp/about_data">https://data.cdc.gov/Case-Surveillance/Weekly-United-States-COVID-19-Cases-and-Deaths-by-/pwn4-m3yp/about_data</a></li>
+<li><a href="https://healthdata.gov/dataset/COVID-19-Diagnostic-Laboratory-Testing-PCR-Testing/j8mb-icvb/about_data">https://healthdata.gov/dataset/COVID-19-Diagnostic-Laboratory-Testing-PCR-Testing/j8mb-icvb/about_data</a></li>
+<li><a href="https://data.cdc.gov/Vaccinations/COVID-19-Vaccination-Trends-in-the-United-States-N/rh2h-3yt2/about_data">https://data.cdc.gov/Vaccinations/COVID-19-Vaccination-Trends-in-the-United-States-N/rh2h-3yt2/about_data</a></li>
+</ul>
+<script>
+let q=document.querySelectorAll('a,code,pre')
+for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
+
+document.querySelectorAll('.spoiler button').forEach(x=>{x.addEventListener('click',function(){
+  let block=this.nextElementSibling
+  if(window.getComputedStyle(block).display=='none'){block.style.display='block';this.textContent='Hide code'}
+  else{block.style.display='none';this.textContent='Show code'}
+})})
+</script>
