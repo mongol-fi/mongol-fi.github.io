@@ -114,6 +114,7 @@ fwrite(o,&quot;ctmort.csv.gz&quot;,na=&quot;&quot;)</pre>
  110 100000      1
  115 100000      2
  age    cmr      N</pre>
+<p>In my subsequent analysis I have generally excluded ages below 65.</p>
 <h2>
 <a href=#Bucket_analysis id=Bucket_analysis>Bucket analysis</a>
 </h2>
@@ -123,11 +124,14 @@ fwrite(o,&quot;ctmort.csv.gz&quot;,na=&quot;&quot;)</pre>
 # fast way to get difference in floored years for a pair of dates after 1900 and before 2100
 age=\(x,y){class(x)=class(y)=NULL;(y-x-(y-789)%/%1461+(x-789)%/%1461)%/%365}
 
-rec=fread(&quot;http://sars2.net/f/ctmort.csv.gz&quot;)
+ct=fread(&quot;http://sars2.net/f/ctmort.csv.gz&quot;)
+
+# exclude 30 people whose date of death is before a date of vaccination
+ct=ct[is.na(dead)|dead&gt;=date1]
 
 mindate=as.Date(&quot;2020-12-1&quot;);maxdate=as.Date(&quot;2024-07-31&quot;)
 
-t=rec[,.(id,sex,dead,type=brand,date=c(date1,date2,date3),dose=rep(1:3,each=.N),age)]
+t=ct[,.(id,sex,dead,type=brand,date=c(date1,date2,date3),dose=rep(1:3,each=.N),age)]
 t$vaxmonth=substr(t$date,1,7)
 set.seed(0);t$birth=as.Date(t$date)-years(t$age)-sample(0:364,nrow(t),T)
 
@@ -421,7 +425,63 @@ ggsave(&quot;1.png&quot;,width=4.8,height=2.7,dpi=400)</pre>
   2021-10      9      10       2
   2021-11      5      18       6
   2021-12      3       9       4</pre>
-<p>The percentage of first doses that were given in the last 3 months of 2021 was about 37% for Moderna and 17% for Pfizer. Most of those were probably misclassified third doses. But there was also an increasing trend in background mortality during the last three months of 2021, which would explain why the temporal healthy vaccinee effect would appear to be more pronounced for Moderna.</p>
+<p>The percentage of first doses that were given in the last 3 months of 2021 was about 37% for Moderna and 17% for Pfizer. Most of those were probably misclassified third doses. But there was also an increasing trend in background mortality during the last three months of 2021, which also partially explains why the temporal healthy vaccinee effect appears to be more pronounced for Moderna than Pfizer.</p>
+<p>I tried plotting deaths by weeks since vaccination and vaccine type, but I calculated a baseline number of deaths by multiplying the number of person-days for each combination of month and age with the mortality rate in Connecticut for the same combination of age and month. I had to aggregate together ages 85 and above because the US Census Bureau aggregates together ages 85 and above in their state-specific population estimates. During the first 10 weeks from vaccination, Pfizer had a sharp drop in the baseline but the baseline for Moderna remained roughly flat:</p>
+<div class="width6">
+<img src="i/ct-weektype-2.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2)
+
+base=fread(&quot;http://sars2.net/f/ctpopdeadmonthly.csv&quot;)
+base=base[,.(age,month=date,base=dead/pop/lubridate::days_in_month(paste0(date,&quot;-1&quot;)))]
+
+b=fread(&quot;http://sars2.net/f/ctbucketskeep.csv.gz&quot;)[dose==1&amp;age&gt;=65][,age:=pmin(age,85)]
+a=b[,.(dead=sum(dead),alive=sum(alive)),.(type,age,week,month)]
+a=merge(a,base)[,base:=base*alive]
+p=a[,.(dead=sum(dead),base=sum(base)),.(type,week)][week&lt;=50]
+
+p$type=factor(p$type,c(&quot;Pfizer&quot;,&quot;Moderna&quot;,&quot;Janssen&quot;))
+
+xstart=0;xend=50;xbreak=0:10*5
+ystart=0;ystep=50;yend=max(p$dead);ybreak=seq(ystart,yend,ystep)
+
+color=hsv(c(240,355,204)/360,c(.94,.75,.67),c(.76,.82,.87))
+
+ggplot(p,aes(x=week,y=dead))+
+geom_vline(xintercept=c(xstart,xend),linewidth=.3,lineend=&quot;square&quot;)+
+geom_hline(yintercept=c(ystart,0,yend),linewidth=.3,lineend=&quot;square&quot;)+
+geom_line(aes(color=type),linewidth=.4)+
+geom_point(aes(color=type),stroke=0,size=1,show.legend=F)+
+geom_line(aes(color=type,y=base),linewidth=.4,linetype=2)+
+labs(title=&quot;CT Medicare data, ages 65+: Deaths by weeks after vaccination and brand of first vaccine dose&quot;|&gt;stringr::str_wrap(70),subtitle=&quot;The dashed line is a baseline which was calculated by multiplying the number of person-days for each combination of month and age with the mortality rate for the same combination of month and age among the general population of Connecticut.&quot;|&gt;stringr::str_wrap(80),x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak)+
+scale_y_continuous(limits=c(ystart,yend),breaks=seq(ystart,yend,ystep))+
+scale_color_manual(values=color)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.ticks=element_line(linewidth=.3),
+  axis.ticks.length=unit(3,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;horizontal&quot;,
+  legend.key.height=unit(11,&quot;pt&quot;),
+  legend.key.width=unit(18,&quot;pt&quot;),
+  legend.key=element_blank(),
+  legend.margin=margin(3,,1),
+  legend.position=&quot;bottom&quot;,
+  legend.spacing.x=unit(1.5,&quot;pt&quot;),
+  legend.text=element_text(size=7),
+  legend.title=element_blank(),
+  panel.grid=element_blank(),
+  panel.background=element_blank(),
+  plot.margin=margin(4,10,4,6),
+  plot.subtitle=element_text(size=7,margin=margin(0,0,4,0)),
+  plot.title=element_text(size=7.4,face=&quot;bold&quot;,margin=margin(2,0,4,0)))
+ggsave(&quot;1.png&quot;,width=4,height=2.7,dpi=400)</pre>
+</div>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
