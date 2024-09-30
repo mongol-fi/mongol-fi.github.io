@@ -27,7 +27,7 @@ blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(45,55%,65%)}
 blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote .quote,.quote .quote .quote{color:hsl(40,40%,50%)}
 .spoiler button{width:90px;border:0;font-family:inherit;font-size:inherit;color:inherit;margin:0;background:#4a4a4a;padding:4px 0px;outline:none;cursor:pointer}
 .spoiler pre{display:none;margin-top:0}
-.red{color:hsl(0,100%,75%)}
+.red,.red .quote{color:hsl(0,100%,75%)!important}
 .width1{max-width:100px}
 .width2{max-width:200px}
 .width3{max-width:300px}
@@ -66,7 +66,8 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Deaths_by_weeks_since_vaccination>Deaths by weeks since vaccination</a></li>
 <li><a href=#ASMR_by_vaccine_brand_and_month>ASMR by vaccine brand and month</a></li>
 <li><a href=#Plot_of_excess_deaths_COVID_deaths_and_cases_PCR_positivity_and_vaccine_doses_in_Connecticut>Plot of excess deaths, COVID deaths and cases, PCR positivity, and vaccine doses in Connecticut</a></li>
-<li><a href=#Twitter_thread_by_Uncle_John_Returns>Twitter thread by Uncle John Returns</a></li>
+<li><a href=#Increase_in_people_with_a_first_dose_in_late_2021_pointed_out_by_Uncle_John_Returns>Increase in people with a first dose in late 2021 pointed out by Uncle John Returns</a></li>
+<li><a href=#Deaths_by_weeks_since_vaccination_and_vaccine_brand>Deaths by weeks since vaccination and vaccine brand</a></li>
 </ul>
 
 <h2>
@@ -142,7 +143,7 @@ for(day in as.list(seq(mindate,maxdate,1))){
 
 setorder(buck,month,vaxmonth,week,age,dose,type,sex)
 fwrite(buck,&quot;ctbucketskeep.csv.gz&quot;,quote=F)</pre>
-<p>I uploaded the output here: <a href=f/ctbucketskeep.csv.gz>f/ctbucketskeep.csv.gz</a>. In the file people are kept under earlier doses after a new dose.</p>
+<p>I uploaded the output here: <a href=f/ctbucketskeep.csv.gz>f/ctbucketskeep.csv.gz</a>. In the file people are kept included under earlier doses after a new dose.</p>
 <h2>
 <a href=#Moderna_Pfizer_ratio_by_month_of_vaccination_and_ongoing_month id=Moderna_Pfizer_ratio_by_month_of_vaccination_and_ongoing_month>Moderna-Pfizer ratio by month of vaccination and ongoing month</a>
 </h2>
@@ -275,9 +276,9 @@ abline(h=0,lwd=1.5,lty=2)
 legend(&quot;bottom&quot;,legend=leg,col=col,lty=1,lwd=1.5)
 dev.off()</pre>
 </div>
-<p>In the plots above for the Connecticut data, there's close to 0% excess mortality from week 20 onwards if you look at the light gray line where each month has a different baseline. But in the plot before it for the Czech data there was about -20% to -10% from around week 20 onwards. In both plots the baseline was derived from the mortality rate of the general population which included both unvaccinated and vaccinated people, but in the US plot vaccinated people who were not on Medicare were included in the baseline but not in the actual deaths. I included all ages in the Czech plots but only ages 65 and above in the Medicare plots, but it shouldn't make much difference.</p>
+<p>In the plot for Connecticut data there's close to 0% excess mortality from week 20 onwards if you look at the light gray line where each month has a different baseline. But in the plot for Czech data there was about -20% to -10% from around week 20 onwards. In both plots the baseline was derived from the mortality rate of the general population which included both unvaccinated and vaccinated people, but in the US plot vaccinated people who were not included in the new Medicare dataset were included in the baseline but not in the actual deaths.</p>
 <p>At first I thought the reason why the plots for Connecticut had close to 0% excess deaths might have been if vaccinated people who are on Medicare had higher ASMR than vaccinated people in the general US population, which might be if people on Medicare have lower SES than the general US population.</p>
-<p>However ChatGPT said that about 95-98% of the US population in ages 65 and above is enrolled on Medicare. And based on my calculation below, about 97% of the Connecticut population in ages 65 and above was enrolled to Medicare. [<a href="https://data.cms.gov/summary-statistics-on-beneficiary-enrollment/medicare-and-medicaid-reports/medicare-monthly-enrollment">https://data.cms.gov/summary-statistics-on-beneficiary-enrollment/medicare-and-medicaid-reports/medicare-monthly-enrollment</a>] However Kirsch's dataset includes only about 70% of the enrolled population, so it's probably missing some vaccinated people who are on Medicare:</p>
+<p>However ChatGPT said that about 95-98% of the US population in ages 65 and above is enrolled on Medicare. And based on my calculation below, about 97% of the Connecticut population in ages 65 and above was enrolled on Medicare: [<a href="https://data.cms.gov/summary-statistics-on-beneficiary-enrollment/medicare-and-medicaid-reports/medicare-monthly-enrollment">https://data.cms.gov/summary-statistics-on-beneficiary-enrollment/medicare-and-medicaid-reports/medicare-monthly-enrollment</a>]</p>
 <pre>t=fread(&quot;Medicare Monthly Enrollment Data_May2024.csv&quot;,na.strings=&quot;*&quot;)
 t[YEAR==2021&amp;MONTH==&quot;Year&quot;&amp;BENE_STATE_ABRVTN==&quot;CT&quot;&amp;BENE_COUNTY_DESC==&quot;Total&quot;,28:34]|&gt;sum()
 # 626640 # people enrolled to Medicare
@@ -286,9 +287,9 @@ pop=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2020-20
 pop[NAME==&quot;Connecticut&quot;&amp;SEX==0&amp;ORIGIN==0&amp;AGE&gt;=65,sum(POPESTIMATE2021)]
 # 644196 # resident population estimate
 
-ct=fread(&quot;http://sars2.net/f/ctmort.csv.gz&quot;)
-ct[age&gt;=65,.N]
+fread(&quot;http://sars2.net/f/ctmort.csv.gz&quot;)[age&gt;=65,.N]
 # 440116 # people in Kirsch&#39;s dataset</pre>
+<p>Kirsch's dataset includes only about 70% of the enrolled population, so it seems to be missing some vaccinated people who are on Medicare.</p>
 <p>Another reason why I got close to 0% excess deaths in my plots for Connecticut might be that the percentage of unvaccinated people is lower in the United States than the Czech Republic, and it's even lower in northeastern states like Connecticut than in the US as a whole. So it would explain why vaccinated people in Connecticut would have similar mortality as the total population of Connecticut.</p>
 <h2>
 <a href=#ASMR_by_vaccine_brand_and_month id=ASMR_by_vaccine_brand_and_month>ASMR by vaccine brand and month</a>
@@ -363,7 +364,7 @@ ggsave(&quot;1.png&quot;,width=4.8,height=2.7,dpi=400)</pre>
 <h2>
 <a href=#Plot_of_excess_deaths_COVID_deaths_and_cases_PCR_positivity_and_vaccine_doses_in_Connecticut id=Plot_of_excess_deaths_COVID_deaths_and_cases_PCR_positivity_and_vaccine_doses_in_Connecticut>Plot of excess deaths, COVID deaths and cases, PCR positivity, and vaccine doses in Connecticut</a>
 </h2>
-<p>This shows that in April 2021 when new vaccine doses peaked, the seasonality-adjusted excess mortality was negative. And spikes in exces sdeaths coincided with spikes in PCR positivity rate so it's difficult to blame the excess deaths on vaccines:</p>
+<p>This shows that in April 2021 when new vaccine doses peaked, the seasonality-adjusted excess mortality was negative. And spikes in excess deaths coincided with spikes in PCR positivity rate, so it's difficult to blame the excess deaths on vaccines:</p>
 <div class="width7">
 <img src="i/ct-quad.png">
 </div>
@@ -375,17 +376,52 @@ ggsave(&quot;1.png&quot;,width=4.8,height=2.7,dpi=400)</pre>
 <li><a href="https://data.cdc.gov/Vaccinations/COVID-19-Vaccination-Trends-in-the-United-States-N/rh2h-3yt2/about_data">https://data.cdc.gov/Vaccinations/COVID-19-Vaccination-Trends-in-the-United-States-N/rh2h-3yt2/about_data</a></li>
 </ul>
 <h2>
-<a href=#Twitter_thread_by_Uncle_John_Returns id=Twitter_thread_by_Uncle_John_Returns>Twitter thread by Uncle John Returns</a>
+<a href=#Increase_in_people_with_a_first_dose_in_late_2021_pointed_out_by_Uncle_John_Returns id=Increase_in_people_with_a_first_dose_in_late_2021_pointed_out_by_Uncle_John_Returns>Increase in people with a first dose in late 2021 pointed out by Uncle John Returns</a>
 </h2>
 <p>Uncle John Returns posted this tweet: [<a href="https://x.com/UncleJo46902375/status/1840441446777683997">https://x.com/UncleJo46902375/status/1840441446777683997</a>]</p>
 <blockquote>
 <p>Here's the Medicare uptake from Kirsch's substack and state uptake from <a href="http://ct.gov">http://ct.gov</a></p>
 <p>During Oct-Dec 2021, the Medicare dose 1 uptake increased by more than the state total</p>
 <p>That's impossible</p>
-<p>2/8</p>
 <p><img src=i/ct-uncle-1.png class=width6></p>
 </blockquote>
-<p>However I think Kirsch said about his old Medicare data that it included the earliest known dose of each person at Medicare, which was usually but not always the first dose. So I suspect the new dataset has some third doses entered as first doses if they were the earliest listed doses in the Medicare database.</p>
+<p>However I suspect the new dataset has some third doses entered as first doses if they were the earliest listed dose in the Medicare database. The new dataset has no people with a first dose missing. The old <code>Medicare-2-1-23.xlsx</code> file included these comments: [<a href="https://kirschsubstack.com/p/game-over-medicare-data-shows-the#%c2%a7the-medicare-data-that-i-received">https://kirschsubstack.com/p/game-over-medicare-data-shows-the#%c2%a7the-medicare-data-that-i-received</a>]</p>
+<div class="width9">
+<img src="i/ct-uncle-2.jpg">
+</div>
+<h2>
+<a href=#Deaths_by_weeks_since_vaccination_and_vaccine_brand id=Deaths_by_weeks_since_vaccination_and_vaccine_brand>Deaths by weeks since vaccination and vaccine brand</a>
+</h2>
+<p>Ulf Lorré included these plots in a Substack post about the Connecticut data: [<a href="https://ulflorr.substack.com/p/more-about-steve-kirschs-medicare">https://ulflorr.substack.com/p/more-about-steve-kirschs-medicare</a>]</p>
+<div class="width6">
+<img src="i/ct-weektype-1.jpg">
+</div>
+<p>However he didn't take into account that the average date of first doses was about 2 months earlier for Pfizer than Moderna:</p>
+<pre>&gt; ct=fread(&quot;http://sars2.net/f/ctmort.csv.gz&quot;)
+&gt; ct[,mean(date1),brand]
+     brand         V1
+1:  Pfizer 2021-04-14
+2: Moderna 2021-06-11
+3: Janssen 2021-05-22</pre>
+<p>In the first two months of 2021 there was a rapidly decreasing trend in the background mortality rate because the COVID wave in the winter of 2020 to 2021 was passing by, and Pfizer has a higher percentage of doses given in the first two months of 2021 than Moderna:</p>
+<pre>&gt; m=ct[date1&lt;&quot;2022-1-1&quot;,table(brand,substr(date1,1,7))]
+&gt; t(round(m/rowSums(m)*100))[,3:1]
+         brand
+          Pfizer Moderna Janssen
+  2020-12      2       0       0
+  2021-01     22      10       0
+  2021-02     30      26       0
+  2021-03     17      13      27
+  2021-04      5       6      26
+  2021-05      2       2      18
+  2021-06      1       1       7
+  2021-07      1       1       4
+  2021-08      1       2       3
+  2021-09      4       1       2
+  2021-10      9      10       2
+  2021-11      5      18       6
+  2021-12      3       9       4</pre>
+<p>The percentage of first doses that were given in the last 3 months of 2021 was about 37% for Moderna and 17% for Pfizer. Most of those were probably misclassified third doses. But there was also an increasing trend in background mortality during the last three months of 2021, which would explain why the temporal healthy vaccinee effect would appear to be more pronounced for Moderna.</p>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
