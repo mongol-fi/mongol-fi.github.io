@@ -426,6 +426,73 @@ ggsave(&quot;1.png&quot;,width=4.8,height=2.7,dpi=400)</pre>
   2021-11      5      18       6
   2021-12      3       9       4</pre>
 <p>The percentage of first doses that were given in the last 3 months of 2021 was about 37% for Moderna and 17% for Pfizer. Most of those were probably misclassified third doses. But there was also an increasing trend in background mortality during the last three months of 2021, which also partially explains why the temporal healthy vaccinee effect appears to be more pronounced for Moderna than Pfizer.</p>
+<p>The next plot shows that by the end of March when deaths from all causes had leveled off, the percentage of first doses administered was about 70% for Pfizer but only about 50% for Moderna:</p>
+<div class="width6">
+<img src="i/ct-weektype-3.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2)
+
+w=fread(&quot;Weekly_Provisional_Counts_of_Deaths_by_State_and_Select_Causes__2020-2023_20240930.csv&quot;)
+w=w[`Jurisdiction of Occurrence`==&quot;Connecticut&quot;]
+w=w[,.(date=`Week Ending Date`-6,dead=`All Cause`,covid=`COVID-19 (U071, Underlying Cause of Death)`)]
+
+ct=fread(&quot;http://sars2.net/f/ctmort.csv.gz&quot;)
+ct=ct[year(date1)&lt;2022,.N,.(brand,date=date1)]
+ct=rbind(ct,do.call(CJ,lapply(ct[,-3],unique))[,N:=0])|&gt;unique(by=1:2)
+p=ct[order(date)][,cum:=cumsum(N)/sum(N)*100,brand]
+
+p$brand=factor(p$brand,c(&quot;Pfizer&quot;,&quot;Moderna&quot;,&quot;Janssen&quot;))
+
+xstart=as.Date(&quot;2020-12-1&quot;);xend=as.Date(&quot;2022-1-1&quot;)
+xbreak=seq(xstart,xend,&quot;month&quot;);xbreak=sort(c(xbreak,head(xbreak,-1)+15))
+xlab=c(rbind(&quot;&quot;,format(seq(xstart,xend-1,&quot;month&quot;),&quot;%b\n%y&quot;)),&quot;&quot;)
+ystart=0;yend=100;ystep=10;ybreak=seq(ystart,yend,ystep)
+
+w=rbind(w[date&lt;xstart][.N][,date:=as.IDate(xstart)],w)
+w=w[date&gt;=xstart&amp;date&lt;=xend]
+w=rbind(w,tail(w,1)[,date:=as.IDate(xend)])
+yend2=1000;ystep2=200;secmult=yend/yend2
+
+color=hsv(c(240,355,204)/360,c(.94,.75,.67),c(.76,.82,.87))
+
+ggplot(p,aes(x=date,y=cum))+
+geom_vline(xintercept=c(xstart,xend),linewidth=.3,lineend=&quot;square&quot;)+
+geom_hline(yintercept=c(ystart,0,yend),linewidth=.3,lineend=&quot;square&quot;)+
+geom_line(aes(color=brand),linewidth=.4)+
+geom_step(data=w,aes(y=dead*secmult),linewidth=.4)+
+labs(title=&quot;CT Medicare data: Cumulative percentage of first doses administered by vaccine type&quot;|&gt;stringr::str_wrap(66),x=NULL,y=&quot;Cumulative first doses administered&quot;)+
+scale_x_date(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
+scale_y_continuous(limits=c(ystart,yend),breaks=seq(ystart,yend,ystep),labels=\(x)paste0(x,&quot;%&quot;),sec.axis=sec_axis(trans=~./secmult,breaks=seq(0,yend2,ystep2),name=&quot;Weekly deaths in Connecticut&quot;))+
+scale_color_manual(values=color)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.ticks=element_line(linewidth=.3),
+  axis.ticks.x=element_line(color=alpha(&quot;black&quot;,c(1,0))),
+  axis.text.x=element_text(vjust=1),
+  axis.ticks.length=unit(3,&quot;pt&quot;),
+  axis.title=element_text(size=7),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;horizontal&quot;,
+  legend.key.height=unit(11,&quot;pt&quot;),
+  legend.key.width=unit(18,&quot;pt&quot;),
+  legend.key=element_blank(),
+  legend.margin=margin(-2,,3),
+  legend.position=&quot;top&quot;,
+  legend.justification=&quot;left&quot;,
+  legend.spacing.x=unit(1.5,&quot;pt&quot;),
+  legend.text=element_text(size=7),
+  legend.title=element_blank(),
+  panel.grid=element_blank(),
+  panel.background=element_blank(),
+  plot.margin=margin(4,5,4,5),
+  plot.title=element_text(size=7.4,face=&quot;bold&quot;,margin=margin(2,,4)))
+ggsave(&quot;1.png&quot;,width=4,height=2.5,dpi=380*4)
+system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
+</div>
 <p>I tried plotting deaths by weeks since vaccination and vaccine type, but I calculated a baseline number of deaths by multiplying the number of person-days for each combination of month and age with the mortality rate in Connecticut for the same combination of age and month. I had to aggregate together ages 85 and above because the US Census Bureau aggregates together ages 85 and above in their state-specific population estimates. During the first 10 weeks from vaccination, Pfizer had a sharp drop in the baseline but the baseline for Moderna remained roughly flat:</p>
 <div class="width6">
 <img src="i/ct-weektype-2.png">
@@ -446,7 +513,7 @@ p=a[,.(dead=sum(dead),base=sum(base)),.(type,week)][week&lt;=50]
 p$type=factor(p$type,c(&quot;Pfizer&quot;,&quot;Moderna&quot;,&quot;Janssen&quot;))
 
 xstart=0;xend=50;xbreak=0:10*5
-ystart=0;ystep=50;yend=max(p$dead);ybreak=seq(ystart,yend,ystep)
+ystart=0;ystep=50;yend=300;ybreak=seq(ystart,yend,ystep)
 
 color=hsv(c(240,355,204)/360,c(.94,.75,.67),c(.76,.82,.87))
 
