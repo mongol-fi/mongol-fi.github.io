@@ -71,6 +71,8 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Baseline_that_started_from_the_1970s_for_CMR_in_New_Zealand>Baseline that started from the 1970s for CMR in New Zealand</a></li>
 <li><a href=#Deaths_from_malignant_neoplasms_in_ages_0_to_54>Deaths from malignant neoplasms in ages 0 to 54</a></li>
 <li><a href=#Deaths_from_malignant_neoplasms_with_excess_MCD_normalization>Deaths from malignant neoplasms with excess MCD normalization</a></li>
+<li><a href=#Files_for_population_estimates_by_single_year_of_age_up_to_ages_100>Files for population estimates by single year of age up to ages 100+</a></li>
+<li><a href=#Cancer_deaths_by_age_group>Cancer deaths by age group</a></li>
 </ul>
 
 <h2>
@@ -778,18 +780,17 @@ m=t(t(m)/colSums(m))*100
 
 maxcolor=max(m)
 
+disp=m;disp[]=sprintf(&quot;%.*f&quot;,ifelse(m&gt;10,0,1),m)
+
 m=m*4;base=2
 maxcolor=max(m)
 
-pal=colorRampPalette(hsv(c(21,21,21,16,11,6,3,0,0,0)/36,c(0,.25,rep(.5,8)),c(rep(1,8),.5,0)))(256)
-
-pheatmap::pheatmap(log(m,base),filename=&quot;0.png&quot;,display_numbers=disp,
+pheatmap::pheatmap(log(m,base),filename=&quot;1.png&quot;,display_numbers=disp,
   cluster_rows=F,cluster_cols=F,legend=F,cellwidth=14,cellheight=14,fontsize=9,fontsize_number=8,
-  border_color=NA,
-  number_color=ifelse(log(m,base)&gt;log(maxcolor,base)*.8,&quot;white&quot;,&quot;black&quot;),
-  breaks=seq(0,log(maxcolor,base),,256),pal)
+  border_color=&quot;#cccccc&quot;,number_color=&quot;black&quot;,&quot;white&quot;)
 
-system(&quot;w=`identify -format %w 0.png`;pad=20;convert -gravity northwest -pointsize 42 -font Arial \\( -size $[w-pad] caption:&#39;Percentage of each age group in New Zealand population&#39; -splice 20x24 \\) 0.png -append 1.png&quot;)</pre>
+system(&quot;w=`identify -format %w 1.png`;pad=20;magick -pointsize 42 -font Arial \\( -size $[w-pad] caption:&#39;New Zealand resident population estimates: Percentage of each age group&#39; -splice 20x24 \\) 1.png -append 1.png&quot;)
+qp()</pre>
 </div>
 <p>In the plot below I think my green baseline is the most accurate but it's far above the actual CMR in 2020:</p>
 <div class="width7">
@@ -988,7 +989,7 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   plot.title=element_text(size=7.6,margin=margin(2,,4)))
 ggsave(&quot;1.png&quot;,width=4.2,height=2.8,dpi=450)</pre>
 </div>
-<p>In the plot below if you look at UCD deaths, they remained near the baseline in 2020 and 2021 but by 2023 they had risen clearly above the baseline. And similarly if you look at the light gray line for MCD deaths with COVID subtracted, it is also close to the baseline in 2020 and 2021 but clearly above the baseline in 2023 (and actually it's slightly further above the baseline in 2023 than UCD deaths are):</p>
+<p>In the plot below if you look at UCD deaths, they remained near the baseline in 2020 and 2021 but by 2023 they had risen clearly above the baseline. And similarly if you look at the light gray line for MCD deaths with COVID subtracted, it is also close to the baseline in 2020 and 2021 but clearly above the baseline in 2023 (and actually it's slightly further above the baseline in 2023 than UCD deaths are). So there seems to be a genuine increase in cancer deaths above the trend in 2023 even if you only look at UCD deaths, even though it's much smaller than the increase TES gets when he additionally applies excess MCD normalization and PFE adjustment:</p>
 <div class="width7">
 <img src="i/ethical-malignant-5.png">
 </div>
@@ -997,6 +998,120 @@ ggsave(&quot;1.png&quot;,width=4.2,height=2.8,dpi=450)</pre>
 <p>I think Ethical Skeptic hasn't documented what precise calculation he used to determine the magnitude of the excess MCD normalization, or how he picked week 10 of 2022 as the date when he started applying the normalization or week 20 of 2023 as the date when he stopped increasing the amount of added deaths. If he didn't pick the variables programmatically but based on some kind of subjective criteria, it would be difficult for other people to reproduce his work systematically or so that they would be able to apply the same methodology to other causes of death.</p>
 <p>In any case in his plot which has a line that shows the number of deaths with excess MCD normalization, he should've also included another line which would've showed the number of deaths without the normalization, so it would've been clearer to his followers what the magnitude of the normalization was and when it started.</p>
 <p>(Ethical Skeptic uses the acronym <span class="quote">&quot;MCoD&quot;</span> or <span class="quote">&quot;MCOD&quot;</span> to refer to multiple cause of death but CDC WONDER uses the acronym <span class="quote">&quot;MCD&quot;</span>, so I'm following the convention of CDC WONDER on this website.)</p>
+<h2>
+<a href=#Files_for_population_estimates_by_single_year_of_age_up_to_ages_100 id=Files_for_population_estimates_by_single_year_of_age_up_to_ages_100>Files for population estimates by single year of age up to ages 100+</a>
+</h2>
+<p>One annoying feature at CDC WONDER is that it doesn't return population sizes for ages 85 and above, even though the US Census Bureau has published population estimates by single year of age up to ages 100+ since 2010. The 2000-2010 population estimates by single year of age only go up to ages 85+ however, so I omitted them here.</p>
+<p>The following code downloads the 2010-2020 resident population estimates that are based on the 2010 census and the 2020-2023 resident population estimates that are based on the 2020 census.</p>
+<p>In order to get rid of a sudden jump in the population estimates at the point when the new and old estimates are merged, the old estimates are multiplied by a linear slope so that they are the same in 2020 as the new estimates. For example for the age 80, the new population estimate for 2020 is 1450396 and the old estimate is 1526957, so their ratio is about 0.9499, so here for example the old estimate for 2016 is multiplied by about <code>1-(6/10)*(1-0.9499)</code>. (However a problem with this approach is that the mid-year population estimates for 2020 had already been reduced by COVID deaths, so COVID deaths will be reflected in the slope by which the 2010-2019 estimates are multiplied.)</p>
+<p>I also added a column for the number of deaths for each age at CDC WONDER as of October 2024.</p>
+<pre>new=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/nc-est2023-agesex-res.csv&quot;)
+old=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/national/asrh/nc-est2020-agesex-res.csv&quot;)
+
+old=old[SEX==0&amp;AGE!=999,.(age=AGE,pop=unlist(.SD[,-(1:4)]),year=rep(2010:2020,each=.N))]
+new=new[SEX==0&amp;AGE!=999,.(age=AGE,pop=unlist(.SD[,-(1:3)]),year=rep(2020:2023,each=.N))]
+
+me=merge(merge(old[year==2020,.(age,old=pop)],new[year==2020,.(age,new=pop)])[,.(age,ratio=new/old)],old)
+pop=rbind(me[year!=2020,.(year,age,pop=round(pop*(1-(((year-2010)/10))*(1-ratio))))],new)
+
+dead=fread(&quot;usyearlydead.csv&quot;) # from CDC WONDER
+o=merge(pop,dead,all=T)
+fwrite(o[order(year,age)],&quot;uspopdead.csv&quot;,na=&quot;&quot;)</pre>
+<p>I uploaded the output here: <a href=f/uspopdead.csv>f/uspopdead.csv</a>. This is a similar file for monthly data: <a href=f/uspopdeadmonthly.csv>f/uspopdeadmonthly.csv</a>. Both files are used in some of my scripts on this page.</p>
+<p>CDC WONDER uses vintage 2021 population estimates for 2021, vintage 2022 estimates for 2022, and so on, but here I'm using vintage 2023 population estimates for 2020-2023 and vintage 2020 estimates for 2010-2020.</p>
+<h2>
+<a href=#Cancer_deaths_by_age_group id=Cancer_deaths_by_age_group>Cancer deaths by age group</a>
+</h2>
+<p>Ethical Skeptic posted this tweet: [<a href="https://x.com/EthicalSkeptic/status/1841879475241300326">https://x.com/EthicalSkeptic/status/1841879475241300326</a>]</p>
+<blockquote>
+<p>Competence Question: If young age-bracket cancer mortality is up 20+%, while old age-bracket cancer mortality is down 3 to 6% due to PFE pool depletion, what is the underlying rate of cancer increase?</p>
+<p>Answer: The young age bracket rate. Especially in the circumstance where the former young rate was negative (prior to inflection).</p>
+<p>Beware of analysts who don't comprehend this.</p>
+<p><img src=i/ethical-cancerage-1.png class=width7> <img src=i/ethical-cancerage-2.png class=width7></p>
+</blockquote>
+<p>In these plots which display weekly deaths starting from 2018, I believe TES calculates some kind of a linear baseline based on data from 2018 and 2019 only, because he erroneously believes that the data before 2018 used different suppression behavior than the data from 2018 onwards. When I asked him that isn't a 2018 to 2019 trend biased because there was a low number of deaths in 2019 and a high number of deaths in the first two month of 2018, he answered that the method he uses to fit the baseline is somehow different from a regular linear regression, but he didn't explain how: <span class="quote">&quot;However, I did not use a pure linear regression of 2018 and 19 for this reason. I fit the baseline to the variances linearly, but not by least-squares regression (how I avoided the early 2018 surge).&quot;</span> [<a href="https://theethicalskeptic.substack.com/p/the-state-of-things-pandemic-week-706/comment/53237226">https://theethicalskeptic.substack.com/p/the-state-of-things-pandemic-week-706/comment/53237226</a>]</p>
+<p>In any case, using a linear trend based on raw deaths is inaccurate, and it's especially inaccurate when you're plotting deaths within age groups like 75 to 84 whose population size has increased rapidly from 2021 onwards because the baby boomers started turning 75 in 2021.</p>
+<p>In the next plot I calculated the dashed baseline using a more accurate method, where for each age I first calculated the linear trend in crude mortality rate for each single year of age in 2010 to 2019, and I multiplied the value of the projected trend for each year with the population size of the age to get the expected deaths for the age. My method of calculating the baseline gave me close to 0% excess mortality even in ages 85+, but the 2018 to 2019 linear trend is just way too high in ages 85+:</p>
+<div class="width8">
+<img src="i/ethical-cancerage-3.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2)
+
+agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
+
+t=fread(&quot;http://sars2.net/f/wondermalignantyearly.csv&quot;)
+t=t[year%in%2010:2023]
+t=merge(t[grep(&quot;COVID&quot;,cause,invert=T)],t[grep(&quot;COVID&quot;,cause),.(year,age,and=dead)],all=T)[,.(year,age,dead=dead-nafill(and,,0))]
+
+pop=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)
+t=merge(t,pop[,.(pop=sum(pop)),.(year,age)])
+
+t=merge(t,t[year%in%2010:2019,.(year=2010:2023,trend=predict(lm(dead/pop~year),.(year=2010:2023))),age])
+
+t[,group:=agecut(age,c(0,45,55,65,75,85))]
+p=t[,.(dead=sum(dead),base=sum(trend*pop)),.(year,group)]
+
+p=p[p[year%in%2018:2019,.(year=2010:2023,linear=predict(lm(dead~year),.(year=2010:2023))),group],on=c(&quot;group&quot;,&quot;year&quot;)]
+
+p=merge(p,p[,.(max=max(dead,base,linear)),group])
+p=merge(p,p[,.(min=min(dead,base,linear)),group])
+
+xstart=min(p$year);xend=max(p$year)
+color=c(&quot;black&quot;,&quot;black&quot;,&quot;gray60&quot;)
+
+kim=\(x)ifelse(x&gt;=1e3,ifelse(x&gt;=1e6,paste0(x/1e6,&quot;M&quot;),paste0(x/1e3,&quot;k&quot;)),x)
+
+lab=p[,.(group,year,y=dead,pct=round((dead/base-1)*100),vjust=ifelse(dead&gt;(min+max)/2,1.7,-.5))]
+
+p=p[,.(group,year,min,max,y=c(dead,base,linear),z=rep(c(&quot;Actual deaths&quot;,&quot;2010-2019 trend in CMR by age&quot;,&quot;2018-2019 linear trend for raw deaths&quot;),each=.N))]
+p[,z:=factor(z,unique(z))]
+
+ggplot(p,aes(x=year,y))+
+facet_wrap(~group,ncol=2,dir=&quot;v&quot;,scales=&quot;free_y&quot;,strip.position=&quot;top&quot;)+
+geom_vline(xintercept=c(2014.5,2019.5),color=&quot;gray80&quot;,linewidth=.25)+
+geom_line(aes(color=z,linetype=z),linewidth=.3)+
+geom_point(data=p[z==&quot;Actual deaths&quot;],stroke=0,size=.6,show.legend=F)+
+geom_text(data=lab,aes(label=pct,vjust=vjust),size=2)+
+labs(title=&quot;CDC WONDER: Yearly deaths with MCD malignant neoplasms but not MCD COVID&quot;,subtitle=&quot;The numbers show the percentage of excess deaths relative to the black dashed baseline&quot;,x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=seq(xstart-.5,xend+.5,.5),labels=c(rbind(&quot;&quot;,xstart:xend),&quot;&quot;))+
+scale_y_continuous(labels=kim)+
+scale_color_manual(values=color)+
+scale_linetype_manual(values=c(1,2,2))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
+  axis.ticks.x=element_line(color=alpha(&quot;black&quot;,c(1,0))),
+  axis.ticks=element_line(linewidth=.25,color=&quot;black&quot;),
+  axis.ticks.length=unit(.2,&quot;lines&quot;),
+  axis.title=element_text(size=8),
+  legend.background=element_blank(),
+  legend.box.just=&quot;left&quot;,
+  legend.justification=c(0,1),
+  legend.key=element_blank(),
+  legend.key.height=unit(10,&quot;pt&quot;),
+  legend.key.width=unit(17,&quot;pt&quot;),
+  legend.position=&quot;bottom&quot;,
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.margin=margin(5,,1),
+  legend.text=element_text(size=7,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.3),
+  panel.spacing=unit(0,&quot;pt&quot;),
+  panel.spacing.x=unit(3,&quot;pt&quot;),
+  plot.margin=margin(5,5,5,5),
+  plot.subtitle=element_text(size=7,margin=margin(0)),
+  plot.title=element_text(size=7.6,face=2,margin=margin(2,,4)),
+  strip.background=element_blank(),
+  strip.text=element_text(size=7))
+ggsave(&quot;1.png&quot;,width=5,height=4.4,dpi=380*4)
+system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
+</div>
+<p>My method of calculating the baseline implements a weak adjustment for the pull-forward effect in elderly age groups, because when I'm multiplying the trend in CMR with the population size, the expected deaths are lower because the population size has been reduced because of excess deaths since 2020. But it's usually not nearly as strong as Ethical Skeptic's PFE adjustment. And it doesn't have much effect in young age groups, because the population size of young age groups woudn't be affected that much even if there was 100% excess mortality.</p>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
