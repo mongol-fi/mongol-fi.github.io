@@ -1044,7 +1044,15 @@ agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quo
 
 t=fread(&quot;http://sars2.net/f/wondermalignantyearly.csv&quot;)
 t=t[year%in%2010:2023]
-t=merge(t[grep(&quot;COVID&quot;,cause,invert=T)],t[grep(&quot;COVID&quot;,cause),.(year,age,and=dead)],all=T)[,.(year,age,dead=dead-nafill(and,,0))]
+me=merge(t[!grepl(&quot;COVID&quot;,cause)],t[grep(&quot;COVID&quot;,cause),.(year,age,and=dead)],all=T)
+
+# Some ages below 45 have less than 10 deaths with both MCD cancer and
+# MCD COVID per year, so the deaths are suppressed when grouped by
+# single year of age, but here I retrieved deaths for ages 0-44
+# aggregated together to avoid the supression.
+me[age&lt;45,and:=0][age==0&amp;year&gt;=2020,and:=c(311,495,477,130)]
+
+t=me[,.(year,age,dead=dead-nafill(and,,0))]
 
 pop=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)
 t=merge(t,pop[,.(pop=sum(pop)),.(year,age)])
@@ -1111,7 +1119,7 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
 ggsave(&quot;1.png&quot;,width=5,height=4.4,dpi=380*4)
 system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 </div>
-<p>My method of calculating the baseline implements a weak adjustment for the pull-forward effect in elderly age groups, because when I'm multiplying the trend in CMR with the population size, the expected deaths are lower because the population size has been reduced because of excess deaths since 2020. But it's usually not nearly as strong as Ethical Skeptic's PFE adjustment. And it doesn't have much effect in young age groups, because the population size of young age groups woudn't be affected that much even if there was 100% excess mortality.</p>
+<p>My method of calculating the baseline implements a weak adjustment for the pull-forward effect in elderly age groups, because when I'm multiplying the trend in CMR with the population size, the expected deaths are reduced from 2020 onwards because the population size has been reduced by excess mortality. But it's usually not nearly as strong as Ethical Skeptic's PFE adjustment. And it doesn't have much effect in young age groups, because even if they had 100% excess mortality it wouldn't affect their population size that much.</p>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
