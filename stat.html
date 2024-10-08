@@ -18,13 +18,16 @@ table{border-collapse:collapse}
 td,th{border:1px solid #555;padding:2px 4px}
 th{background:#444;text-align:left;font-weight:bold}
 img{max-width:100%}
-blockquote{margin-left:0px;padding-left:40px;margin-right:0;width:calc(min(50vw - 270px, 100vw - 1100px) - 46px)}
+blockquote{margin-left:0px;padding-left:40px;margin-right:0}
 blockquote p{max-width:480px}
 blockquote blockquote p{max-width:440px}
 blockquote blockquote blockquote p{max-width:400px}
 blockquote,.quote,blockquote h1,blockquote h2,blockquote h3{color:hsl(50,100%,85%)}
 blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(45,55%,65%)}
 blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote .quote,.quote .quote .quote{color:hsl(40,40%,50%)}
+.spoiler button{width:90px;border:0;font-family:inherit;font-size:inherit;color:inherit;margin:0;background:#4a4a4a;padding:4px 0px;outline:none;cursor:pointer}
+.spoiler pre{display:none;margin-top:0}
+.red,.red .quote{color:hsl(0,100%,75%)!important}
 .width1{max-width:100px}
 .width2{max-width:200px}
 .width3{max-width:300px}
@@ -43,7 +46,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 .width00 img,.width0 img{margin:0 -1.5px -1.5px 0;vertical-align:bottom}
 .blockimg{max-width:calc(100vw - min(50vw - 270px, 100vw - 1100px) - 40px - 6px)}
 @media print{
-  body{background:white;color:black;margin:0px;zoom:.75;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+  body{background:white;color:black;margin:0px;zoom:1;print-color-adjust:exact;-webkit-print-color-adjust:exact}
   a{color:#0000EE}a:visited{color:#551A8B}
   h1,h2,h2 a,h3 a,h2 a:visited,h3 a:visited{color:black}
   pre,code{background:#ccc;color:black;font-size:13px}
@@ -95,6 +98,10 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Make_a_heatmap_for_excess_CMR_by_age_group_relative_to_a_2015_2019_trend>Make a heatmap for excess CMR by age group relative to a 2015-2019 trend</a></li>
 <li><a href=#Plot_CMR_by_age_group_and_dose_along_with_CMR_in_general_population_of_England>Plot CMR by age group and dose along with CMR in general population of England</a></li>
 <li><a href=#Plot_CMR_by_age_group_when_people_are_classified_as_unvaccinated_until_3_weeks_from_vaccination>Plot CMR by age group when people are classified as unvaccinated until 3 weeks from vaccination</a></li>
+</ul></li>
+<li><a href=#Eurostat>Eurostat</a>
+<ul>
+<li><a href=#Compile_CSV_file_for_deaths_and_population_estimates_by_single_year_of_age>Compile CSV file for deaths and population estimates by single year of age</a></li>
 </ul></li>
 <li><a href=#United_Nations>United Nations</a>
 <ul>
@@ -2190,13 +2197,57 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
 ggsave(&quot;1.png&quot;,width=3.4,height=7,dpi=350*4)
 system(&quot;mogrify -resize 25% 1.png&quot;)</pre>
 <h2>
+<a href=#Eurostat id=Eurostat>Eurostat</a>
+</h2>
+<h3>
+<a href=#Compile_CSV_file_for_deaths_and_population_estimates_by_single_year_of_age id=Compile_CSV_file_for_deaths_and_population_estimates_by_single_year_of_age>Compile CSV file for deaths and population estimates by single year of age</a>
+</h3>
+<p>Eurostat has datasets for deaths and population estimates by single year of age up to ages 100+. This code combines them into a single CSV file with a more convenient format than the original files:</p>
+<pre>api=&quot;https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/&quot;
+
+pop=read.table(paste0(api,&quot;demo_pjan?format=TSV&quot;),sep=&quot;\t&quot;,header=T,check.names=F,na.strings=&quot;:&quot;)
+pop=pop[grep(&quot;^A,NR,Y[^,]*,T&quot;,pop[,1],perl=T),]
+year=rep(as.numeric(names(pop)[-1]),each=nrow(pop))
+age=as.numeric(sub(&quot;_LT1&quot;,0,sub(&quot;_OPEN&quot;,100,sub(&quot;.*,Y(.*?),.*&quot;,&quot;\\1&quot;,pop[,1]))))
+location=sub(&quot;.*,&quot;,&quot;&quot;,pop[,1])
+d1=data.frame(year,age,location,pop=as.numeric(sub(&quot;:? *\\w*?$&quot;,&quot;&quot;,unlist(pop[,-1]))))
+
+dead=read.table(paste0(api,&quot;demo_magec?format=TSV&quot;),sep=&quot;\t&quot;,header=T,check.names=F,na.strings=&quot;:&quot;)
+dead=dead[grep(&quot;^A,NR,T,Y&quot;,dead[,1]),]
+year=rep(as.numeric(names(dead)[-1]),each=nrow(dead))
+age=as.numeric(sub(&quot;_LT1&quot;,0,sub(&quot;_OPEN&quot;,100,sub(&quot;.*,Y(.*?),.*&quot;,&quot;\\1&quot;,dead[,1]))))
+location=sub(&quot;.*,&quot;,&quot;&quot;,dead[,1])
+d2=data.frame(location,year,age,dead=as.numeric(sub(&quot;:? *\\w*?$&quot;,&quot;&quot;,unlist(dead[,-1]))))
+
+o=merge(d1,d2,all=T)
+o=o[!is.na(o$pop)|!is.na(o$dead),]
+o=o[order(o$location,o$year,o$age),]
+
+iso=read.csv(&quot;https://raw.githubusercontent.com/lukes/ISO-3166-Countries-with-Regional-Codes/master/all/all.csv&quot;)
+iso=setNames(iso$name,iso$alpha.2)
+iso[&quot;XK&quot;]=&quot;Kosovo&quot;
+iso[&quot;UK&quot;]=&quot;United Kingdom&quot;
+iso[&quot;EL&quot;]=&quot;Greece&quot;
+iso[&quot;FX&quot;]=&quot;Metropolitan France&quot;
+iso[&quot;TR&quot;]=&quot;Turkey&quot;
+iso[&quot;RU&quot;]=&quot;Russia&quot;
+iso[&quot;MD&quot;]=&quot;Moldova&quot;
+iso[&quot;NL&quot;]=&quot;Netherlands&quot;
+iso[&quot;DE_TOT&quot;]=&quot;Germany including former GDR&quot;
+
+o$name=iso[o$location]
+o=o[,c(&quot;name&quot;,&quot;location&quot;,&quot;year&quot;,&quot;age&quot;,&quot;dead&quot;,&quot;pop&quot;)]
+
+write.csv(o,&quot;eurostatpopdead.csv&quot;,quote=F,row.names=F,na=&quot;&quot;)```</pre>
+<p>I uploaded the output here: <a href=f/eurostatpopdead.csv.gz>f/eurostatpopdead.csv.gz</a>.</p>
+<h2>
 <a href=#United_Nations id=United_Nations>United Nations</a>
 </h2>
 <h3>
 <a href=#Plot_percentage_change_in_yearly_crude_mortality_rate_estimates_in_the_World_Population_Prospects_dataset id=Plot_percentage_change_in_yearly_crude_mortality_rate_estimates_in_the_World_Population_Prospects_dataset>Plot percentage change in yearly crude mortality rate estimates in the World Population Prospects dataset</a>
 </h3>
-<p>This uses UN's <span class="quote">&quot;World Population Prospects&quot;</span> dataset which starts in 1950: <a href="https://population.un.org/wpp/Download/Standard/CSV/">https://population.un.org/wpp/Download/Standard/CSV/</a>. The dataset uses modeled data for many developing countries, which explains why there is little variation in the CMR of many developing countries during the first decades of data.</p>
-<p>The dataset was published in July 2022, but it uses modeled data from January 2022 onwards: <span class="quote">&quot;In the 2022 revision, the figures from 1950 up to 2021 are treated as estimates, and thus the projections for each country or area begin on 1 January 2022 and extend until 2100. Because population data are not necessarily available for that date, the 2022 estimate is derived from the most recent population data available for each country, obtained usually from a population census or a population register, projected to 2022 using all available data on fertility, mortality and international migration trends between the reference date of the population data available and 1 January 2022.&quot;</span> [<a href="https://population.un.org/wpp/Methodology/">https://population.un.org/wpp/Methodology/</a>] Notes about the dataset also say: <span class="quote">&quot;For 74 countries or areas, the most recent available population count was from the period 2005-2014. For the remaining 11 countries or areas, the most recent available census data were from before 2005.&quot;</span></p>
+<p>This uses UN's <span class="quote">&quot;World Population Prospects&quot;</span> dataset which starts in 1950: https://population.un.org/wpp/Download/Standard/CSV/. The dataset uses modeled data for many developing countries, which explains why there is little variation in the CMR of many developing countries during the first decades of data.</p>
+<p>The dataset was published in July 2022, but it uses modeled data from January 2022 onwards: <span class="quote">&quot;In the 2022 revision, the figures from 1950 up to 2021 are treated as estimates, and thus the projections for each country or area begin on 1 January 2022 and extend until 2100. Because population data are not necessarily available for that date, the 2022 estimate is derived from the most recent population data available for each country, obtained usually from a population census or a population register, projected to 2022 using all available data on fertility, mortality and international migration trends between the reference date of the population data available and 1 January 2022.&quot;</span> [https://population.un.org/wpp/Methodology/] Notes about the dataset also say: <span class="quote">&quot;For 74 countries or areas, the most recent available population count was from the period 2005-2014. For the remaining 11 countries or areas, the most recent available census data were from before 2005.&quot;</span></p>
 <pre>library(ComplexHeatmap)
 library(circlize)
 library(colorspace)
@@ -2261,7 +2312,7 @@ system(&quot;mogrify -gravity center -trim -border 16 -bordercolor white 1.png&q
 <h3>
 <a href=#Plot_excess_mortality_in_Africa_in_2021_compared_to_number_of_vaccine_doses id=Plot_excess_mortality_in_Africa_in_2021_compared_to_number_of_vaccine_doses>Plot excess mortality in Africa in 2021 compared to number of vaccine doses</a>
 </h3>
-<p>WHO has a dataset for monthly excess mortality in 2020 and 2021 where they use reported data for some countries and modeled data for other countries. [<a href="https://www.who.int/data/sets/global-excess-deaths-associated-with-covid-19-modelled-estimates">https://www.who.int/data/sets/global-excess-deaths-associated-with-covid-19-modelled-estimates</a>] The dataset uses modeled data for most sub-Saharan African countries so I don't know how accurate it is though.</p>
+<p>WHO has a dataset for monthly excess mortality in 2020 and 2021 where they use reported data for some countries and modeled data for other countries. [https://www.who.int/data/sets/global-excess-deaths-associated-with-covid-19-modelled-estimates] The dataset uses modeled data for most sub-Saharan African countries so I don't know how accurate it is though.</p>
 <p>OWID has vaccination data for almost all African countries, but the data ends in 2022 for some countries, and some countries may have recorded only a part of their vaccinations.</p>
 <pre>library(ggplot2)
 
@@ -2340,7 +2391,7 @@ ggsave(&quot;1.png&quot;,width=7,height=5)</pre>
 <h3>
 <a href=#Plot_COVID_cases_by_province_and_day_in_early_2020_in_China id=Plot_COVID_cases_by_province_and_day_in_early_2020_in_China>Plot COVID cases by province and day in early 2020 in China</a>
 </h3>
-<p>Source: <a href="https://github.com/cheongsa/Coronavirus-COVID-19-statistics-in-China">https://github.com/cheongsa/Coronavirus-COVID-19-statistics-in-China</a>.</p>
+<p>Source: https://github.com/cheongsa/Coronavirus-COVID-19-statistics-in-China.</p>
 <pre>library(colorspace)
 
 t=read.csv(&quot;https://github.com/cheongsa/Coronavirus-COVID-19-statistics-in-China/raw/master/China_daily_new_infections.csv&quot;,check.names=F)
@@ -2365,5 +2416,11 @@ system(&quot;w=`identify -format %w 0.png`;convert 0.png -gravity northwest \\( 
 </div>
 <script>
 let q=document.querySelectorAll('a,code,pre')
-for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,"$&<wbr>")).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,"$1<wbr>")
+for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
+
+document.querySelectorAll('.spoiler button').forEach(x=>{x.addEventListener('click',function(){
+  let block=this.nextElementSibling
+  if(window.getComputedStyle(block).display=='none'){block.style.display='block';this.textContent='Hide code'}
+  else{block.style.display='none';this.textContent='Show code'}
+})})
 </script>

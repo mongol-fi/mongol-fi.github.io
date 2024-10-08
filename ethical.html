@@ -67,11 +67,11 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#COVID_deaths_per_capita_compared_to_percentage_of_vaccinated_population_in_US_counties>COVID deaths per capita compared to percentage of vaccinated population in US counties</a></li>
 <li><a href=#Does_the_provisional_dataset_have_different_suppression_behavior_than_the_final_dataset>Does the provisional dataset have different suppression behavior than the final dataset?</a></li>
 <li><a href=#Deaths_associated_with_pregnancy_and_childbirth>Deaths associated with pregnancy and childbirth</a></li>
-<li><a href=#Files_for_population_estimates_by_single_year_of_age_up_to_ages_100>Files for population estimates by single year of age up to ages 100+</a></li>
 <li><a href=#Cancer_ASMR_compared_to_historical_ASMR_starting_from_1950>Cancer ASMR compared to historical ASMR starting from 1950</a></li>
 <li><a href=#Baseline_that_started_from_the_1970s_for_CMR_in_New_Zealand>Baseline that started from the 1970s for CMR in New Zealand</a></li>
 <li><a href=#Deaths_from_malignant_neoplasms_in_ages_0_to_54>Deaths from malignant neoplasms in ages 0 to 54</a></li>
 <li><a href=#Deaths_from_malignant_neoplasms_with_excess_MCD_normalization>Deaths from malignant neoplasms with excess MCD normalization</a></li>
+<li><a href=#Files_for_population_estimates_by_single_year_of_age_up_to_ages_100>Files for population estimates by single year of age up to ages 100+</a></li>
 <li><a href=#Cancer_deaths_by_age_group>Cancer deaths by age group</a></li>
 </ul>
 
@@ -273,6 +273,65 @@ ggsave(&quot;1.png&quot;,width=4.6,height=4.5,dpi=450)</pre>
 <p>Ethical Skeptic said that he omitted excess drug overdose deaths from 2020 but not 2021, but he didn't mention what baseline he used to calculate the excess drug deaths. However the plot below shows that if you simply use the 2018-2019 average as the baseline, then there's even more excess drug deaths in 2021 than in the post-lockdown period of 2020 Q2-Q4. (But an average baseline wouldn't make sense because there was already a sharply increasing trend in drug overdose deaths in the years before COVID. And there necessarily weren't even that many excess drug deaths caused by the lockdowns but the increase in drug deaths in 2020 could've been due to other reasons, and in either case it wouldn't make sense to blame excess drug deaths in 2023 on the lockdown.)</p>
 <div class="width6">
 <img src="i/debunk-ethical-8.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2)
+
+ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
+
+t=fread(&quot;http://sars2.net/f/wonderskeptic.csv&quot;)
+p=t[,.(x=date-3,y=as.double(dead),z=factor(cause,unique(cause)))]
+
+xstart=as.Date(&quot;2018-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
+xbreak=seq(xstart,xend,&quot;6 month&quot;)
+xlab=c(rbind(&quot;&quot;,2018:2023),&quot;&quot;)
+
+p=p[x&gt;=xstart&amp;x&lt;=xend]
+p=p[,y:=ma(y,1),z]
+
+ystart=0;yend=1600;ystep=200;ybreak=seq(ystart,yend,ystep)
+
+color=c(&quot;#bb0000&quot;,hcl(225,100,40),hcl(90,120,50),hcl(280,120,50),&quot;gray50&quot;)
+
+note=&quot;CDC WONDER uses the 2022 population estimate as the population size for 2023, so the population size for 2023 was interpolated by doing a linear regression for the trend in population size in 2015-2022.&quot;
+
+kim=\(x)ifelse(x&gt;=1e3,ifelse(x&gt;=1e6,paste0(x/1e6,&quot;M&quot;),paste0(x/1e3,&quot;k&quot;)),x)
+
+ggplot(p,aes(x,y,color=z))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+geom_hline(yintercept=seq(ystart,yend,ystep/2),color=&quot;gray90&quot;,linewidth=.25)+
+geom_vline(xintercept=seq(xstart,xend,&quot;3 month&quot;),color=&quot;gray90&quot;,linewidth=.25)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),linewidth=.25)+
+geom_hline(yintercept=c(ystart,yend),linewidth=.25,lineend=&quot;square&quot;)+
+geom_vline(xintercept=c(xstart,xend),linewidth=.25,lineend=&quot;square&quot;)+
+geom_line(linewidth=.3)+
+labs(title=&quot;CDC WONDER, weekly deaths by multiple cause of death in ages 15-44 (3-week centered moving averages)&quot;|&gt;stringr::str_wrap(80),x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
+scale_color_manual(values=color)+
+guides(colour=guide_legend(ncol=2,byrow=F))+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.ticks=element_blank(),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  axis.title=element_text(size=7),
+  legend.background=element_blank(),
+  legend.box.just=&quot;left&quot;,
+  legend.key=element_blank(),
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.key.size=unit(10,&quot;pt&quot;),
+  legend.position=c(0,1),
+  legend.justification=c(0,1),
+  legend.box.background=element_rect(fill=alpha(&quot;white&quot;,.85),color=&quot;black&quot;,linewidth=.3),
+  legend.margin=margin(-2,5,4,5),
+  legend.text=element_text(size=7,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  plot.margin=margin(5,5,5,5,&quot;pt&quot;),
+  plot.subtitle=element_text(size=7),
+  plot.title=element_text(size=7.3,face=2))
+ggsave(&quot;1.png&quot;,width=4.3,height=3,dpi=400)</pre>
 </div>
 <p>In the plot above I didn't exclude deaths with MCD COVID. In 2020-2023, only about 0.5% of deaths with MCD X42 to X44 (accidental drug poisoning) also included MCD U07.1 (COVID) (983 out of 184,920). But about 8.5% of deaths with one of the cardiac ICD codes also had MCD COVID (8,677 out of 101,714). The spikes in cardiac deaths coincide with spikes in COVID deaths, so I guess COVID actually contributed to some of the cardiac deaths.</p>
 <p>My plot above also shows that in the third quarter of 2023 there is a decrease in drug overdose deaths, which is probably because of a registration delay, but it gets offset by an increase in R96 and R99 deaths where the cause of death has not yet been resolved. Ethical Skeptic omitted approximately the last 12 weeks of 2023 from his plot, but he didn't mention that there was already an increase in R96 and R99 deaths in the third quarter of 2023.</p>
@@ -570,7 +629,7 @@ ggsave(&quot;1.png&quot;,width=5.2,height=3.1,dpi=450)</pre>
 <p><img src=i/ethical-pregnancy.png class=width10></p>
 </blockquote>
 <p>Ethical Skeptic told me that in these plots which display weekly deaths from 2018 onwards, he fits the baseline using only data from 2018 and 2019. He said that his baseline is linear but it's somehow different from a regular least squares linear regression, but he didn't explain how it's different. [<a href="https://theethicalskeptic.substack.com/p/the-state-of-things-pandemic-week-706/comment/53237226">https://theethicalskeptic.substack.com/p/the-state-of-things-pandemic-week-706/comment/53237226</a>]</p>
-<p>The year 2019 had an unusually low number of deaths, so normally if you fit a linear baseline using only data from 2018 and 2019, the slope of the baseline is pointed too much downwards. However in the case of deaths with an underlying cause related to pregnancy and childbirth, 2019 actually had a higher number of deaths than 2018, so in the plot below when I fitted a linear baseline based on deaths from 2018 and 2019 only, the slope was pointed too much upwards compared to a longer-term linear trend. So it probably explains why Ethical Skeptic's plot had a steadily decreasing trend in excess deaths in 2022-2023, because the same can be seen in the light blue line in my plot below where I used a 2018-2019 baseline. But my excess deaths remained roughly flat in 2022-2023 when I used a 2013-2019 baseline instead:</p>
+<p>The year 2019 had an unusually low number of deaths, so normally if you fit a linear baseline using only data from 2018 and 2019, the slope of the baseline is pointed too much downwards. However in the case of deaths with an underlying cause related to pregnancy and childbirth, 2019 actually had a higher number of deaths than 2018, so in the plot below when I fitted a linear baseline based on deaths from 2018 and 2019 only, the slope was pointed too much upwards compared to a longer-term linear trend. So it probably explains why Ethical Skeptic's plot had a steadily decreasing trend in excess deaths in 2022-2023, because the same can be seen in the cyan line in my plot below where I used a 2018-2019 baseline. But my excess deaths remained roughly flat in 2022-2023 when I used a 2013-2019 baseline instead:</p>
 <div class="width6">
 <img src="i/ethical-pregnancy-2.png">
 </div>
@@ -723,27 +782,6 @@ legend(&quot;topright&quot;,legend=leg,col=col,lty=1,lwd=1.5)
 mtext(text=sub,side=1,line=2)
 dev.off()</pre>
 <h2>
-<a href=#Files_for_population_estimates_by_single_year_of_age_up_to_ages_100 id=Files_for_population_estimates_by_single_year_of_age_up_to_ages_100>Files for population estimates by single year of age up to ages 100+</a>
-</h2>
-<p>One annoying feature at CDC WONDER is that it doesn't return population sizes for ages 85 and above, even though the US Census Bureau has published population estimates by single year of age up to ages 100+ since 2010. The 2000-2010 population estimates by single year of age only go up to ages 85+ however, so in the following code I only included population estimates for 2010 and later years.</p>
-<p>The code below downloads the 2010-2020 resident population estimates that are based on the 2010 census and the 2020-2023 resident population estimates that are based on the 2020 census.</p>
-<p>In order to get rid of a sudden jump in the population estimates at the point when the new and old estimates are merged, the old estimates are multiplied by a linear slope so that they are the same in 2020 as the new estimates. For example for the age 80, the new population estimate for 2020 is 1,450,396 and the old estimate is 1,526,957, so their ratio is about 0.9499 so I'm multiplying the old estimate for 2016 by about <code>1-(6/10)*(1-0.9499)</code>. (However a minor problem with this approach is that the mid-year population estimates for 2020 had already been slightly reduced by COVID deaths, so COVID deaths will be reflected in the slope by which the 2010-2019 estimates are multiplied.)</p>
-<p>CDC WONDER uses vintage 2021 population estimates for 2021, vintage 2022 estimates for 2022, and so on, but here I'm using vintage 2023 population estimates for 2020 to 2023 and vintage 2020 estimates for 2010 to 2019.</p>
-<p>I also added a column for the yearly number of deaths for each age at CDC WONDER as of October 2024.</p>
-<pre>new=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/nc-est2023-agesex-res.csv&quot;)
-old=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/national/asrh/nc-est2020-agesex-res.csv&quot;)
-
-old=old[SEX==0&amp;AGE!=999,.(age=AGE,pop=unlist(.SD[,-(1:4)]),year=rep(2010:2020,each=.N))]
-new=new[SEX==0&amp;AGE!=999,.(age=AGE,pop=unlist(.SD[,-(1:3)]),year=rep(2020:2023,each=.N))]
-
-me=merge(merge(old[year==2020,.(age,old=pop)],new[year==2020,.(age,new=pop)])[,.(age,ratio=new/old)],old)
-pop=rbind(me[year!=2020,.(year,age,pop=round(pop*(1-(((year-2010)/10))*(1-ratio))))],new)
-
-dead=fread(&quot;usyearlydead.csv&quot;) # from CDC WONDER
-o=merge(pop,dead,all=T)
-fwrite(o[order(year,age)],&quot;uspopdead.csv&quot;,na=&quot;&quot;)</pre>
-<p>I uploaded the output here: <a href=f/uspopdead.csv>f/uspopdead.csv</a>. This is a similar file for monthly data: <a href=f/uspopdeadmonthly.csv>f/uspopdeadmonthly.csv</a>. Both files are used in some of my scripts on this page.</p>
-<h2>
 <a href=#Cancer_ASMR_compared_to_historical_ASMR_starting_from_1950 id=Cancer_ASMR_compared_to_historical_ASMR_starting_from_1950>Cancer ASMR compared to historical ASMR starting from 1950</a>
 </h2>
 <p>Ethical Skeptic posted this tweet: [<a href="https://x.com/EthicalSkeptic/status/1803267649385668791">https://x.com/EthicalSkeptic/status/1803267649385668791</a>]</p>
@@ -833,11 +871,11 @@ theme(axis.text=element_text(size=6.5,color=&quot;black&quot;),
 ggsave(&quot;1.png&quot;,width=4,height=3.4,dpi=400*4)
 system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 </div>
-<p>In the previous plot I used population estimates that I downloaded from the website of the US Census Bureau, because CDC WONDER doesn't return population estimates for ages 85 and above and it still uses 2022 population estimates for 2023. I used vintage 2023 estimates for 2020-2023 and vintage 2020 estimates for 2010-2019.</p>
-<p>However in the next plot I used population estimates returned by CDC WONDER and I calculated ASMR by 10-year age groups and not by single year of age. CDC WONDER doesn't return population sizes for the oldest age groups if the results are grouped by single year of age or by 5-year age groups, but it does return population sizes for ages 85+ which is the oldest age group when the results are grouped by 10-year age groups.</p>
-<p>As of October 2024, CDC WONDER still used 2022 population estimates for 2023 and 2024, but it overestimates the CMR of elderly age groups in 2023 the population sizes of elderly age groups were higher in 2023 than 2022, and therefore it also overestimates the total ASMR.</p>
+<p>In the plot above I used population estimates that I downloaded from the website of the US Census Bureau, because CDC WONDER doesn't return population estimates for ages 85 and above and it still uses 2022 population estimates for 2023. I used vintage 2023 estimates for 2020-2023 and vintage 2020 estimates for 2010-2019.</p>
+<p>However in the next plot I used population estimates returned by CDC WONDER and I calculated ASMR by 10-year age groups and not by single year of age. CDC WONDER doesn't return population sizes for the oldest age groups if the results are grouped by single year of age or by 5-year age groups, but it does return population sizes for ages 85+ which is the oldest age group when the results are grouped by 10-year age groups. So therefore Ethical Skeptic might have calculated the ASMR by 10-year age groups in case he relied on the population sizes returned by CDC WONDER.</p>
+<p>As of October 2024, CDC WONDER still used 2022 population estimates for 2023, which overestimates the CMR of elderly age groups in 2023 because the population sizes of elderly age groups were higher in 2023 than 2022, and therefore it also overestimates the total ASMR in 2023.</p>
 <p>CDC WONDER also uses vintage 2021 population estimates for 2021, vintage 2022 estimates for 2022, and so on.</p>
-<p>However even when I used the population sizes returned by CDC WONDER, I still wasn't able to reproduce the plot by Ethical Skeptic, because I got lower ASMR in 2022 and 2023 than in 2021 regardless of whether I included only UCD malignant neoplasms or all neoplasms:</p>
+<p>However even when I used the population sizes returned by CDC WONDER, I still wasn't able to reproduce the plot by Ethical Skeptic, because I got lower ASMR in 2022 and 2023 than in 2021 regardless of whether I looked at the UCD neoplasms or the UCD malignant neoplasms:</p>
 <div class="width6">
 <img src="i/ethical-historical-cancer-3.png">
 </div>
@@ -907,9 +945,7 @@ system(&quot;magick 1.png -resize 25% 1.png&quot;)
 <h2>
 <a href=#Baseline_that_started_from_the_1970s_for_CMR_in_New_Zealand id=Baseline_that_started_from_the_1970s_for_CMR_in_New_Zealand>Baseline that started from the 1970s for CMR in New Zealand</a>
 </h2>
-<p>One of the terms invented by Ethical Skeptic is a <span class="quote">&quot;paltered&quot;</span> baseline, which means that 2020 or later years are included in the fitting period of a baseline.</p>
-<p>OWID says that the fitting period of their baseline consists of the years 2015 to 2019: <span class="quote">&quot;We use an estimate produced by Ariel Karlinsky and Dmitry Kobak as part of their World Mortality Dataset (WMD). To produce this estimate, they first fit a regression model for each region using historical deaths data from 2015–2019. They then use the model to project the number of deaths we might normally have expected in 2020–2024. Their model can capture both seasonal variation and year-to-year trends in mortality.&quot;</span> [<a href="https://ourworldindata.org/excess-mortality-covid#how-is-excess-mortality-measured">https://ourworldindata.org/excess-mortality-covid#how-is-excess-mortality-measured</a>]</p>
-<p>However for some reason in this tweet Ethical Skeptic said that the baseline used by OWID was <span class="quote">&quot;paltered&quot;</span> even though it doesn't fit his usual definition of what the term paltered means: [<a href="https://twitter.com/EthicalSkeptic/status/1720267405883027598">https://twitter.com/EthicalSkeptic/status/1720267405883027598</a>]</p>
+<p>One of the terms invented by Ethical Skeptic is a <span class="quote">&quot;paltered&quot;</span> baseline, which means that 2020 or later years are included in the fitting period of a baseline. The baseline that OWID uses to calculate excess deaths is fitted against data from 2015 to 2019. [<a href="https://ourworldindata.org/excess-mortality-covid#how-is-excess-mortality-measured">https://ourworldindata.org/excess-mortality-covid#how-is-excess-mortality-measured</a>] However for some reason in this tweet Ethical Skeptic said that the baseline used by OWID was <span class="quote">&quot;paltered&quot;</span> even though it doesn't fit his usual definition of what the term paltered means: [<a href="https://twitter.com/EthicalSkeptic/status/1720267405883027598">https://twitter.com/EthicalSkeptic/status/1720267405883027598</a>]</p>
 <div class="width6">
 <img src="i/ethical-nz.jpg">
 </div>
@@ -981,7 +1017,7 @@ system(&quot;magick 0.png -resize 25% 1.png&quot;)</pre>
 </div>
 <p>In Ethical Skeptic's plot the B baseline looks closer to my lighter blue dashed line which was fitted against the 5-year blocks for 1970-2023 than my darker blue dashed line which was fitted against the 5-year blocks for 1970-2019 (or maybe it's somewhere in between). I don't know if he just drew the B baseline by hand, but it doesn't look steep enough to be fitted against data from 1970-2019 but it looks more like it's fitted against data up to the present in his plot. (Which is not really an important point, but it would be ironic if he was simultaneously guilty of paltering his own baseline while he falsely accused OWID of paltering.)</p>
 <p>For some reason the y-axis of Ethical Skeptic's plot says <span class="quote">&quot;deaths per 1000 people&quot;</span> but the values on the y-axis are over 6,000, so I don't know if it actually means deaths per million people.</p>
-<p>But in any case, the age structure of the New Zealand population has changed completely since the 1970s, so it doesn't make any sense to just use a linear baseline for CMR that starts from the 70s. Here I only had population data that went back to 1992, but the change since the 70s would've been even more dramatic:</p>
+<p>But in any case, the age structure of the New Zealand population has completely changed since the 1970s, so it doesn't make any sense to just use a linear baseline for CMR that starts from the 70s. Here I only had population data that went back to 1992, but the change since the 70s would've been even more dramatic:</p>
 <div class="width8">
 <img src="i/ethical-nz-4.png">
 </div>
@@ -1370,6 +1406,27 @@ system(paste0(&quot;f=1.png;mar=30;w=`identify -format %w $f`;magick \\( $f -cho
 <p>I think Ethical Skeptic hasn't documented what precise calculation he used to determine the magnitude of the excess MCD normalization, or how he picked week 10 of 2022 as the date when he started applying the normalization or week 20 of 2023 as the date when he stopped increasing the amount of added deaths. If he didn't pick the variables programmatically but based on some kind of subjective criteria, it would be difficult for other people to reproduce his work systematically or so that they would be able to apply the same methodology to other causes of death.</p>
 <p>In any case in his plot which has a line that shows the number of deaths with excess MCD normalization, he should've also included another line which would've showed the number of deaths without the normalization, so it would've been clearer to his followers what the magnitude of the normalization was and when it started.</p>
 <p>(Ethical Skeptic uses the acronym <span class="quote">&quot;MCoD&quot;</span> or <span class="quote">&quot;MCOD&quot;</span> to refer to multiple cause of death but CDC WONDER uses the acronym <span class="quote">&quot;MCD&quot;</span>, so I'm following the convention of CDC WONDER on this website.)</p>
+<h2>
+<a href=#Files_for_population_estimates_by_single_year_of_age_up_to_ages_100 id=Files_for_population_estimates_by_single_year_of_age_up_to_ages_100>Files for population estimates by single year of age up to ages 100+</a>
+</h2>
+<p>One annoying feature at CDC WONDER is that it doesn't return population sizes for ages 85 and above, even though the US Census Bureau has published population estimates by single year of age up to ages 100+ since 2010. The 2000-2010 population estimates by single year of age only go up to ages 85+ however, so in the following code I only included population estimates for 2010 and later years.</p>
+<p>The code below downloads the 2010-2020 resident population estimates that are based on the 2010 census and the 2020-2023 resident population estimates that are based on the 2020 census.</p>
+<p>In order to get rid of a sudden jump in the population estimates at the point when the new and old estimates are merged, the old estimates are multiplied by a linear slope so that they are the same in 2020 as the new estimates. For example for the age 80, the new population estimate for 2020 is 1,450,396 and the old estimate is 1,526,957, so their ratio is about 0.9499 so I'm multiplying the old estimate for 2016 by about <code>1-(6/10)*(1-0.9499)</code>. (However a minor problem with this approach is that the mid-year population estimates for 2020 had already been slightly reduced by COVID deaths, so COVID deaths will be reflected in the slope by which the 2010-2019 estimates are multiplied.)</p>
+<p>CDC WONDER uses vintage 2021 population estimates for 2021, vintage 2022 estimates for 2022, and so on, but here I'm using vintage 2023 population estimates for 2020 to 2023 and vintage 2020 estimates for 2010 to 2019.</p>
+<p>I also added a column for the yearly number of deaths for each age at CDC WONDER as of October 2024.</p>
+<pre>new=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/nc-est2023-agesex-res.csv&quot;)
+old=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/national/asrh/nc-est2020-agesex-res.csv&quot;)
+
+old=old[SEX==0&amp;AGE!=999,.(age=AGE,pop=unlist(.SD[,-(1:4)]),year=rep(2010:2020,each=.N))]
+new=new[SEX==0&amp;AGE!=999,.(age=AGE,pop=unlist(.SD[,-(1:3)]),year=rep(2020:2023,each=.N))]
+
+me=merge(merge(old[year==2020,.(age,old=pop)],new[year==2020,.(age,new=pop)])[,.(age,ratio=new/old)],old)
+pop=rbind(me[year!=2020,.(year,age,pop=round(pop*(1-(((year-2010)/10))*(1-ratio))))],new)
+
+dead=fread(&quot;usyearlydead.csv&quot;) # from CDC WONDER
+o=merge(pop,dead,all=T)
+fwrite(o[order(year,age)],&quot;uspopdead.csv&quot;,na=&quot;&quot;)</pre>
+<p>I uploaded the output here: <a href=f/uspopdead.csv>f/uspopdead.csv</a>. This is a similar file for monthly data: <a href=f/uspopdeadmonthly.csv>f/uspopdeadmonthly.csv</a>. Both files are used in some of my scripts on this page.</p>
 <h2>
 <a href=#Cancer_deaths_by_age_group id=Cancer_deaths_by_age_group>Cancer deaths by age group</a>
 </h2>
