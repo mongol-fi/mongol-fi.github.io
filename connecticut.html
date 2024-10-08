@@ -61,8 +61,8 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <h2 id=Contents><a href=#Contents>Contents</a></h2>
 <ul>
 <li><a href=#Converting_the_data_to_CSV>Converting the data to CSV</a></li>
-<li><a href=#Ages_below_65_have_elevated_mortality_due_to_Medicare_eligibility_criteria>Ages below 65 have elevated mortality due to Medicare eligibility criteria</a></li>
 <li><a href=#Bucket_analysis>Bucket analysis</a></li>
+<li><a href=#Ages_below_65_have_elevated_mortality_due_to_Medicare_eligibility_criteria>Ages below 65 have elevated mortality due to Medicare eligibility criteria</a></li>
 <li><a href=#Moderna_Pfizer_ratio_by_month_of_vaccination_and_ongoing_month>Moderna-Pfizer ratio by month of vaccination and ongoing month</a></li>
 <li><a href=#Deaths_by_weeks_since_vaccination>Deaths by weeks since vaccination</a></li>
 <li><a href=#ASMR_by_vaccine_brand_and_month>ASMR by vaccine brand and month</a></li>
@@ -78,8 +78,8 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <h2>
 <a href=#Converting_the_data_to_CSV id=Converting_the_data_to_CSV>Converting the data to CSV</a>
 </h2>
-<p>In September 2024 Steve Kirsch published a spreadsheet for Medicare data from Connecticut that contains rows for a total of about 500,000 people. The file has columns for sex, date of death, vaccine brand, the dates of the first 3 vaccine doses, and age at dose 1: <a href="https://kirschsubstack.com/p/i-have-been-fully-vindicated-by-the">https://kirschsubstack.com/p/i-have-been-fully-vindicated-by-the</a>. The vaccine brand is presumably the brand of the first dose.</p>
-<p>Kirsch obfuscated the vaccine brand names in his spreadsheet in order to do his ChatGPT analysis, but this code converts the spreadsheet to a CSV file with unobfuscated vaccine brand names, ISO date format, and shorter column names:</p>
+<p>In September 2024 Steve Kirsch published a spreadsheet for data from Connecticut that contains rows for a total of about 500,000 people who were enrolled on Medicare. The file has columns for sex, date of death, vaccine brand, the dates of the first 3 vaccine doses, and age at the time of the first dose: <a href="https://kirschsubstack.com/p/i-have-been-fully-vindicated-by-the">https://kirschsubstack.com/p/i-have-been-fully-vindicated-by-the</a>. The vaccine brand is presumably the brand of the first dose.</p>
+<p>Kirsch obfuscated the vaccine brand names in his spreadsheet in order to do his ChatGPT analysis, but this code converts the spreadsheet to a CSV file with unobfuscated vaccine brand names, and it also converts the dates to the ISO format and makes column names shorter:</p>
 <pre>download.file(&quot;https://www.skirsch.com/covid/ct_mortality.xlsx&quot;,&quot;ct_mortality.xlsx&quot;)
 t=data.table(readxl::read_excel(&quot;ct_mortality.xlsx&quot;))
 
@@ -93,40 +93,9 @@ o=t[,.(id=PERSON_ID,sex=Sex,dead=as.Date(`Date of death`),brand=BRAND,date1=as.D
 fwrite(o,&quot;ctmort.csv.gz&quot;,na=&quot;&quot;)</pre>
 <p>I uploaded the output here: <a href=f/ctmort.csv.gz>f/ctmort.csv.gz</a>.</p>
 <h2>
-<a href=#Ages_below_65_have_elevated_mortality_due_to_Medicare_eligibility_criteria id=Ages_below_65_have_elevated_mortality_due_to_Medicare_eligibility_criteria>Ages below 65 have elevated mortality due to Medicare eligibility criteria</a>
-</h2>
-<p>The website of HHS says: <span class="quote">&quot;Generally, Medicare is for people 65 or older. You may be able to get Medicare earlier if you have a disability, End-Stage Renal Disease (permanent kidney failure requiring dialysis or a transplant), or ALS (also called Lou Gehrig’s disease).&quot;</span> [<a href="https://www.hhs.gov/answers/medicare-and-medicaid/who-is-eligible-for-medicare/index.html">https://www.hhs.gov/answers/medicare-and-medicaid/who-is-eligible-for-medicare/index.html</a>] So in the code below where I calculated a mortality rate within a year from the first dose, ages 60 to 64 had much higher mortality than ages 65 to 69:</p>
-<pre>&gt; ct=fread(&quot;http://sars2.net/f/ctmort.csv.gz&quot;)
-&gt; ct[,.(cmr=round(mean(!is.na(dead)&amp;dead-date1&lt;365)*1e5),.N),.(age=age%/%5*5)][order(age)]|&gt;print(r=F)
- age    cmr      N
-  10      0      2
-  15      0      1
-  20    621    483
-  25    190   1055
-  30    306   1633
-  35    934   2034
-  40   1163   2494
-  45   1333   3151
-  50   2436   5624
-  55   2675   9681
-  60   2988  14925 # ages 60 to 64 have almost 3 times as high CMR as ages 65 to 69
-  65   1169 121444
-  70   1724 113601
-  75   2911  87246
-  80   5014  56220
-  85   8739  35681
-  90  15787  19168
-  95  23483   5932
- 100  32071    792
- 105  41379     29
- 110 100000      1
- 115 100000      2
- age    cmr      N</pre>
-<p>In my subsequent analysis I have generally excluded ages below 65.</p>
-<h2>
 <a href=#Bucket_analysis id=Bucket_analysis>Bucket analysis</a>
 </h2>
-<p>The following script generates a file for the Connecticut data similar to the files generated by Kirsch's <code>buckets.py</code> script, which shows the number of deaths and person-days grouped by the month of vaccination, ongoing month, weeks since vaccination, dose number, age, sex, and vaccine type. I assigned a random birthday to each person in order to account for the aging of people over time with daily precision:</p>
+<p>The following script generates a file for the Connecticut data similar to the files generated by Kirsch's <code>buckets.py</code> script. The file shows the number of deaths and person-days grouped by the month of vaccination, ongoing month, weeks since vaccination, dose number, age, sex, and vaccine type. I assigned a random birthday to each person in order to account for the aging of people over time with daily precision:</p>
 <pre>library(data.table);library(lubridate)
 
 # fast way to get difference in floored years for a pair of dates after 1900 and before 2100
@@ -157,16 +126,46 @@ setorder(buck,month,vaxmonth,week,age,dose,type,sex)
 fwrite(buck,&quot;ctbucketskeep.csv.gz&quot;,quote=F)</pre>
 <p>I uploaded the output here: <a href=f/ctbucketskeep.csv.gz>f/ctbucketskeep.csv.gz</a>. In the file people are kept included under earlier doses after a new dose.</p>
 <h2>
+<a href=#Ages_below_65_have_elevated_mortality_due_to_Medicare_eligibility_criteria id=Ages_below_65_have_elevated_mortality_due_to_Medicare_eligibility_criteria>Ages below 65 have elevated mortality due to Medicare eligibility criteria</a>
+</h2>
+<p>Medicare is managed by the U.S. Department of Health and Human Services (HHS). The website of HHS says: <span class="quote">&quot;Generally, Medicare is for people 65 or older. You may be able to get Medicare earlier if you have a disability, End-Stage Renal Disease (permanent kidney failure requiring dialysis or a transplant), or ALS (also called Lou Gehrig's disease).&quot;</span> [<a href="https://www.hhs.gov/answers/medicare-and-medicaid/who-is-eligible-for-medicare/index.html">https://www.hhs.gov/answers/medicare-and-medicaid/who-is-eligible-for-medicare/index.html</a>] So in the code below where I calculated a mortality rate within a year from the first dose, ages 60 to 64 had almost three times higher mortality rate than ages 65 to 69:</p>
+<pre>&gt; ct=fread(&quot;http://sars2.net/f/ctmort.csv.gz&quot;)
+&gt; ct[,.(cmr=round(mean(!is.na(dead)&amp;dead-date1&lt;365)*1e5),people=.N),.(age=age%/%5*5)][order(age)]|&gt;print(r=F)
+ age    cmr people
+  10      0      2
+  15      0      1
+  20    621    483
+  25    190   1055
+  30    306   1633
+  35    934   2034
+  40   1163   2494
+  45   1333   3151
+  50   2436   5624
+  55   2675   9681
+  60   2988  14925
+  65   1169 121444
+  70   1724 113601
+  75   2911  87246
+  80   5014  56220
+  85   8739  35681
+  90  15787  19168
+  95  23483   5932
+ 100  32071    792
+ 105  41379     29
+ 110 100000      1
+ 115 100000      2
+ age    cmr      N</pre>
+<p>In the subsequent analysis in this HTML file, I have generally excluded ages below 65.</p>
+<h2>
 <a href=#Moderna_Pfizer_ratio_by_month_of_vaccination_and_ongoing_month id=Moderna_Pfizer_ratio_by_month_of_vaccination_and_ongoing_month>Moderna-Pfizer ratio by month of vaccination and ongoing month</a>
 </h2>
-<p>In Kirsch's analysis of the Czech record-level data, his main argument why Moderna was more unsafe than Pfizer was that when he calculated age-specific mortality rates during the first year from the first dose, Moderna got about 1.3 higher mortality rate than Pfizer across various age groups. However I pointed out to him that it might have been due to some confounders he didn't adjust for in his analysis, and when in the plot below where I calculated an age-normalized Moderna-Pfizer mortality ratio, my total ratio for all months of vaccination was about 1.3 like in Kirsch's analysis, but my ratio fell close to 1.0 among people who were vaccinated in the fourth quarter of 2021: [<a href=czech2.html#Triangle_plot_of_Moderna_Pfizer_ratio>czech2.html#Triangle_plot_of_Moderna_Pfizer_ratio</a>]</p>
+<p>In Kirsch's analysis of the Czech record-level data, his main argument why Moderna vaccinese were unsafe than Pfizer vaccines was that when he calculated age-specific mortality rates during the first year from the first dose, Moderna got about 1.3 higher mortality rate than Pfizer across various age groups. However I pointed out to him that it might have been due to some confounders he didn't adjust for in his analysis. In the plot below where I calculated an age-normalized Moderna-Pfizer mortality ratio, my total ratio for all months of vaccination aggregated together was about 1.3 like in Kirsch's analysis, but my ratio fell close to 1.0 among people who were vaccinated in the fourth quarter of 2021: [<a href=czech2.html#Triangle_plot_of_Moderna_Pfizer_ratio>czech2.html#Triangle_plot_of_Moderna_Pfizer_ratio</a>]</p>
 <div class="width8">
 <img src="i/czech-mrr-triangle.png">
 </div>
 <p>In the new Connecticut data Kirsch now got about 10% higher mortality rate for Pfizer than Moderna, but he again attributed the difference to a difference in vaccine safety, even though this time Pfizer got higher mortality rates than Moderna. When someone asked Kirsch to explain it in his Substack comments, Kirsch replied: <span class="quote">&quot;it's a QA issue. Moderna is more deadly, but the batches are even a greater problem.&quot;</span> [<a href="https://kirschsubstack.com/p/i-have-been-fully-vindicated-by-the/comment/70688177">https://kirschsubstack.com/p/i-have-been-fully-vindicated-by-the/comment/70688177</a>]</p>
 <p>Kirsch also posted this tweet: <span class="quote">&quot;This is in Connecticut only. Other states had completely the opposite numbers and it was statistically significant there as well.&quot;</span> [<a href="https://x.com/stkirsch/status/1840121580405366903">https://x.com/stkirsch/status/1840121580405366903</a>] But I think he hasn't published the data for other states.</p>
-<p>I bet even if Moderna and Pfizer would've gotten an equal mortality rate, Kirsch would have somehow said it proved that the vaccines were killing people.</p>
-<p>But anyway, in the following code I calculated age-normalized mortality rates for each combination of vaccination month, ongoing month, and vaccine brand. And when I divided the rate for Moderna with the rate for Pfizer, the total ratio for all months of vaccination was about 0.79. Moderna got a higher rate among people who got the first dose in March, April, May, June, July, or September 2021, even though during other months the age-normalized rate was higher for Pfizer. So I think it shows that people who got Pfizer and Moderna vaccines had different profiles of confounders during different months of vaccination, even though I guess Kirsch might argue it was because some batches were more deadly than others:</p>
+<p>In the following code I calculated age-normalized mortality rates for each combination of vaccination month, ongoing month, and vaccine brand. And when I divided the rate for Moderna with the rate for Pfizer, the total ratio for all months of vaccination was about 0.79. Moderna got a higher rate among people who got the first dose in March, April, May, June, July, or September 2021, even though during other months the age-normalized rate was higher for Pfizer. So I think it shows that people who got Pfizer and Moderna vaccines had different profiles of confounders during different months of vaccination, even though I guess Kirsch might argue it was because some batches were more deadly than others:</p>
 <div class="width14">
 <img src="i/ct-triangle.png">
 </div>
@@ -184,7 +183,7 @@ b=fread(&quot;http://sars2.net/f/ctbucketskeep.csv.gz&quot;)
 
 a=b[age&gt;=65&amp;dose==1,.(dead=sum(dead),alive=sum(alive)),.(type,month,vaxmonth,age=pmin(age,100))]
 
-pop=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)
+pop=fread(&quot;http://sars2.net/f/uspopdeadmonthly.csv&quot;)
 a=merge(a,pop[,.(month=date,age,base=dead/persondays)])[,base:=base*alive]
 a=a[month&gt;=&quot;2020-12&quot;&amp;vaxmonth&gt;=&quot;2020-12&quot;&amp;vaxmonth&lt;=&quot;2021-12&quot;]
 
@@ -254,7 +253,7 @@ Show code
 
 a=b[age&gt;=65,.(dead=sum(dead),alive=sum(alive)),.(month,age,week)]
 
-pop=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)
+pop=fread(&quot;http://sars2.net/f/uspopdeadmonthly.csv&quot;)
 
 a=merge(a,pop[,.(base=dead/persondays,month=date,age)])
 
@@ -289,7 +288,7 @@ abline(h=0,lwd=1.5,lty=2)
 legend(&quot;bottom&quot;,legend=leg,col=col,lty=1,lwd=1.5)
 dev.off()</pre>
 </div>
-<p>In the plot for Connecticut data there's close to 0% excess mortality from week 20 onwards if you look at the light gray line where each month has a different baseline. But in the plot for Czech data there was about -20% to -10% from around week 20 onwards. In both plots the baseline was derived from the mortality rate of the general population which included both unvaccinated and vaccinated people, but in the US plot vaccinated people who were not included in the new Medicare dataset were included in the baseline but not in the actual deaths.</p>
+<p>In the plot for Connecticut data above there's close to 0% excess mortality from week 20 onwards if you look at the light gray line where each month has a different baseline. But in the plot for Czech data there was about -20% to -10% excess mortality from around week 20 onwards. In both plots the baseline was derived from the mortality rate of the general population which included both unvaccinated and vaccinated people, but in the US plot vaccinated people who were not included in the new Medicare dataset were included in the baseline but not in the actual deaths.</p>
 <p>At first I thought the reason why the plots for Connecticut had close to 0% excess deaths might have been if vaccinated people who are on Medicare had higher ASMR than vaccinated people in the general US population, which might be if people on Medicare have lower SES than the general US population. However I mixed up Medicaid which is meant for low-income people and Medicare which contains almost the entire US population aged 65 and above. ChatGPT said that about 95-98% of the US population in ages 65 and above is enrolled on Medicare. And based on my calculation below, about 97% of the Connecticut population in ages 65 and above was enrolled on Medicare: [<a href="https://data.cms.gov/summary-statistics-on-beneficiary-enrollment/medicare-and-medicaid-reports/medicare-monthly-enrollment">https://data.cms.gov/summary-statistics-on-beneficiary-enrollment/medicare-and-medicaid-reports/medicare-monthly-enrollment</a>]</p>
 <pre>t=fread(&quot;Medicare Monthly Enrollment Data_May2024.csv&quot;,na.strings=&quot;*&quot;)
 t[YEAR==2021&amp;MONTH==&quot;Year&quot;&amp;BENE_STATE_ABRVTN==&quot;CT&quot;&amp;BENE_COUNTY_DESC==&quot;Total&quot;,28:34]|&gt;sum()
@@ -306,11 +305,11 @@ fread(&quot;http://sars2.net/f/ctmort.csv.gz&quot;)[age&gt;=65,.N]
 <h2>
 <a href=#ASMR_by_vaccine_brand_and_month id=ASMR_by_vaccine_brand_and_month>ASMR by vaccine brand and month</a>
 </h2>
-<p>The Czech Republic had a wave of COVID deaths which peaked around December 2021. But in the Czech record-level data in December 2021, unvaccinated people had a much higher spike in ASMR than vaccinated people, which might mean that the vaccines were effective at preventing COVID deaths. However among vaccinated people, the spike was higher for Janssen and AstraZeneca which are viral vector vaccines, but the spike was lower for Moderna and Pfizer which are mRNA vaccines, which might mean that the mRNA vaccines had higher efficacy than the viral vector vaccines: [<a href=czech2.html#ASMR_by_month_and_vaccine_type>czech2.html#ASMR_by_month_and_vaccine_type</a>]</p>
+<p>The Czech Republic had a wave of COVID deaths which peaked around December 2021. But the plot below shows that in the Czech record-level data in December 2021, unvaccinated people had a much more pronounced spike in ASMR than vaccinated people, which might mean that the vaccines were effective at preventing COVID deaths. However among vaccinated people, the spike was more pronounced for Janssen and AstraZeneca which are viral vector vaccines, but the spike was more flat for Moderna and Pfizer which are mRNA vaccines, which might mean that the mRNA vaccines had higher efficacy than the viral vector vaccines: [<a href=czech2.html#ASMR_by_month_and_vaccine_type>czech2.html#ASMR_by_month_and_vaccine_type</a>]</p>
 <div class="width7">
 <img src="i/czech-asmrtype.png">
 </div>
-<p>Connecticut didn't have any major wave of COVID deaths after the winter of 2020-2021, even though there was a smaller spike in COVID deaths around January 2022. In the plot below the spike around January 2022 seems to be higher for Jansssen than Moderna or AstraZeneca, which again might mean that Janssen had lower efficacy than the mRNA vaccines (even though it's hard to tell because Janssen also has wide confidence intervals because of a small sample size):</p>
+<p>Connecticut didn't have any major wave of COVID deaths after the winter of 2020-2021, even though there was a spike in COVID deaths around January 2022 which was smaller than the spike in the Czech Republic around December 2021. In the plot below the spike around January 2022 seems to be more pronounced for Jansssen than Moderna or AstraZeneca, which again might mean that Janssen had lower efficacy than the mRNA vaccines (even though it's hard to tell because Janssen also has wide confidence intervals because of a small sample size, and Janssen also has another fairly large spike in deaths in August 2021 which may have been due to random noise and not COVID because there was a low prevalence of COVID in August 2021):</p>
 <div class="width8">
 <img src="i/ct-asmrtype.png">
 </div>
@@ -405,7 +404,7 @@ ggsave(&quot;1.png&quot;,width=4.8,height=2.7,dpi=400)</pre>
 <h2>
 <a href=#Deaths_by_weeks_since_vaccination_and_vaccine_brand id=Deaths_by_weeks_since_vaccination_and_vaccine_brand>Deaths by weeks since vaccination and vaccine brand</a>
 </h2>
-<p>Ulf Lorré published a Substack post about the Connecticut data, where he included these plots which appear to show that the temporal healthy vaccinee effect is much stronger for Moderna than Pfizer: [<a href="https://ulflorr.substack.com/p/more-about-steve-kirschs-medicare">https://ulflorr.substack.com/p/more-about-steve-kirschs-medicare</a>]</p>
+<p>Ulf Lorré published a Substack post about the Connecticut data, where he included these plots which appear to show that the temporal healthy vaccinee effect is much stronger for Moderna than Pfizer vaccines: [<a href="https://ulflorr.substack.com/p/more-about-steve-kirschs-medicare">https://ulflorr.substack.com/p/more-about-steve-kirschs-medicare</a>]</p>
 <div class="width6">
 <img src="i/ct-weektype-1.jpg">
 </div>
@@ -476,7 +475,7 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
 ggsave(&quot;1.png&quot;,width=4,height=2.5,dpi=380*4)
 system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 </div>
-<p>In the next plot I plotted deaths by weeks since vaccination and vaccine type, but I calculated a baseline number of deaths by multiplying the number of person-days for each combination of month and age with the mortality rate in Connecticut for the same combination of age and month. I had to aggregate together ages 85 and above because I used population estimates published by the US Census Bureau where ages 85 and above were aggregated together. [<a href="https://www2.census.gov/programs-surveys/popest/datasets/2020-2022/state/asrh/sc-est2022-agesex-civ.csv">https://www2.census.gov/programs-surveys/popest/datasets/2020-2022/state/asrh/sc-est2022-agesex-civ.csv</a>] But anyway, during the first 10 weeks from vaccination, Pfizer had a sharp drop in the baseline but the baseline for Moderna remained roughly flat:</p>
+<p>In the next plot I plotted deaths by weeks since vaccination and vaccine type, but I calculated a baseline number of deaths by multiplying the number of person-days for each combination of month and age with the mortality rate in Connecticut for the same combination of month and age. I had to aggregate together ages 85 and above because I used population estimates published by the US Census Bureau where ages 85 and above were aggregated together. [<a href="https://www2.census.gov/programs-surveys/popest/datasets/2020-2022/state/asrh/sc-est2022-agesex-civ.csv">https://www2.census.gov/programs-surveys/popest/datasets/2020-2022/state/asrh/sc-est2022-agesex-civ.csv</a>] But anyway, during the first 10 weeks from vaccination, Pfizer had a sharp drop in the baseline but the baseline for Moderna remained roughly flat:</p>
 <div class="width6">
 <img src="i/ct-weektype-2.png">
 </div>
@@ -562,7 +561,7 @@ b=fread(&quot;http://sars2.net/f/ctbucketskeep.csv.gz&quot;)
 
 a=b[age&gt;=65&amp;dose==1,.(dead=sum(dead),alive=sum(alive)),.(type,month,vaxmonth,age=pmin(age,100))]
 
-pop=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)
+pop=fread(&quot;http://sars2.net/f/uspopdeadmonthly.csv&quot;)
 a=merge(a,pop[,.(month=date,age,base=dead/persondays)])[,base:=base*alive]
 a=a[vaxmonth&gt;=&quot;2020-12&quot;&amp;vaxmonth&lt;=&quot;2021-12&quot;]
 
@@ -616,10 +615,10 @@ system(paste0(&quot;magick mort.png pop[12].png +append 0.png;w=`identify -forma
 <h2>
 <a href=#Comparison_of_deaths_by_weeks_since_vaccination_to_other_datasets id=Comparison_of_deaths_by_weeks_since_vaccination_to_other_datasets>Comparison of deaths by weeks since vaccination to other datasets</a>
 </h2>
-<p>In March 2022 Clare Craig, Martin Neil, Norman Fenton, and Scott McLachlan published a preprint titled <span class="quote">&quot;Official mortality data for England reveal systematic undercounting of deaths occurring within first two weeks of Covid-19 vaccination&quot;</span>. [<a href="https://www.researchgate.net/publication/358979921_Official_mortality_data_for_England_reveal_systematic_undercounting_of_deaths_occurring_within_first_two_weeks_of_Covid-19_vaccination">https://www.researchgate.net/publication/358979921_Official_mortality_data_for_England_reveal_systematic_undercounting_of_deaths_occurring_within_first_two_weeks_of_Covid-19_vaccination</a>] Craig et al. speculated that because the ONS dataset for deaths by vaccination status had a low number of non-COVID deaths in the first two weeks after vaccination, deaths that occurred soon after vaccination were somehow systematically omitted from the dataset.</p>
-<p>However there is also a very low number of deaths in the first few weeks after vaccination in the old record-level datasets that Kirsch has published from New Zealand, the Maldives, and the United States. The datasets show the date of vaccination and date of death of individual people, so you can calculate the number of deaths by weeks since vaccination manually so that you know for sure that there is no trick used where vaccinated people would be classified as unvaccinated for 1 to 3 weeks after vaccination. I have pointed it out to Neil and Fenton and I have tried to get them to look at Kirsch's datasets, but I don't think I have been successful.</p>
-<p>Craig et al. wrote: <span class="quote">&quot;The healthy vaccinee hypothesis, that those close to death will postpone or decline vaccination might hypothetically account for a lower rate of death in the first two weeks. But as an explanation it is only plausible if every possible death that might occur in the first two weeks, after the offer of vaccination, was foreknown whilst those deaths in the third week were not, and hence those dying in the third week did not postpone or decline vaccination.&quot;</span> However Craig et al. didn't take into account that the temporal healthy vaccinee effect actually lasts longer than 2 weeks, but if you plot deaths by weeks since the first dose in England, the increasing trend in mortality caused by the waning out of the temporal HVE is counteracted by the decreasing trend in the background mortality rate, because many first doses in England were given in the first three months of 2021 when there the mortality rate was falling rapidly because the COVID wave in the winter was passing by.</p>
-<p>A similar effect can be seen in the plot below which shows deaths by weeks since the first dose in the new Connecticut Medicare data and in the Czech record-level data, because in both Connecticut and the Czech Republic many people got first doses at a time when there was a sharply decreasing background mortality rate because a COVID wave was passing by. But in New Zealand the temporal HVE seems to last longer, because New Zealand had not yet been hit by COVID in 2021 when first dose was rolled out:</p>
+<p>In March 2022 Clare Craig, Martin Neil, Norman Fenton, and Scott McLachlan published a preprint titled <span class="quote">&quot;Official mortality data for England reveal systematic undercounting of deaths occurring within first two weeks of Covid-19 vaccination&quot;</span>. [<a href="https://www.researchgate.net/publication/358979921_Official_mortality_data_for_England_reveal_systematic_undercounting_of_deaths_occurring_within_first_two_weeks_of_Covid-19_vaccination">https://www.researchgate.net/publication/358979921_Official_mortality_data_for_England_reveal_systematic_undercounting_of_deaths_occurring_within_first_two_weeks_of_Covid-19_vaccination</a>] Craig et al. speculated that because the ONS dataset for deaths by vaccination status had a low number of non-COVID deaths in the first two weeks after vaccination, deaths that occurred soon after vaccination were somehow systematically omitted or misclassified.</p>
+<p>However there is also a very low number of deaths in the first few weeks after vaccination in the old record-level datasets that Kirsch has published from New Zealand, the Maldives, and the United States. The datasets show the date of vaccination and date of death of individual people, so you can calculate the number of deaths by weeks since vaccination manually so that you know for sure that there is no trick used where vaccinated people would be classified as unvaccinated for 1 to 3 weeks after vaccination. I have pointed it out to Neil and Fenton and I have tried to get them to look at Kirsch's record-level datasets, but I don't think I have been successful.</p>
+<p>Craig et al. wrote: <span class="quote">&quot;The healthy vaccinee hypothesis, that those close to death will postpone or decline vaccination might hypothetically account for a lower rate of death in the first two weeks. But as an explanation it is only plausible if every possible death that might occur in the first two weeks, after the offer of vaccination, was foreknown whilst those deaths in the third week were not, and hence those dying in the third week did not postpone or decline vaccination.&quot;</span> However Craig et al. didn't take into account that the temporal healthy vaccinee effect actually lasts longer than 2 weeks, but if you plot deaths by weeks since the first dose in England, the increasing trend in mortality caused by the waning out of the temporal HVE is counteracted by the decreasing trend in the background mortality rate, because many first doses in England were given in the first three months of 2021 when the mortality rate was falling rapidly because the COVID wave in the winter was passing by.</p>
+<p>A similar effect can be seen in the plot below which shows deaths by weeks since the first dose in the new Connecticut Medicare data and in the Czech record-level data, because in both Connecticut and the Czech Republic many people got first doses at a time when there was a sharply decreasing background mortality rate because a COVID wave was passing by. But in New Zealand the period after vaccination when there was reduced mortality seems to last longer, because New Zealand had not yet been hit by COVID in 2021 when first dose was rolled out:</p>
 <div class="width6">
 <img src="i/ct-weeksafter.png">
 </div>
@@ -708,7 +707,7 @@ system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 <h2>
 <a href=#ChatGPTs_comments_about_Kirschs_analysis id=ChatGPTs_comments_about_Kirschs_analysis>ChatGPT's comments about Kirsch's analysis</a>
 </h2>
-<p>When I pasted Kirsch's Substack post to ChatGPT and asked if his analysis was valid, ChatGPT raised several good points about the analysis:</p>
+<p>Kirsch's analysis of the Connecticut data mostly relied on ChatGPT which he called the <span class="quote">&quot;world's most objective epidemiologist&quot;</span>. So when I pasted Kirsch's Substack post to ChatGPT and asked if his analysis was valid, ChatGPT raised several good points about the analysis:</p>
 <blockquote>
 <ul>
 <li><strong>No adjustment for confounders</strong>: The analysis admits that it doesn't control for critical variables (e.g., age, preexisting health conditions, socioeconomic status, access to care), which are vital in vaccine effectiveness and safety studies.</li>
@@ -732,7 +731,7 @@ system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 <a href=#ASMR_by_month_of_vaccination id=ASMR_by_month_of_vaccination>ASMR by month of vaccination</a>
 </h2>
 <p>In the New Zealand released by Barry Young, in the English UKHSA FOI data that was given to Clare Craig in May 2024, and in the Czech record-level data, I have identified a phenomenon I'm calling the <span class="quote">&quot;early vaccinee effect&quot;</span>, where there was subsequently low mortality in the early vaccinees who got vaccinated during the rollout peak or during the period leading up to the peak, but there was subsequently much higher mortality in the late vaccinees who got vaccinated after the rollout peak had passed.</p>
-<p>Now the plot below shows that a similar phenomenon can also be seen in the new Connecticut data (even though people who got the first dose in the last 3 months of 2021 subsequently had fairly low ASMR, but most of the doses were actually misclassified third doses):</p>
+<p>Now the plot below shows that a similar phenomenon can also be seen in the new Connecticut data, where in the case of both Pfizer and Moderna, the number of first doses administered peaked in Feburary 2021 (even though people who got the first dose in the last 3 months of 2021 subsequently had fairly low ASMR, but most of the doses were actually misclassified third doses):</p>
 <div class="width7">
 <img src="i/ct-asmrvaxmonth.png">
 </div>
@@ -802,7 +801,7 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
 ggsave(&quot;1.png&quot;,width=4.8,height=2.7,dpi=400*4)
 system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 </div>
-<p>The plot above also shows that in December 2020 Pfizer accounted for almost all vaccine doses, but people who got a Pfizer vaccine in December 2020 subsequently had very high ASMR. So could it be that vulnerable people who were priorized during early rollout are overrepresented among people who got a Pfizer vaccine? It might partially explain why during the first three months in the plot above Pfizer has higher ASMR than Moderna but afterwards it's the other way around. (Even though on the other hand the total number of doses administered in December 2020 is so small that it has little impact on total ASMR, and Pfizer also had higher ASMR than Moderna in January and February which were the two months with the highest number of Pfizer doses administered.)</p>
+<p>The plot above also shows that in December 2020 Pfizer accounted for almost all vaccine doses, but people who got a Pfizer vaccine in December 2020 subsequently had very high ASMR. So could it be that vulnerable people who were priorized during early rollout are overrepresented among people who got a Pfizer vaccine? It might partially explain why during the first three months in the plot above Pfizer has higher ASMR than Moderna but afterwards it's the other way around. (Even though on the other hand the total number of doses administered in December 2020 is so small that it doesn't have much impact on the total ASMR across all vaccination months, and Pfizer also had higher ASMR than Moderna in January and February 2021 which were the two months that had the highest number of Pfizer doses administered.)</p>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
