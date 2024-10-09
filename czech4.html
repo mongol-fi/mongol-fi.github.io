@@ -1099,23 +1099,22 @@ dev.off()</pre>
 <div class="width6">
 <img src="i/czech-ci-2.jpg">
 </div>
-<p>I don't think his approach was correct, because he should've taken into account the number of deaths and baseline deaths for Moderna and Pfizer vaccinees. I'm not sure if the following is the correct approach either, but I gave this prompt to ChatGPT: <code>r code to calculate confidence interval for (moderna_dead/moderna_baseline)/(pfizer_dead/pfizer_baseline): moderna_dead=284;moderna_baseline=252.52;pfizer_dead=2266;pfizer_baseline=2725.01</code>. It gave me code like this, where the 95% CI for the Moderna-Pfizer ratio for people vaccinated in July 2021 was about 1.19 to 1.52, so the lower bound of the CI was still clearly above 1:</p>
-<pre>moderna_dead=284;moderna_baseline=252.52
-pfizer_dead=2266;pfizer_baseline=2725.01
+<p>I don't think his approach was correct, because he should've taken into account the number of deaths and baseline deaths for Moderna and Pfizer vaccinees. I'm not sure if the following is the correct approach either, but when I asked ChatGPT how to calculate the confidence interval for the Moderna-Pfizer ratio for people vaccinated in July 2021, it gave me code like this, where the 95% CI was about 1.20 to 1.53 so the lower bound of the CI was still clearly above 1:</p>
+<pre>dead1=284;base1=252.52
+dead2=2266;base2=2725.01
+rate1=dead1/base1;rate2=dead2/base2
+ratio=rate1/rate2
 
-moderna_rate=moderna_dead/moderna_baseline
-pfizer_rate=pfizer_dead/pfizer_baseline
-ratio=moderna_rate/pfizer_rate
+se1=sqrt(dead1)/base1;se2=sqrt(dead2)/base2
 
-se_moderna=sqrt(moderna_dead)/moderna_baseline
-se_pfizer=sqrt(pfizer_dead)/pfizer_baseline
-
-se_ratio=ratio*sqrt((se_moderna/moderna_rate)^2+(se_pfizer/pfizer_rate)^2)
-ratio+c(-1,1)*qnorm(.975)*se_ratio # [1] 1.185617 1.519343</pre>
+se=sqrt((se1/rate1)^2+(se2/rate2)^2)
+exp(log(ratio)+c(-1,1)*qnorm(.975)*se)
+# [1] 1.195500 1.530073</pre>
 <p>When I asked ChatGPT how to calculate whether the result was statistically significant, it said <span class="quote">&quot;To assess if the result is statistically significant, we check if the 95% confidence interval for the ratio excludes 1. If the interval excludes 1, it indicates that there is a statistically significant difference between the Moderna and Pfizer rates.&quot;</span></p>
-<p>When I asked how to calculate a p-value for the result, ChatGPT answered: <span class="quote">&quot;To calculate the p-value, we need to test the null hypothesis that the ratio of the two rates is equal to 1. This can be done using a Wald test, which compares the observed value of the ratio to the null value (1), using the standard error of the ratio to compute a Z-score. The p-value is then obtained from the Z-score.&quot;</span> And it gave me this code which gave me a p-value of about 3e-5:</p>
-<pre>z_score=(ratio-1)/se_ratio
-2*(1-pnorm(abs(z_score))) # 3.469878e-05</pre>
+<p>When I asked how to calculate a p-value for the result, ChatGPT answered: <span class="quote">&quot;To calculate the p-value, we need to test the null hypothesis that the ratio of the two rates is equal to 1. This can be done using a Wald test, which compares the observed value of the ratio to the null value (1), using the standard error of the ratio to compute a Z-score. The p-value is then obtained from the Z-score.&quot;</span> And it gave me this code which gave me a p-value of about 2e-6:</p>
+<pre>z_score=log(ratio)/se
+2*(1-pnorm(abs(z_score)))
+# [1] 1.6133e-06</pre>
 <p>Here when I applied the same method of calculating confidence intervals to all months of vaccination, I got fairly narrow confidence intervals up to January 2022:</p>
 <pre>b=fread(&quot;http://sars2.net/f/czbucketskeep.csv.gz&quot;)
 b=b[month&gt;=&quot;2020-12&quot;&amp;dose&lt;=1][,age:=pmin(age,100)]
@@ -1130,38 +1129,38 @@ o=merge(a1,a2)
 rate1=o[,dead1/base1];rate2=o[,dead2/base2]
 o[,ratio:=rate1/rate2]
 se1=o[,sqrt(dead1)/base1];se2=o[,sqrt(dead2)/base2]
-se=ratio*sqrt((se1/rate1)^2+(se2/rate2)^2)
-o[,low:=ratio-qnorm(.975)*se]
-o[,high:=ratio+qnorm(.975)*se]
+se=sqrt((se1/rate1)^2+(se2/rate2)^2)
+o[,low:=exp(log(ratio)-qnorm(.975)*se)]
+o[,high:=exp(log(ratio)+qnorm(.975)*se)]
 
 mutate_if(o,is.double,round,2)|&gt;print(r=F)</pre>
 <!-- -->
-<pre>vaxmonth dead1   base1 dead2    base2 ratio   low high
- 2021-01  1515  744.34 18513 21218.40  2.33  2.31 2.36
- 2021-02  3501 3732.26 13979 19466.04  1.31  1.28 1.33
- 2021-03  4961 6404.36 19616 32300.32  1.28  1.25 1.30
- 2021-04  2887 3748.78 16321 26352.89  1.24  1.21 1.28
- 2021-05  2186 2433.25 12130 21496.87  1.59  1.56 1.62
- 2021-06  1674 1510.94  3761  5030.32  1.48  1.44 1.52
- 2021-07   284  252.52  2266  2725.01  1.35  1.26 1.44
- 2021-08   136  125.80  1080  1118.41  1.12  0.96 1.28
- 2021-09   157   93.80   744   586.62  1.32  1.19 1.45
- 2021-10    99   78.51   754   557.74  0.93  0.71 1.16
- 2021-11   282  222.76  2275  1838.82  1.02  0.90 1.14
- 2021-12   249  163.23  1306   871.66  1.02  0.89 1.15
- 2022-01    81   47.04   585   342.17  1.01  0.78 1.24
- 2022-02    13    8.14   125    55.09  0.70 -0.11 1.52
- 2022-03     2    3.08    46    17.62  0.25 -5.44 5.94
- 2022-04     0    0.81    19    10.48  0.00   NaN  NaN
- 2022-05     0    0.45    20     8.44  0.00   NaN  NaN
- 2022-06     0    0.25    12     4.52  0.00   NaN  NaN
- 2022-07     2    0.77    10     4.49  1.17 -0.13 2.47
- 2022-08     1    0.87    21     8.76  0.48 -3.72 4.68
- 2022-09     1    0.53    20     7.98  0.76 -1.88 3.40
- 2022-10     0    0.12    14     3.93  0.00   NaN  NaN
- 2022-11     1    0.07     3     1.45  6.85  6.51 7.18
- 2022-12     0    0.00     0     0.26   NaN   NaN  NaN
-vaxmonth dead1   base1 dead2    base2 ratio   low high</pre>
+<pre> vaxmonth dead1   base1 dead2    base2 ratio  low  high
+  2021-01  1515  744.34 18513 21218.40  2.33 2.21  2.46
+  2021-02  3501 3732.26 13979 19466.04  1.31 1.26  1.36
+  2021-03  4961 6404.36 19616 32300.32  1.28 1.24  1.32
+  2021-04  2887 3748.78 16321 26352.89  1.24 1.20  1.29
+  2021-05  2186 2433.25 12130 21496.87  1.59 1.52  1.67
+  2021-06  1674 1510.94  3761  5030.32  1.48 1.40  1.57
+  2021-07   284  252.52  2266  2725.01  1.35 1.20  1.53
+  2021-08   136  125.80  1080  1118.41  1.12 0.94  1.34
+  2021-09   157   93.80   744   586.62  1.32 1.11  1.57
+  2021-10    99   78.51   754   557.74  0.93 0.76  1.15
+  2021-11   282  222.76  2275  1838.82  1.02 0.90  1.16
+  2021-12   249  163.23  1306   871.66  1.02 0.89  1.17
+  2022-01    81   47.04   585   342.17  1.01 0.80  1.27
+  2022-02    13    8.14   125    55.09  0.70 0.40  1.25
+  2022-03     2    3.08    46    17.62  0.25 0.06  1.03
+  2022-04     0    0.81    19    10.48  0.00  NaN   NaN
+  2022-05     0    0.45    20     8.44  0.00  NaN   NaN
+  2022-06     0    0.25    12     4.52  0.00  NaN   NaN
+  2022-07     2    0.77    10     4.49  1.17 0.26  5.34
+  2022-08     1    0.87    21     8.76  0.48 0.06  3.55
+  2022-09     1    0.53    20     7.98  0.76 0.10  5.66
+  2022-10     0    0.12    14     3.93  0.00  NaN   NaN
+  2022-11     1    0.07     3     1.45  6.85 0.71 65.81
+  2022-12     0    0.00     0     0.26   NaN  NaN   NaN
+ vaxmonth dead1   base1 dead2    base2 ratio  low  high</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
