@@ -1099,8 +1099,7 @@ dev.off()</pre>
 <div class="width6">
 <img src="i/czech-ci-2.jpg">
 </div>
-<p>I don't think his approach was correct, because he should've also taken into account how many Moderna vaccinees and how many Pfizer vaccinees there were in July 2021.</p>
-<p>I'm not sure if the following is the correct approach either, but I gave this prompt to ChatGPT: <code>r code to calculate confidence interval for (moderna_dead/moderna_baseline)/(pfizer_dead/pfizer_baseline): moderna_dead=284;moderna_baseline=252.52;pfizer_dead=2266;pfizer_baseline=2725.01</code>. It gave me code like this, where the 95% CI for the Moderna-Pfizer ratio for people vaccinated in July 2021 was about 1.19 to 1.52, so the lower bound of the CI was still clearly above 1:</p>
+<p>I don't think his approach was correct, because he should've taken into account the number of deaths and baseline deaths for Moderna and Pfizer vaccinees. I'm not sure if the following is the correct approach either, but I gave this prompt to ChatGPT: <code>r code to calculate confidence interval for (moderna_dead/moderna_baseline)/(pfizer_dead/pfizer_baseline): moderna_dead=284;moderna_baseline=252.52;pfizer_dead=2266;pfizer_baseline=2725.01</code>. It gave me code like this, where the 95% CI for the Moderna-Pfizer ratio for people vaccinated in July 2021 was about 1.19 to 1.52, so the lower bound of the CI was still clearly above 1:</p>
 <pre>moderna_dead=284;moderna_baseline=252.52
 pfizer_dead=2266;pfizer_baseline=2725.01
 
@@ -1117,7 +1116,7 @@ ratio+c(-1,1)*qnorm(.975)*se_ratio # [1] 1.185617 1.519343</pre>
 <p>When I asked how to calculate a p-value for the result, ChatGPT answered: <span class="quote">&quot;To calculate the p-value, we need to test the null hypothesis that the ratio of the two rates is equal to 1. This can be done using a Wald test, which compares the observed value of the ratio to the null value (1), using the standard error of the ratio to compute a Z-score. The p-value is then obtained from the Z-score.&quot;</span> And it gave me this code which gave me a p-value of about 3e-5:</p>
 <pre>z_score=(ratio-1)/se_ratio
 2*(1-pnorm(abs(z_score))) # 3.469878e-05</pre>
-<p>Here when I applied the same method of calculating confidence intervals to all months of vaccination, I got fairly narrow confidence intervals until January 2022:</p>
+<p>Here when I applied the same method of calculating confidence intervals to all months of vaccination, I got fairly narrow confidence intervals up to January 2022:</p>
 <pre>b=fread(&quot;http://sars2.net/f/czbucketskeep.csv.gz&quot;)
 b=b[month&gt;=&quot;2020-12&quot;&amp;dose&lt;=1][,age:=pmin(age,100)]
 t=b[,.(dead=sum(dead),alive=as.numeric(sum(alive))),.(age,month,vaxmonth,type)]
@@ -1134,7 +1133,8 @@ se1=o[,sqrt(dead1)/base1];se2=o[,sqrt(dead2)/base2]
 se=ratio*sqrt((se1/rate1)^2+(se2/rate2)^2)
 o[,low:=ratio-qnorm(.975)*se]
 o[,high:=ratio+qnorm(.975)*se]
-o</pre>
+
+mutate_if(o,is.double,round,2)|&gt;print(r=F)</pre>
 <!-- -->
 <pre>vaxmonth dead1   base1 dead2    base2 ratio   low high
  2021-01  1515  744.34 18513 21218.40  2.33  2.31 2.36
