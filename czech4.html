@@ -71,6 +71,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Mortality_rate_of_people_born_before_1930_calculated_by_Tom_F_rst>Mortality rate of people born before 1930 calculated by Tomáš Fürst</a></li>
 <li><a href=#Plot_for_raw_deaths_by_weeks_after_vaccination>Plot for raw deaths by weeks after vaccination</a></li>
 <li><a href=#Kirschs_calculation_for_mortality_rate_by_batch>Kirsch's calculation for mortality rate by batch</a></li>
+<li><a href=#Confidence_intervals_for_age_normalized_Moderna_Pfizer_ratio_by_month_of_vaccination>Confidence intervals for age-normalized Moderna-Pfizer ratio by month of vaccination</a></li>
 </ul>
 
 <h2>
@@ -426,7 +427,7 @@ o[,crude:=reports/doses*1e6][order(-doses)]|&gt;print(r=F)</pre>
  Janssen      84   397696  205.40   211.22
    Other       2      180 2590.57 11111.11</pre>
 <p>At first when I tried to select Czech VAERS reports by picking rows where the age field was not missing and the <code>SYMPTOM_TEXT</code> field matched <code>\bCZ-</code>, I got 199 reports for Moderna but 1210 for Pfizer. But now when I picked rows where the <code>SPLTTYPE</code> field started with <code>CZ</code> instead, I got 415 reports for Moderna but 1369 for Pfizer, so it approximately doubled the ratio of Moderna reports to Pfizer reports. It might be because many of the reports for Pfizer vaccines included an identifier like <code>CZ-PFIZER INC-2021285400</code> in the <code>SYMPTOM_TEXT</code> field, but there wasn't a similar identifier for Moderna vaccines. However it also seems to be a sign that there was somehow a different reporting procedure used for Pfizer vaccines and Moderna vaccines.</p>
-<p>In the previous code I only included VAERS reports where the age field was not missing. But now when I also included the reports where the age field was missing, Pfizer got about 9% higher crude rate of reports per dose than Moderna:</p>
+<p>In the previous block of code I only included VAERS reports where the age field was not missing. But now when I also included the reports where the age field was missing, Pfizer got about 9% higher crude rate of reports per dose than Moderna:</p>
 <pre>&gt; allage=merge(d[,.(doses=sum(doses)),type],va[,.(reports=.N),.(type=rename(VAX_MANU))])
 &gt; allage[,crude:=reports/doses*1e6][order(-doses)]|&gt;print(r=F)
     type    doses reports   crude
@@ -1087,6 +1088,79 @@ tit=&quot;Histogram of batch ASMR&quot;
 barx=barplot(p$y,names.arg=p$x,main=tit,cex.main=1.1,xlab=NA,ylab=NA,lwd=1.5,las=2,space=0,ylim=c(0,yend))
 text(x=barx,y=p$y-.01*yend,labels=p$y,pos=3,cex=.8)
 dev.off()</pre>
+<h2>
+<a href=#Confidence_intervals_for_age_normalized_Moderna_Pfizer_ratio_by_month_of_vaccination id=Confidence_intervals_for_age_normalized_Moderna_Pfizer_ratio_by_month_of_vaccination>Confidence intervals for age-normalized Moderna-Pfizer ratio by month of vaccination</a>
+</h2>
+<p>Kirsch said that in my triangle plot which showed an age-normalized Moderna-Pfizer ratio by month of vaccination and ongoing month, the results were not statistically significant from July 2021 onwards: [<a href="https://kirschsubstack.com/p/a-closer-look-at-the-czech-data-confirms">https://kirschsubstack.com/p/a-closer-look-at-the-czech-data-confirms</a>]</p>
+<div class="width7">
+<img src="i/czech-ci-1.jpg">
+</div>
+<p>Kirsch seems to have determined statistical significance on each row of my heatmap by calculating the mean and standard deviation of each column and then looking at whether the mean was at least 2 standard deviations above 1, so for example in July 2021 he calculated the mean and standard deviation for a vector of monthly values like 0.64, 1.07, 1.72, 1.52, 0.88, and so on:</p>
+<div class="width6">
+<img src="i/czech-ci-2.jpg">
+</div>
+<p>I don't think his approach was correct, because he should've also taken into account how many Moderna vaccinees and how many Pfizer vaccinees there were in July 2021.</p>
+<p>I'm not sure if the following is the correct approach either, but I gave this prompt to ChatGPT: <code>r code to calculate confidence interval for (moderna_dead/moderna_baseline)/(pfizer_dead/pfizer_baseline): moderna_dead=284;moderna_baseline=252.52;pfizer_dead=2266;pfizer_baseline=2725.01</code>. It gave me code like this, where the 95% CI for the Moderna-Pfizer ratio for people vaccinated in July 2021 was about 1.19 to 1.52, so the lower bound of the CI was still clearly above 1:</p>
+<pre>moderna_dead=284;moderna_baseline=252.52
+pfizer_dead=2266;pfizer_baseline=2725.01
+
+moderna_rate=moderna_dead/moderna_baseline
+pfizer_rate=pfizer_dead/pfizer_baseline
+ratio=moderna_rate/pfizer_rate
+
+se_moderna=sqrt(moderna_dead)/moderna_baseline
+se_pfizer=sqrt(pfizer_dead)/pfizer_baseline
+
+se_ratio=ratio*sqrt((se_moderna/moderna_rate)^2+(se_pfizer/pfizer_rate)^2)
+ratio+c(-1,1)*qnorm(.975)*se_ratio # [1] 1.185617 1.519343</pre>
+<p>When I asked ChatGPT how to calculate whether the result was statistically significant, it said <span class="quote">&quot;To assess if the result is statistically significant, we check if the 95% confidence interval for the ratio excludes 1. If the interval excludes 1, it indicates that there is a statistically significant difference between the Moderna and Pfizer rates.&quot;</span></p>
+<p>When I asked how to calculate a p-value for the result, ChatGPT answered: <span class="quote">&quot;To calculate the p-value, we need to test the null hypothesis that the ratio of the two rates is equal to 1. This can be done using a Wald test, which compares the observed value of the ratio to the null value (1), using the standard error of the ratio to compute a Z-score. The p-value is then obtained from the Z-score.&quot;</span> And it gave me this code which gave me a p-value of about 3e-5:</p>
+<pre>z_score=(ratio-1)/se_ratio
+2*(1-pnorm(abs(z_score))) # 3.469878e-05</pre>
+<p>Here when I applied the same method of calculating confidence intervals to all months of vaccination, I got fairly narrow confidence intervals until January 2022:</p>
+<pre>b=fread(&quot;http://sars2.net/f/czbucketskeep.csv.gz&quot;)[month&gt;=&quot;2020-12&quot;&amp;dose&lt;=1][,age:=pmin(age,100)]
+t=b[,.(dead=sum(dead),alive=as.numeric(sum(alive))),.(age,month,vaxmonth,type)]
+t=merge(t,t[,.(base=sum(dead)/sum(alive)),age])[,base:=base*alive]
+
+a=t[,.(dead=sum(dead),base=sum(base)),.(vaxmonth,type)]
+a1=a[type==&quot;Moderna&quot;,.(vaxmonth,dead1=dead,base1=base)]
+a2=a[type==&quot;Pfizer&quot;,.(vaxmonth,dead2=dead,base2=base)]
+o=merge(a1,a2)
+
+rate1=o[,dead1/base1];rate2=o[,dead2/base2]
+o[,ratio:=rate1/rate2]
+se1=o[,sqrt(dead1)/base1];se2=o[,sqrt(dead2)/base2]
+se=ratio*sqrt((se1/rate1)^2+(se2/rate2)^2)
+o[,low:=ratio-qnorm(.975)*se]
+o[,high:=ratio+qnorm(.975)*se]
+o</pre>
+<!-- -->
+<pre>vaxmonth dead1   base1 dead2    base2 ratio   low high
+ 2021-01  1515  744.34 18513 21218.40  2.33  2.31 2.36
+ 2021-02  3501 3732.26 13979 19466.04  1.31  1.28 1.33
+ 2021-03  4961 6404.36 19616 32300.32  1.28  1.25 1.30
+ 2021-04  2887 3748.78 16321 26352.89  1.24  1.21 1.28
+ 2021-05  2186 2433.25 12130 21496.87  1.59  1.56 1.62
+ 2021-06  1674 1510.94  3761  5030.32  1.48  1.44 1.52
+ 2021-07   284  252.52  2266  2725.01  1.35  1.26 1.44
+ 2021-08   136  125.80  1080  1118.41  1.12  0.96 1.28
+ 2021-09   157   93.80   744   586.62  1.32  1.19 1.45
+ 2021-10    99   78.51   754   557.74  0.93  0.71 1.16
+ 2021-11   282  222.76  2275  1838.82  1.02  0.90 1.14
+ 2021-12   249  163.23  1306   871.66  1.02  0.89 1.15
+ 2022-01    81   47.04   585   342.17  1.01  0.78 1.24
+ 2022-02    13    8.14   125    55.09  0.70 -0.11 1.52
+ 2022-03     2    3.08    46    17.62  0.25 -5.44 5.94
+ 2022-04     0    0.81    19    10.48  0.00   NaN  NaN
+ 2022-05     0    0.45    20     8.44  0.00   NaN  NaN
+ 2022-06     0    0.25    12     4.52  0.00   NaN  NaN
+ 2022-07     2    0.77    10     4.49  1.17 -0.13 2.47
+ 2022-08     1    0.87    21     8.76  0.48 -3.72 4.68
+ 2022-09     1    0.53    20     7.98  0.76 -1.88 3.40
+ 2022-10     0    0.12    14     3.93  0.00   NaN  NaN
+ 2022-11     1    0.07     3     1.45  6.85  6.51 7.18
+ 2022-12     0    0.00     0     0.26   NaN   NaN  NaN
+vaxmonth dead1   base1 dead2    base2 ratio   low high</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
