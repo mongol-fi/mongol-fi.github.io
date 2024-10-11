@@ -27,7 +27,7 @@ blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(45,55%,65%)}
 blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote .quote,.quote .quote .quote{color:hsl(40,40%,50%)}
 .spoiler button{width:90px;border:0;font-family:inherit;font-size:inherit;color:inherit;margin:0;background:#4a4a4a;padding:4px 0px;outline:none;cursor:pointer}
 .spoiler pre{display:none;margin-top:0}
-.red{color:hsl(0,100%,75%)}
+.red,.red .quote{color:hsl(0,100%,75%)!important}
 .width1{max-width:100px}
 .width2{max-width:200px}
 .width3{max-width:300px}
@@ -95,10 +95,6 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Steve_Kirsch_Cardiac_failure_deaths_in_children_at_CDC_WONDER>Steve Kirsch: Cardiac failure deaths in children at CDC WONDER</a></li>
 <li><a href=#Clare_Craig_Sustained_excess_deaths_in_Sweden>Clare Craig: Sustained excess deaths in Sweden</a></li>
 <li><a href=#Aly_Cook_FOI_response_for_presentations_of_chest_pain_in_New_Zealand_in_ages_0_to_39>Aly Cook: FOI response for presentations of chest pain in New Zealand in ages 0 to 39</a></li>
-<li><a href=#Steve_Kirsch_Record_level_Medicare_data_from_Connecticut>Steve Kirsch: Record-level Medicare data from Connecticut</a>
-<ul>
-<li><a href=#Converting_the_data_to_CSV>Converting the data to CSV</a></li>
-</ul></li>
 </ul>
 
 <h2>
@@ -1235,53 +1231,6 @@ system(&quot;mogrify -resize 25% 1.png&quot;)</pre>
 <img src="i/statistic-chestpain-4.png">
 </div>
 <p>However even the 35% increase was for presentations, and maybe the increase would be lower if you would look at statistics for admissions rather than presentations. Someone from New Zealand wrote: <span class="quote">&quot;The health system was on alert for both covid and vax side effects, referring people to EDs for ECGs etc. Hell, I went to the doctor with reflux and as I had a sore chest was sent to ED for an ECG (which was fine). But it's still recorded chest pain. Admissions are what matters&quot;</span>. [<a href="https://x.com/Thoughtfulnz/status/1838832801875136805">https://x.com/Thoughtfulnz/status/1838832801875136805</a>] And another person from New Zealand wrote: <span class="quote">&quot;Can share my personal story. I presented for chest pain a few weeks after vax. They told me to be in the lookout and get checked without hesitation. Turns out I had a pulled muscle. You warn millions of people about chest pain, a ton more are going to turn up. I am in those stats&quot;</span>. [<a href="https://x.com/CloudyNetwork/status/1838834771776147797">https://x.com/CloudyNetwork/status/1838834771776147797</a>] And then the first user replied: <span class="quote">&quot;A workmate once cancelled a meeting for a very similar story - taking the warnings seriously they did what they were supposed to and went to the ER - and it was a muscle strain. They would not have gone to the ER with that a decade ago.&quot;</span></p>
-<h2>
-<a href=#Steve_Kirsch_Record_level_Medicare_data_from_Connecticut id=Steve_Kirsch_Record_level_Medicare_data_from_Connecticut>Steve Kirsch: Record-level Medicare data from Connecticut</a>
-</h2>
-<h3>
-<a href=#Converting_the_data_to_CSV id=Converting_the_data_to_CSV>Converting the data to CSV</a>
-</h3>
-<p>In September 2024 Steve Kirsch published a spreadsheet for Medicare data from Connecticut that contains columns for sex, date of death, vaccine brand, the dates of first 3 vaccine doses, and age at dose 1: <a href="https://kirschsubstack.com/p/i-have-been-fully-vindicated-by-the">https://kirschsubstack.com/p/i-have-been-fully-vindicated-by-the</a>. The vaccine brand is presumably the brand of the first dose. The spreadsheet contains data for a total of about 500,000 people.</p>
-<p>Kirsch obfuscated the vaccine brand names in his spreadsheet to do his ChatGPT analysis, but this code converts the spreadsheet to a CSV file unobfuscated vaccine brand names, ISO date format, and shorter column names:</p>
-<pre>download.file(&quot;https://www.skirsch.com/covid/ct_mortality.xlsx&quot;,&quot;ct_mortality.xlsx&quot;)
-t=data.table(readxl::read_excel(&quot;ct_mortality.xlsx&quot;))
-
-t[BRAND==&quot;PURPLE&quot;,BRAND:=&quot;Pfizer&quot;]
-t[BRAND==&quot;MIXED&quot;,BRAND:=&quot;Moderna&quot;]
-t[BRAND==&quot;CHERRY&quot;,BRAND:=&quot;Janssen&quot;]
-t[BRAND==&quot;MODERNA&quot;,BRAND:=&quot;Moderna&quot;]
-
-o=t[,.(id=PERSON_ID,sex=Sex,dead=as.Date(`Date of death`),brand=BRAND,date1=as.Date(SHOTDATE_1),date2=as.Date(SHOTDATE_2),date3=as.Date(SHOTDATE_3),age=AGE_AT_DOSE1)]
-
-fwrite(o,&quot;ctmort.csv.gz&quot;,na=&quot;&quot;)</pre>
-<p>I uploaded the output here: <a href=f/ctmort.csv.gz>f/ctmort.csv.gz</a>.</p>
-<p>Medicare is generally available to only ages 65 and above, but it's also available to people under the age of 65 with disabilities: <a href="https://medicareadvocacy.org/under-65-project/">https://medicareadvocacy.org/under-65-project/</a>. Therefore if for example you calculate a mortality rate within a year from the first dose, it's much higher for ages 60-64 than 65-69:</p>
-<pre>&gt; ct=fread(&quot;http://sars2.net/f/ctmort.csv.gz&quot;)
-&gt; ct[,.(cmr=round(mean(!is.na(dead)&amp;dead-date1&lt;365,na.rm=T)*1e5),.N),.(age=age%/%5*5)][order(age)]|&gt;print(r=F)
- age    cmr      N
-  10      0      2
-  15      0      1
-  20    621    483
-  25    190   1055
-  30    306   1633
-  35    934   2034
-  40   1163   2494
-  45   1333   3151
-  50   2436   5624
-  55   2675   9681
-  60   2988  14925 # ages 60-64 have almost 3 times as high CMR as ages 65-69
-  65   1169 121444
-  70   1724 113601
-  75   2911  87246
-  80   5014  56220
-  85   8739  35681
-  90  15787  19168
-  95  23483   5932
- 100  32071    792
- 105  41379     29
- 110 100000      1
- 115 100000      2
- age    cmr      N</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
