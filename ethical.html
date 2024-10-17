@@ -73,6 +73,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Deaths_from_malignant_neoplasms_with_excess_MCD_normalization>Deaths from malignant neoplasms with excess MCD normalization</a></li>
 <li><a href=#Files_for_population_estimates_by_single_year_of_age_up_to_ages_100>Files for population estimates by single year of age up to ages 100+</a></li>
 <li><a href=#Cancer_deaths_by_age_group>Cancer deaths by age group</a></li>
+<li><a href=#Non_COVID_deaths_from_natural_causes_in_ages_0_to_24>Non-COVID deaths from natural causes in ages 0 to 24</a></li>
 </ul>
 
 <h2>
@@ -326,8 +327,7 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
 ggsave(&quot;1.png&quot;,width=4.3,height=2.7,dpi=400*4)
 system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 </div>
-<p>In the plot above I didn't exclude deaths with MCD COVID. In 2020-2023, only about 0.5% of deaths with MCD X42 to X44 (accidental drug poisoning) also included MCD U07.1 (COVID) (983 out of 184,920). But about 8.5% of deaths with one of the cardiac ICD codes also had MCD COVID (8,677 out of 101,714). The spikes in cardiac deaths coincide with spikes in COVID deaths, so I guess COVID actually contributed to some of the cardiac deaths.</p>
-<p>My plot above also shows that in the third quarter of 2023 there is a decrease in drug overdose deaths, which is probably because of a registration delay, but it gets offset by an increase in R96 and R99 deaths where the cause of death has not yet been resolved. Ethical Skeptic omitted approximately the last 12 weeks of 2023 from his plot, but he didn't mention that there was already an increase in R96 and R99 deaths in the third quarter of 2023.</p>
+<p>In the plot above I didn't exclude deaths with MCD COVID. In 2020 to 2023 in ages 0 to 54, only about 0.5% of deaths with MCD X42 to X44 also had MCD COVID, but about 9% of deaths with MCD I45 to I51 also had MCD COVID.</p>
 <p>When someone asked Ethical Skeptic why there was a huge increase in deaths in early 2021 even though only few people in ages 0 to 54 had been vaccinated, he answered that it was the vaccines but he didn't even mention that he added in drug deaths to his plot in 2021 but not 2020:</p>
 <div class="width5">
 <img src="i/debunk-ethical-9.jpg">
@@ -1588,6 +1588,103 @@ ggsave(&quot;1.png&quot;,width=5,height=4.4,dpi=380*4)
 system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 </div>
 <p>So basically my plots show that if you calculate the baseline in a way that accounts for the changing population size of age groups, then you don't necessarily even need to adjust for the pull-forward effect.</p>
+<h2>
+<a href=#Non_COVID_deaths_from_natural_causes_in_ages_0_to_24 id=Non_COVID_deaths_from_natural_causes_in_ages_0_to_24>Non-COVID deaths from natural causes in ages 0 to 24</a>
+</h2>
+<p>Ethical Skeptic posted this tweet: [<a href="https://x.com/EthicalSkeptic/status/1846676664589148455">https://x.com/EthicalSkeptic/status/1846676664589148455</a>]</p>
+<blockquote>
+<p>Excess Non-Covid Natural Cause Mortality Ages 0-24</p>
+<p>Elevated 30% or 8-sigma</p>
+<p>We broke out of a 2023 plateau. This rise appears to be related to annual winter virus dynamics, perhaps indicating immune system impairment in our youngest population.</p>
+<p>Not good news for anyone. 😞</p>
+<p><img src=i/ethical-natural-1.png class=width8></p>
+</blockquote>
+<p>Ethical Skeptic didn't exclude R codes from his plot, so some of his excess deaths in 2024 and to a less extent late 2023 might be due to deaths from external causes where the cause has not yet been resolved. His plot included the first 15 weeks of 2024. He posted the plot in October 2024 but I don't know if he retrieved the data earlier.</p>
+<p>In the plot below where I plotted R deaths separately from A to Q deaths, there was a slight increase in deaths under R codes during the first 3 to 4 months of 2024 but it was not that massive. I wasn't able to reproduce Ethical Skeptic's steady increase in excess deaths that started in 2021, because my excess deaths peaked in December 2022 and not in early 2024 like in his plot, but it's probably because I used a different method to calculate the baseline:</p>
+<div class="width7">
+<img src="i/ethical-natural-2.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2);library(lubridate)
+
+cul=\(x,y)y[cut(x,c(y,Inf),,T,F)]
+
+t=fread(&quot;http://sars2.net/f/wondernatural.csv&quot;)[age&lt;25]
+
+pop=fread(&quot;http://sars2.net/f/uspopdeadmonthly.csv&quot;)
+t=merge(t,pop[,.(pop=sum(pop)),.(date,age=cul(age,c(0,1,5,15,25)))])
+
+t=t[,date:=as.Date(paste0(date,&quot;-1&quot;))]
+t[,dead:=dead/days_in_month(date)]
+
+months=sort(unique(t$date))
+base=t[cause==&quot;A-Q&quot;&amp;year(date)%in%2011:2019][,dead:=nafill(dead,,0)]
+t=merge(base[,.(date=months,base=predict(lm(dead/pop~date),.(date=months))),.(age,cause)],t,all=T)
+t[,base:=base*pop]
+
+p=t[,.(base=sum(base),dead=sum(dead)),.(date,cause)]
+p[,cause:=factor(cause,unique(cause))]
+levels(p$cause)=c(&quot;A-Q (natural causes)&quot;,&quot;R (unresolved cause; symptoms and signs; abnormal findings)&quot;)
+
+xstart=as.Date(&quot;2015-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
+p=p[date&gt;=xstart&amp;date&lt;=xend]
+xbreak=seq(xstart,xend,&quot;6 month&quot;)
+xlab=c(rbind(&quot;&quot;,2015:2024),&quot;&quot;)
+
+cand=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
+ymax=p[,max(base,dead,na.rm=T)]
+ystep=cand[which.min(abs(cand-ymax/7))]
+ystart=0
+yend=ystep*ceiling(ymax/ystep)
+ybreak=seq(ystart,yend,ystep)
+
+color=c(&quot;black&quot;,&quot;gray60&quot;)
+
+ggplot(p,aes(x=date+14,y=dead,color=cause))+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray90&quot;,linewidth=.25)+
+geom_hline(yintercept=c(ystart,yend),linewidth=.25,lineend=&quot;square&quot;)+
+geom_vline(xintercept=c(xstart,xend),linewidth=.25,lineend=&quot;square&quot;)+
+geom_line(linewidth=.3)+
+geom_point(stroke=0,size=.6,show.legend=F)+
+geom_line(aes(y=base),linetype=2,linewidth=.3)+
+labs(title=&quot;CDC WONDER, ages 0 to 24: Monthly deaths by underlying cause of death divided by number of days in month&quot;|&gt;stringr::str_wrap(70),x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
+scale_color_manual(values=color)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.ticks.x=element_line(color=alpha(&quot;black&quot;,c(1,0))),
+  axis.ticks=element_line(linewidth=.25,color=&quot;black&quot;),
+  axis.ticks.length=unit(.2,&quot;lines&quot;),
+  axis.title=element_text(size=8),
+  legend.background=element_blank(),
+  legend.justification=c(0,.5),
+  legend.key=element_blank(),
+  legend.key.height=unit(10,&quot;pt&quot;),
+  legend.key.width=unit(17,&quot;pt&quot;),
+  legend.position=c(0,.5),
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.box.background=element_rect(fill=&quot;white&quot;,color=&quot;black&quot;,linewidth=.3),
+  legend.margin=margin(-2,5,4,4,&quot;pt&quot;),
+  legend.text=element_text(size=7,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  plot.margin=margin(5,5,5,5),
+  plot.title=element_text(size=7.6,face=2,margin=margin(2,,4)))
+ggsave(&quot;1.png&quot;,width=4.3,height=2.8,dpi=450)
+
+sub=&quot;\u00a0     The dashed line is a baseline for expected deaths, which was calculated by first doing a linear regression for CMR for each age group in 2011-2019, then multiplying the monthly population estimates of each age group by the value of the projected linear trend, and then adding together the results for each age group.
+      Monthly resident population estimates by age are from www2.census.gov/
+programs-surveys/popest/datasets/2020-2022/national/asrh/nc-est2022-alldata-r-file0{1..8}.csv, and from the corresponding files in the 2010-2020 directory. In order to get rid of a sudden jump in population size after the switch from the 2010-2020 to 2020-2022 estimates, the 2010-2020 estimates were multiplied by a slope so that they matched the 2020-2022 estimates at the point where the estimates were merged. The population estimates for 2024 are probablys not accurate because they were derived by a linear extrapolation of past population estimates.&quot;
+
+system(paste0(&quot;f=1.png;mar=30;w=`identify -format %w $f`;magick \\( $f -chop 0x10 \\) \\( -size $[w-mar*2]x -font Arial -interline-spacing -3 -pointsize 42 caption:&#39;&quot;,sub,&quot;&#39; -gravity southwest -splice $[mar]x20 \\) -append 1.png&quot;))</pre>
+</div>
+<p>I think Ethical Skeptic's heavy adjustment for the pull forward effect is not warranted in young age groups, because do ages 0 to 24 really have that many people who were on the verge of death so they would've died soon anyway if they hadn't died of COVID? There weren't even that many COVID deaths in ages 0 to 24.</p>
+<p>In my plot above where I didn't use a PFE-adjusted baseline, there seems to have been a reduced number of deaths in late 2020, but after that deaths from natural causes remained close to the baseline until June 2022 after which they remained consistently above the baseline. So I would say the inflection rather occurred in 2022 and not in early 2021, but I don't know how to explain the inflection.</p>
+<p>But anyway, the increase above the baseline doesn't seem that impressive impressive in my plot where the monthly number of excess deaths peaks at only about 15%.</p>
+<p>When Ethical Skeptic fits a seasonality-adjusted baseline against only two years of data, it's easy for him to get close to zero excess deaths during the fitting period because the baseline adapts to whatever the number of deaths was during the fitting period, so therefore he gets a low standard deviation for his residuals during the fitting period and he subsequently gets high sigma values after his fitting period. But he would've probably gotten lower sigma scores if he would've employed a longer fitting period or if wouldn't have adjusted his baseline for seasonality.</p>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
