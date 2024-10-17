@@ -270,42 +270,34 @@ ggsave(&quot;1.png&quot;,width=4.6,height=4.5,dpi=450)</pre>
 <img src="i/debunk-ethical-7.jpg">
 </div>
 <p>The reason why the increase between 2020 and 2021 in the plot above is not instant but it's spread over several weeks is because Ethical Skeptic told me that he used a 7-week moving average in the plot (which probably has a centered window which extends 3 weeks backwards and forwards, since in some of his earlier plots he has used a moving average with a window that extended 3 weeks backwards and 2 weeks forwards). [<a href="https://theethicalskeptic.substack.com/p/the-state-of-things-pandemic-week-706/comment/53237226">https://theethicalskeptic.substack.com/p/the-state-of-things-pandemic-week-706/comment/53237226</a>, <a href="https://www.covid-datascience.com/post/evaluating-claims-of-excess-cancer-deaths-in-the-usa-during-the-pandemic">https://www.covid-datascience.com/post/evaluating-claims-of-excess-cancer-deaths-in-the-usa-during-the-pandemic</a>]</p>
-<p>Ethical Skeptic said that he omitted excess drug overdose deaths from 2020 but not 2021, but he didn't mention what baseline he used to calculate the excess drug deaths. However the plot below shows that if you simply use the 2018-2019 average as the baseline, then there's even more excess drug deaths in 2021 than in the post-lockdown period of 2020 Q2-Q4. (But an average baseline wouldn't make sense because there was already a quickly increasing trend in drug overdose deaths in the years before COVID. And there necessarily weren't even that many excess drug deaths caused by the lockdowns but the increase in drug deaths in 2020 could've been due to other reasons, and in either case it wouldn't make sense to blame excess drug deaths in 2023 on the lockdown.)</p>
-<div class="width6">
-<img src="i/debunk-ethical-8.png">
+<p>It's not clear if the plot above includes only X44 deaths or also X42 and X43 deaths, because the line at the bottom indicates that X42 to X44 deaths were removed in 2020, but the second line from the bottom seems to indicate that the plot only includes X44 deaths. In the plot below I got about equally many X44 deaths as X42 and X43 deaths combined.</p>
+<p>The plot below also shows that there's spikes in cardiac deaths during COVID waves, so most of the excess deaths in Ethical Skeptic's plot can probably be attributed to either drug deaths or COVID deaths:</p>
+<div class="width7">
+<img src="i/debunk-ethical-13.png">
 </div>
 <div class="spoiler">
 <button>
 Show code
 </button><pre>library(data.table);library(ggplot2)
 
-ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
-
 t=fread(&quot;http://sars2.net/f/wonderskeptic.csv&quot;)
 p=t[,.(x=date-3,y=as.double(dead),z=factor(cause,unique(cause)))]
 
-xstart=as.Date(&quot;2018-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
-xbreak=seq(xstart,xend,&quot;6 month&quot;)
-xlab=c(rbind(&quot;&quot;,2018:2023),&quot;&quot;)
+xstart=as.Date(&quot;2018-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
+xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=c(rbind(&quot;&quot;,2018:2024),&quot;&quot;)
+ystart=0;yend=3500;ystep=500;ybreak=seq(ystart,yend,ystep)
 
-p=p[x&gt;=xstart&amp;x&lt;=xend]
-p=p[,y:=ma(y,1),z]
-
-ystart=0;yend=1600;ystep=200;ybreak=seq(ystart,yend,ystep)
-
-color=c(&quot;#bb0000&quot;,hcl(225,100,40),hcl(90,120,50),hcl(280,120,50),&quot;gray50&quot;)
-
-kim=\(x)ifelse(x&gt;=1e3,ifelse(x&gt;=1e6,paste0(x/1e6,&quot;M&quot;),paste0(x/1e3,&quot;k&quot;)),x)
+color=c(&quot;#bb0000&quot;,hcl(225,100,40),hcl(90,120,50),hcl(280,120,50),hcl(300,40,30),&quot;gray50&quot;)
 
 ggplot(p,aes(x,y,color=z))+
 coord_cartesian(clip=&quot;off&quot;,expand=F)+
-geom_hline(yintercept=seq(ystart,yend,ystep/2),color=&quot;gray90&quot;,linewidth=.25)+
+geom_hline(yintercept=seq(ystart,yend,ystep),color=&quot;gray90&quot;,linewidth=.25)+
 geom_vline(xintercept=seq(xstart,xend,&quot;3 month&quot;),color=&quot;gray90&quot;,linewidth=.25)+
 geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),linewidth=.25)+
 geom_hline(yintercept=c(ystart,yend),linewidth=.25,lineend=&quot;square&quot;)+
 geom_vline(xintercept=c(xstart,xend),linewidth=.25,lineend=&quot;square&quot;)+
 geom_line(linewidth=.3)+
-labs(title=&quot;CDC WONDER, weekly deaths by multiple cause of death in ages 15-44 (3-week centered moving averages)&quot;|&gt;stringr::str_wrap(80),x=NULL,y=NULL)+
+labs(title=&quot;CDC WONDER, weekly deaths by multiple cause of death in ages 0 to 54&quot;|&gt;stringr::str_wrap(80),x=NULL,y=NULL)+
 scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
 scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
 scale_color_manual(values=color)+
@@ -318,7 +310,8 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   legend.box.just=&quot;left&quot;,
   legend.key=element_blank(),
   legend.spacing.x=unit(2,&quot;pt&quot;),
-  legend.key.size=unit(10,&quot;pt&quot;),
+  legend.key.height=unit(10,&quot;pt&quot;),
+  legend.key.width=unit(17,&quot;pt&quot;),
   legend.position=c(0,1),
   legend.justification=c(0,1),
   legend.box.background=element_rect(fill=alpha(&quot;white&quot;,.85),color=&quot;black&quot;,linewidth=.3),
@@ -326,10 +319,12 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   legend.text=element_text(size=7,vjust=.5),
   legend.title=element_blank(),
   panel.background=element_blank(),
-  plot.margin=margin(5,5,5,5,&quot;pt&quot;),
+  panel.grid=element_blank(),
+  plot.margin=margin(5,5,5,5),
   plot.subtitle=element_text(size=7),
   plot.title=element_text(size=7.3,face=2))
-ggsave(&quot;1.png&quot;,width=4.3,height=3,dpi=400)</pre>
+ggsave(&quot;1.png&quot;,width=4.3,height=2.7,dpi=400*4)
+system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 </div>
 <p>In the plot above I didn't exclude deaths with MCD COVID. In 2020-2023, only about 0.5% of deaths with MCD X42 to X44 (accidental drug poisoning) also included MCD U07.1 (COVID) (983 out of 184,920). But about 8.5% of deaths with one of the cardiac ICD codes also had MCD COVID (8,677 out of 101,714). The spikes in cardiac deaths coincide with spikes in COVID deaths, so I guess COVID actually contributed to some of the cardiac deaths.</p>
 <p>My plot above also shows that in the third quarter of 2023 there is a decrease in drug overdose deaths, which is probably because of a registration delay, but it gets offset by an increase in R96 and R99 deaths where the cause of death has not yet been resolved. Ethical Skeptic omitted approximately the last 12 weeks of 2023 from his plot, but he didn't mention that there was already an increase in R96 and R99 deaths in the third quarter of 2023.</p>
@@ -374,11 +369,6 @@ Second_Booster       NaN   NaN   NaN   NaN</pre>
 <p>Added later: Later Ethical Skeptic posted an updated version of his plot which was now more transparent and honest, because he added another line for 2020 where he didn't omit the excess drug deaths from his plot (even though I don't necessarily agree with his attribution of the excess drug deaths in 2020 to COVID or the lockdowns): [<a href="https://x.com/EthicalSkeptic/status/1846690187297919231">https://x.com/EthicalSkeptic/status/1846690187297919231</a>]</p>
 <div class="width8">
 <img src="i/debunk-ethical-12.png">
-</div>
-<p>It's not clear if the plot above includes only X44 deaths or also X42 and X43 deaths, because the line at the bottom indicates that X42-44 deaths were removed in 2020, but the second line from the bottom seems to indicate that the plot only includes X44 deaths.</p>
-<p>Here's also an updated plot for weekly deaths grouped by cause of death where I'm now looking at ages 0 to 54 instead of ages 15 to 44 like in the earlier plot (I don't remember why I chose that age range in the earlier plot, but it may have been by accident since it didn't match the age range in Ethical Skeptic's plot):</p>
-<div class="width6">
-<img src="i/debunk-ethical-13.png">
 </div>
 <h2>
 <a href=#Plot_for_X44_drug_deaths id=Plot_for_X44_drug_deaths>Plot for X44 drug deaths</a>
