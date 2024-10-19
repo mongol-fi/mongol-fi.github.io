@@ -1531,7 +1531,7 @@ dead=fread(&quot;usyearlydead.csv&quot;) # from CDC WONDER
 o=merge(pop,dead,all=T)
 fwrite(o[order(year,age)],&quot;uspopdead.csv&quot;,na=&quot;&quot;)</pre>
 <p>I uploaded the output here: <a href=f/uspopdead.csv>f/uspopdead.csv</a>. This is a similar file for monthly data: <a href=f/uspopdeadmonthly.csv>f/uspopdeadmonthly.csv</a>. Both files are used in some of my scripts on this page.</p>
-<p>This shows how the population estimates of some age groups have a big jump between the switch from the estimates based on the 2010 census to the estimates based on the 2020 census:</p>
+<p>This shows that particularly ages 90+ have a huge jump between the switch from the estimates based on the 2010 census to the estimates based on the 2020 census (even though it might partially be due to COVID deaths in case COVID deaths are accounted for in the mid-year population estimates for 2020):</p>
 <div class="width7">
 <img src="i/ethical-popmerge.png">
 </div>
@@ -1562,32 +1562,32 @@ p=p[,.(pop=sum(pop)),.(group,year,age=agecut(age,0:9*10))]
 xstart=2010;xend=2023
 p=p[year%in%xstart:xend]
 
+levels(p$age)=p[year==2019,sprintf(&quot;%s (%.1f%%)&quot;,age,(pop[group!=&quot;Unadjusted&quot;]/pop[group==&quot;Unadjusted&quot;]-1)*100)]
+
 ggplot(p,aes(x=year,y=pop,color=group))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
 facet_wrap(~age,ncol=2,dir=&quot;v&quot;,scales=&quot;free_y&quot;)+
 geom_vline(xintercept=c(2014.5,2019.5),color=&quot;gray80&quot;,linewidth=.23)+
 geom_line(linewidth=.3)+
 geom_point(stroke=0,size=.7)+
-labs(title=&quot;Resident population estimates by US Census Bureau&quot;,x=NULL,y=NULL)+
+labs(title=&quot;Mid-year resident population estimates by US Census Bureau&quot;,subtitle=&quot;The number after the age group shows the percentage change between the unadjusted and adjusted estimates for 2019.&quot;|&gt;stringr::str_wrap(78),x=NULL,y=NULL)+
 scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=seq(xstart-.5,xend+.5,.5),labels=c(rbind(&quot;&quot;,xstart:xend),&quot;&quot;))+
-scale_y_continuous(labels=kim)+
-coord_cartesian(clip=&quot;off&quot;,expand=F)+
-scale_color_manual(values=c(&quot;gray60&quot;,&quot;black&quot;))+
+scale_y_continuous(labels=kim,breaks=\(x)pretty(x,3))+
+scale_color_manual(values=c(&quot;black&quot;,&quot;gray60&quot;))+
 theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
   axis.ticks=element_line(linewidth=.2,color=&quot;black&quot;),
-  axis.ticks.x=element_line(color=alpha(&quot;black&quot;,c(1,0))),
   axis.ticks.length=unit(3,&quot;pt&quot;),
   axis.ticks.length.x=unit(0,&quot;pt&quot;),
-  axis.title=element_text(size=8),
   legend.background=element_blank(),
   legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.justification=&quot;right&quot;,
   legend.key=element_blank(),
   legend.key.height=unit(10,&quot;pt&quot;),
   legend.key.width=unit(17,&quot;pt&quot;),
+  legend.margin=margin(,,-1),
   legend.position=&quot;top&quot;,
-  legend.justification=&quot;right&quot;,
   legend.spacing.x=unit(2,&quot;pt&quot;),
-  legend.margin=margin(),
   legend.text=element_text(size=7,vjust=.5),
   legend.title=element_blank(),
   panel.background=element_blank(),
@@ -1595,7 +1595,8 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   panel.spacing=unit(-2,&quot;pt&quot;),
   panel.spacing.x=unit(3,&quot;pt&quot;),
   plot.margin=margin(5,5,5,5),
-  plot.title=element_text(size=7.4,face=2,margin=margin(2,,4)),
+  plot.subtitle=element_text(size=7,margin=margin(,,2)),
+  plot.title=element_text(size=7.4,face=2,margin=margin(1,,4)),
   strip.background=element_blank(),
   strip.text=element_text(size=7,vjust=-.3))
 ggsave(&quot;1.png&quot;,width=4.4,height=4.4,dpi=350*4)
