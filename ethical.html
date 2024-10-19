@@ -1515,7 +1515,7 @@ system(paste0(&quot;f=1.png;mar=30;w=`identify -format %w $f`;magick \\( $f -cho
 </h2>
 <p>One annoying feature at CDC WONDER is that it doesn't return population sizes for ages 85 and above, even though the US Census Bureau has published population estimates by single year of age up to ages 100+ from 2010 onwards. The 2000-2010 population estimates by single year of age only go up to ages 85+ however, so in the following code I only included population estimates for 2010 and later years.</p>
 <p>The code below downloads the 2010-2020 resident population estimates that are based on the 2010 census and the 2020-2023 resident population estimates that are based on the 2020 census: <a href="https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/national/asrh/">https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/national/asrh/</a>, <a href="https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/">https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/</a>.</p>
-<p>In order to get rid of a sudden jump in the population estimates at the point when the new and old estimates are merged, the old estimates are multiplied by a linear slope so that they are the same in 2020 as the new estimates. For example for the age 80, the new population estimate for 2020 is 1,450,396 and the old estimate is 1,526,957 so their ratio is about 0.9499, so I'm multiplying the old estimate by about <code>1-(6/10)*(1-0.9499)</code> for 2016 or <code>1-(7/10)*(1-0.9499)</code> for 2017. (However a problem with this approach is that the mid-year population estimates for 2020 had already been slightly reduced by COVID deaths, so COVID deaths will be reflected in the slope by which the 2010-2019 estimates are multiplied.)</p>
+<p>In order to get rid of a sudden jump in the population estimates at the point when the new and old estimates are merged, the old estimates are multiplied by a linear slope so that they are the same in 2020 as the new estimates. For example for the age 80, the new population estimate for 2020 is 1,450,396 and the old estimate is 1,526,957 so their ratio is about 0.9499, so I'm multiplying the old estimate by about <code>1-(6/10)*(1-0.9499)</code> for 2016, by about <code>1-(7/10)*(1-0.9499)</code> for 2017, and so on. (I'm not sure if COVID deaths in the first half of 2020 are accounted for in the mid-year population estimates for 2020, but if they are then a slight problem with my approach is that COVID deaths are reflected in the slope by which the 2010-2019 estimates are multiplied.)</p>
 <p>CDC WONDER uses vintage 2021 population estimates for 2021, vintage 2022 estimates for 2022, and so on, but here I'm using vintage 2023 population estimates for 2020 to 2023 and vintage 2020 estimates for 2010 to 2019.</p>
 <p>I also added a column for the yearly number of deaths for each age at CDC WONDER as of October 2024.</p>
 <pre>new=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/nc-est2023-agesex-res.csv&quot;)
@@ -1531,6 +1531,76 @@ dead=fread(&quot;usyearlydead.csv&quot;) # from CDC WONDER
 o=merge(pop,dead,all=T)
 fwrite(o[order(year,age)],&quot;uspopdead.csv&quot;,na=&quot;&quot;)</pre>
 <p>I uploaded the output here: <a href=f/uspopdead.csv>f/uspopdead.csv</a>. This is a similar file for monthly data: <a href=f/uspopdeadmonthly.csv>f/uspopdeadmonthly.csv</a>. Both files are used in some of my scripts on this page.</p>
+<p>This shows how the population estimates of some age groups have a big jump between the switch from the estimates based on the 2010 census to the estimates based on the 2020 census:</p>
+<div class="width7">
+<img src="i/ethical-popmerge.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2)
+
+agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
+
+kim=\(x)ifelse(x&gt;=1e3,ifelse(x&gt;=1e6,paste0(x/1e6,&quot;M&quot;),paste0(x/1e3,&quot;k&quot;)),x)
+
+new=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/nc-est2023-agesex-res.csv&quot;)
+old=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/national/asrh/nc-est2020-agesex-res.csv&quot;)
+
+old=old[SEX==0&amp;AGE!=999,.(age=AGE,pop=unlist(.SD[,-(1:4)]),year=rep(2010:2020,each=.N))]
+new=new[SEX==0&amp;AGE!=999,.(age=AGE,pop=unlist(.SD[,-(1:3)]),year=rep(2020:2023,each=.N))]
+
+me=merge(merge(old[year==2020,.(age,old=pop)],new[year==2020,.(age,new=pop)])[,.(age,ratio=new/old)],old)
+p=rbind(me[year!=2020,.(year,age,pop=round(pop*(1-(((year-2010)/10))*(1-ratio))))],new)
+p$group=&quot;2010-2020 estimates multiplied by a linear slope&quot;
+
+p=rbind(rbind(old[year!=2020],new)[,group:=&quot;Unadjusted&quot;],p)
+p[,group:=factor(group,unique(group))]
+
+p=p[,.(pop=sum(pop)),.(group,year,age=agecut(age,0:9*10))]
+
+xstart=2010;xend=2023
+p=p[year%in%xstart:xend]
+
+ggplot(p,aes(x=year,y=pop,color=group))+
+facet_wrap(~age,ncol=2,dir=&quot;v&quot;,scales=&quot;free_y&quot;)+
+geom_vline(xintercept=c(2014.5,2019.5),color=&quot;gray80&quot;,linewidth=.23)+
+geom_line(linewidth=.3)+
+geom_point(stroke=0,size=.7)+
+labs(title=&quot;Resident population estimates by US Census Bureau&quot;,x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=seq(xstart-.5,xend+.5,.5),labels=c(rbind(&quot;&quot;,xstart:xend),&quot;&quot;))+
+scale_y_continuous(labels=kim)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+scale_color_manual(values=c(&quot;gray60&quot;,&quot;black&quot;))+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
+  axis.ticks=element_line(linewidth=.2,color=&quot;black&quot;),
+  axis.ticks.x=element_line(color=alpha(&quot;black&quot;,c(1,0))),
+  axis.ticks.length=unit(3,&quot;pt&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.title=element_text(size=8),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.key=element_blank(),
+  legend.key.height=unit(10,&quot;pt&quot;),
+  legend.key.width=unit(17,&quot;pt&quot;),
+  legend.position=&quot;top&quot;,
+  legend.justification=&quot;right&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.margin=margin(),
+  legend.text=element_text(size=7,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.23),
+  panel.spacing=unit(-2,&quot;pt&quot;),
+  panel.spacing.x=unit(3,&quot;pt&quot;),
+  plot.margin=margin(5,5,5,5),
+  plot.title=element_text(size=7.4,face=2,margin=margin(2,,4)),
+  strip.background=element_blank(),
+  strip.text=element_text(size=7,vjust=-.3))
+ggsave(&quot;1.png&quot;,width=4.4,height=4.4,dpi=350*4)
+system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
+</div>
 <h2>
 <a href=#Cancer_deaths_by_age_group id=Cancer_deaths_by_age_group>Cancer deaths by age group</a>
 </h2>
