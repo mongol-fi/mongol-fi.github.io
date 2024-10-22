@@ -1531,7 +1531,7 @@ dead=fread(&quot;usyearlydead.csv&quot;) # from CDC WONDER
 o=merge(pop,dead,all=T)
 fwrite(o[order(year,age)],&quot;uspopdead.csv&quot;,na=&quot;&quot;)</pre>
 <p>I uploaded the output here: <a href=f/uspopdead.csv>f/uspopdead.csv</a>. This is a similar file for monthly data: <a href=f/uspopdeadmonthly.csv>f/uspopdeadmonthly.csv</a>. Both files are used in some of my scripts on this page.</p>
-<p>This shows that particularly ages 90+ have a huge jump between the switch from the estimates based on the 2010 census to the estimates based on the 2020 census (even though it might partially be due to COVID deaths in case COVID deaths are accounted for in the mid-year population estimates for 2020):</p>
+<p>This shows that particularly ages 90+ have a huge jump between the switch from the estimates based on the 2010 census to the estimates based on the 2020 census:</p>
 <div class="width7">
 <img src="i/ethical-popmerge.png">
 </div>
@@ -1552,9 +1552,9 @@ new=new[SEX==0&amp;AGE!=999,.(age=AGE,pop=unlist(.SD[,-(1:3)]),year=rep(2020:202
 
 me=merge(merge(old[year==2020,.(age,old=pop)],new[year==2020,.(age,new=pop)])[,.(age,ratio=new/old)],old)
 p=rbind(me[year!=2020,.(year,age,pop=round(pop*(1-(((year-2010)/10))*(1-ratio))))],new)
-p$group=&quot;2010-2020 estimates multiplied by a linear slope&quot;
+p$group=&quot;2011-2019 estimates multiplied by a linear slope&quot;
 
-p=rbind(rbind(old[year!=2020],new)[,group:=&quot;Unadjusted&quot;],p)
+p=rbind(p,rbind(old[year!=2020],new)[,group:=&quot;Unadjusted&quot;])
 p[,group:=factor(group,unique(group))]
 
 p=p[,.(pop=sum(pop)),.(group,year,age=agecut(age,0:9*10))]
@@ -1573,7 +1573,7 @@ geom_point(stroke=0,size=.7)+
 labs(title=&quot;Mid-year resident population estimates by US Census Bureau&quot;,subtitle=&quot;The number after the age group shows the percentage change between the unadjusted and adjusted estimates for 2019.&quot;|&gt;stringr::str_wrap(78),x=NULL,y=NULL)+
 scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=seq(xstart-.5,xend+.5,.5),labels=c(rbind(&quot;&quot;,xstart:xend),&quot;&quot;))+
 scale_y_continuous(labels=kim,breaks=\(x)pretty(x,3))+
-scale_color_manual(values=c(&quot;black&quot;,&quot;gray60&quot;))+
+scale_color_manual(values=c(&quot;gray60&quot;,&quot;black&quot;))+
 theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
   axis.ticks=element_line(linewidth=.2,color=&quot;black&quot;),
@@ -1585,7 +1585,7 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   legend.key=element_blank(),
   legend.key.height=unit(10,&quot;pt&quot;),
   legend.key.width=unit(17,&quot;pt&quot;),
-  legend.margin=margin(,,-1),
+  legend.margin=margin(,,-2),
   legend.position=&quot;top&quot;,
   legend.spacing.x=unit(2,&quot;pt&quot;),
   legend.text=element_text(size=7,vjust=.5),
@@ -1595,13 +1595,14 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   panel.spacing=unit(-2,&quot;pt&quot;),
   panel.spacing.x=unit(3,&quot;pt&quot;),
   plot.margin=margin(5,5,5,5),
-  plot.subtitle=element_text(size=7,margin=margin(,,2)),
+  plot.subtitle=element_text(size=7,margin=margin(,,3)),
   plot.title=element_text(size=7.4,face=2,margin=margin(1,,4)),
   strip.background=element_blank(),
   strip.text=element_text(size=7,vjust=-.3))
 ggsave(&quot;1.png&quot;,width=4.4,height=4.4,dpi=350*4)
 system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 </div>
+<p>The decrease in the population size of ages 90+ might partially be due to COVID deaths in case COVID deaths are accounted for in the mid-year population estimates for 2020. But COVID deaths would probably only explain a small part of the decrease, because in the first half of 2020 CDC WONDER returned 21,600 deaths with UCD COVID in ages 90+, which is only about 0.9% of the total population size of ages 90+ based on the 2020 resident population estimates. In case the population estimates are calculated based on yearly data for deaths, it might also be that the mid-year population estimates for 2020 are affected by COVID deaths in the second half of 2020, but even in the whole of 2020, ages 90+ had 59,739 deaths with UCD COVID which was only about 2.5% of the total population size.</p>
 <h2>
 <a href=#Cancer_deaths_by_age_group id=Cancer_deaths_by_age_group>Cancer deaths by age group</a>
 </h2>
