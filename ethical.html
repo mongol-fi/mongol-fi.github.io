@@ -54,6 +54,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
   blockquote,.quote{color:hsl(30,65%,30%)}
   blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(30,45%,50%)}
   blockquote blockquote blockquote,blockquote .quote .quote,.quote .quote .quote{color:hsl(30,70%,60%)}
+  .spoiler{display:none}
 }
 </style>
 <title>Comments to Ethical Skeptic</title>
@@ -565,7 +566,7 @@ ggsave(&quot;1.png&quot;,width=4,height=2.8,dpi=380*4)
 system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 </div>
 <p>The plot by Ethical Skeptic started from 2018 and it only included X44 deaths, so it looked like there was an anomalous sustained increase in drug deaths in 2021-2023. But from my plot above which starts from 2015 and where X44 deaths are also included, it looks like 2022 isn't that far off the long-term trend but rather the level of deaths in mid-2021 looks elevated, and there's still probably a lot of deaths missing in 2023 because drug-related deaths have a long registration delay.</p>
-<p>Before COVID the long-term trend in drug deaths seemed to be curved upwards, so the 2015-2019 linear trend in my plot above might be too low, and in the plot below where I used a 2010-2019 quadratic trend instead, the X42 deaths were actually below the trend in 2022:</p>
+<p>Before COVID the long-term trend in drug deaths seemed to be curved upwards, so the 2015-2019 linear trend in my plot above might be too low, and in the next plot where I used a 2010-2019 quadratic trend instead, the X42 deaths were actually below the trend in 2022 (even though X44 deaths were still above the trend in 2022):</p>
 <div class="width7">
 <img src="i/ethical-drug-3.png">
 </div>
@@ -637,12 +638,78 @@ system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 <p>As a result, I don't have either a Jan 2018 high or 2019 lowering bias in my baseline.</p>
 </blockquote>
 <p>I don't understand how his method of calculating a linear baseline is different from a regular linear regression or how he accounted for the low number of deaths in 2019, but he blocked me before I was able to ask him to clarify it.</p>
-<p>There was an exceptionally low number of deaths in 2019 and there was a high number of deaths in early 2018, so if you fit a regular linear baseline using only data from the years 2018 and 2019, the slope of the baseline will usually be too low (but I don't know to what extent Ethical Skeptic's undocumented regression method suffers from the same problem):</p>
+<p>The United States had a high number of deaths in early 2018 and a low number of deaths in 2019, so if you fit a regular linear baseline using only data from the years 2018 and 2019, the slope of the baseline will usually point too much downwards like in the case of my gray baseline below (even though I don't know to what extent Ethical Skeptic's undocumented regression method suffers from the same problem):</p>
 <div class="width6">
 <img src="i/debunk-ethical-5.png">
 </div>
-<p>Ethical Skeptic included the following point on his list of crimes committed by other analysts: <span class="quote">&quot;16. Add volatility of peak winter mortality periods into the trend regression, and not index off the summer base. That way a rough flu year will raise the baseline artificially to your advantage.&quot;</span> [<a href="https://x.com/EthicalSkeptic/status/1773066903000396096">https://x.com/EthicalSkeptic/status/1773066903000396096</a>] So I don't know if it means that he omits weeks with high mortality in early 2018 when he calculates the baseline.</p>
-<p>The plot below shows that when I fitted a seasonality-adjusted baseline against only one year of weekly data so that the baseline was adjusted to match the actual deaths each week, there was 0% excess deaths during each week of the fitting period, so then the standard deviation of the residuals during the fitting period was zero, so I got infinite z-scores when I divided excess deaths with the standard deviation of the residuals. And similarly when I fitted a seasonality-adjusted baseline against only two years of data, I subsequently got higher z-scores than with a 4-year fitting period. The plot also demonstrates that shorter seasonality-adjusted baselines tend to produce a lower standard deviation for the residuals during the fitting period, and they also tend to produce higher z-scores after the fitting period:</p>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(stringr);library(ggplot2)
+
+t=fread(&quot;http://sars2.net/f/uspopdeadmonthly.csv&quot;)
+t[,date:=as.Date(paste0(date,&quot;-1&quot;))]
+
+xstart=as.Date(&quot;2011-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
+xbreak=seq(xstart,xend,&quot;6 month&quot;)
+xlab=c(rbind(&quot;&quot;,2011:2023),&quot;&quot;)
+
+p=t[date&gt;=xstart&amp;date&lt;=xend]
+p=p[,.(y=sum(dead)/sum(persondays)*365e5,z=&quot;Actual deaths&quot;),.(x=date)]
+
+dates=unique(p$x)
+p1=p[year(x)%in%2018:2019,.(x=dates,y=predict(lm(y~x),.(x=dates)),z=&quot;2018-2019 linear trend&quot;)]
+p2=p[year(x)%in%2011:2019,.(x=dates,y=predict(lm(y~x),.(x=dates)),z=&quot;2011-2019 linear trend&quot;)]
+
+<h2><a href=#base_t_year_date_lt_2020_date_dates_base_predict_lm_dead_persondays_date_date_dates_age id=base_t_year_date_lt_2020_date_dates_base_predict_lm_dead_persondays_date_date_dates_age>base=t[year(date)&lt;2020,.(date=dates,base=predict(lm(dead/persondays~date),.(date=dates))),age]</a></h2>
+<h2><a href=#base_merge_t_base_y_sum_base_persondays_sum_persondays_365e5_z_quot_2011_2019_linear_trend_in_CMR_by_age_quot_x_date id=base_merge_t_base_y_sum_base_persondays_sum_persondays_365e5_z_quot_2011_2019_linear_trend_in_CMR_by_age_quot_x_date>base=merge(t,base)[,.(y=sum(base*persondays)/sum(persondays)*365e5,z=&quot;2011-2019 linear trend in CMR by age&quot;),.(x=date)]</a></h2>
+p=rbind(p,p1,p2)[,z:=factor(z,unique(z))]
+
+ybreak=pretty(p$y);ystart=min(p$y);yend=max(p$y)
+
+color=c(&quot;black&quot;,&quot;gray60&quot;,&quot;black&quot;)
+
+ggplot(p,aes(x=x+15,y))+
+<h2><a href=#geom_hline_yintercept_ybreak_color_quot_gray90_quot_linewidth_25 id=geom_hline_yintercept_ybreak_color_quot_gray90_quot_linewidth_25>geom_hline(yintercept=ybreak,color=&quot;gray90&quot;,linewidth=.25)+</a></h2>
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray90&quot;,linewidth=.25)+
+geom_vline(xintercept=c(as.Date(&quot;2018-1-1&quot;),as.Date(&quot;2020-1-1&quot;)),linetype=2,linewidth=.25)+
+geom_vline(xintercept=c(xstart,xend),linewidth=.25,lineend=&quot;square&quot;)+
+geom_hline(yintercept=c(ystart,yend),linewidth=.25,lineend=&quot;square&quot;)+
+geom_line(aes(color=z,linetype=z),linewidth=.3)+
+geom_point(data=p[z==&quot;Actual deaths&quot;],size=.4,show.legend=F)+
+labs(title=&quot;CDC WONDER: Monthly deaths from all causes per 100,000 person-years&quot;,x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
+scale_color_manual(values=color)+
+scale_linetype_manual(values=c(1,2,2))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.background=element_rect(fill=alpha(&quot;white&quot;,1),color=&quot;black&quot;,linewidth=.25),
+  legend.box.just=&quot;left&quot;,
+  legend.justification=c(0,1),
+  legend.key=element_blank(),
+  legend.key.width=unit(17,&quot;pt&quot;),
+  legend.key.height=unit(11,&quot;pt&quot;),
+  legend.margin=margin(-3,4,3,4,&quot;pt&quot;),
+  legend.position=c(0,1),
+  legend.spacing.x=unit(1.5,&quot;pt&quot;),
+  legend.text=element_text(size=6.5,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  plot.margin=margin(5,5,5,5),
+  plot.title=element_text(size=7.3,face=2,margin=margin(1,,3)))
+ggsave(&quot;1.png&quot;,width=4,height=2.4,dpi=380*4)
+system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
+</div>
+<p>When Ethical Skeptic posted of list errors made by other analysts, this was one of the points on his list: <span class="quote">&quot;Add volatility of peak winter mortality periods into the trend regression, and not index off the summer base. That way a rough flu year will raise the baseline artificially to your advantage.&quot;</span> [<a href="https://x.com/EthicalSkeptic/status/1773066903000396096">https://x.com/EthicalSkeptic/status/1773066903000396096</a>] So I don't know if it means that he omits weeks in early 2018 high mortality when he calculates the baseline.</p>
+<p>Ethical Skeptic has published three articles in a series called <span class="quote">&quot;Houston We Have a Problem&quot;</span> where he explains some of his methodology. [<a href="https://theethicalskeptic.com/2024/04/04/the-state-of-things-pandemic-week-50-2023/">https://theethicalskeptic.com/2024/04/04/the-state-of-things-pandemic-week-50-2023/</a>] In the third part he included the image below where he described how he calculates his baseline, but it sounds like he's just doing a regular linear regression and he's not applying any special method to account for the low number of deaths in 2019 or for the high number of deaths in early 2018 (even though here he seems to describe the methodology he uses to make his plots that start from 2014, so it could be that he uses different methodology in the plots that start from 2018):</p>
+<div class="width6">
+<img src="i/ethical-houston.png">
+</div>
+<p>When Ethical Skeptic fits a seasonality-adjusted baseline against only two years of data, another more minor issue is that the baseline for each week number will adapt to whatever the number of deaths that week number happened to be in 2018 and 2019, so 2018 and 2019 will have low residuals of excess death compared to subsequent years, and therefore the z-scores of subsequent years will also be elevated. So he will often get impressively high z-scores for deaths since 2021, but he doesn't mention that the z-scores would usually be lower if he used a longer fitting period for his baseline.</p>
+<p>The plot below shows that when I fitted a seasonality-adjusted baseline against only one year of weekly data so that the baseline was adjusted to match the actual deaths each week, there were 0% excess deaths during each week of the fitting period, so then the standard deviation of the residuals during the fitting period was zero, so I got infinite z-scores when I divided excess deaths with the standard deviation of the residuals. And similarly when I fitted a seasonality-adjusted baseline against only two years of data, my z-scores were subsequently further away from zero than when I used a 4-year fitting period. The plot demonstrates that shorter seasonality-adjusted baselines tend to produce a lower standard deviation for the residuals during the fitting period, and therefore they produce higher z-scores for excess deaths:</p>
 <div class="width6">
 <img src="i/debunk-ethical-6.png">
 </div>
@@ -722,10 +789,6 @@ theme(axis.text=element_text(size=6.5,color=&quot;black&quot;),
   plot.caption=element_text(size=6.7,hjust=0,margin=margin(.6,0,0,0,&quot;lines&quot;)),
   plot.title=element_text(size=7.8))
 ggsave(&quot;1.png&quot;,width=4.6,height=3.4,dpi=450)</pre>
-</div>
-<p>Ethical Skeptic has published three articles in a series called <span class="quote">&quot;Houston We Have a Problem&quot;</span> where he explains some of his methodology. [<a href="https://theethicalskeptic.com/2024/04/04/the-state-of-things-pandemic-week-50-2023/">https://theethicalskeptic.com/2024/04/04/the-state-of-things-pandemic-week-50-2023/</a>] In the third part he included the image below where he described how he calculates his baseline, but it sounds like he's just doing a regular linear regression and he's not applying any special method to account for the low number of deaths in 2019 or for the high number of deaths in early 2018 (even though here he seems to describe the methodology he uses to make his plots that start from 2014, so it could be that he uses different methodology in the plots that start from 2018):</p>
-<div class="width6">
-<img src="i/ethical-houston.png">
 </div>
 <h2>
 <a href=#COVID_deaths_per_capita_compared_to_percentage_of_vaccinated_population_in_US_counties id=COVID_deaths_per_capita_compared_to_percentage_of_vaccinated_population_in_US_counties>COVID deaths per capita compared to percentage of vaccinated population in US counties</a>
@@ -1214,7 +1277,8 @@ system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 <div class="width6">
 <img src="i/ethical-nz.jpg">
 </div>
-<p>For some reason in the plot above Ethical Skeptic calculated CMR for segments of 5 years grouped together. The A baseline roughly looks like it's fitted against the last 5-year segment displayed in the plot (or it's hard to tell if the last segment is actually a 4-year segment like in my plot below). But OWID's baseline is not even calculated based on CMR but based on the raw number of deaths. His plot would've been more clear if it would've showed the CMR for each year and not for the 5-year blocks, and if he would've calculated the 2015-2019 linear trend in deaths based on the raw number of deaths and then converted it to CMR by dividing it by the population size, so then it would've been closer to the baseline that is actually used by OWID.</p>
+<p>The y-axis of Ethical Skeptic's plot says <span class="quote">&quot;deaths per 1000 people&quot;</span> but the values on the y-axis are over 6,000, so I don't know if it's supposed to mean deaths per million people.</p>
+<p>For some reason Ethical Skeptic calculated CMR for segments of 5 years grouped together. The A baseline roughly looks like it's fitted against the last 5-year segment displayed in the plot (or it's hard to tell if the last segment is actually a 4-year segment like in my plot below). But OWID's baseline is not even calculated based on CMR but based on the raw number of deaths. His plot would've been more clear if it would've showed the CMR for each individual year and not for the 5-year blocks, and if he would've calculated the 2015-2019 linear trend in deaths based on the raw number of deaths and then converted it to CMR by dividing it by the population size, so then it would've been closer to the baseline that is actually used by OWID.</p>
 <p>I wasn't able to reproduce Ethical Skeptic's plot perfectly, but I think he used a method similar to this to calculate CMR for the 5-year blocks:</p>
 <div class="width7">
 <img src="i/ethical-nz-2.png">
@@ -1229,31 +1293,24 @@ p=t[,.(x=year,y=cmr,z=&quot;Actual CMR&quot;)]
 v=t[,.(y=mean(cmr),z=&quot;Average of year and next 4 years&quot;),.(x=(year)%/%5*5)]
 lin1=p[,.(x,y=v[x&gt;=1970,predict(lm(y~x),p)],z=&quot;Linear regression of blocks for 1970-2023&quot;)]
 lin2=p[,.(x,y=v[x&gt;=1970&amp;x&lt;=2015,predict(lm(y~x),p)],z=&quot;Linear regression of blocks for 1970-2019&quot;)]
-p=rbind(p,v,lin1[x&lt;=2020],lin2[x&lt;=2020])
+p=rbind(p,v,lin1,lin2)
 p$y=100*p$y
 
 xstart=1969;xend=2023
 p=p[x&gt;=xstart&amp;x&lt;=xend]
 
-cand=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
-ymax=max(p$y,na.rm=T);ymin=min(p$y,na.rm=T)
-ystep=cand[which.min(abs(cand-(ymax-ymin)/6))]
-yend=ystep*ceiling(ymax/ystep)
-yend=ymax
-ystart=ystep*floor(ymin/ystep)
-ybreak=seq(ystart,yend,ystep)
-ystart=ymin
+ybreak=pretty(p$y);ystart=min(p$y);yend=max(p$y)
 
 color=c(&quot;black&quot;,&quot;blue&quot;,&quot;#77f&quot;,&quot;#ccf&quot;)
 
 ggplot(p,aes(x,y))+
-geom_vline(xintercept=c(xstart,xend),linewidth=.3,lineend=&quot;square&quot;)+
+geom_vline(xintercept=c(xstart-.5,xend+.5),linewidth=.3,lineend=&quot;square&quot;)+
 geom_hline(yintercept=c(ystart,yend),linewidth=.3,lineend=&quot;square&quot;)+
 geom_line(aes(color=z,linetype=z),linewidth=.4)+
 geom_point(data=p[!grep(&quot;Linear&quot;,z)],aes(color=z),size=.5,show.legend=F)+
 labs(title=&quot;Crude mortality rate in New Zealand (deaths per 100,000 people)&quot;,subtitle=paste0(&quot;Source: infoshare.stats.govt.nz/Default.aspx
 (\&quot;Population\&quot; &gt; \&quot;Death Rates - DMM\&quot; &gt; \&quot;Crude death rate (Maori and total population) (Annual-Dec)\&quot;). The linear regression was performed based on the 5-year blocks so that the x value for each block was the same year where the block is plotted here. The point for 2020 is an average of the CMR in 2020-2023. The point for 2020 is included in the darker blue dashed line but not in the lighter blue dashed line.&quot;)|&gt;stringr::str_wrap(88),x=NULL,y=NULL)+
-scale_x_continuous(limits=c(xstart,xend),breaks=seq(1900,2100,5))+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=seq(1900,2100,5))+
 scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,labels=\(x)ifelse(x&gt;=1e3,paste0(x/1e3,&quot;k&quot;),x))+
 scale_color_manual(values=color)+
 scale_linetype_manual(values=c(1,1,2,2))+
@@ -1280,8 +1337,7 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
 ggsave(&quot;0.png&quot;,width=4.2,height=2.9,dpi=400*4)
 system(&quot;magick 0.png -resize 25% 1.png&quot;)</pre>
 </div>
-<p>In Ethical Skeptic's plot the B baseline looks closer to my lighter blue dashed line which was fitted against the 5-year blocks for 1970-2023 than my darker blue dashed line which was fitted against the 5-year blocks for 1970-2019, or maybe the B baseline somewhere in between my two baselines. I don't know if he just drew the B baseline by hand, but it doesn't look steep enough to be fitted against data from 1970-2019 but it looks more like it's fitted against data up to the present in his plot. (Which is not really an important point, but it would be ironic if he was simultaneously guilty of paltering his own baseline while he falsely accused OWID of paltering.)</p>
-<p>For some reason the y-axis of Ethical Skeptic's plot says <span class="quote">&quot;deaths per 1000 people&quot;</span> but the values on the y-axis are over 6,000, so I don't know if it's supposed to mean deaths per million people.</p>
+<p>In Ethical Skeptic's plot the B baseline looks closer to my lighter blue dashed line which was fitted against the 5-year blocks for 1970-2023 than my darker blue dashed line which was fitted against the 5-year blocks for 1970-2019, or maybe the B baseline is somewhere in between my two baselines. I don't know if Ethical Skeptic just drew the B baseline by hand, but it doesn't look steep enough to be fitted against data from 1970-2019 but it looks more like it's fitted against data up to the present in his plot. (Which is not really an important point, but it would be ironic if he was simultaneously guilty of paltering his own baseline while he falsely accused OWID of paltering.)</p>
 <p>But in any case, the age structure of the New Zealand population has completely changed since the 1970s, so it doesn't make any sense to just a linear baseline for CMR that starts from the 70s, because the actual trend in CMR is curved due to the changing age structure. Here I only had population data that went back to 1992, but the change since the 70s would've been even more dramatic:</p>
 <div class="width8">
 <img src="i/ethical-nz-4.png">
@@ -1330,54 +1386,37 @@ p=nzcmr[year&gt;=1970,.(x=year,y=cmr,z=&quot;Actual CMR&quot;)]
 lm=a[year%in%2010:2019,.(year=2010:2023,trend=predict(lm(dead/pop~year),.(year=2010:2023))),age]
 p=rbind(p,merge(a,lm)[,.(dead=sum(trend*pop),pop=sum(pop)),year][,.(y=dead/pop*1e5,z=&quot;2010-2019 trend in CMR by single year of age multiplied by population size&quot;),.(x=year)])
 
-#lm=a[year%in%2010:2019,.(year=1970:2023,lm=predict(lm(dead/pop~poly(year,2)),.(year=1970:2023))),age]
-#p=rbind(p,merge(a,lm)[,.(dead=sum(lm*pop),pop=sum(pop)),year][,.(y=dead/pop*1e5,z=&quot;1970-2019 quadratic trend in CMR for 5-year age groups&quot;),.(x=year)])
-
 p=rbind(p,nzcmr[year%in%1970:2019,.(x=1970:2023,y=predict(lm(cmr~year),.(year=1970:2023)),z=&quot;1970-2019 linear trend in CMR (like Ethical Skeptic&#39;s B baseline)&quot;)])
 
 owid=a[,.(dead=sum(dead)),year][year%in%2015:2019,.(year=2010:2023,owid=predict(lm(dead~year),.(year=2010:2023)))]
 p=rbind(p,merge(a[,.(pop=sum(pop)),year],owid)[,.(x=year,y=owid/pop*1e5,z=&quot;2015-2019 linear trend in deaths (like OWID)&quot;)])
 
-# p=a[year&gt;=1991,.(y=sum(dead)/sum(pop)*1e5,z=&quot;Actual CMR&quot;),.(x=year)]
-
-# p=rbind(p,merge(a,a[year==2020,.(age,std=pop/sum(pop))])[year&gt;=1992,.(y=sum(dead/pop*std*1e5),z=&quot;ASMR using 2020 population&quot;),.(x=year)])
-
-p$z=factor(p$z,unique(p$z))
+p[,z:=factor(z,unique(z))]
 
 xstart=1970;xend=2023
-
 p=p[x&gt;=xstart&amp;x&lt;=xend]
-
-cand=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
-ymin=min(p$y,na.rm=T);ymax=max(p$y,na.rm=T)
-ystep=cand[which.min(abs(cand-(ymax-ymin)/6))]
-# yend=ystep*ceiling(ymax/ystep)
-yend=ymax
-ystart=ystep*floor(ymin/ystep)
-ybreak=seq(ystart,yend,ystep)
-ystart=ymin
+ystart=min(p$y);yend=max(p$y);ybreak=pretty(p$y)
 
 color=c(&quot;black&quot;,&quot;#00bb00&quot;,&quot;#0055ff&quot;,&quot;#ee0000&quot;,hsv(30/36,1,.8))
 
-cap=&quot;    Source: infoshare.stats.govt.nz/Default.aspx.&quot;
+cap=&quot;    Source: infoshare.stats.govt.nz.&quot;
 cap=paste0(cap,&quot;\n    &quot;,&quot;In the green baseline, for example the CMR in 2023 was calculated by first calculating a trend in CMR for each age in 2010-2019, then the trend projected to 2023 was multiplied with the population size of each age in 2023 to get the expected deaths for each age group, and the expected deaths of all age groups were added together and then divided by the population size in 2023.&quot;|&gt;str_wrap(90))
 cap=paste0(cap,&quot;\n    &quot;,&quot;The red line was calculated by doing a linear regression for the raw number of deaths and by then dividing the projected trend with the population size to convert it to CMR.&quot;|&gt;str_wrap(90))
 
 ggplot(p,aes(x,y))+
-geom_vline(xintercept=c(xstart,xend),linewidth=.3,lineend=&quot;square&quot;)+
-geom_hline(yintercept=c(ystart,yend),linewidth=.3,lineend=&quot;square&quot;)+
-geom_line(aes(color=z),linewidth=.4)+
+geom_vline(xintercept=c(xstart-.5,xend+.5),linewidth=.25,lineend=&quot;square&quot;)+
+geom_hline(yintercept=c(ystart,yend),linewidth=.25,lineend=&quot;square&quot;)+
+geom_line(aes(color=z),linewidth=.35)+
 geom_point(data=p[grep(&quot;Actual&quot;,z)],aes(color=z),size=.5,show.legend=F)+
 labs(title=&quot;Crude mortality rate in New Zealand (deaths per 100,000 people)&quot;,subtitle=cap,x=NULL,y=NULL)+
-scale_x_continuous(limits=c(xstart,xend),breaks=seq(1900,2100,5))+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=seq(1900,2100,5))+
 scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
 scale_color_manual(values=color)+
 coord_cartesian(clip=&quot;off&quot;,expand=F)+
 theme(axis.text=element_text(size=7,color=&quot;black&quot;),
-  axis.ticks=element_line(linewidth=.3),
+  axis.ticks=element_line(linewidth=.25),
   axis.ticks.length=unit(3,&quot;pt&quot;),
   legend.direction=&quot;vertical&quot;,
-  legend.background=element_rect(fill=alpha(&quot;white&quot;,.8)),
   legend.key.height=unit(9,&quot;pt&quot;),
   legend.key.width=unit(15,&quot;pt&quot;),
   legend.key=element_rect(fill=&quot;white&quot;),
@@ -1388,13 +1427,12 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   legend.spacing.x=unit(1.5,&quot;pt&quot;),
   legend.text=element_text(size=7),
   legend.title=element_blank(),
-  panel.grid.major=element_blank(),
-  panel.background=element_rect(fill=&quot;white&quot;),
+  panel.background=element_blank(),
   plot.margin=margin(3,5,4,4),
-  plot.subtitle=element_text(size=6.7,margin=margin(0,0,4,0)),
-  plot.title=element_text(size=7.5,face=&quot;bold&quot;,margin=margin(2,0,4,0)))
-ggsave(&quot;0.png&quot;,width=4.2,height=3.7,dpi=400*4)
-system(&quot;magick 0.png -resize 25% 1.png&quot;)</pre>
+  plot.subtitle=element_text(size=6.7,margin=margin(,,4)),
+  plot.title=element_text(size=7.5,face=&quot;bold&quot;,margin=margin(2,,4)))
+ggsave(&quot;1.png&quot;,width=4.2,height=3.7,dpi=380*4)
+system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 </div>
 <p>And also if you look at ASMR instead of CMR, then there was clearly negative excess mortality in 2020 even relative to a long-term trend like my 1992 to 2019 quadratic trend in this plot:</p>
 <div class="width5">
