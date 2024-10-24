@@ -263,7 +263,7 @@ theme(axis.text=element_text(size=6.5,color=&quot;black&quot;),
   plot.title=element_text(size=7.5))
 ggsave(&quot;1.png&quot;,width=4.6,height=4.5,dpi=450)</pre>
 </div>
-<p>Added later: Ethical Skeptic later explained to me was that the reason why his plot seemed to be missing approximately the first two months of data was that his plot showed a moving average, so the first two months of data were actually included in the moving average for the point that was plotted around the start of March 2018.</p>
+<p>Added later: Ethical Skeptic later explained to me was that the reason why his plot seemed to be missing approximately the first two months of data was that his plot showed a moving average, so the first weeks of data were actually included in the moving average for the point that was plotted around the start of March 2018. He wrote: <span class="quote">&quot;The initial months are smoothed into a 7-w moving average data line, so they are in there. I will add a tapered-moving average version of the the initial months into the future versions of the chart to allay that misconception.&quot;</span> [<a href="https://theethicalskeptic.substack.com/p/the-state-of-things-pandemic-week-706/comment/53336888">https://theethicalskeptic.substack.com/p/the-state-of-things-pandemic-week-706/comment/53336888</a>]</p>
 <h2>
 <a href=#Updated_plot_for_cardiac_deaths_in_ages_0_to_54_with_drug_deaths_included id=Updated_plot_for_cardiac_deaths_in_ages_0_to_54_with_drug_deaths_included>Updated plot for cardiac deaths in ages 0 to 54 with drug deaths included</a>
 </h2>
@@ -1640,10 +1640,10 @@ Show code
 t=fread(&quot;http://sars2.net/f/wondermalignant5year.csv&quot;)
 t=t[,.(dead=sum(dead)),.(month,cause)]
 
-and=fread(&quot;http://sars2.net/f/wondermalignantmcdandcovidmcd.csv&quot;)
+and=fread(&quot;http://sars2.net/f/wondermalignantmcdandcovidmcd.csv&quot;)[age==&quot;all&quot;]
 
 p=t[grep(&quot;Multiple&quot;,cause),.(x=month,y=dead,z=&quot;MCD COVID not subtracted&quot;)]
-p=rbind(p,merge(p,and[,.(x=month,and=dead)])[,.(x,y=y-and,z=&quot;MCD COVID subtracted&quot;)])
+p=rbind(p,merge(p,and[,.(x=date,and=dead)])[,.(x,y=y-and,z=&quot;MCD COVID subtracted&quot;)])
 p=merge(p,t[grep(&quot;Under&quot;,cause),.(x=month,under=dead)])
 p[,y:=y/under*100]
 
@@ -1653,31 +1653,32 @@ p[,x:=as.Date(paste0(x,&quot;-1&quot;))]
 xstart=as.Date(&quot;1999-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
 xbreak=seq(xstart,xend,&quot;6 month&quot;)
 xlab=c(rbind(&quot;&quot;,1999:2024),&quot;&quot;)
+ybreak=pretty(p$y);ystart=ybreak[1];yend=max(ybreak)
 
-cand=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
-ymin=p[,min(y,na.rm=T)];ymax=p[,max(y,na.rm=T)]
-ystep=cand[which.min(abs(cand-(ymax-ymin)/7))]
-ystart=ystep*floor(ymin/ystep)
-yend=ystep*ceiling(ymax/ystep)
-ybreak=seq(ystart,yend,ystep)
+color=c(&quot;black&quot;,&quot;gray70&quot;,&quot;black&quot;)
 
-color=c(&quot;black&quot;,&quot;gray60&quot;)
+months=seq(xstart,xend,&quot;month&quot;)
+p=rbind(p[,.(x,y,z)],p[z==&quot;MCD COVID not subtracted&quot;&amp;year(x)%in%2016:2019,.(x=months,y=predict(lm(y~x),.(x=months)),z=&quot;2016-2019 linear trend&quot;)])
 
-ggplot(p,aes(x=x+14,y=y,color=z))+
+p[,z:=factor(z,unique(z))]
+
+ggplot(p,aes(x=x+14,y=y))+
 geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray90&quot;,linewidth=.25)+
 geom_hline(yintercept=c(ystart,yend),linewidth=.25,lineend=&quot;square&quot;)+
 geom_vline(xintercept=c(xstart,xend),linewidth=.25,lineend=&quot;square&quot;)+
-geom_line(linewidth=.3)+
+geom_line(aes(color=z,linetype=z),linewidth=.3)+
 labs(title=&quot;CDC WONDER: Monthly deaths with cause C00-C97 (malignant neoplasms): MCD deaths as percentage of UCD deaths&quot;|&gt;stringr::str_wrap(70),x=NULL,y=NULL)+
 scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
 scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,labels=\(x)paste0(x,&quot;%&quot;))+
 scale_color_manual(values=color)+
+scale_linetype_manual(values=c(1,1,2))+
 coord_cartesian(clip=&quot;off&quot;,expand=F)+
 theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
   axis.ticks.x=element_line(color=alpha(&quot;black&quot;,c(1,0))),
   axis.ticks=element_line(linewidth=.25,color=&quot;black&quot;),
-  axis.ticks.length=unit(.2,&quot;lines&quot;),
+  axis.ticks.length=unit(3,&quot;pt&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
   axis.title=element_text(size=8),
   legend.background=element_blank(),
   legend.box.just=&quot;left&quot;,
