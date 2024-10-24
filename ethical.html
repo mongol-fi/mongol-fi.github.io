@@ -328,26 +328,149 @@ ggsave(&quot;1.png&quot;,width=4.3,height=2.7,dpi=400*4)
 system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 </div>
 <p>In the plot above I didn't exclude deaths with MCD COVID. In 2020 to 2023 in ages 0 to 54, only about 0.5% of deaths with MCD X42 to X44 also had MCD COVID, but about 9% of deaths with MCD I45 to I51 also had MCD COVID.</p>
-<p>When someone asked Ethical Skeptic why there was a huge increase in deaths in early 2021 even though only few people in ages 0 to 54 had been vaccinated, he answered that it was the vaccines but he didn't even mention that he added in drug deaths to his plot in 2021 but not 2020:</p>
+<p>In the next plot the light red line shows deaths with MCD I45-I51 but not MCD COVID. The light red line is clearly elevated in 2020 to 2023 compared to 2018 and 2019, but the period with elevated deaths already started in the second quarter of 2020 so it's difficult to blame on the vaccines, and the steady elevation in the light red line since 2020 rather seems to coincide with the steady elevation of drug-related deaths since 2020:</p>
+<div class="width7">
+<img src="i/debunk-ethical-15.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2)
+
+t=fread(&quot;http://sars2.net/f/wonderskeptic.csv&quot;)
+t=rbind(t[cause%like%&quot;I45&quot;],merge(t[cause%like%&quot;I45&quot;,.(date,dead)],t[cause%like%&quot;Cardiac&quot;,.(date,dead2=dead)],all=T)[,.(cause=&quot;I45-I51 but not COVID&quot;,dead=dead-dead2,date)],t[!cause%like%&quot;I45|Cardiac|COVID&quot;])
+
+p=t[,.(x=date-3,y=as.double(dead),z=factor(cause,unique(cause)))]
+
+xstart=as.Date(&quot;2018-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
+xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=c(rbind(&quot;&quot;,2018:2024),&quot;&quot;)
+ystart=0;yend=2000;ystep=200;ybreak=seq(ystart,yend,ystep)
+
+color=c(&quot;#bb0000&quot;,&quot;#ff9999&quot;,hcl(225,100,40),hcl(280,120,50),hcl(300,40,30),&quot;gray50&quot;)
+
+ggplot(p,aes(x,y,color=z))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+geom_hline(yintercept=seq(ystart,yend,ystep),color=&quot;gray90&quot;,linewidth=.25)+
+geom_vline(xintercept=seq(xstart,xend,&quot;3 month&quot;),color=&quot;gray90&quot;,linewidth=.25)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),linewidth=.25)+
+geom_hline(yintercept=c(ystart,yend),linewidth=.25,lineend=&quot;square&quot;)+
+geom_vline(xintercept=c(xstart,xend),linewidth=.25,lineend=&quot;square&quot;)+
+geom_line(linewidth=.3)+
+labs(title=&quot;CDC WONDER, weekly deaths by multiple cause of death in ages 0 to 54&quot;,x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
+scale_color_manual(values=color)+
+guides(colour=guide_legend(ncol=2,byrow=F))+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.ticks=element_blank(),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  axis.title=element_text(size=7),
+  legend.background=element_blank(),
+  legend.box.just=&quot;left&quot;,
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.key=element_blank(),
+  legend.key.height=unit(10,&quot;pt&quot;),
+  legend.key.width=unit(17,&quot;pt&quot;),
+  legend.margin=margin(5,5,0,5),
+  legend.position=&quot;bottom&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.text=element_text(size=7,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.grid=element_blank(),
+  plot.margin=margin(5,5,5,5),
+  plot.subtitle=element_text(size=7),
+  plot.title=element_text(size=7.3,face=2))
+ggsave(&quot;1.png&quot;,width=4.3,height=2.7,dpi=400*4)
+system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
+</div>
+<p>In the next plot which shows deaths by underlying cause instead of multiple cause, there is no longer such a clear increase in deaths under the cardiac ICD codes in 2020:</p>
+<div class="width7">
+<img src="i/debunk-ethical-16.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2)
+
+t=fread(&quot;http://sars2.net/f/wonderskepticucd.csv&quot;)
+
+p=t[,.(x=date-3,y=as.double(dead),z=factor(cause,unique(cause)))]
+
+xstart=as.Date(&quot;2018-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
+xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=c(rbind(&quot;&quot;,2018:2024),&quot;&quot;)
+yend=2000;ystep=500;ybreak=seq(0,yend,ystep)
+
+color=c(&quot;#bb0000&quot;,hcl(90,120,50),hcl(280,120,50),hcl(300,40,30),&quot;gray50&quot;)
+
+ggplot(p,aes(x,y=pmin(y,yend),color=z))+
+coord_cartesian(clip=&quot;off&quot;,ylim=c(0,yend),expand=F)+
+geom_hline(yintercept=seq(0,yend,ystep),color=&quot;gray90&quot;,linewidth=.25)+
+geom_vline(xintercept=seq(xstart,xend,&quot;3 month&quot;),color=&quot;gray90&quot;,linewidth=.25)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),linewidth=.25)+
+geom_hline(yintercept=c(0,yend),linewidth=.25,lineend=&quot;square&quot;)+
+geom_vline(xintercept=c(xstart,xend),linewidth=.25,lineend=&quot;square&quot;)+
+geom_line(linewidth=.3)+
+labs(title=&quot;CDC WONDER, weekly deaths by underlying cause of death in ages 0 to 54&quot;|&gt;stringr::str_wrap(80),x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
+scale_y_continuous(breaks=ybreak)+
+scale_color_manual(values=color)+
+guides(colour=guide_legend(ncol=1,byrow=F))+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.ticks=element_blank(),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  axis.title=element_text(size=7),
+  legend.background=element_blank(),
+  legend.box.just=&quot;left&quot;,
+  legend.key=element_blank(),
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.key.height=unit(10,&quot;pt&quot;),
+  legend.key.width=unit(17,&quot;pt&quot;),
+  legend.position=c(0,1),
+  legend.justification=c(0,1),
+  legend.box.background=element_rect(fill=alpha(&quot;white&quot;,.85),color=&quot;black&quot;,linewidth=.3),
+  legend.margin=margin(-2,5,4,5),
+  legend.text=element_text(size=7,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.grid=element_blank(),
+  plot.margin=margin(5,5,5,5),
+  plot.subtitle=element_text(size=7),
+  plot.title=element_text(size=7.3,face=2))
+ggsave(&quot;1.png&quot;,width=4.3,height=2.7,dpi=400*4)
+system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
+</div>
+<p>Ethical Skeptic had the chutzpah to say that it would equate to obfuscation if he also added excess drug deaths to his plot in 2020. He wrote: <span class="quote">&quot;It should be noted that an initial mid-2020 surge in excess deaths due to overdoses (X42-44) during the lockdown period has been removed from this data. This is a death-surge which is non-Natural/non-Vaccine in its basis and can be viewed as to its arrival shape and magnitude in Chart 4c above. This 2020 surge is not trend data, hence its removal in favor of the true arrival trend attributable to the mRNA vaccine. There exists a slight elevation in these deaths which remains on the chart, attributable to Covid-19, but the permanent surge in mortality arrived as a result of the Covid vaccine beginning in December (Week 52 - 14 days after the vaccine start) 2020. To conflate that pre-vaccine surge with the vaccine arrival data, would constitute obfuscation.&quot;</span> [<a href="https://theethicalskeptic.com/2024/04/04/the-state-of-things-pandemic-week-50-2023/">https://theethicalskeptic.com/2024/04/04/the-state-of-things-pandemic-week-50-2023/</a>] He said that the excess drug deaths in 2020 were not <span class="quote">&quot;trend data&quot;</span> because the trend he was trying to find was a trend of increased deaths after the vaccine rollout. So in order to show there is a trend which fits his preconceptions, he considers data which doesn't conform to his preconceptions to not be <span class="quote">&quot;trend data&quot;</span> so he can freely discard it.</p>
+<p>When someone asked Ethical Skeptic why there was a huge increase in deaths in early 2021 even though only few people in ages 0 to 54 had been vaccinated, he answered the deaths were caused by the vaccines but he didn't even mention that he omitted excess drug deaths from his plot in 2020 but not 2021: [<a href="https://x.com/EthicalSkeptic/status/1775757476085841999">https://x.com/EthicalSkeptic/status/1775757476085841999</a>]</p>
 <div class="width5">
 <img src="i/debunk-ethical-9.jpg">
 </div>
-<p>And when someone asked Ethical Skeptic why he included drug deaths in his plot, he said that the drug deaths were somehow associated with the vaccines:</p>
+<p>And when someone asked Ethical Skeptic why he included drug deaths in his plot, he said that the persistent increase in drug deaths was somehow caused by the vaccines: [<a href="https://x.com/EthicalSkeptic/status/1775741411524030473">https://x.com/EthicalSkeptic/status/1775741411524030473</a>]</p>
 <div class="width6">
 <img src="i/debunk-ethical-10.jpg">
 </div>
-<p>In one tweet he further explained that the reason why he included a certain proportion of drug deaths is because if someone died from a cardiac cause induced by a drug overdose, only the drug overdose would be listed as MCD because he claims there is only one MCD listed for deaths from external causes: <span class="quote">&quot;The reason we <em>can and ethically should</em> add the incremental vaccine-caused portion of these deaths (from Chart 4c) into this analysis, is because this is a multiple cause of death (MCoD) analysis, not an underlying cause of death (UCoD) analysis. MCoD analysis is used to detect prevalence and trend, when an overlap between causes is determined. However, when death is ascribed to a Non-Natural Cause, no MCoD overlap is afforded that pool of mortality, as only one cause of death is allowed - thereby depleting the sudden cardiac death trend numbers artificially. This has been abused (as one can ascertain from Chart 4c) - therefore, competent analysis on this <strong><em>must</em></strong> include the incremental portion of <span class="quote">'unknown drug overdose'</span> which is clearly sensitive to the introduction of the vaccine.&quot;</span> [<a href="https://x.com/EthicalSkeptic/status/1778166029601943622">https://x.com/EthicalSkeptic/status/1778166029601943622</a>] However for example in 2021 in all ages, CDC WONDER returned 4702 deaths where the MCD included X42-X44 (which are the ICD codes for accidental drug overdoses that Ethical Skeptic included in his plot) and where the MCD also included I45-I51, R00, or R01 (which were the cardiac ICD codes in his plot). So I don't think he is right that only one cause of death is allowed for deaths from non-natural causes.</p>
+<p>In one tweet he further explained that the reason why he included a certain proportion of drug deaths is because if someone died from a cardiac cause induced by a drug overdose, only the drug overdose would be listed as MCD because he claims there is only one MCD listed for deaths from external causes: <span class="quote">&quot;The reason we <em>can and ethically should</em> add the incremental vaccine-caused portion of these deaths (from Chart 4c) into this analysis, is because this is a multiple cause of death (MCoD) analysis, not an underlying cause of death (UCoD) analysis. MCoD analysis is used to detect prevalence and trend, when an overlap between causes is determined. However, when death is ascribed to a Non-Natural Cause, no MCoD overlap is afforded that pool of mortality, as only one cause of death is allowed - thereby depleting the sudden cardiac death trend numbers artificially. This has been abused (as one can ascertain from Chart 4c) - therefore, competent analysis on this <strong><em>must</em></strong> include the incremental portion of <span class="quote">'unknown drug overdose'</span> which is clearly sensitive to the introduction of the vaccine.&quot;</span> [<a href="https://x.com/EthicalSkeptic/status/1778166029601943622">https://x.com/EthicalSkeptic/status/1778166029601943622</a>] However for example in 2021 in all ages, CDC WONDER returned 4,713 deaths where the MCD included one of the drug-related codes X42-X44 and where the MCD also included I45-I51, R00, or R01 (which were the cardiac ICD codes in his plot). So I don't think he is right that only one cause of death is allowed for deaths from non-natural causes. ChatGPT had the same opinion:</p>
+<blockquote>
+<p>In the U.S., multiple causes of death are generally allowed and recorded on death certificates, even for deaths from non-natural causes. The death certificate typically includes:</p>
+<ol style="list-style-type: decimal">
+<li><strong>Immediate Cause of Death</strong>: The direct cause that led to the death (e.g., gunshot wound, drowning).</li>
+<li><strong>Underlying Causes of Death</strong>: Conditions or events that led to the immediate cause (e.g., chronic illness, drug overdose).</li>
+<li><strong>Contributing Factors</strong>: Other medical conditions or external factors that played a role in the death (e.g., alcohol intoxication, diabetes).</li>
+</ol>
+<p>For <strong>non-natural causes of death</strong> - such as accidents, homicides, or suicides - the certificate will often list both the immediate cause (such as the injury) and any contributing factors or circumstances.</p>
+</blockquote>
+<p>ChatGPT also said that <span class="quote">&quot;for a heart attack induced by drug overdose, both causes are typically listed on the death certificate in the U.S. This allows for a more complete understanding of the sequence of events leading to death. The death certificate will show both the immediate cause of death and the underlying causes.&quot;</span></p>
 <p>The GIF file below shows that an earlier version of the plot that Ethical Skeptic posted on Twitter was even more misleading, because it didn't include the line at the bottom which said: <span class="quote">&quot;X42-44 ((narcotics, heroin, fentanyl, meth, other drug) excess mortality surge removed (for 2020 only - lockdown impact is not trend data)&quot;</span>: [<a href="https://x.com/EthicalSkeptic/status/1775711298061275434">https://x.com/EthicalSkeptic/status/1775711298061275434</a>]</p>
 <div class="width6">
 <img src="i/debunk-ethical-11.gif">
 </div>
-<p>X42 is <span class="quote">&quot;Accidental poisoning by and exposure to narcotics and psychodysleptics [hallucinogens], not elsewhere classified&quot;</span>, X43 is <span class="quote">&quot;Accidental poisoning by and exposure to other drugs acting on the autonomic nervous system&quot;</span>, and X44 is <span class="quote">&quot;Accidental poisoning by and exposure to other and unspecified drugs, medicaments and biological substances&quot;</span>. In the year 2021 CDC WONDER returned 45,053 deaths with MCD X42, 35 deaths with MCD X43, and 45,710 deaths with MCD X44.</p>
-<p>Someone on Twitter also asked: <span class="quote">&quot;Wonder what that graph looks like without that bottom code (and similar others)&quot;</span> (where the bottom line meant the ICD code X44, because the X42 and X43 codes were not included in the version of the post that was posted on Twitter). [<a href="https://x.com/All_Im_sayn/status/1775728867543535904">https://x.com/All_Im_sayn/status/1775728867543535904</a>] But Ethical Skeptic replied: <span class="quote">&quot;It is 268 deaths per week out of the 929. Decrement that, and the injury-death tally is far below the actual vaccine impact - by conducting cherry picking to force a desired conclusion - and it does not even accomplish the task.&quot;</span> 929 refers to the number of excess deaths on week 39 of 2023, so I don't know if the number of excess drug deaths would've been similar on other weeks. And I don't know if the figure of 268 only included drug deaths under X44 or also X42 and X43 (which would likely be around double of X44 alone).</p>
-<p>One of the three <span class="quote">&quot;vaccine uptake periods&quot;</span> that are highlighted in Ethical Skeptic's plot is in mid-2022. I don't know if it's supposed to refer to the period when people got second boosters, because the period in winter 2021-2022 when people got first boosters is not highlighted. in the CDC dataset which shows the number of vaccines administered by age group, the percentage of people in ages 25 to 49 who had received the first booster didn't increase that much after February 2022, but the CDC dataset doesn't even include data for second boosters administered in ages 25 to 49 (even though the total percentage of people in ages 25-49 who ever got a second booster is fairly low): [<a href="https://data.cdc.gov/Vaccinations/COVID-19-Vaccination-Age-and-Sex-Trends-in-the-Uni/5i5k-6cmh">https://data.cdc.gov/Vaccinations/COVID-19-Vaccination-Age-and-Sex-Trends-in-the-Uni/5i5k-6cmh</a>]</p>
+<p>I don't know if his plot includes only X44 deaths or also X42 and X43 deaths, because the line at the bottom says that he removed X42-X44 deaths in 2020 but the line above it seems to indicate that his plot only includes X44 deaths but not X42 and X43 deaths. X42 is <span class="quote">&quot;Accidental poisoning by and exposure to narcotics and psychodysleptics [hallucinogens], not elsewhere classified&quot;</span>, X43 is <span class="quote">&quot;Accidental poisoning by and exposure to other drugs acting on the autonomic nervous system&quot;</span>, and X44 is <span class="quote">&quot;Accidental poisoning by and exposure to other and unspecified drugs, medicaments and biological substances&quot;</span>. In the year 2021 CDC WONDER returned 45,053 deaths with MCD X42, 35 deaths with MCD X43, and 45,710 deaths with MCD X44. So there's approximately an equal number of X42 and X44 deaths but almost no X43 deaths.</p>
+<p>Someone on Twitter asked: <span class="quote">&quot;Wonder what that graph looks like without that bottom code (and similar others)&quot;</span> (where the bottom code referred to the cause of death X44, because the version of the plot did not yet include the line which said that excess X42-X44 deaths had been removed from 2020). [<a href="https://x.com/All_Im_sayn/status/1775728867543535904">https://x.com/All_Im_sayn/status/1775728867543535904</a>] But Ethical Skeptic replied: <span class="quote">&quot;It is 268 deaths per week out of the 929. Decrement that, and the injury-death tally is far below the actual vaccine impact - by conducting cherry picking to force a desired conclusion - and it does not even accomplish the task.&quot;</span> 929 refers to the number of excess deaths on week 39 of 2023, so I guess 268 drug deaths also referred to the number of deaths on week 39 of 2023. But it was at the end of the x-axis when a lot of drug deaths were still missing because of a registration delay, so the proportion of drug deaths out of all deaths was probably higher during earlier months.</p>
+<p>One of the three <span class="quote">&quot;vaccine uptake periods&quot;</span> that are highlighted in Ethical Skeptic's plot is in mid-2022. I don't know if it's supposed to refer to the period when people got second boosters, because the period in winter 2021-2022 when people got first boosters is not highlighted. In a CDC dataset which shows the number of vaccines administered by age group, the percentage of people in ages 25 to 49 who had received the first booster didn't increase that much after February 2022, but it's missing data for second boosters administered in younger age groups (even though the total percentage of people in ages 25 to 49 who ever got a second booster is fairly low): [<a href="https://data.cdc.gov/Vaccinations/COVID-19-Vaccination-Age-and-Sex-Trends-in-the-Uni/5i5k-6cmh">https://data.cdc.gov/Vaccinations/COVID-19-Vaccination-Age-and-Sex-Trends-in-the-Uni/5i5k-6cmh</a>]</p>
 <pre>&gt; t=data.table::fread(&quot;COVID-19_Vaccination_Age_and_Sex_Trends_in_the_United_States__National_and_Jurisdictional_20240131.csv&quot;)
 &gt; t=t[Demographic_Category==&quot;Ages_25-49_yrs&quot;&amp;Location==&quot;US&quot;]
 &gt; a=aggregate(t[,9:12],list(sub(&quot;(..)/../..(..).*&quot;,&quot;\\2-\\1&quot;,t$Date)),mean,na.rm=T)
-&gt; colnames(a)=sub(&quot;_(Pop|Vax|pct).*&quot;,&quot;&quot;,colnames(a))
+&gt; names(a)=sub(&quot;_(Pop|Vax|pct).*&quot;,&quot;&quot;,names(a))
 &gt; round(t(data.frame(a,row.names=1)))
                    20-12 21-01 21-02 21-03 21-04 21-05 21-06 21-07 21-08 21-09 21-10 21-11 21-12
 Administered_Dose1     1     6    10    20    39    51    56    60    64    69    72    74    77
@@ -364,9 +487,8 @@ Administered_Dose1    85    85    85    86
 Series_Complete       72    72    72    72
 Booster_Doses         43    43    43    43
 Second_Booster       NaN   NaN   NaN   NaN</pre>
-<p>However actually the reason why Ethical Skeptic highlighted mid-2022 as a vaccine uptake period might have been because his plot had a noticeable spike in all-cause deaths around the same time. But in my plot above which showed similar data grouped by cause of death, there wasn't any cause of death which had a clear increase in deaths around mid-2022, apart from a small increase in COVID deaths (which weren't even included in Ethical Skeptic's plot). But it might be because his plot displayed excess deaths and not raw deaths like my plot, so the increase in mid-2022 might have been an artifact of the way he calculated his baseline.</p>
-<p>In his blog Ethical Skeptic had the chutzpah to say that it would equate to obfuscation if he also added drug deaths to his plot in 2020. He wrote: <span class="quote">&quot;It should be noted that an initial mid-2020 surge in excess deaths due to overdoses (X42-44) during the lockdown period has been removed from this data. This is a death-surge which is non-Natural/non-Vaccine in its basis and can be viewed as to its arrival shape and magnitude in Chart 4c above. This 2020 surge is not trend data, hence its removal in favor of the true arrival trend attributable to the mRNA vaccine. There exists a slight elevation in these deaths which remains on the chart, attributable to Covid-19, but the permanent surge in mortality arrived as a result of the Covid vaccine beginning in December (Week 52 - 14 days after the vaccine start) 2020. To conflate that pre-vaccine surge with the vaccine arrival data, would constitute obfuscation.&quot;</span> [<a href="https://theethicalskeptic.com/2024/04/04/the-state-of-things-pandemic-week-50-2023/">https://theethicalskeptic.com/2024/04/04/the-state-of-things-pandemic-week-50-2023/</a>]</p>
-<p>Added later: Later Ethical Skeptic posted an updated version of his plot which was now more transparent and honest, because he added another line for 2020 where he didn't omit the excess drug deaths from his plot (even though I don't necessarily agree with his attribution of the excess drug deaths in 2020 to COVID or the lockdowns): [<a href="https://x.com/EthicalSkeptic/status/1846690187297919231">https://x.com/EthicalSkeptic/status/1846690187297919231</a>]</p>
+<p>However actually the reason why Ethical Skeptic highlighted mid-2022 as a vaccine uptake period might have been because his plot had a noticeable spike in all-cause deaths around the same time. But in my plots where I split out the number of deaths by cause of death, there wasn't any cause of death which had a clear increase in deaths around mid-2022. But it might be because Ethical Skeptic's plot displayed excess deaths and not raw deaths like my plot, so his increase in mid-2022 might have been an artifact of the way he adjusted his baseline for seasonal variation in mortality.</p>
+<p>Added later: Later Ethical Skeptic posted an updated version of his plot which was now more transparent and honest, because he added a second gray line to his plot where he didn't omit the excess drug deaths in 2020 (even though a lot of people on Twitter still didn't seem to understand what the second line meant, or that excess drug deaths were omitted from the blue line in 2020 but not 2021): [<a href="https://x.com/EthicalSkeptic/status/1846690187297919231">https://x.com/EthicalSkeptic/status/1846690187297919231</a>]</p>
 <div class="width8">
 <img src="i/debunk-ethical-12.png">
 </div>
@@ -529,7 +651,7 @@ Show code
 
 t=fread(&quot;COVID-19_Vaccinations_in_the_United_States_County_20240227.csv&quot;)
 t=t[Date==&quot;03/01/2022&quot;,c(&quot;FIPS&quot;,&quot;Administered_Dose1_Recip&quot;)]
-colnames(t)=c(&quot;fips&quot;,&quot;vax&quot;)
+names(t)=c(&quot;fips&quot;,&quot;vax&quot;)
 t$fips=as.integer(t$fips)
 
 pop=fread(&quot;uscountypop.csv&quot;)[,.(fips=as.integer(sprintf(&quot;%d%03d&quot;,STATE,COUNTY)),pop=POPESTIMATE2022)]
@@ -1602,7 +1724,7 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
 ggsave(&quot;1.png&quot;,width=4.4,height=4.4,dpi=350*4)
 system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 </div>
-<p>The decrease in the population size of ages 90+ might partially be due to COVID deaths in case COVID deaths are accounted for in the mid-year population estimates for 2020. But COVID deaths would probably only explain a small part of the decrease, because in the first half of 2020 CDC WONDER returned 21,600 deaths with UCD COVID in ages 90+, which is only about 0.9% of the total population size of ages 90+ based on the 2020 resident population estimates. In case the population estimates are calculated based on yearly data for deaths, it might also be that the mid-year population estimates for 2020 are affected by COVID deaths in the second half of 2020, but even in the whole of 2020, ages 90+ had 59,739 deaths with UCD COVID which was only about 2.5% of the total population size.</p>
+<p>The decrease in the population size of ages 90+ might partially be due to COVID deaths in case COVID deaths are accounted for in the mid-year population estimates for 2020. But COVID deaths would probably only explain a small part of the decrease, because in the first half of 2020 CDC WONDER returned 21,600 deaths with UCD COVID in ages 90+, which is only about 0.9% of the total population size of ages 90+ based on the 2020 resident population estimates. However in case the population estimates are calculated based on yearly data for deaths, it might also be that the mid-year population estimates for 2020 are affected by COVID deaths in the second half of 2020, but even in the whole of 2020, ages 90+ had 59,739 deaths with UCD COVID which was only about 2.5% of the total population size.</p>
 <h2>
 <a href=#Cancer_deaths_by_age_group id=Cancer_deaths_by_age_group>Cancer deaths by age group</a>
 </h2>
@@ -1768,7 +1890,7 @@ system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 </blockquote>
 <p>Ethical Skeptic didn't exclude deaths under ICD chapter R from his plot, so some of his excess deaths in 2024 and to a less extent late 2023 might be due to deaths from external causes where the cause has not yet been resolved. His plot included the first 15 weeks of 2024. He posted the plot in October 2024 but I don't know if he retrieved the data earlier.</p>
 <p>In the plot below where I plotted R deaths separately from A to Q deaths, there was a slight elevation in deaths under R codes during the first 3 to 4 months of 2024 but it was not that massive. But I wasn't able to reproduce Ethical Skeptic's steady increase in excess deaths that started in 2021, and my excess deaths peaked in December 2022 and not in early 2024 like in his plot:</p>
-<div class="width7">
+<div class="width6">
 <img src="i/ethical-natural-2.png">
 </div>
 <div class="spoiler">
