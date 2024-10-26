@@ -2212,7 +2212,41 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   plot.subtitle=element_text(size=6.8,margin=margin(,,4)),
   plot.title=element_text(size=7,face=2,margin=margin(1,,3)))
 ggsave(&quot;1.png&quot;,width=4.2,height=2.8,dpi=380*4)
-system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
+system(&quot;magick 1.png -resize 25% 1.png&quot;)
+</pre>
+</div>
+<p>From the table below which shows yearly number of deaths by ICD code, you can see that most of the increase in the past few years is explained by N17.9 (<span class="quote">&quot;acute renal failure, unspecified&quot;</span>):</p>
+<div class="width10">
+<img src="i/ethical-kidney-3.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table)
+
+kimi=\(x){na=is.na(x);x[na]=0;e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;x[]=ifelse(abs(x)&lt;1e3,round(x),paste0(sprintf(paste0(&quot;%.&quot;,ifelse(e%%3==0,1,0),&quot;f&quot;),x/1e3^(e2-1)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2]));x[na]=&quot;NA&quot;;x}
+
+t=fread(&quot;http://sars2.net/f/wondericd.csv&quot;)
+t=t[type==&quot;MCD&quot;&amp;year!=2024&amp;code%like%&quot;N0[0-7]|N1[789]|N2[567]&quot;]
+
+m=t[,xtabs(dead~paste0(code,&quot;: &quot;,cause)+year)]
+maxcolor=max(m)
+exp=.6
+pal=hsv(c(21,21,12,6,3,0,0)/36,c(0,.5,.5,.5,.5,.5,0),rep(1:0,c(6,1)))
+
+pheatmap::pheatmap(m^exp,filename=&quot;1.png&quot;,
+  display_numbers=ifelse(m&lt;10,m,kimi(m)),
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=15,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;gray90&quot;,
+  number_color=ifelse(abs(m^exp)&gt;maxcolor^exp*.8,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(0,maxcolor^exp,,256),
+  colorRampPalette(pal)(256))
+
+system(&quot;w=`identify -format %w 1.png`;pad=20;magick -pointsize 44 -font Arial-Bold \\( -size $[w-pad] caption:&#39;CDC WONDER: Yearly deaths by multiple cause of death&#39; -splice $[pad]x24 \\) 1.png -append 1.png&quot;)</pre>
+</div>
+<p>However from the next table which shows deaths by UCD instead of MCD, you can see that N17.9 isn't as common as an underlying cause of death as N18.5 (<span class="quote">&quot;chronic kidney disease, stage 5&quot;</span>), and there hasn't been any clear increase in deaths with UCD N18.5 since 2019:</p>
+<div class="width10">
+<img src="i/ethical-kidney-4.png">
 </div>
 <script>
 let q=document.querySelectorAll('a,code,pre')
