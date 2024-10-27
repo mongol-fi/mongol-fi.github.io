@@ -1252,7 +1252,7 @@ theme(axis.text=element_text(size=6.5,color=&quot;black&quot;),
 ggsave(&quot;1.png&quot;,width=4,height=2.8,dpi=400*4)
 system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 </div>
-<p>In the plot below I calculated ASMR using the same 2000 US standard population that was used at Statista.com. [<a href="https://seer.cancer.gov/stdpopulations/stdpop.19ages.html">https://seer.cancer.gov/stdpopulations/stdpop.19ages.html</a>] In the yellow line where I calculated ASMR using 10-year age groups and the population sizes returned by CDC WONDER, I was now able to reproduce the historical ASMR from 1999 up to 2017 exactly or nearly exactly. But my yellow line started to diverge from Ethical Skeptic's plot from 2018 onwards, so I guess he used data from 2018 onwards from CDC WONDER. In the red line I used a more accurate way to calculate ASMR by single year of age where I used population estimates from the website of the US Census Bureau. But I got lower ASMR in 2023 than 2021 for both lines, and I was still not able to reproduce the increase in ASMR that Ethical Skeptic got from 2021 onwards:</p>
+<p>In the plot below I calculated ASMR using the same year 2000 US standard population that was used in the Statista dataset. [<a href="https://seer.cancer.gov/stdpopulations/stdpop.19ages.html">https://seer.cancer.gov/stdpopulations/stdpop.19ages.html</a>] In the yellow line where I calculated ASMR by 10-year age groups and I used the population sizes returned by CDC WONDER, I was now able to reproduce the historical ASMR from 1999 up to 2017 exactly or nearly exactly. But my yellow line started to diverge from Ethical Skeptic's plot from 2018 onwards, so I guess he took data up to 2017 from the Statista dataset which used similar methodology as my yellow line, but he calculated ASMR from 2018 onwards himself using different methodology. In the red line I used a more accurate way to calculate ASMR by single year of age where I took the population estimates from the website of the US Census Bureau. But I got lower ASMR in 2023 than 2021 for both lines, and I was still not able to reproduce the increase in ASMR that Ethical Skeptic got from 2021 onwards:</p>
 <div class="width8">
 <img src="i/ethical-historical-cancer-6.png">
 </div>
@@ -1272,7 +1272,19 @@ t2=fread(&quot;http://sars2.net/f/wondercanceryearlyten.csv&quot;)[cause%like%&q
 t2=merge(t2,std[,.(std=sum(std)),.(age=cul(age,unique(t2$age)))])
 merge(p,t2[,.(asmr10=sum(dead/pop*std)*1e5),year],all=T)</pre>
 </div>
-<p>So I don't know if Ethical Skeptic applied some of his usual adjustments to his plot, like his <span class="quote">&quot;excess MCD normalization&quot;</span> trick where he adds in a gradually increasing proportion of MCD deaths to his plot in addition to UCD deaths. Or maybe he included a part of deaths where the cause has not yet been resolved under cancer deaths. Or maybe he added in deaths that he estimated to be missing because of a registration delay, because he got even higher ASMR in 2024 than 2023.</p>
+<p>The reason why my yellow line has the big jump up between 2020 and 2021 is that CDC WONDER uses population estimates based on the 2010 census for 2020, but the population estimates of elderly age groups were reduced by several percent in the population estimates for 2020 that are based on the 2020 census:</p>
+<pre>t=fread(&quot;http://sars2.net/f/wondercanceryearlyten.csv&quot;)
+t[cause%like%&quot;Mal&quot;&amp;year==2020&amp;age==85,pop]
+# 6658420 (population size of ages 85+ in 2020 returned by CDC WONDER)
+
+old=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/national/asrh/nc-est2020-agesex-res.csv&quot;)
+old[SEX==0&amp;AGE%in%85:100,sum(POPESTIMATE2020)]
+# 6658420 (CDC WONDER is the same as the population estimates based on the 2010 census)
+
+new=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/nc-est2023-agesex-res.csv&quot;)
+new[SEX==0&amp;AGE%in%85:100,sum(POPESTIMATE2020)]
+# 6061016 (the estimate based on the 2020 census is about 9% lower than the estimate based on the 2010 census)</pre>
+<p>But anyway, the reason why Ethical Skeptic got the increase in ASMR since 2021 might be if applied some of his usual adjustments to his plot, like his <span class="quote">&quot;excess MCD normalization&quot;</span> trick where he adds in a gradually increasing proportion of MCD deaths to his plot in addition to UCD deaths. Or maybe he also added in deaths that he estimated to be missing because of a registration delay, because he got even higher ASMR in 2024 than 2023.</p>
 <h2>
 <a href=#Baseline_that_started_from_the_1970s_for_CMR_in_New_Zealand id=Baseline_that_started_from_the_1970s_for_CMR_in_New_Zealand>Baseline that started from the 1970s for CMR in New Zealand</a>
 </h2>
@@ -1789,6 +1801,79 @@ system(paste0(&quot;f=1.png;mar=30;w=`identify -format %w $f`;magick \\( $f -cho
 <p>I think Ethical Skeptic hasn't documented what precise calculation he used to determine the magnitude of the excess MCD normalization, or how he picked week 10 of 2022 as the date when he started applying the normalization or week 20 of 2023 as the date when he stopped increasing the amount of added deaths. If he didn't pick the variables programmatically but based on some kind of subjective criteria, it would be difficult for other people to reproduce his work systematically or so that they would be able to apply the same methodology to other causes of death.</p>
 <p>In any case in his plot which has the light orange line that shows the number of deaths with excess MCD normalization, he should've also included another line which would've showed the number of deaths without the normalization, so it would've been clearer to his followers what the magnitude of the normalization was and when it started.</p>
 <p>(Ethical Skeptic uses the acronym <span class="quote">&quot;MCoD&quot;</span> or <span class="quote">&quot;MCOD&quot;</span> to refer to multiple cause of death but CDC WONDER uses the acronym <span class="quote">&quot;MCD&quot;</span>, so I'm following the convention of CDC WONDER on this website.)</p>
+<p>Added later: Chris Martenson posted this reply to me: <span class="quote">&quot;I don't think we can explain that above-trend line jump with <span class="quote">'Covid.'</span> Covid can't explain anything in post-Omicron world, which is from Dec-21 onward. It just doesn't kill people in those numbers. Sure, it gets written down on death certs, but that's explained by incentives and poor reporting thresholds (<span class="quote">'with vs of'</span> and all that). So <span class="quote">'with MCD Covid'</span> is not a valid explanation to me.&quot;</span> [<a href="https://x.com/chrismartenson/status/1850667452901781740">https://x.com/chrismartenson/status/1850667452901781740</a>] I pointed out that here even during the Omicron spike in January 2022, deaths with UCD COVID account for about 77% of the extra MCD cancer deaths above the 2016-2019 baseline. And after that my baseline might actually be too low in case the real trend in the MCD to UCD cancer ratio is curved upwards:</p>
+<div class="width7">
+<img src="i/ethical-malignant-7.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2)
+
+t=fread(&quot;http://sars2.net/f/wondermalignantmonthly.csv&quot;)
+
+p=t[cause==&quot;MCD malignant neoplasms&quot;,.(date,dead,cause=&quot;COVID not subtracted&quot;)]
+
+p1=merge(p,t[cause==&quot;MCD malignant neoplasms and MCD COVID&quot;,.(and=dead,date)])[,.(date,dead=dead-nafill(and,,0),cause=&quot;MCD COVID subtracted&quot;)]
+p2=merge(p,t[cause==&quot;MCD malignant neoplasms and UCD COVID&quot;,.(and=dead,date)])[,.(date,dead=dead-nafill(and,,0),cause=&quot;UCD COVID subtracted&quot;)]
+p=rbind(p,p1,p2)
+
+p=merge(t[cause==&quot;UCD malignant neoplasms&quot;,.(date,under=dead)],p)
+
+p=p[date!=&quot;2024-10&quot;]
+p=p[,.(x=as.Date(paste0(date,&quot;-1&quot;)),y=dead/under*100,z=cause)]
+
+xstart=as.Date(&quot;1999-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
+xbreak=seq(xstart,xend,&quot;6 month&quot;)
+xlab=c(rbind(&quot;&quot;,1999:2024),&quot;&quot;)
+ybreak=pretty(p[z==&quot;COVID not subtracted&quot;,y]);ystart=ybreak[1];yend=max(ybreak)
+
+color=c(&quot;black&quot;,&quot;gray60&quot;,hsv(22/36,.8,1),&quot;black&quot;)
+
+months=seq(xstart,xend,&quot;month&quot;)
+p=rbind(p[,.(x,y,z)],p[z==&quot;COVID not subtracted&quot;&amp;year(x)%in%2016:2019,.(x=months,y=predict(lm(y~x),.(x=months)),z=&quot;2016-2019 linear trend&quot;)])
+
+p[,z:=factor(z,unique(z))]
+
+seg=p[x==D(&quot;2022-1-1&quot;)&amp;!z%like%&quot;MCD&quot;]
+
+ggplot(p,aes(x=x+14,y=y))+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray90&quot;,linewidth=.25)+
+geom_hline(yintercept=c(ystart,yend),linewidth=.25,lineend=&quot;square&quot;)+
+geom_vline(xintercept=c(xstart,xend),linewidth=.25,lineend=&quot;square&quot;)+
+geom_line(aes(color=z,linetype=z),linewidth=.3)+
+labs(title=&quot;CDC WONDER: Monthly deaths with cause C00-C97 (malignant neoplasms): MCD deaths as percentage of UCD deaths&quot;|&gt;stringr::str_wrap(70),x=NULL,y=NULL)+
+geom_segment(data=seg,aes(x=x-90,y=y,xend=x,yend=y),linewidth=.3,color=&quot;red&quot;,lineend=&quot;square&quot;)+
+annotate(geom=&quot;segment&quot;,x=seg$x[1]-90,xend=seg$x[1]-90,y=min(seg$y),yend=max(seg$y),lineend=&quot;square&quot;,color=&quot;red&quot;,linewidth=.3)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,labels=\(x)paste0(x,&quot;%&quot;))+
+scale_color_manual(values=color)+
+scale_linetype_manual(values=c(1,1,1,2))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
+  axis.ticks.x=element_line(color=alpha(&quot;black&quot;,c(1,0))),
+  axis.ticks=element_line(linewidth=.25,color=&quot;black&quot;),
+  axis.ticks.length=unit(3,&quot;pt&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.title=element_text(size=8),
+  legend.background=element_blank(),
+  legend.box.just=&quot;left&quot;,
+  legend.justification=c(0,1),
+  legend.key=element_blank(),
+  legend.key.height=unit(10,&quot;pt&quot;),
+  legend.key.width=unit(17,&quot;pt&quot;),
+  legend.position=c(0,1),
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.box.background=element_rect(fill=&quot;white&quot;,color=&quot;black&quot;,linewidth=.3),
+  legend.margin=margin(-2,5,4,4,&quot;pt&quot;),
+  legend.text=element_text(size=7,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  plot.margin=margin(5,5,5,5),
+  plot.title=element_text(size=7.6,margin=margin(2,,4)))
+ggsave(&quot;1.png&quot;,width=4.2,height=2.8,dpi=450)</pre>
+</div>
 <h2>
 <a href=#Files_for_population_estimates_by_single_year_of_age_up_to_ages_100 id=Files_for_population_estimates_by_single_year_of_age_up_to_ages_100>Files for population estimates by single year of age up to ages 100+</a>
 </h2>
