@@ -1252,35 +1252,27 @@ theme(axis.text=element_text(size=6.5,color=&quot;black&quot;),
 ggsave(&quot;1.png&quot;,width=4,height=2.8,dpi=400*4)
 system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 </div>
-<p>In Ethical Skeptic's plot the ASMR for malignant neoplasms in 2021 was about 148 per 100,000 people, but in my two previous plots it was about 180 and 186 instead, but it's probably because I used the 2020 resident population estimates as my standard population but he probably used the 2000 US standard population similar to the dataset at Statista.com. [<a href="https://seer.cancer.gov/stdpopulations/stdpop.19ages.html">https://seer.cancer.gov/stdpopulations/stdpop.19ages.html</a>] When I calculated ASMR otherwise the same way as in my previous plot but I switched my standard population to the 2000 US standard population, my ASMR for malignant neoplasms in 2021 was about 147 which was close to his figure, but the change of standard population mostly just affected the magnitude of the lines in my plot but their overall shape remained the same, so I still got lower ASMR in 2022 and 2023 than in 2021.</p>
-<p>So I don't know if Ethical Skeptic applied some of his usual adjustments to his plot, like his <span class="quote">&quot;excess MCD normalization&quot;</span> trick where he adds in a gradually increasing proportion of MCD deaths to his plot in addition to UCD deaths. Or maybe he included a part of deaths where the cause has not yet been resolved under cancer deaths. Or maybe he added in deaths that he estimated to be missing because of a registration delay, because he got even higher ASMR in 2024 than 2023.</p>
-<p>In the plot below I calculated ASMR using the same 2000 US standard population that was used at Statista, but I was unable to reproduce the historical ASMR before 2020 exactly, even though it might be because I calculated the ASMR by single year of age but the data at Statista may have used 5-year or 10-year age groups, or it might be because I multiplied the 2010-2020 population estimates for each age in 2011 to 2019 by a linear slope so they matched the newer population estimates in 2020:</p>
+<p>In the plot below I calculated ASMR using the same 2000 US standard population that was used at Statista.com. [<a href="https://seer.cancer.gov/stdpopulations/stdpop.19ages.html">https://seer.cancer.gov/stdpopulations/stdpop.19ages.html</a>] In the yellow line where I calculated ASMR using 10-year age groups and the population sizes returned by CDC WONDER, I was now able to reproduce the historical ASMR from 1999 up to 2017 exactly or nearly exactly. But my yellow line started to diverge from Ethical Skeptic's plot from 2018 onwards, so I guess he used data from 2018 onwards from CDC WONDER. However I was still not able to reproduce the increase in ASMR that Ethical Skeptic got from 2021 onwards:</p>
 <div class="width8">
-<img src="i/ethical-historical-cancer-5.png">
+<img src="i/ethical-historical-cancer-6.png">
 </div>
 <div class="spoiler">
 <button>
 Show code
-</button><pre>t=fread(&quot;http://sars2.net/f/wondercanceryearly.csv&quot;)[cause%like%&quot;Malignant&quot;]
+</button><pre>cul=\(x,y)y[cut(x,c(y,Inf),,T,F)]
+
+std=fread(&quot;http://sars2.net/f/us2000stdpop.csv&quot;)[,std:=std/sum(std)]
+
+t=fread(&quot;http://sars2.net/f/wondercanceryearly.csv&quot;)[cause%like%&quot;Mali&quot;][,cause:=sub(&quot;^UCD &quot;,&quot;&quot;,cause)]
 t=merge(t,fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)[,dead:=NULL])
-t=merge(fread(&quot;http://sars2.net/f/us2000stdpop.csv&quot;)[,std:=std/sum(std)],t)
-t[year%in%2010:2023,.(asmr=sum(dead/pop*std)*1e5),year]|&gt;print(r=F)
-# year     asmr
-# 2010 171.9271
-# 2011 169.0880
-# 2012 167.2358
-# 2013 164.5987
-# 2014 162.9694
-# 2015 160.7964
-# 2016 158.0356
-# 2017 155.2248
-# 2018 152.1956
-# 2019 149.2157
-# 2020 147.3787
-# 2021 145.6608
-# 2022 143.7187
-# 2023 141.6383</pre>
+t=merge(std,t)
+p=t[year%in%2010:2023,.(asmr1=sum(dead/pop*std)*1e5),year]
+
+t2=fread(&quot;http://sars2.net/f/wondercanceryearlyten.csv&quot;)[cause%like%&quot;Mal&quot;]
+t2=merge(t2,std[,.(std=sum(std)),.(age=cul(age,unique(t2$age)))])
+merge(p,t2[,.(asmr10=sum(dead/pop*std)*1e5),year],all=T)</pre>
 </div>
+<p>So I don't know if Ethical Skeptic applied some of his usual adjustments to his plot, like his <span class="quote">&quot;excess MCD normalization&quot;</span> trick where he adds in a gradually increasing proportion of MCD deaths to his plot in addition to UCD deaths. Or maybe he included a part of deaths where the cause has not yet been resolved under cancer deaths. Or maybe he added in deaths that he estimated to be missing because of a registration delay, because he got even higher ASMR in 2024 than 2023.</p>
 <h2>
 <a href=#Baseline_that_started_from_the_1970s_for_CMR_in_New_Zealand id=Baseline_that_started_from_the_1970s_for_CMR_in_New_Zealand>Baseline that started from the 1970s for CMR in New Zealand</a>
 </h2>
