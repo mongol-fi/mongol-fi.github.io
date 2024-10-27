@@ -1196,76 +1196,91 @@ system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 <div class="spoiler">
 <button>
 Show code
-</button><pre>library(data.table);library(ggplot2);library(stringr)
+</button><pre>library(data.table);library(ggplot2)
 
-t=fread(&quot;http://sars2.net/f/nzpopdead.csv&quot;)
-a=t[,.(dead=sum(dead),pop=sum(pop,na.rm=T)),.(age=pmin(age,95),year)]
+t=fread(&quot;http://sars2.net/f/wondercanceryearlyten.csv&quot;)
 
-nzcmr=fread(&quot;http://sars2.net/f/nzcmr.csv&quot;)
-p=nzcmr[year&gt;=1970,.(x=year,y=cmr,z=&quot;Actual CMR&quot;)]
+t=merge(t,t[year==2020&amp;cause==cause[1],.(age,std=pop/sum(pop))])
 
-lm=a[year%in%2010:2019,.(year=2010:2023,trend=predict(lm(dead/pop~year),.(year=2010:2023))),age]
-p=rbind(p,merge(a,lm)[,.(dead=sum(trend*pop),pop=sum(pop)),year][,.(y=dead/pop*1e5,z=&quot;2010-2019 trend in CMR by single year of age multiplied by population size&quot;),.(x=year)])
-
-p=rbind(p,nzcmr[year%in%1970:2019,.(x=1970:2023,y=predict(lm(cmr~year),.(year=1970:2023)),z=&quot;1970-2019 linear trend in CMR (like Ethical Skeptic&#39;s B baseline)&quot;)])
-
-owid=a[,.(dead=sum(dead)),year][year%in%2015:2019,.(year=2010:2023,owid=predict(lm(dead~year),.(year=2010:2023)))]
-p=rbind(p,merge(a[,.(pop=sum(pop)),year],owid)[,.(x=year,y=owid/pop*1e5,z=&quot;2015-2019 linear trend in deaths (like OWID)&quot;)])
-
-p$z=factor(p$z,unique(p$z))
-
-xstart=1970;xend=2023
-
-p=p[x&gt;=xstart&amp;x&lt;=xend]
+p=t[year%in%2010:2023,.(asmr=sum(dead/pop*std)*1e5),.(cause,year)]
+p[,cause:=factor(cause,sort(unique(p$cause),T))]
 
 cand=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
-ymin=min(p$y,na.rm=T);ymax=max(p$y,na.rm=T)
+ymin=min0(p$asmr);ymax=max0(p$asmr)
 ystep=cand[which.min(abs(cand-(ymax-ymin)/6))]
-yend=ymax
 ystart=ystep*floor(ymin/ystep)
+yend=ystep*ceiling(ymax/ystep)
 ybreak=seq(ystart,yend,ystep)
-ystart=ymin
 
-color=c(&quot;black&quot;,&quot;#00bb00&quot;,&quot;#0055ff&quot;,&quot;#ee0000&quot;,hsv(30/36,1,.8))
+xstart=2010;xend=2023
+xbreak=seq(xstart-.5,xend+.5,.5)
+xlab=c(rbind(&quot;&quot;,xstart:xend),&quot;&quot;)
 
-cap=&quot;    Source: infoshare.stats.govt.nz.&quot;
-cap=paste0(cap,&quot;\n    &quot;,&quot;In the green baseline, for example the CMR in 2023 was calculated by first calculating a trend in CMR for each age in 2010-2019, then the trend projected to 2023 was multiplied with the population size of each age in 2023 to get the expected deaths for each age group, and the expected deaths of all age groups were added together and then divided by the population size in 2023.&quot;|&gt;str_wrap(90))
-cap=paste0(cap,&quot;\n    &quot;,&quot;The red line was calculated by doing a linear regression for the raw number of deaths and by then dividing the projected trend with the population size to convert it to CMR.&quot;|&gt;str_wrap(90))
-
-ggplot(p,aes(x,y))+
+ggplot(p,aes(x=year,y=asmr,color=cause))+
+geom_vline(xintercept=seq(xstart-.5,xend+.5,5),linewidth=.3,color=&quot;gray80&quot;)+
 geom_vline(xintercept=c(xstart-.5,xend+.5),linewidth=.3,lineend=&quot;square&quot;)+
 geom_hline(yintercept=c(ystart,yend),linewidth=.3,lineend=&quot;square&quot;)+
-geom_line(aes(color=z),linewidth=.4)+
-geom_point(data=p[grep(&quot;Actual&quot;,z)],aes(color=z),size=.5,show.legend=F)+
-labs(title=&quot;Crude mortality rate in New Zealand (deaths per 100,000 people)&quot;,subtitle=cap,x=NULL,y=NULL)+
-scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=seq(1900,2100,5))+
+geom_line(linewidth=.3)+
+geom_point(size=.4)+
+labs(x=NULL,y=&quot;Deaths per 100,000 people&quot;,title=&quot;CDC WONDER: ASMR for underlying cause of death cancer&quot;,subtitle=&quot;ASMR was calculated by 10-year age groups using inaccurate population sizes returned by CDC WONDER.&quot;|&gt;stringr::str_wrap(82))+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=xbreak,labels=xlab)+
 scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
-scale_color_manual(values=color)+
+scale_color_manual(values=c(&quot;black&quot;,&quot;gray60&quot;))+
 coord_cartesian(clip=&quot;off&quot;,expand=F)+
-theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+theme(axis.text=element_text(size=6.5,color=&quot;black&quot;),
   axis.ticks=element_line(linewidth=.3),
+  axis.ticks.x=element_line(color=alpha(&quot;black&quot;,c(1,0))),
   axis.ticks.length=unit(3,&quot;pt&quot;),
-  legend.direction=&quot;vertical&quot;,
-  legend.background=element_rect(fill=alpha(&quot;white&quot;,.8)),
-  legend.key.height=unit(9,&quot;pt&quot;),
+  axis.title=element_text(size=7),
+  legend.background=element_blank(),
+  legend.box.background=element_rect(fill=&quot;white&quot;,color=&quot;black&quot;,linewidth=.3),
+  legend.box.just=&quot;left&quot;,
+  legend.justification=c(1,1),
   legend.key.width=unit(15,&quot;pt&quot;),
-  legend.key=element_rect(fill=&quot;white&quot;),
-  legend.box.spacing=unit(2,&quot;pt&quot;),
-  legend.margin=margin(,,3),
-  legend.justification=c(0,1),
-  legend.position=&quot;bottom&quot;,
-  legend.spacing.x=unit(1.5,&quot;pt&quot;),
-  legend.text=element_text(size=7),
+  legend.key.height=unit(11,&quot;pt&quot;),
+  legend.key=element_rect(fill=alpha(&quot;white&quot;,0)),
+  legend.margin=margin(-2,5,4,5),
+  legend.position=c(1,1),
+  legend.spacing.x=unit(.15,&quot;lines&quot;),
+  legend.text=element_text(size=7,vjust=.5),
   legend.title=element_blank(),
-  panel.grid.major=element_blank(),
-  panel.background=element_rect(fill=&quot;white&quot;),
-  plot.margin=margin(3,5,4,4),
-  plot.subtitle=element_text(size=6.7,margin=margin(0,0,4,0)),
-  plot.title=element_text(size=7.5,face=&quot;bold&quot;,margin=margin(2,0,4,0)))
-ggsave(&quot;1.png&quot;,width=4.2,height=3.7,dpi=400*4)
+  panel.background=element_blank(),
+  panel.grid=element_blank(),
+  plot.margin=margin(5,5,5,5),
+  plot.subtitle=element_text(size=7,margin=margin(,,4)),
+  plot.title=element_text(size=7.3,face=2,margin=margin(2,,4)))
+ggsave(&quot;1.png&quot;,width=4,height=2.8,dpi=400*4)
 system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 </div>
-<p>I don't know if Ethical Skeptic applied some of his usual adjustments to his plot, like his <span class="quote">&quot;excess MCD normalization&quot;</span> trick where he adds in a gradually increasing proportion of MCD deaths to his plot in addition to UCD deaths. Or maybe he included a part of deaths where the cause has not yet been resolved under cancer deaths. Or maybe he added in deaths that he estimated to be missing because of a registration delay, because he got even higher ASMR in 2024 than 2023.</p>
+<p>In Ethical Skeptic's plot the ASMR for malignant neoplasms in 2021 was about 148 per 100,000 people, but in my two previous plots it was about 180 and 186 instead, but it's probably because I used the 2020 resident population estimates as my standard population but he probably used the 2000 US standard population similar to the dataset at Statista.com. [<a href="https://seer.cancer.gov/stdpopulations/stdpop.19ages.html">https://seer.cancer.gov/stdpopulations/stdpop.19ages.html</a>] When I calculated ASMR otherwise the same way as in my previous plot but I switched my standard population to the 2000 US standard population, my ASMR for malignant neoplasms in 2021 was about 147 which was close to his figure, but the change of standard population mostly just affected the magnitude of the lines in my plot but their overall shape remained the same, so I still got lower ASMR in 2022 and 2023 than in 2021.</p>
+<p>So I don't know if Ethical Skeptic applied some of his usual adjustments to his plot, like his <span class="quote">&quot;excess MCD normalization&quot;</span> trick where he adds in a gradually increasing proportion of MCD deaths to his plot in addition to UCD deaths. Or maybe he included a part of deaths where the cause has not yet been resolved under cancer deaths. Or maybe he added in deaths that he estimated to be missing because of a registration delay, because he got even higher ASMR in 2024 than 2023.</p>
+<p>In the plot below I calculated ASMR using the same 2000 US standard population that was used at Statista, but I was unable to reproduce the historical ASMR before 2020 exactly, even though it might be because I calculated the ASMR by single year of age but the data at Statista may have used 5-year or 10-year age groups, or it might be because I multiplied the 2010-2020 population estimates for each age in 2011 to 2019 by a linear slope so they matched the newer population estimates in 2020:</p>
+<div class="width8">
+<img src="i/ethical-historical-cancer-5.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>t=fread(&quot;http://sars2.net/f/wondercanceryearly.csv&quot;)[cause%like%&quot;Malignant&quot;]
+t=merge(t,fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)[,dead:=NULL])
+t=merge(fread(&quot;http://sars2.net/f/us2000stdpop.csv&quot;)[,std:=std/sum(std)],t)
+t[year%in%2010:2023,.(asmr=sum(dead/pop*std)*1e5),year]|&gt;print(r=F)
+# year     asmr
+# 2010 171.9271
+# 2011 169.0880
+# 2012 167.2358
+# 2013 164.5987
+# 2014 162.9694
+# 2015 160.7964
+# 2016 158.0356
+# 2017 155.2248
+# 2018 152.1956
+# 2019 149.2157
+# 2020 147.3787
+# 2021 145.6608
+# 2022 143.7187
+# 2023 141.6383</pre>
+</div>
 <h2>
 <a href=#Baseline_that_started_from_the_1970s_for_CMR_in_New_Zealand id=Baseline_that_started_from_the_1970s_for_CMR_in_New_Zealand>Baseline that started from the 1970s for CMR in New Zealand</a>
 </h2>
@@ -1274,7 +1289,7 @@ system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 <img src="i/ethical-nz.jpg">
 </div>
 <p>The y-axis of Ethical Skeptic's plot says <span class="quote">&quot;deaths per 1000 people&quot;</span> but the values on the y-axis are over 6,000, so I don't know if it's supposed to mean deaths per million people.</p>
-<p>For some reason Ethical Skeptic calculated CMR for segments of 5 years grouped together. The A baseline roughly looks like it's fitted against the last 5-year segment displayed in the plot (or it's hard to tell if the last segment is actually a 4-year segment like in my plot below). But OWID's baseline is not even calculated based on CMR but based on the raw number of deaths. His plot would've been more clear if it would've showed the CMR for each individual year and not for the 5-year blocks, and if he would've calculated the 2015-2019 linear trend in deaths based on the raw number of deaths and then converted it to CMR by dividing it by the population size, so then it would've been closer to the baseline that is actually used by OWID.</p>
+<p>In the tweet above for some reason Ethical Skeptic calculated CMR for segments of 5 years grouped together. His A baseline roughly looks like it's fitted against the last 5-year segment displayed in the plot (or it's hard to tell if the last segment is actually a 4-year segment like in my plot below). But OWID's baseline is not even calculated based on CMR but based on the raw number of deaths. His plot would've been more clear if it would've showed the CMR for each individual year and not for the 5-year blocks, and if he would've calculated the 2015-2019 linear trend in deaths based on the raw number of deaths and then converted it to CMR by dividing it by the population size, so then it would've been closer to the baseline that is actually used by OWID.</p>
 <p>I wasn't able to reproduce Ethical Skeptic's plot perfectly, but I think he used a method similar to this to calculate CMR for the 5-year blocks:</p>
 <div class="width7">
 <img src="i/ethical-nz-2.png">
@@ -1719,8 +1734,8 @@ t[,base:=base*pop]
 
 p=t[,.(base=sum(base),dead=sum(dead)),.(date=month,cause)]
 
-and=fread(&quot;http://sars2.net/f/wondermalignantmcdandcovidmcd.csv&quot;)
-and=and[,month:=as.Date(paste0(month,&quot;-1&quot;))][,.(date=month,andcovid=dead/days_in_month(month))]
+and=fread(&quot;http://sars2.net/f/wondermalignantmcdandcovidmcd.csv&quot;)[age==&quot;all&quot;]
+and=and[,date:=as.Date(paste0(date,&quot;-1&quot;))][,.(date,andcovid=dead/days_in_month(date))]
 p=rbind(p,merge(and,p[cause%like%&quot;Multiple&quot;])[,.(date,base=NA,cause=&quot;Multiple cause of death C00-C97 but not COVID&quot;,dead=dead-andcovid)])
 
 xstart=as.Date(&quot;2015-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
@@ -1787,7 +1802,7 @@ system(paste0(&quot;f=1.png;mar=30;w=`identify -format %w $f`;magick \\( $f -cho
 </h2>
 <p>One annoying feature at CDC WONDER is that it doesn't return population sizes for ages 85 and above, even though the US Census Bureau has published population estimates by single year of age up to ages 100+ from 2010 onwards. The 2000-2010 population estimates by single year of age only go up to ages 85+ however, so in the following code I only included population estimates for 2010 and later years.</p>
 <p>The code below downloads the 2010-2020 resident population estimates that are based on the 2010 census and the 2020-2023 resident population estimates that are based on the 2020 census: <a href="https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/national/asrh/">https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/national/asrh/</a>, <a href="https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/">https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/</a>.</p>
-<p>In order to get rid of a sudden jump in the population estimates at the point when the new and old estimates are merged, the old estimates are multiplied by a linear slope so that they are the same in 2020 as the new estimates. For example for the age 80, the new population estimate for 2020 is 1,450,396 and the old estimate is 1,526,957 so their ratio is about 0.9499, so I'm multiplying the old estimate by about <code>1-(6/10)*(1-0.9499)</code> for 2016, by about <code>1-(7/10)*(1-0.9499)</code> for 2017, and so on. (I'm not sure if COVID deaths in the first half of 2020 are accounted for in the mid-year population estimates for 2020, but if they are then a slight problem with my approach is that COVID deaths are reflected in the slope by which the 2010-2019 estimates are multiplied.)</p>
+<p>In order to get rid of a sudden jump in the population estimates at the point when the new and old estimates are merged, the old estimates are multiplied by a linear slope so that they are the same in 2020 as the new estimates. For example for the age 80, the new population estimate for 2020 is 1,450,396 and the old estimate is 1,526,957 so their ratio is about 0.9499, so I'm multiplying the old estimate by about <code>1-(1/10)*(1-0.9499)</code> for 2011, by about <code>1-(2/10)*(1-0.9499)</code> for 2012, and so on. (I'm not sure if COVID deaths in the first half of 2020 are accounted for in the mid-year population estimates for 2020, but if they are then a slight problem with my approach is that COVID deaths are reflected in the slope by which the 2010-2019 estimates are multiplied.)</p>
 <p>CDC WONDER uses vintage 2021 population estimates for 2021, vintage 2022 estimates for 2022, and so on, but here I'm using vintage 2023 population estimates for 2020 to 2023 and vintage 2020 estimates for 2010 to 2019.</p>
 <p>I also added a column for the yearly number of deaths for each age at CDC WONDER as of October 2024.</p>
 <pre>new=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/nc-est2023-agesex-res.csv&quot;)
@@ -2226,7 +2241,7 @@ Show code
 
 kimi=\(x){na=is.na(x);x[na]=0;e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;x[]=ifelse(abs(x)&lt;1e3,round(x),paste0(sprintf(paste0(&quot;%.&quot;,ifelse(e%%3==0,1,0),&quot;f&quot;),x/1e3^(e2-1)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2]));x[na]=&quot;NA&quot;;x}
 
-t=fread(&quot;http://sars2.net/f/wondericd.csv&quot;)
+t=fread(&quot;http://sars2.net/f/wondericd.csv.gz&quot;)
 t=t[type==&quot;MCD&quot;&amp;year!=2024&amp;code%like%&quot;N0[0-7]|N1[789]|N2[567]&quot;]
 
 m=t[,xtabs(dead~paste0(code,&quot;: &quot;,cause)+year)]
@@ -2244,9 +2259,75 @@ pheatmap::pheatmap(m^exp,filename=&quot;1.png&quot;,
 
 system(&quot;w=`identify -format %w 1.png`;pad=20;magick -pointsize 44 -font Arial-Bold \\( -size $[w-pad] caption:&#39;CDC WONDER: Yearly deaths by multiple cause of death&#39; -splice $[pad]x24 \\) 1.png -append 1.png&quot;)</pre>
 </div>
-<p>However from the next table which shows deaths by UCD instead of MCD, you can see that N17.9 isn't as common as an underlying cause of death as N18.5 (<span class="quote">&quot;chronic kidney disease, stage 5&quot;</span>), and there hasn't been any clear increase in deaths with UCD N18.5 since 2019:</p>
+<p>However from the next table which shows deaths by UCD instead of MCD, you can see that acute renal failure isn't as common as an underlying cause of death as chronic kidney disease, and deaths with UCD chronic kidney disease have remained stable since 2019:</p>
 <div class="width10">
 <img src="i/ethical-kidney-4.png">
+</div>
+<p>I thought that there might have been some particular underlying cause of death that would've accounted for the increase in deaths from MCD acute renal failure, but the deaths seem to be distributed across various underlying causes apart from about 70,000 deaths with UCD COVID. John Beaudoin has been saying that there have been about 155,000 excess deaths from acute renal failure in the United States, but he means MCD and not UCD deaths, and about half of his 155,000 excess deaths seem to have the underlying cause COVID:</p>
+<div class="width6">
+<img src="i/ethical-kidney-5.png">
+</div>
+<p>In the UK there has actually been a large decrease in deaths with UCD acute renal failure (N17) since 2018, even though UCD chronic kidney disease (N18) has remained more stable: [<a href="https://www.nomisweb.co.uk/query/161.1/advanced.aspx">https://www.nomisweb.co.uk/query/161.1/advanced.aspx</a>]</p>
+<div class="width7">
+<img src="i/ethical-kidney-6.png">
+</div>
+<p>However the yearly number of new N17 diagnoses in England has remained stable (or it has slightly increased at a pace which is consistent with the aging population): [<a href="https://digital.nhs.uk/data-and-information/publications/statistical/hospital-admitted-patient-care-activity">https://digital.nhs.uk/data-and-information/publications/statistical/hospital-admitted-patient-care-activity</a>]</p>
+<pre>dlf=\(x,y,...){if(missing(y))y=sub(&quot;.*/&quot;,&quot;&quot;,x);for(i in 1:length(x))download.file(x[i],y[i],quiet=T,...)}
+dlf(&quot;https://files.digital.nhs.uk/89/67CEF6/hosp-epis-stat-admi-diag-2023-24-tab.xlsx&quot;)
+dlf(&quot;https://files.digital.nhs.uk/7A/DB1B00/hosp-epis-stat-admi-diag-2022-23-tab_V2.xlsx&quot;)
+dlf(&quot;https://files.digital.nhs.uk/0E/E70963/hosp-epis-stat-admi-diag-2021-22-tab.xlsx&quot;)
+dlf(&quot;https://files.digital.nhs.uk/5B/AD892C/hosp-epis-stat-admi-diag-2020-21-tab.xlsx&quot;)
+dlf(&quot;https://files.digital.nhs.uk/37/8D9781/hosp-epis-stat-admi-diag-2019-20-tab%20supp.xlsx&quot;)
+dlf(&quot;https://files.digital.nhs.uk/1C/B2AD9B/hosp-epis-stat-admi-diag-2018-19-tab.xlsx&quot;)
+dlf(&quot;https://files.digital.nhs.uk/B2/5CEC8D/hosp-epis-stat-admi-diag-2017-18-tab.xlsx&quot;)
+dlf(&quot;https://files.digital.nhs.uk/publication/7/d/hosp-epis-stat-admi-diag-2016-17-tab.xlsx&quot;)
+dlf(&quot;https://files.digital.nhs.uk/publicationimport/pub22xxx/pub22378/hosp-epis-stat-admi-diag-2015-16-tab.xlsx&quot;)
+
+r=do.call(rbind,lapply(2015:2023,\(i){
+  t=data.table(readxl::read_excel(Sys.glob(paste0(&quot;hosp-epis-stat-admi-diag-&quot;,i,&quot;*&quot;)),sheet=3))
+  t[grep(&quot;^N17&quot;,t[[1]]),.(cause=paste0(.SD[[1]],&quot;: &quot;,.SD[[2]]),count=as.integer(.SD[[8]]),year=i)]}))
+
+print(r,r=F) # the years start in April and end in March of the next year
+#                    cause  count year
+# N17: Acute renal failure  95538 2015
+# N17: Acute renal failure  98821 2016
+# N17: Acute renal failure  99761 2017
+# N17: Acute renal failure 106608 2018
+# N17: Acute renal failure 108103 2019
+# N17: Acute renal failure 104132 2020
+# N17: Acute renal failure 111538 2021
+# N17: Acute renal failure 110844 2022
+# N17: Acute renal failure 111169 2023</pre>
+<p>In the Czech Republic there was an increasing trend in the number of deaths with UCD N17 before COVID, but the number of deaths from 2020 onwards roughly fell along the prepandemic trend, except 2021 was slightly above the trend and 2022 was slightly below the trend: [<a href=czech2.html#Deaths_by_ICD_code_region_age_group_and_year>czech2.html#Deaths_by_ICD_code_region_age_group_and_year</a>]</p>
+<div class="width5">
+<img src="i/ethical-kidney-7.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>t=fread(&quot;http://sars2.net/f/czicd.csv.gz&quot;)
+
+p=t[icd==&quot;N17&quot;,.(dead=sum(dead)),year]
+p$trend=p[year&lt;2020,predict(lm(dead~year),p)]
+
+png(&quot;1.png&quot;,1500,900,res=300)
+par(mar=c(2.6,2.7,1.8,.7),mgp=c(0,.6,0),adj=0,lend=&quot;square&quot;)
+
+tit=&quot;Deaths with UCD N17 (acute renal failure) in Czechia&quot;
+leg=c(&quot;Deaths with UCD N17&quot;,&quot;2013-2019 linear trend&quot;)
+
+ybreak=pretty(c(0,p$dead,p$trend));ylim=range(ybreak)
+xstart=min(p$year);xend=max(p$year)
+xbreak=xstart:xend
+
+plot(p$year,p$trend,type=&quot;n&quot;,main=tit,xlab=NA,ylab=NA,xaxs=&quot;i&quot;,yaxs=&quot;i&quot;,yaxt=&quot;n&quot;,xaxt=&quot;n&quot;,ylim=ylim,xlim=c(xstart-.5,xend+.5),cex.main=1)
+axis(2,at=ybreak,las=1)
+mtext(xbreak,side=1,line=.3,at=xbreak,las=2)
+lines(p$year,p$dead,lwd=1.5)
+points(p$year,p$dead,pch=20,cex=.6)
+lines(p$year,p$trend,type=&quot;l&quot;,lty=2,lwd=1.5)
+legend(&quot;topleft&quot;,legend=leg,lty=c(1,2),lwd=1.5)
+dev.off()</pre>
 </div>
 <script>
 let q=document.querySelectorAll('a,code,pre')

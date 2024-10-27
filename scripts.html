@@ -54,6 +54,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
   blockquote,.quote{color:hsl(30,65%,30%)}
   blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(30,45%,50%)}
   blockquote blockquote blockquote,blockquote .quote .quote,.quote .quote .quote{color:hsl(30,70%,60%)}
+  .spoiler{display:none}
 }
 </style>
 <title>Shell and R code for genetic analysis of SARS-like viruses</title>
@@ -2063,9 +2064,49 @@ $ seqkit seq -s sv40.fa|awk &#39;{for(i=1;;i++){delete a;for(j=1;j&lt;=length-i+
 72 73 144 GGTGTGGAAAGTCCCCAGGCTCCCCAGCAGGCAGAAGTATGCAAAGCATGCATCTCAATTAGTCAGCAACCA</pre>
 <p>From the output above, you can see that the SV40 promoter sequence starts with a tandem repeat where the same 72-base segment is repeated twice in a row.</p>
 <p>This finds palindromes, which are sequences that are identical to their reverse complement:</p>
-<pre>x=$(seqkit replace -p&#39;.* ([^ ]*),.*&#39; -r\$1 input.fa|seqkit replace -sip&#39;a*$&#39;);paste &lt;(seqkit fx2tab&lt;&lt;&lt;&quot;$x&quot;|cut -f-2) &lt;(seqkit seq -rp&lt;&lt;&lt;&quot;$x&quot;|seqkit seq -s)|awk -F\\t &#39;{max=length($2);for(len=startlen;;len+=2){found=0;for(i=1;i&lt;=max-len+1;i++){fw=substr($2,i,len);rev=substr($3,max-len-i+2,len);if(fw==rev){found=1;print len,i,fw,$1}}if(!found)next}}&#39; startlen=10</pre>
+<pre>$ x=$(seqkit replace -p&#39;.* ([^ ]*),.*&#39; -r\$1 sars2.fa|seqkit replace -sip&#39;a*$&#39;);paste &lt;(seqkit fx2tab&lt;&lt;&lt;&quot;$x&quot;|cut -f-2) &lt;(seqkit seq -rp&lt;&lt;&lt;&quot;$x&quot;|seqkit seq -s)|awk -F\\t &#39;{max=length($2);for(len=startlen;;len+=2){found=0;for(i=1;i&lt;=max-len+1;i++){fw=substr($2,i,len);rev=substr($3,max-len-i+2,len);if(fw==rev){found=1;print len,i,fw,$1}}if(!found)next}}&#39; startlen=16
+16 5747 ACTGGTAATTACCAGT Wuhan-Hu-1
+16 6089 AACCAGTTAACTGGTT Wuhan-Hu-1
+16 22901 GGTAATTATAATTACC Wuhan-Hu-1
+18 5746 CACTGGTAATTACCAGTG Wuhan-Hu-1
+20 5745 ACACTGGTAATTACCAGTGT Wuhan-Hu-1</pre>
 <p>This finds mirror repeats, which are sequences that are identical to their reversed form without taking a complement of the nucleotides:</p>
-<pre>seqkit replace -p&#39;.* ([^ ]*),.*&#39; -r\$1 input.fa|seqkit replace -sip&#39;a*$&#39;|seqkit fx2tab|awk -F\\t &#39;{for(len=startlen;;len++){found=0;for(i=1;i&lt;=length($2)-len+1;i++){fw=substr($2,i,len);rev=&quot;&quot;;for(j=len;j&gt;=1;j--)rev=rev substr(fw,j,1);if(fw==rev){found=1;print len,i,fw,$1}}if(found==0&amp;&amp;prevfound==0)next;prevfound=found}}&#39; startlen=10</pre>
+<pre>$ seqkit replace -p&#39;.* ([^ ]*),.*&#39; -r\$1 sars2.fa|seqkit replace -sip&#39;a*$&#39;|seqkit fx2tab|awk -F\\t &#39;{for(len=startlen;;len++){found=0;for(i=1;i&lt;=length($2)-len+1;i++){fw=substr($2,i,len);rev=&quot;&quot;;for(j=len;j&gt;=1;j--)rev=rev substr(fw,j,1);if(fw==rev){found=1;print len,i,fw,$1}}if(found==0&amp;&amp;prevfound==0)next;prevfound=found}}&#39; startlen=16
+16 9979 CAATGACTTCAGTAAC Wuhan-Hu-1
+18 9978 TCAATGACTTCAGTAACT Wuhan-Hu-1
+20 9977 CTCAATGACTTCAGTAACTC Wuhan-Hu-1</pre>
+<p>This finds all direct repeats of 15 bases:</p>
+<pre>$ seqkit head -n2 sarbe.fa|seqkit seq -g|seqkit replace -p&#39;(,|surface|ORF|orf).*&#39;|seqkit replace -sip&#39;a*$&#39;|seqkit fx2tab|awk -F\\t &#39;{l=length($2);delete count;delete pos;for(i=1;i&lt;=l-len+1;i++){motif=substr($2,i,len);count[motif]++;pos[motif][i]}for(i in count)if(count[i]&gt;1){o=i;for(j in pos[i])o=o&quot; &quot;j;print NR,o&quot;;&quot;$1}}&#39; len=15|awk &#39;$2!~/[nN]/&#39;|sort -nk3|sort -snk1,1|cut -d\  -f2-|sed &#39;s/ /;/&#39;
+cacttacgcagtata;76 9741;OR233295.1 Horseshoe bat sarbecovirus isolate Rt17DN420
+acttacgcagtataa;77 9742;OR233295.1 Horseshoe bat sarbecovirus isolate Rt17DN420
+aaaagaaaaagactg;1092 29142;OR233295.1 Horseshoe bat sarbecovirus isolate Rt17DN420
+aaagaaaaagactga;1093 29143;OR233295.1 Horseshoe bat sarbecovirus isolate Rt17DN420
+agtacggaagtttct;7889 23609;OR233295.1 Horseshoe bat sarbecovirus isolate Rt17DN420
+gtacggaagtttctg;7890 23610;OR233295.1 Horseshoe bat sarbecovirus isolate Rt17DN420
+taaacgaacatgaaa;27133 27639;OR233295.1 Horseshoe bat sarbecovirus isolate Rt17DN420
+aaaagaaaaagactg;1108 29181;OR233321.1 Horseshoe bat sarbecovirus isolate Rt22QT53
+aaagaaaaagactga;1109 29182;OR233321.1 Horseshoe bat sarbecovirus isolate Rt22QT53
+gaagaagaagaagaa;3159 3162;OR233321.1 Horseshoe bat sarbecovirus isolate Rt22QT53
+aagaagaagaagaag;3160 3163;OR233321.1 Horseshoe bat sarbecovirus isolate Rt22QT53
+agaagaagaagaaga;3161 3164;OR233321.1 Horseshoe bat sarbecovirus isolate Rt22QT53
+ctaaacgaacatgaa;21430 27674;OR233321.1 Horseshoe bat sarbecovirus isolate Rt22QT53
+taaacgaacatgaaa;27169 27675;OR233321.1 Horseshoe bat sarbecovirus isolate Rt22QT53</pre>
+<p>This finds tandem repeats, which are direct repeats that occur twice in a row with no bases in between. The columns are length, starting position, repeated motif, and sequence name. Tandem repeats are rare in sarbecoviruses, so here I only found two tandem repeats longer than 10 bases in sarbecoviruses:</p>
+<pre>$ seqkit seq -g sarbe.fa|seqkit grep -sivp n|seqkit replace -p&#39;(,|surface|ORF|orf).*&#39;|seqkit replace -sip&#39;a*$&#39;|seqkit fx2tab|awk -F\\t &#39;{l=length($2);for(len=10;;len++){found=0;delete count;delete pos;for(i=1;i&lt;=l-len+1;i++){motif=substr($2,i,len);count[motif]++;pos[motif][i]}for(i in count)if(count[i]&gt;1){found=1;o=&quot;&quot;;for(j in pos[i])if((j+len)in pos[i]&amp;&amp;i!~/^[aA]*$|[nN]/)print NR,len,j,(j+len),i&quot;;&quot;$1}if(!found)next}}&#39;
+21 1901 tgcagcaaaccactcaattcc;OR233291.1 Horseshoe bat sarbecovirus isolate Ra21CB8
+21 1902 gcagcaaaccactcaattcct;OR233291.1 Horseshoe bat sarbecovirus isolate Ra21CB8
+21 1903 cagcaaaccactcaattcctg;OR233291.1 Horseshoe bat sarbecovirus isolate Ra21CB8
+21 5 tccaggaaaagccaaccaacc;DQ640652.1 SARS coronavirus GDH-BJH01
+21 6 ccaggaaaagccaaccaacct;DQ640652.1 SARS coronavirus GDH-BJH01
+21 7 caggaaaagccaaccaacctc;DQ640652.1 SARS coronavirus GDH-BJH01
+15 29288 aaaaaaaaaaaaaac;OQ401249.1 MAG: Sarbecovirus RfGB02
+15 29289 aaaaaaaaaaaaaca;OQ401249.1 MAG: Sarbecovirus RfGB02
+15 29290 aaaaaaaaaaaacaa;OQ401249.1 MAG: Sarbecovirus RfGB02
+15 29291 aaaaaaaaaaacaaa;OQ401249.1 MAG: Sarbecovirus RfGB02
+15 29292 aaaaaaaaaacaaaa;OQ401249.1 MAG: Sarbecovirus RfGB02
+15 29293 aaaaaaaaacaaaaa;OQ401249.1 MAG: Sarbecovirus RfGB02
+15 29294 aaaaaaaacaaaaaa;OQ401249.1 MAG: Sarbecovirus RfGB02
+15 29295 aaaaaaacaaaaaaa;OQ401249.1 MAG: Sarbecovirus RfGB02</pre>
 <h2>
 <a href=#Find_GISAID_samples_with_lowest_mutation_distance_to_RaTG13 id=Find_GISAID_samples_with_lowest_mutation_distance_to_RaTG13>Find GISAID samples with lowest mutation distance to RaTG13</a>
 </h2>
