@@ -1213,7 +1213,7 @@ new[SEX==0&amp;AGE%in%85:100,sum(POPESTIMATE2020)]
 <div class="width7">
 <img src="i/ethical-historical-cancer-10.png">
 </div>
-<p>I also don't think the SV40 virus would've caused so many cases of cancer that it would've been the primary determinant of the rise and fall in cancer mortality in the United States since the 1950s. The plots below show that the increase in cancer mortality up to around 1990 seems to have been mainly driven by lung cancer, because the ASMR of other types of cancer was mostly flat or falling from 1950 to 1990. And a large part of the decrease in cancer ASMR since 1990 seems to also be due to a decrease in lung cancer. So did the SV40 virus disproportionately cause lung cancer as opposed to other types of cancer? [<a href="https://www.cancer.org/content/dam/cancer-org/research/cancer-facts-and-statistics/annual-cancer-facts-and-figures/2024/2024-cancer-facts-and-figures-acs.pdf">https://www.cancer.org/content/dam/cancer-org/research/cancer-facts-and-statistics/annual-cancer-facts-and-figures/2024/2024-cancer-facts-and-figures-acs.pdf</a>]</p>
+<p>Ethical Skeptic's plot seems to imply that the SV40 virus would've been the primary determinant of the rise and fall in cancer mortality in the United States since the 1950s. But the plots below show that the increase in cancer mortality up to around 1990 seems to have been mainly driven by lung cancer, because the ASMR of other types of cancer mostly decreased or remained flat from 1950 to 1990. And a large part of the decrease in cancer ASMR since 1990 seems to also be due to a decrease in lung cancer. So did the SV40 virus disproportionately cause lung cancer as opposed to other types of cancer? [<a href="https://www.cancer.org/content/dam/cancer-org/research/cancer-facts-and-statistics/annual-cancer-facts-and-figures/2024/2024-cancer-facts-and-figures-acs.pdf">https://www.cancer.org/content/dam/cancer-org/research/cancer-facts-and-statistics/annual-cancer-facts-and-figures/2024/2024-cancer-facts-and-figures-acs.pdf</a>]</p>
 <div class="maxwidth">
 <img src=i/ethical-historical-cancer-7.png class=width7><img src=i/ethical-historical-cancer-9.png class=width7>
 </div>
@@ -1818,13 +1818,13 @@ ggsave(&quot;1.png&quot;,width=4.2,height=2.8,dpi=450)</pre>
 </h2>
 <p>The following code corrects these shortcomings of the population estimates returned by CDC WONDER:</p>
 <ul>
-<li>CDC WONDER takes several months to add new population estimates after they get published by the US Census Bureau. For example the Census Bureau had already published population estimates for 2023 in May 2024, but as of October 2024 CDC WONDER was still using the 2022 population estimates for 2023.</li>
+<li>CDC WONDER takes about a year to add the new resident population estimates published by the US Census Bureau. For example the Census Bureau published mid-year resident population population for 2023 in December 2023, but as of October 2024 CDC WONDER was still using the 2022 population estimates for 2023.</li>
 <li>CDC WONDER doesn't return population sizes for ages 85 and above, even though the US Census Bureau has published population estimates by single year of age up to ages 100+ from 2010 onwards. (The 2000-2010 population estimates by single year of age only go up to ages 85+ however, so in the following code I only included population estimates for 2010 and later years.)</li>
-<li>CDC WONDER uses population estimates based on the 2010 census for 2010 to 2020 but population estimates based on the 2020 census for 2021 and later years, so some age groups have a big jump in the population size between 2020 and 2021.</li>
+<li>CDC WONDER uses population estimates based on the 2010 census for 2010 to 2020 but population estimates based on the 2020 census for 2021 and later years, so some age groups have a big jump in the population size between 2020 and 2021. The same problem does not exist between the switch from the estimates based on the 2000 census to the estimates based on the 2010 census, because CDC WONDER uses 2000-2010 intercensal estimates for 2000-2009 which have eliminated the jump in population size between 2010 and 2011, but the 2010-2020 intercensal estimates will only be published in 2025.</li>
 <li>CDC WONDER uses vintage 2021 population estimates for 2021, vintage 2022 estimates for 2022, and so on, even though in later vintages the earlier estimates have often been revised considerably which might be because more mortality data had become available.</li>
 </ul>
 <p>The following code downloads the 2010-2020 resident population estimates that are based on the 2010 census and the 2020-2023 resident population estimates that are based on the 2020 census: <a href="https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/national/asrh/">https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/national/asrh/</a>, <a href="https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/">https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/</a>.</p>
-<p>In order to get rid of a sudden jump in the population estimates at the point when the new and old estimates are merged, the old estimates are multiplied by a linear slope so that they are the same in 2020 as the new estimates. For example for the age 80, the new population estimate for 2020 is 1,450,396 and the old estimate is 1,526,957 so their ratio is about 0.9499, so I'm multiplying the old estimate by about <code>1-(1/10)*(1-0.9499)</code> for 2011, by about <code>1-(2/10)*(1-0.9499)</code> for 2012, and so on. (I'm not sure if COVID deaths in the first half of 2020 are accounted for in the mid-year population estimates for 2020, but if they are then a slight problem with my approach is that COVID deaths are reflected in the slope by which the population estimates for 2011 to 2019 are multiplied.)</p>
+<p>In order to get rid of a sudden jump in the population estimates at the point when the new and old estimates are merged, the old estimates are multiplied by a linear slope so that they are the same in 2020 as the new estimates. For example for the age 80, the vintage 2023 population estimate for 2020 is 1,450,396 and the vintage 2020 estimate for 2020 is 1,526,957, so their ratio is about 0.9499, so I'm multiplying the old estimate by about <code>.9+.1*0.9499</code> for 2011, by about <code>.8+.2*0.9499</code> for 2012, and so on. (I'm not sure if COVID deaths in the first half of 2020 are accounted for in the mid-year population estimates for 2020, but if they are then a slight problem with my approach is that COVID deaths are reflected in the slope by which the population estimates for 2011 to 2019 are multiplied.)</p>
 <pre>old=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/national/asrh/nc-est2020-agesex-res.csv&quot;)
 new=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/nc-est2023-agesex-res.csv&quot;)
 
@@ -1915,6 +1915,23 @@ ggsave(&quot;1.png&quot;,width=4.4,height=4.4,dpi=350*4)
 system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 </div>
 <p>The reason why the population size of ages 90+ decreased by over 10% in the new population estimates might partially be due to COVID deaths in case COVID deaths are accounted for in the mid-year population estimates for 2020. But COVID deaths would probably only explain a small part of the decrease, because in the first half of 2020 CDC WONDER returned 21,600 deaths with UCD COVID in ages 90+, which is only about 0.9% of the total population size of ages 90+ based on the vintage 2023 resident population estimates for the year 2020. However in case the population estimates are calculated based on yearly data for deaths, it might also be that the mid-year population estimates for 2020 are affected by COVID deaths in the second half of 2020, but even in the whole of 2020 the number of COVID deaths in ages 90+ was only about 2.5% of the resident population estimate for ages 90+ in 2020.</p>
+<p>There's often fairly large changes to old population estimates in newer vintages. For example the resident population estimate of ages 80-84 in 2021 was increased by about 1.9% between the 2021 and 2022 vintages, but it was again reduced by about 1.8% between the 2022 and 2023 vintages:</p>
+<pre>r=do.call(rbind,lapply(2020:2023,\(x){
+  t=fread(paste0(&quot;https://www2.census.gov/programs-surveys/popest/datasets/&quot;,ifelse(x&lt;=2020,2010,2020),&quot;-&quot;,x,&quot;/national/asrh/nc-est&quot;,x,&quot;-agesex-res.csv&quot;))
+  t[SEX==0&amp;AGE!=999,.(vintage=x,year=rep(as.integer(sub(&quot;\\D+&quot;,&quot;&quot;,names(.SD))),each=.N),age=AGE,pop=unlist(.SD,,F)),.SDcols=patterns(&quot;POPESTIMATE&quot;)]}))
+
+r[year&gt;=2020&amp;age%in%80:84,xtabs(pop~year+vintage)]
+#       vintage
+# year      2020    2021    2022    2023
+#   2020 6464714 6155000 6288784 6160937
+#   2021       0 6301306 6422252 6308178
+#   2022       0       0 6659545 6557159
+#   2023       0       0       0 6980680
+
+# CDC WONDER still uses vintage 2021 estimates for 2021
+&gt; t3=fread(&quot;http://sars2.net/f/wondercanceryearlysingle.csv&quot;)
+&gt; t3[age%in%80:84&amp;year==2021,sum(pop)]
+[1] 6301306</pre>
 <h2>
 <a href=#Cancer_deaths_by_age_group id=Cancer_deaths_by_age_group>Cancer deaths by age group</a>
 </h2>
