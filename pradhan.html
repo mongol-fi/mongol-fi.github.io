@@ -514,9 +514,9 @@ start  end
 <div class="width6">
 <img src="i/pradhan-perez.png">
 </div>
-<p>One error in the table is that <span class="quote">&quot;Simian immunodeficiency virus isolate TAN5 from Tanzania&quot;</span> should have the accession number JN091691.1, but it was accidentally given the same accession as the sequence on the next row. Confusingly the coordinates in the last column are also too low by 1, so for example the first match is actually to positions 21138-21153 of the reference and not 21137-21152.</p>
+<p>One error in the table is that <span class="quote">&quot;Simian immunodeficiency virus isolate TAN5 from Tanzania&quot;</span> should have the accession number JN091691.1, but it was accidentally given the same accession as the sequence on the next row. The coordinates in the last two columns seem to use zero-based indexing, because for example the first row is shown to match positions 21137 to 21152, but it's positions 21138 to 21153 in regular 1-based indexing.</p>
 <p>When I downloaded all 15 sequences in the table, I did a BLAST search of them against the whole genome of SARS-CoV-2 and not just regions A and B, there were no matches returned when I ran BLAST with the default settings:</p>
-<pre>$ cat perez # here I corrected the starting and ending positions by incrementing them by 1
+<pre>$ cat perez # here I converted the starting and ending positions to 1-based indexing
 JN230738.1 21138 21153
 MF373163.1 21226 21246
 JN863831.1 21308 21325
@@ -541,8 +541,8 @@ $ fmt=&#39;sseqid bitscore evalue nident length pident sstrand qstart qend&#39;
 $ &lt;perezref.fa blastn -db perez.fa -outfmt &quot;6 $fmt&quot;
 $ # there were no results when BLAST was ran with default parameters</pre>
 <p>So therefore in order to use less strict matching criteria, I added the options <code>-word_size 5 -evalue 10</code>, which gave me one or more matches for all 15 HIV and SIV sequences. I filtered out matches with length below 18 bases like Perez, and I selected the best match for each HIV or SIV sequence by selecting the match with the highest bitscore, which is equivalent to selecting the match with the lowest E-value. But now there were 5 sequences whose best match in the whole genome was not even the same match that was shown in the table by Perez:</p>
-<pre>$ &lt;perezref.fa blastn -db perez.fa -outfmt &quot;6 $fmt&quot; -word_size 5 -evalue 10|sort -rnk2|awk &#39;!a[$1]++&#39;|(echo $fmt perezstart perezend matches_perez;awk -F&#39;[\t,]&#39; &#39;NR==FNR{a[$1]=$2&quot; &quot;$3;pos[$1]=NR;next}{print pos[$1],$0,a[$1]}&#39; perez -|sort -n|cut -d\  -f2-|awk &#39;{print$0,$8==$10&amp;&amp;$9==$11?&quot;true&quot;:&quot;false&quot;}&#39;)|column -t
-sseqid      bitscore  evalue  nident  length  pident   sstrand  qstart  qend   perezstart  perezend  matches_perez
+<pre>$ &lt;perezref.fa blastn -db perez.fa -outfmt &quot;6 $fmt&quot; -word_size 5 -evalue 10|sort -rnk2|awk &#39;!a[$1]++&#39;|(echo $fmt perezstart perezend matchesperez;awk -F&#39;[\t,]&#39; &#39;NR==FNR{a[$1]=$2&quot; &quot;$3;pos[$1]=NR;next}{print pos[$1],$0,a[$1]}&#39; perez -|sort -n|cut -d\  -f2-|awk &#39;{print$0,$8==$10&amp;&amp;$9==$11?&quot;true&quot;:&quot;false&quot;}&#39;)|column -t
+sseqid      bitscore  evalue  nident  length  pident   sstrand  qstart  qend   perezstart  perezend  matchesperez
 JN230738.1  30.7      0.93    21      23      91.304   plus     21133   21153  21138       21153     false
 MF373163.1  39.9      0.002   21      21      100.000  minus    21226   21246  21226       21246     true
 JN863831.1  28.8      3.4     17      18      94.444   minus    21308   21325  21308       21325     true
