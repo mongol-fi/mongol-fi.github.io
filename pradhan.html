@@ -540,7 +540,7 @@ $ makeblastdb -dbtype nucl -in perez.fa
 $ fmt=&#39;sseqid bitscore evalue nident length pident sstrand qstart qend&#39;
 $ &lt;perezref.fa blastn -db perez.fa -outfmt &quot;6 $fmt&quot;
 $ # there were no results when BLAST was ran with default parameters</pre>
-<p>So therefore in order to use less strict matching criteria, I added the option <code>-word_size 5</code> which gave me one or more matches for all 15 HIV and SIV sequences. I filtered out matches with length below 18 bases like Perez, and I selected the best match for each HIV or SIV sequence by selecting the match with the highest bitscore, which is equivalent to selecting the match with the lowest E-value. But now there were 5 sequences whose best match in the whole genome was not even the same match that was shown in the table by Perez:</p>
+<p>So therefore in order to use less strict matching criteria, I added the option <code>-word_size 5</code> which gave me one or more matches for all 15 sequences. I selected the best match for each HIV or SIV sequence by selecting the match with the highest bitscore, which is equivalent to selecting the match with the lowest E-value. But there were 5 sequences whose best match in the whole genome was not even the same match that was shown in the table by Perez:</p>
 <pre>$ &lt;perezref.fa blastn -db perez.fa -outfmt &quot;6 $fmt&quot; -word_size 5|sort -rnk2|awk &#39;!a[$1]++&#39;|(echo $fmt perezstart perezend matchesperez;awk -F&#39;[\t,]&#39; &#39;NR==FNR{a[$1]=$2&quot; &quot;$3;pos[$1]=NR;next}{print pos[$1],$0,a[$1]}&#39; perez -|sort -n|cut -d\  -f2-|awk &#39;{print$0,$8==$10&amp;&amp;$9==$11?&quot;true&quot;:&quot;false&quot;}&#39;)|column -t
 sseqid      bitscore  evalue  nident  length  pident   sstrand  qstart  qend   perezstart  perezend  matchesperez
 JN230738.1  30.7      0.93    21      23      91.304   plus     21133   21153  21138       21153     false
@@ -559,13 +559,12 @@ KC187066.1  36.2      0.020   28      32      87.500   minus    21884   21915  2
 GU481454.1  30.7      0.93    32      39      82.051   minus    21914   21952  21914       21952     true
 LM999945.1  28.8      3.4     23      27      85.185   minus    21944   21970  21951       21970     false</pre>
 <p>However the output above shows that all of the E-values are high, so that even the lowest e-value is about 0.002, which means that there is approximately 0.2% likelihood that the match could have occured by chance. And some of the E-values are above 0.9.</p>
-<p>The output above also shows that out of the 10 matches that are the same as in Perez's table, 8 matches are on the minus strand, which means that the matched segment won't even code for the same amino acids in SARS-CoV-2 and HIV/SIV (except perhaps extremely unprobably by chance).</p>
-<p>For example the second sequence in Perez's table matches a Swedish HIV-1 sequence from 2017. [<a href="https://www.ncbi.nlm.nih.gov/nuccore/MF373163">https://www.ncbi.nlm.nih.gov/nuccore/MF373163</a>] But it matches SARS-CoV-2 on the opposite strand so the translation is different:</p>
-<pre>SARS-CoV-2:                  HIV:
+<p>The output above also shows that out of the 10 matches that are the same as in Perez's table, 8 matches are on the minus strand, which means that the matched segment won't even code for the same amino acids in SARS-CoV-2 and HIV/SIV. For example the second sequence in Perez's table matches a Swedish HIV-1 sequence from 2017. [<a href="https://www.ncbi.nlm.nih.gov/nuccore/MF373163">https://www.ncbi.nlm.nih.gov/nuccore/MF373163</a>] But it matches SARS-CoV-2 on the opposite strand so its translation is completely different:</p>
+<pre>SARS-CoV-2:                HIV:
 
- ATGCGTCATCATCTGAAGCAT        ATGCTTCAGATGATGACGCAT
-AATGCGTCATCATCTGAAGCATTT     TATGCTTCAGATGATGACGCATAT
- N  A  S  S  S  E  A  F       Y  A  S  D  D  D  A  Y</pre>
+ ATGCGTCATCATCTGAAGCAT      ATGCTTCAGATGATGACGCAT
+AATGCGTCATCATCTGAAGCATTT   TATGCTTCAGATGATGACGCATAT
+ N  A  S  S  S  E  A  F     Y  A  S  D  D  D  A  Y</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
