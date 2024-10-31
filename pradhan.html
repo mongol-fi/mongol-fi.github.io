@@ -541,7 +541,7 @@ $ fmt=&#39;sseqid bitscore evalue nident length pident sstrand qstart qend&#39;
 $ &lt;perezref.fa blastn -db perez.fa -outfmt &quot;6 $fmt&quot;
 $ # there were no results when BLAST was ran with default parameters</pre>
 <p>So therefore in order to use less strict matching criteria, I added the option <code>-word_size 5</code> which gave me one or more matches for all 15 sequences. I selected the best match for each HIV or SIV sequence by selecting the match with the highest bitscore, which is equivalent to selecting the match with the lowest E-value. But there were 5 sequences whose best match in the whole genome was not even the same match that was shown in the table by Perez:</p>
-<pre>$ &lt;perezref.fa blastn -db perez.fa -outfmt &quot;6 $fmt&quot; -word_size 5|sort -rnk2|awk &#39;!a[$1]++&#39;|(echo $fmt perezstart perezend matchesperez;awk -F&#39;[\t,]&#39; &#39;NR==FNR{a[$1]=$2&quot; &quot;$3;pos[$1]=NR;next}{print pos[$1],$0,a[$1]}&#39; perez -|sort -n|cut -d\  -f2-|awk &#39;{print$0,$8==$10&amp;&amp;$9==$11?&quot;true&quot;:&quot;false&quot;}&#39;)|column -t
+<pre>$ &lt;perezref.fa blastn -db perez.fa -outfmt &quot;6 $fmt&quot; -word_size 5|sort -rnk2|awk &#39;!a[$1]++&#39;|(echo $fmt perezstart perezend matchesperez;awk &#39;NR==FNR{a[$1]=$2&quot; &quot;$3;pos[$1]=NR;next}{print pos[$1],$0,a[$1]}&#39; perez -|sort -n|cut -d\  -f2-|awk &#39;{print$0,$8==$10&amp;&amp;$9==$11?&quot;true&quot;:&quot;false&quot;}&#39;)|column -t
 sseqid      bitscore  evalue  nident  length  pident   sstrand  qstart  qend   perezstart  perezend  matchesperez
 JN230738.1  30.7      0.93    21      23      91.304   plus     21133   21153  21138       21153     false
 MF373163.1  39.9      0.002   21      21      100.000  minus    21226   21246  21226       21246     true
@@ -565,6 +565,25 @@ LM999945.1  28.8      3.4     23      27      85.185   minus    21944   21970  2
  ATGCGTCATCATCTGAAGCAT      ATGCTTCAGATGATGACGCAT
 AATGCGTCATCATCTGAAGCATTT   TATGCTTCAGATGATGACGCATAT
  N  A  S  S  S  E  A  F     Y  A  S  D  D  D  A  Y</pre>
+<p>The paper by Perez and Montagnier also included a second table of additional matches to HIV and SIV:</p>
+<div class="width6">
+<img src="i/pradhan-perez-2.png">
+</div>
+<p>However 3 out of 4 matches in the table are on the minus strand:</p>
+<pre>$ printf %s\\n &#39;KM378564.1 8752 8770&#39; &#39;EU184986.1 14341 14378&#39; &#39;AY516986.1 20374 20401&#39; &#39;HQ217329.1 20401 20430&#39;&gt;perez2
+$ cut -d\  -f1 perez2|emu&gt;perez2.fa
+$ fmt=&#39;sseqid evalue nident length pident sstrand sstart send qstart qend&#39;
+$ &lt;perezref.fa blastn -db perez2.fa -outfmt &quot;6 $fmt&quot; -word_size 5|sort -gk2|awk &#39;!a[$1]++&#39;|(echo $fmt perezstart perezend matchesperez;awk &#39;NR==FNR{a[$1]=$2&quot; &quot;$3;pos[$1]=NR;next}{print pos[$1],$0,a[$1]}&#39; perez2 -|sort -n|cut -d\  -f2-|awk &#39;{print$0,$9==$11&amp;&amp;$10==$12?&quot;true&quot;:&quot;false&quot;}&#39;)|column -t
+sseqid      evalue    nident  length  pident   sstrand  sstart  send  qstart  qend   perezstart  perezend  matchesperez
+KM378564.1  0.001     20      20      100.000  minus    6142    6123  8736    8755   8752        8770      false
+EU184986.1  1.00e-04  31      35      88.571   minus    304     271   14344   14378  14341       14378     false
+AY516986.1  1.00e-04  26      28      92.857   plus     82      109   20374   20401  20374       20401     true
+HQ217329.1  2.79e-05  26      27      96.296   minus    2140    2115  20404   20430  20401       20430     false</pre>
+<p>Perez seems to have entered the wrong coordinates for the first row in his table, because the first row is shown to match positions 8751-8770 of his reference genome (i.e. 8752-8770 using one-based indexing and an inclusive end of the range). But that region of his reference genome does not actually match the HIV sequence on the first row but the region 8736-8755 in my output above does.</p>
+<p>In the table above the lone match on the plus strand doesn't even match HIV but it matches a part of a human genome that is included in an HIV integration site sequence, where the first 69 bases come from an HIV long terminal repeat but the rest of the sequence comes from a human genome: [<a href="https://www.ncbi.nlm.nih.gov/nuccore/AY516986">https://www.ncbi.nlm.nih.gov/nuccore/AY516986</a>]</p>
+<div class="width5">
+<img src="i/pradhan-perez-3.jpg">
+</div>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
