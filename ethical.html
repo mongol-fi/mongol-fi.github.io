@@ -76,6 +76,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Cancer_deaths_by_age_group>Cancer deaths by age group</a></li>
 <li><a href=#Non_COVID_deaths_from_natural_causes_in_ages_0_to_24>Non-COVID deaths from natural causes in ages 0 to 24</a></li>
 <li><a href=#Deaths_with_kidney_related_MCD_in_ages_0_to_64>Deaths with kidney-related MCD in ages 0 to 64</a></li>
+<li><a href=#Plot_for_excess_deaths_from_natural_causes>Plot for excess deaths from natural causes</a></li>
 </ul>
 
 <h2>
@@ -1917,7 +1918,7 @@ system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 <p>The reason why the population size of ages 90+ decreased by over 10% in the new population estimates might partially be due to COVID deaths in case COVID deaths are accounted for in the mid-year population estimates for 2020. But COVID deaths would probably only explain a small part of the decrease, because in the first half of 2020 CDC WONDER returned 21,600 deaths with UCD COVID in ages 90+, which is only about 0.9% of the total population size of ages 90+ based on the vintage 2023 resident population estimates for the year 2020. However in case the population estimates are calculated based on yearly data for deaths, it might also be that the mid-year population estimates for 2020 are affected by COVID deaths in the second half of 2020, but even in the whole of 2020 the number of COVID deaths in ages 90+ was only about 2.5% of the resident population estimate for ages 90+ in 2020.</p>
 <p>There's often fairly large changes to old population estimates in newer vintages. For example the resident population estimate of ages 80-84 in 2021 was increased by about 1.9% between the 2021 and 2022 vintages, but it was again reduced by about 1.8% between the 2022 and 2023 vintages:</p>
 <pre>r=do.call(rbind,lapply(2020:2023,\(x){
-  t=fread(paste0(&quot;https://www2.census.gov/programs-surveys/popest/datasets/&quot;,ifelse(x&lt;=2020,2010,2020),&quot;-&quot;,x,&quot;/national/asrh/nc-est&quot;,x,&quot;-agesex-res.csv&quot;))
+  t=fread(paste0(&quot;https://www2.census.gov/programs-surveys/popest/datasets/&quot;,ifelse(x==2020,2010,2020),&quot;-&quot;,x,&quot;/national/asrh/nc-est&quot;,x,&quot;-agesex-res.csv&quot;))
   t[SEX==0&amp;AGE!=999,.(vintage=x,year=rep(as.integer(sub(&quot;\\D+&quot;,&quot;&quot;,names(.SD))),each=.N),age=AGE,pop=unlist(.SD,,F)),.SDcols=patterns(&quot;POPESTIMATE&quot;)]}))
 
 r[year&gt;=2020&amp;age%in%80:84,xtabs(pop~year+vintage)]
@@ -1929,8 +1930,8 @@ r[year&gt;=2020&amp;age%in%80:84,xtabs(pop~year+vintage)]
 #   2023       0       0       0 6980680
 
 # CDC WONDER still uses vintage 2021 estimates for 2021
-&gt; t3=fread(&quot;http://sars2.net/f/wondercanceryearlysingle.csv&quot;)
-&gt; t3[age%in%80:84&amp;year==2021,sum(pop)]
+&gt; t2=fread(&quot;http://sars2.net/f/wondercanceryearlysingle.csv&quot;)
+&gt; t2[age%in%80:84&amp;year==2021,sum(pop)]
 [1] 6301306</pre>
 <h2>
 <a href=#Cancer_deaths_by_age_group id=Cancer_deaths_by_age_group>Cancer deaths by age group</a>
@@ -2371,7 +2372,174 @@ lines(p$year,p$dead,lwd=1.5)
 points(p$year,p$dead,pch=20,cex=.6)
 lines(p$year,p$trend,type=&quot;l&quot;,lty=2,lwd=1.5)
 legend(&quot;topleft&quot;,legend=leg,lty=c(1,2),lwd=1.5)
-dev.off()</pre>
+dev.off()
+</pre>
+</div>
+<h2>
+<a href=#Plot_for_excess_deaths_from_natural_causes id=Plot_for_excess_deaths_from_natural_causes>Plot for excess deaths from natural causes</a>
+</h2>
+<p>Ethical Skeptic posted this tweet: [<a href="https://x.com/EthicalSkeptic/status/1849206168767303734">https://x.com/EthicalSkeptic/status/1849206168767303734</a>]</p>
+<blockquote>
+<p>Excess Non-Covid Natural Cause Mortality = 760,000 US Citizens (+6,058 for Week 41 2024)</p>
+<p>All the other excess natural cause mortality factors are mostly gone, yet Excess Non-Covid Natural Cause Mortality is still running around 6,000 excess deaths per week.</p>
+<p>Only one differential remains in the populace -&gt; the mRNA vaccine. The very event around which this curve inflected as its beginning.</p>
+<p><img src=i/ethical-naturalall-1.jpg class=width10></p>
+</blockquote>
+<p>He used a linear baseline fitted against raw deaths, which is inaccurate in some other developed countries like Sweden because the trend in the raw number of deaths is curved upwards due to the aging population. However the plot below shows that it's not as inaccurate in the United States, because the blue baseline which was calculated based on the raw number of deaths falls fairly close to the green baseline which was calculated in a more accurate way:</p>
+<div class="width6">
+<img src="i/ethical-naturalall-2.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2)
+
+kim=\(x)ifelse(x&gt;=1e3,ifelse(x&gt;=1e6,paste0(x/1e6,&quot;M&quot;),paste0(x/1e3,&quot;k&quot;)),x)
+
+years=2011:2023
+
+t=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)[,country:=&quot;United States&quot;]
+t=rbind(t,fread(&quot;http://sars2.net/f/swedenpopdead.csv&quot;)[,country:=&quot;Sweden&quot;])
+t[,country:=factor(country,unique(country))]
+
+t=t[year%in%years,.(dead=sum(dead),pop=sum(pop)),.(year,age,country)]
+
+t=merge(t,t[year&lt;2020,.(year=years,base=predict(lm(dead/pop~year),.(year=years))),.(age,country)])
+t=t[,.(dead=sum(dead),base=sum(base*pop)),.(year,country)]
+t=merge(t,t[year&lt;2020,.(year=years,base2=predict(lm(dead~year),.(year=years))),country])
+
+p=t[,.(x=year,country,y=unlist(.SD[,-(1:2)]),z=rep(names(.SD)[-(1:2)],each=.N))]
+
+lv=c(&quot;Actual deaths&quot;,&quot;2011-2019 linear baseline from CMR by age&quot;,&quot;2013-2019 linear baseline for raw deaths&quot;)
+p[,z:=`levels&lt;-`(factor(z,unique(z)),lv)]
+
+xstart=min(p$x);xend=max(p$x)
+ybreak=pretty(p$y);ystart=ybreak[1];yend=max(ybreak)
+
+color=c(&quot;black&quot;,&quot;#00aa00&quot;,hsv(21/36,1,.8))
+
+ggplot(p,aes(x,y))+
+facet_wrap(~country,ncol=1,scales=&quot;free&quot;)+
+geom_line(linewidth=.3,aes(color=z,linetype=z))+
+geom_text(data=p[,.(y=max(y)),country],aes(label=paste0(&quot;\n   &quot;,country,&quot;   \n&quot;)),x=(xend+xstart)/2,size=grid::convertUnit(unit(7,&quot;pt&quot;),&quot;mm&quot;),vjust=.7,fontface=&quot;bold&quot;)+
+labs(title=&quot;Yearly deaths in United States and Sweden&quot;,subtitle=&quot;The green baseline was calculated by first doing a linear regression for CMR for each single year of age in 2011-2019, and then the yearly population sizes of each age were multiplied by the value of the projected trend. The 2013-2019 linear trend is based simply on the total number of deaths each year in all ages aggregated together.&quot;|&gt;stringr::str_wrap(76),x=NULL,y=NULL)+
+scale_x_continuous(expand=expansion(0),limits=c(xstart-.5,xend+.5),breaks=xstart:xend)+
+scale_y_continuous(breaks=pretty,labels=kim,expand=expansion(.03))+
+scale_color_manual(values=color)+
+scale_linetype_manual(values=c(1,2,2))+
+coord_cartesian(clip=&quot;off&quot;)+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.ticks=element_line(linewidth=.3,),
+  axis.ticks.length=unit(3,&quot;pt&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.title=element_text(size=8),
+  legend.background=element_blank(),
+  legend.justification=&quot;left&quot;,
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.key=element_rect(fill=&quot;white&quot;),
+  legend.spacing.x=unit(1,&quot;pt&quot;),
+  legend.key.size=unit(9,&quot;pt&quot;),
+  legend.key.width=unit(17,&quot;pt&quot;),
+  legend.position=&quot;top&quot;,
+  legend.margin=margin(-7,,3),
+  legend.text=element_text(size=7,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.3),
+  panel.spacing=unit(2,&quot;pt&quot;),
+  plot.margin=margin(5,5,5,5),
+  plot.subtitle=element_text(size=7,margin=margin(,,4)),
+  plot.title=element_text(size=7.2,face=2,margin=margin(1,,4)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=3.8,height=4.3,dpi=400*4)
+system(&quot;mogrify -resize 25% 1.png&quot;)</pre>
+</div>
+<p>In the plot above I used mid-year resident population estimates, so the reason why the baseline for Sweden fell so much between 2019 and 2020 is because by mid-2020 the population size of elderly age groups had been reduced by COVID deaths in the first half of 2020.</p>
+<p>But anyway, a large part of Ethical Skeptic's excess deaths from natural causes seem to be due to his pull-forward adjustment. You can roughly see the magnitude of the PFE adjustment by comparing the straight orange baseline against the PFE-adjusted baseline at the point when deaths are the lowest in the summer, which shows that the PFE adjustment accounted for the majority of excess deaths by summer 2023 and essentially all excess deaths by summer 2024.</p>
+<p>And if he would've plotted ASMR instead of raw deaths then he wouldn't even need to have adjusted for PFE, because ASMR accounts for the reduction in population size due to COVID deaths. In the next plot which shows ASMR from natural causes, I got only about -0.1% total excess ASMR in 2023:</p>
+<div class="width7">
+<img src="i/ethical-naturalall-3.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2);library(lubridate)
+
+t=fread(&quot;http://sars2.net/f/wondernaturalsingle.csv&quot;)
+pop=fread(&quot;http://sars2.net/f/uspopdeadmonthly.csv&quot;)
+t=merge(t,pop[,.(date,age,pop=persondays)])[,date:=as.Date(paste0(date,&quot;-1&quot;))]
+t=merge(t,fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)[year==2020,.(age,std=pop/sum(pop))])
+t=t[year(date)%in%2011:2023]
+
+a=t[,.(y=sum(dead/pop*std*365e5),z=&quot;Actual ASMR&quot;),.(x=date)]
+p=copy(a)
+dates=unique(a$x)
+
+a[,month:=month(x)]
+a=merge(a,a[year(x)&lt;2020,.(x=dates,base=predict(lm(y~x),a))])
+a=merge(a[year(x)&lt;2020,.(monthly=mean(y-base)),.(month)],a)
+
+p=a[,.(x,y,base=base+monthly,group=&quot;ASMR&quot;)]
+p=rbind(p,p[,.(y=(y/base-1)*100,x,base=NA,group=&quot;Excess ASMR percent&quot;)])
+
+p[,group:=factor(group,unique(group))]
+
+xstart=min(dates);xend=as.Date(&quot;2024-1-1&quot;);xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=c(rbind(&quot;&quot;,2011:2023),&quot;&quot;)
+
+color=c(&quot;black&quot;,&quot;gray60&quot;)
+
+sub=&quot;\u00a0    Chapter R is excluded (symptoms, signs, and unresolved cause).
+     ASMR was calculated by single year of age up to ages 100+ so that the vintage 2023 resident population estimates for the year 2020 were used as the standard population. Population estimates were downloaded from www2.census.gov/programs-surveys/popest/tables. Vintage 2020 resident population estimates are used for 2011 to 2019 and vintage 2023 resident population estimates are used for 2020 to 2023. In order to get rid of a sudden jump in the population estimates between 2019 and 2020, the population estimates for each age in 2011 to 2019 were multiplied by a linear slope.
+     The gray baseline was calculated by doing a linear regression against the monthly ASMR values in 2011 to 2019, and then the average difference between the actual ASMR and the baseline on each January of 2011 to 2019 was added to the baseline for each January, and similarly for other months. The gray number above the year shows the yearly total excess mortality percent.&quot;
+
+yearly=p[group==&quot;ASMR&quot;,.(label=sprintf(&quot;%.1f%%&quot;,(sum(y)/sum(base)-1)*100)),.(x=year(x))]
+yearly=cbind(yearly,p[group==&quot;Excess ASMR percent&quot;,.(y=min(y)),group])
+
+ggplot(p,aes(x+15,y))+
+facet_wrap(~group,ncol=1,scales=&quot;free&quot;)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray88&quot;,linewidth=.2)+
+geom_vline(xintercept=as.Date(&quot;2020-1-1&quot;),linetype=5,linewidth=.25)+
+geom_hline(aes(yintercept=ifelse(group==&quot;ASMR&quot;,NA,0)),linewidth=.25,linetype=5)+
+geom_line(aes(y=base),color=&quot;gray60&quot;,linewidth=.3)+
+geom_line(linewidth=.3)+
+geom_label(data=p[,max(y,base,na.rm=T),group],aes(label=paste0(&quot;\n   &quot;,group,&quot;   \n&quot;),y=V1),x=xstart,lineheight=.5,hjust=0,vjust=1,size=grid::convertUnit(unit(7,&quot;pt&quot;),&quot;mm&quot;),label.r=unit(0,&quot;pt&quot;),label.padding=unit(0,&quot;pt&quot;),label.size=.3)+
+geom_point(stroke=0,size=.8,show.legend=F)+
+geom_text(data=yearly,aes(x=as.Date(paste0(x,&quot;-7-1&quot;)),label=label),vjust=-.6,color=&quot;gray60&quot;,size=2.3)+
+labs(title=&quot;CDC WONDER: Monthly ASMR per 100,000 person-years for underlying cause of death A to Q (natural causes excluding COVID and chapter R)&quot;|&gt;stringr::str_wrap(74),x=NULL,y=NULL)+
+scale_x_date(limits=c(xstart,xend),breaks=xbreak,labels=xlab,expand=expansion(0))+
+scale_y_continuous(breaks=\(x)pretty(x,6),labels=\(x)ifelse(x&lt;100,paste0(x,&quot;%&quot;),ifelse(x&gt;1e3,paste0(x/1e3,&quot;k&quot;),x)))+
+scale_color_manual(values=color)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.ticks=element_line(linewidth=.25,color=&quot;black&quot;),
+  axis.ticks.length=unit(3,&quot;pt&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.title=element_text(size=8),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;horizontal&quot;,
+  legend.justification=&quot;right&quot;,
+  legend.key=element_rect(fill=alpha(&quot;white&quot;,0)),
+  legend.key.height=unit(10,&quot;pt&quot;),
+  legend.key.width=unit(17,&quot;pt&quot;),
+  legend.margin=margin(,,2),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(1.5,&quot;pt&quot;),
+  legend.text=element_text(size=7,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.25),
+  panel.spacing=unit(2,&quot;pt&quot;),
+  plot.margin=margin(5,5,3,5),
+  plot.title=element_text(size=7.2,face=2,margin=margin(,,4)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=4.4,height=3.4,dpi=400*4)
+system(&quot;magick 1.png -resize 25% 1.png&quot;)
+system(paste0(&quot;f=1.png;mar=30;w=`identify -format %w $f`;magick $f \\( -size $[w-mar*2]x -font Arial -interline-spacing -3 -pointsize 36 caption:&#39;&quot;,sub,&quot;&#39; -gravity southwest -splice $[mar]x14 \\) -append 1.png&quot;))
+system(&quot;qlmanage -p ~/1.png&amp;&gt;/dev/null&quot;)</pre>
 </div>
 <script>
 let q=document.querySelectorAll('a,code,pre')
