@@ -54,6 +54,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
   blockquote,.quote{color:hsl(30,65%,30%)}
   blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(30,45%,50%)}
   blockquote blockquote blockquote,blockquote .quote .quote,.quote .quote .quote{color:hsl(30,70%,60%)}
+  .spoiler{display:none}
 }
 </style>
 <title>Czech record-level mortality data by vaccination status (part 4)</title>
@@ -72,6 +73,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Plot_for_raw_deaths_by_weeks_after_vaccination>Plot for raw deaths by weeks after vaccination</a></li>
 <li><a href=#Kirschs_calculation_for_mortality_rate_by_batch>Kirsch's calculation for mortality rate by batch</a></li>
 <li><a href=#Confidence_intervals_for_age_normalized_Moderna_Pfizer_ratio_by_month_of_vaccination>Confidence intervals for age-normalized Moderna-Pfizer ratio by month of vaccination</a></li>
+<li><a href=#The_record_level_data_includes_vaccination_entries_for_impossibly_old_people>The record-level data includes vaccination entries for impossibly old people</a></li>
 </ul>
 
 <h2>
@@ -1100,13 +1102,12 @@ dev.off()</pre>
 <img src="i/czech-ci-2.jpg">
 </div>
 <p>I don't think his approach was correct, because he should've taken into account the number of deaths and baseline deaths for Moderna and Pfizer vaccinees. I'm not sure if the following is the correct approach either, but when I asked ChatGPT how to calculate the confidence interval for the Moderna-Pfizer ratio for people vaccinated in July 2021, it gave me code like this, where the 95% CI was about 1.20 to 1.53 so the lower bound of the CI was still clearly above 1:</p>
-<pre>dead1=284;base1=252.52
-dead2=2266;base2=2725.01
+<pre>dead1=284;dead2=2266
+base1=252.52;base2=2725.01
 rate1=dead1/base1;rate2=dead2/base2
 ratio=rate1/rate2
 
 se1=sqrt(dead1)/base1;se2=sqrt(dead2)/base2
-
 se=sqrt((se1/rate1)^2+(se2/rate2)^2)
 exp(log(ratio)+c(-1,1)*qnorm(.975)*se)
 # [1] 1.195500 1.530073</pre>
@@ -1161,6 +1162,26 @@ mutate_if(o,is.double,round,2)|&gt;print(r=F)</pre>
   2022-11     1    0.07     3     1.45  6.85 0.71 65.81
   2022-12     0    0.00     0     0.26   NaN  NaN   NaN
  vaxmonth dead1   base1 dead2    base2 ratio  low  high</pre>
+<h2>
+<a href=#The_record_level_data_includes_vaccination_entries_for_impossibly_old_people id=The_record_level_data_includes_vaccination_entries_for_impossibly_old_people>The record-level data includes vaccination entries for impossibly old people</a>
+</h2>
+<p>The record-level dataset contains an entry for a man whose year of birth is 1912 but who got vaccinated in 2021 when he would've been 108 or 109 years old:</p>
+<pre>&gt; t=fread(&quot;curl https://github.com/skirsch/Czech/blob/main/data/CR_records.csv.xz|xz -dc&quot;)
+&gt; t[Rok_narozeni&lt;1913,1:4]
+    Pohlavikod Rok_narozeni DatumUmrti    Datum_1
+ 1:          M         1912       &lt;NA&gt; 2021-09-24
+ 2:          F         1912 2021-07-22 2021-02-11
+ 3:          F         1911       &lt;NA&gt; 2021-07-27
+ 4:          F         1911 2020-12-06       &lt;NA&gt;
+ 5:          F         1910       &lt;NA&gt; 2021-03-28
+ 6:          F         1912 2020-05-12       &lt;NA&gt;
+ 7:          F         1912 2021-10-22       &lt;NA&gt;
+ 8:          M         1912       &lt;NA&gt; 2023-11-29
+ 9:          F         1912       &lt;NA&gt;       &lt;NA&gt;
+10:          F         1912       &lt;NA&gt;       &lt;NA&gt;
+11:          F         1912       &lt;NA&gt;       &lt;NA&gt;
+12:          F         1912       &lt;NA&gt;       &lt;NA&gt;</pre>
+<p>However according to the Czech-language Wikipedia the oldest male Czech citizens have died at an age of 107 or less since at least 2010. [<a href="https://cs.wikipedia.org/wiki/Seznam_nejstar%C5%A1%C3%ADch_obyvatel_%C4%8Ceska">https://cs.wikipedia.org/wiki/Seznam_nejstar%C5%A1%C3%ADch_obyvatel_%C4%8Ceska</a>]</p>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
