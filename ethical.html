@@ -76,7 +76,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Cancer_deaths_by_age_group>Cancer deaths by age group</a></li>
 <li><a href=#Non_COVID_deaths_from_natural_causes_in_ages_0_to_24>Non-COVID deaths from natural causes in ages 0 to 24</a></li>
 <li><a href=#Deaths_with_kidney_related_MCD_in_ages_0_to_64>Deaths with kidney-related MCD in ages 0 to 64</a></li>
-<li><a href=#Plot_for_excess_deaths_from_natural_causes>Plot for excess deaths from natural causes</a></li>
+<li><a href=#Excess_deaths_from_natural_causes>Excess deaths from natural causes</a></li>
 </ul>
 
 <h2>
@@ -1814,6 +1814,55 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   plot.title=element_text(size=7.6,margin=margin(2,,4)))
 ggsave(&quot;1.png&quot;,width=4.2,height=2.8,dpi=450)</pre>
 </div>
+<p>Added even later: In the next plot I tried reproducing Ethical Skeptic's plot. I took weekly deaths for UCD malignant neoplasms from CDC WONDER from 2018 onwards and from the same dataset Ethical Skeptic used from 2014 until 2017. [<a href="https://catalog.data.gov/dataset/weekly-counts-of-deaths-by-state-and-select-causes-2014-2018">https://catalog.data.gov/dataset/weekly-counts-of-deaths-by-state-and-select-causes-2014-2018</a>]</p>
+<p>Ethical Skeptic's plot uses a moving average where the window extends 3 weeks backwards and 2 weeks forwards, so I applied a similar moving average to my green line. [<a href="https://www.covid-datascience.com/post/evaluating-claims-of-excess-cancer-deaths-in-the-usa-during-the-pandemic">https://www.covid-datascience.com/post/evaluating-claims-of-excess-cancer-deaths-in-the-usa-during-the-pandemic</a>]</p>
+<p>Here my green line matches Ethical Skeptic's line from 2018 to 2020. But I don't know why his line is already slightly higher than my line in 2021 even though he is supposed to have only started applying the excess MCD normalization on week 10 of 2022.</p>
+<p>I took data for 2017 from the same CDC dataset that Ethical Skeptic listed as his source, but my number of deaths is slightly higher in 2017 because he excluded DC. I plotted deaths where the jurisdiction of occurrence was listed as United States, but I got my green line to match Ethical Skeptic's plot when I summed together deaths for all jurisdictions except United States, Puerto Rico, and District of Columbia. However the United States total is equal to all jurisdictions except Puerto Rico, so I don't think it was correct to exclude DC.</p>
+<p>Ethical Skeptic's plot shows that he got 94,700 excess cancer deaths since MMWR week 14 of 2021. But I got only about 18,000 excess deaths between week 14 of 2021 and week 26 of 2024 (where I excluded later weeks because there's too many deaths missing because of a registration delay).</p>
+<p>My light green baseline was calculated based on a simple linear projection of raw deaths, which is inaccurate in two ways that end up partially canceling each other out. My baseline is too low because it doesn't account for changes to the size or age composition of the population. But my baseline is also too high because it doesn't account for the reduced population size due to COVID deaths.</p>
+<div class="width12">
+<img src="i/ethical-malignant-8.jpg">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2)
+
+ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
+
+t=fread(&quot;http://sars2.net/f/wondermalignantweekly.csv&quot;)
+
+old=fread(&quot;https://data.cdc.gov/api/views/3yf8-kanr/rows.csv?accessType=DOWNLOAD&quot;)
+t2=old[`Jurisdiction of Occurrence`==&quot;United States&quot;,.(date=as.IDate(as.Date(`Week Ending Date`,&quot;%m/%d/%Y&quot;)),year=`MMWR Year`,week=`MMWR Week`,dead=`Malignant neoplasms (C00-C97)`)]
+
+t=rbind(t2[year(date)&lt;2018],t)
+t[,dead:=ma(dead,3,2)]
+
+t$base=t[year&lt;2020,predict(lm(dead~date),t)]
+p=merge(t,t[,mean(dead-base),week])[,.(date,dead,week,year,base=base+V1)]
+
+ystart=11000;yend=12500;ystep=250;ybreak=seq(ystart,yend,ystep)
+xstart=yea(2017);xend=yea(2025)
+xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=c(rbind(&quot;&quot;,2017:2024),&quot;&quot;)
+
+ggplot(p,aes(x=date,y=dead))+
+geom_vline(xintercept=c(xstart),color=&quot;green&quot;,linewidth=.2,lineend=&quot;square&quot;)+
+geom_hline(yintercept=c(ystart),color=&quot;green&quot;,linewidth=.2,lineend=&quot;square&quot;)+
+geom_line(aes(y=base),linewidth=.2,color=&quot;#bbffbb&quot;)+
+geom_line(linewidth=.2,color=&quot;green&quot;)+
+geom_point(stroke=0,size=.5,color=&quot;green&quot;)+
+labs(x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart-.2,xend+.5),breaks=xbreak,labels=xlab)+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=6,color=&quot;green&quot;),
+  axis.ticks=element_line(linewidth=.2,color=&quot;green&quot;),
+  axis.ticks.x=element_line(color=alpha(&quot;green&quot;,c(1,0))),
+  panel.background=element_blank(),
+  panel.grid=element_blank(),
+  plot.background=element_rect(fill=&quot;transparent&quot;,color=NA))
+ggsave(&quot;1.png&quot;,width=5.5,height=2.2,dpi=400)</pre>
+</div>
 <h2>
 <a href=#Files_for_US_population_estimates_by_single_year_of_age_up_to_ages_100 id=Files_for_US_population_estimates_by_single_year_of_age_up_to_ages_100>Files for US population estimates by single year of age up to ages 100+</a>
 </h2>
@@ -2372,11 +2421,10 @@ lines(p$year,p$dead,lwd=1.5)
 points(p$year,p$dead,pch=20,cex=.6)
 lines(p$year,p$trend,type=&quot;l&quot;,lty=2,lwd=1.5)
 legend(&quot;topleft&quot;,legend=leg,lty=c(1,2),lwd=1.5)
-dev.off()
-</pre>
+dev.off()</pre>
 </div>
 <h2>
-<a href=#Plot_for_excess_deaths_from_natural_causes id=Plot_for_excess_deaths_from_natural_causes>Plot for excess deaths from natural causes</a>
+<a href=#Excess_deaths_from_natural_causes id=Excess_deaths_from_natural_causes>Excess deaths from natural causes</a>
 </h2>
 <p>Ethical Skeptic posted this tweet: [<a href="https://x.com/EthicalSkeptic/status/1849206168767303734">https://x.com/EthicalSkeptic/status/1849206168767303734</a>]</p>
 <blockquote>
@@ -2406,11 +2454,11 @@ t=t[year%in%years,.(dead=sum(dead),pop=sum(pop)),.(year,age,country)]
 
 t=merge(t,t[year&lt;2020,.(year=years,base=predict(lm(dead/pop~year),.(year=years))),.(age,country)])
 t=t[,.(dead=sum(dead),base=sum(base*pop)),.(year,country)]
-t=merge(t,t[year&lt;2020,.(year=years,base2=predict(lm(dead~year),.(year=years))),country])
+t=merge(t,t[year%in%2013:2019,.(year=years,base2=predict(lm(dead~year),.(year=years))),country])
 
 p=t[,.(x=year,country,y=unlist(.SD[,-(1:2)]),z=rep(names(.SD)[-(1:2)],each=.N))]
 
-lv=c(&quot;Actual deaths&quot;,&quot;2011-2019 linear baseline from CMR by age&quot;,&quot;2013-2019 linear baseline for raw deaths&quot;)
+lv=c(&quot;Actual deaths&quot;,&quot;2011-2019 linear baseline based on CMR by age&quot;,&quot;2013-2019 linear baseline for raw deaths&quot;)
 p[,z:=`levels&lt;-`(factor(z,unique(z)),lv)]
 
 xstart=min(p$x);xend=max(p$x)
@@ -2418,17 +2466,25 @@ ybreak=pretty(p$y);ystart=ybreak[1];yend=max(ybreak)
 
 color=c(&quot;black&quot;,&quot;#00aa00&quot;,hsv(21/36,1,.8))
 
+minpoint=p[,.(min=min(y),max=max(y)),country]
+yratio=mima[,max(max/min)]
+minpoint=minpoint[,.(country,y=max/yratio)]
+
 ggplot(p,aes(x,y))+
 facet_wrap(~country,ncol=1,scales=&quot;free&quot;)+
-geom_line(linewidth=.3,aes(color=z,linetype=z))+
+geom_line(linewidth=.3,aes(color=z))+
+geom_point(aes(alpha=z),size=.5)+
+geom_point(data=minpoint,alpha=0,x=xstart)+
+geom_line(data=p[z==&quot;Actual deaths&quot;],linewidth=.3,show.legend=F)+
 geom_text(data=p[,.(y=max(y)),country],aes(label=paste0(&quot;\n   &quot;,country,&quot;   \n&quot;)),x=(xend+xstart)/2,size=grid::convertUnit(unit(7,&quot;pt&quot;),&quot;mm&quot;),vjust=.7,fontface=&quot;bold&quot;)+
-labs(title=&quot;Yearly deaths in United States and Sweden&quot;,subtitle=&quot;The green baseline was calculated by first doing a linear regression for CMR for each single year of age in 2011-2019, and then the yearly population sizes of each age were multiplied by the value of the projected trend. The 2013-2019 linear trend is based simply on the total number of deaths each year in all ages aggregated together.&quot;|&gt;stringr::str_wrap(76),x=NULL,y=NULL)+
+labs(title=&quot;Yearly deaths in United States and Sweden&quot;,subtitle=paste0(&quot;The green baseline was calculated by first doing a linear regression for CMR for each single year of age in 2011-2019, and then the yearly population sizes of each age were multiplied by the value of the projected trend. The 2013-2019 linear trend is based simply on the total number of deaths each year in all ages aggregated together. Both countries have the same ratio between the maximum and minimum value of the y-axis (about &quot;,sprintf(&quot;%.2f&quot;,yratio),&quot;).&quot;)|&gt;stringr::str_wrap(76),x=NULL,y=NULL)+
 scale_x_continuous(expand=expansion(0),limits=c(xstart-.5,xend+.5),breaks=xstart:xend)+
 scale_y_continuous(breaks=pretty,labels=kim,expand=expansion(.03))+
 scale_color_manual(values=color)+
-scale_linetype_manual(values=c(1,2,2))+
+scale_alpha_manual(values=c(1,0,0))+
 coord_cartesian(clip=&quot;off&quot;)+
 theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.text.x=element_text(margin=margin(3)),
   axis.ticks=element_line(linewidth=.3,),
   axis.ticks.length=unit(3,&quot;pt&quot;),
   axis.ticks.length.x=unit(0,&quot;pt&quot;),
@@ -2447,17 +2503,17 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   legend.title=element_blank(),
   panel.background=element_blank(),
   panel.border=element_rect(fill=NA,linewidth=.3),
-  panel.spacing=unit(2,&quot;pt&quot;),
+  panel.spacing=unit(3,&quot;pt&quot;),
   plot.margin=margin(5,5,5,5),
   plot.subtitle=element_text(size=7,margin=margin(,,4)),
-  plot.title=element_text(size=7.2,face=2,margin=margin(1,,4)),
+  plot.title=element_text(size=7.3,face=2,margin=margin(1,,4)),
   strip.background=element_blank(),
   strip.text=element_blank())
 ggsave(&quot;1.png&quot;,width=3.8,height=4.3,dpi=400*4)
 system(&quot;mogrify -resize 25% 1.png&quot;)</pre>
 </div>
-<p>In the plot above I used mid-year resident population estimates, so the reason why the baseline for Sweden fell so much between 2019 and 2020 is because by mid-2020 the population size of elderly age groups had been reduced by COVID deaths in the first half of 2020.</p>
-<p>But anyway, a large part of Ethical Skeptic's excess deaths from natural causes seem to be due to his pull-forward adjustment. You can roughly see the magnitude of the PFE adjustment by comparing the straight orange baseline against the PFE-adjusted baseline at the point when deaths are the lowest in the summer, which shows that the PFE adjustment accounted for the majority of excess deaths by summer 2023 and essentially all excess deaths by summer 2024.</p>
+<p>In the plot above I used mid-year resident population estimates, so the reason why the baseline for Sweden fell so much between 2019 and 2020 is because by mid-2020 the population size of elderly age groups had already been reduced by COVID deaths in the first half of 2020.</p>
+<p>But anyway, a large part of Ethical Skeptic's excess deaths from natural causes seem to be due to his PFE adjustment. You can roughly see the magnitude of the PFE adjustment by comparing the straight orange baseline against the PFE-adjusted baseline at the point when deaths are the lowest in the summer, which shows that the PFE adjustment accounted for the majority of excess deaths by summer 2023 and essentially all excess deaths by summer 2024.</p>
 <p>And if he would've plotted ASMR instead of raw deaths then he wouldn't even need to have adjusted for PFE, because ASMR accounts for the reduction in population size due to COVID deaths. In the next plot which shows ASMR from natural causes, I got only about -0.1% total excess ASMR in 2023:</p>
 <div class="width7">
 <img src="i/ethical-naturalall-3.png">
