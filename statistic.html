@@ -54,6 +54,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
   blockquote,.quote{color:hsl(30,65%,30%)}
   blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(30,45%,50%)}
   blockquote blockquote blockquote,blockquote .quote .quote,.quote .quote .quote{color:hsl(30,70%,60%)}
+  .spoiler{display:none}
 }
 </style>
 <title>Comments about COVID statistics</title>
@@ -835,26 +836,96 @@ system(&quot;f=0.png;w=`identify -format %w $f`;convert -interline-spacing -2 -g
 <div class="width5">
 <img src="i/caliage-5.png">
 </div>
-<p>In the heatmap below, within five out of six age groups the total UCoD COVID CMR in 2020-2023 was much higher among Hispanic people than whites. But in ages 85+ Hispanics had only slightly higher CMR than whites, which might be if whites are overrepresented in the upper end of the 85+ age category relative to Hispanics. However for some reason in the year 2023 Hispanics had lower COVID CMR than whites in all age groups:</p>
+<p>In the heatmap below, within five out of six age groups the total UCD COVID CMR in 2020-2023 was much higher among Hispanic people than whites. But in ages 85+ Hispanics had only slightly higher CMR than whites, which might be if whites are overrepresented in the upper end of the 85+ age category relative to Hispanics. However for some reason in the year 2023 Hispanics had lower COVID CMR than whites in all age groups:</p>
 <div class="width8">
 <img src="i/statistic-caliage-5.png">
 </div>
 <h2>
 <a href=#Ed_Dowd_Cancer_deaths_in_ages_15_44_at_CDC_WONDER id=Ed_Dowd_Cancer_deaths_in_ages_15_44_at_CDC_WONDER>Ed Dowd: Cancer deaths in ages 15-44 at CDC WONDER</a>
 </h2>
-<p>In April 2024 a preprint about cancer deaths in ages 15-44 at CDC WONDER was published by Carlos Alegria and Yuri Nunes from Ed Dowd's group Phinance Technologies. [<a href="https://www.researchgate.net/publication/378869803_US_%2dDeath_Trends_for_Neoplasms_ICD_codes_C00-D48_Ages_15-44">https://www.researchgate.net/publication/378869803_US_%2dDeath_Trends_for_Neoplasms_ICD_codes_C00-D48_Ages_15-44</a>] It showed that there was a fairly large increase in mortality between 2020 and 2021:</p>
+<p>Carlos Alegria and Yuri Nunes from Ed Dowd's group Phinance Technologies published a preprint about cancer deaths in ages 15 to 44 at CDC WONDER in April 2024. [<a href="https://www.researchgate.net/publication/378869803_US_%2dDeath_Trends_for_Neoplasms_ICD_codes_C00-D48_Ages_15-44">https://www.researchgate.net/publication/378869803_US_%2dDeath_Trends_for_Neoplasms_ICD_codes_C00-D48_Ages_15-44</a>] These plots from the paper appeared to show that there was a fairly large increase in mortality between 2020 and 2021:</p>
 <div class="width4">
 <img src="i/statistic-dowd-1.jpg">
 </div>
-<p>However the x-axis in the plots above started in 2010, so you couldn't see that the the increase in mortality between 2020 and 2021 wasn't that big compared to the decrease since 1999 (which is when the data at CDC WONDER starts). And you also couldn't see that the long-term trend in CMR between 1999 and 2019 looked curved so that it got flatter over time, and therefore the 2010-2019 linear trend used by Dowd's group might have been too steep relative to a longer-term polynomial trend:</p>
+<p>However the x-axis in the plots above started in 2010, so you couldn't see that the the increase in mortality between 2020 and 2021 wasn't that big compared to the decrease in mortality since 1999. And you also couldn't see that the long-term trend in CMR between 1999 and 2019 looked curved so that it got flatter over time, and therefore the 2010-2019 linear trend used by Dowd's group might have been too steep relative to a longer-term quadratic trend:</p>
 <div class="width6">
 <img src="i/statistic-dowd-4.png">
 </div>
-<p>In Dowd's preprint they plotted only CMR and raw deaths but not ASMR. But relative to the decrease in mortality rate in the two previous decades, the increase between 2020 and 2021 was smaller with CMR than with raw deaths, and it was even smaller with ASMR than with CMR:</p>
+<p>The preprint by Dowd's group only included plots for CMR and raw deaths but not ASMR. Relative to the decrease in mortality between the years 1999 and 2000, the increase between 2020 and 2021 was smaller for CMR than raw deaths, but it was even slightly smaller for ASMR than CMR:</p>
 <div class="width6">
 <img src="i/statistic-dowd-2.png">
 </div>
-<p>Dowd's team retrieved the data from CDC WONDER when it still used 2021 population estimates for 2022, so they got higher CMR in 2022 than 2021, like how the blue cross in my plot above is higher than the 2021 CMR. But I retrieved data from CDC WONDER after the 2022 population sizes had already been added, so I got lower CMR in 2022 than 2021.</p>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2);library(stringr)
+
+t=fread(&quot;http://sars2.net/f/wondercanceryearlysingle.csv&quot;)
+pop=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)
+
+oldpop=t[year==2021&amp;age%in%15:44,sum(pop)]
+
+t=merge(t,pop[,.(year,age,pop2=pop)],all=T)[!is.na(pop2),pop:=pop2]
+t=t[age%in%15:44&amp;year!=2024]
+t=merge(t[year==2020,.(age,std=pop/sum(pop))],t)
+years=unique(t$year)
+
+p=t[,.(dead=sum(dead),pop=sum(pop),asmr=sum(dead/pop*std)*1e5),year][,cmr:=dead/pop*1e5]
+
+annoy=(p[year==2022,dead]/oldpop*1e5-ystart)/(yend-ystart)
+
+ybreak=pretty(p[,c(asmr,cmr)]);ystart=ybreak[1];yend=max(ybreak)
+xstart=years[1];xend=max(years)
+xbreak=seq(xstart-.5,xend+.5,.5);xlab=c(rbind(&quot;&quot;,xstart:xend),&quot;&quot;)
+ybreak2=pretty(p$dead,7);ystart2=ybreak2[1];yend2=max(ybreak2)
+
+p$cmr=(p$cmr-ystart)/(yend-ystart)
+p$asmr=(p$asmr-ystart)/(yend-ystart)
+p$dead=(p$dead-ystart2)/(yend2-ystart2)
+
+color1=c(hcl(225,110,45),&quot;#cc0000&quot;);color2=&quot;black&quot;
+
+leg1=data.frame(x=xstart+.025*(xend-xstart),y=seq(.93,0,,11)[1:2],label=c(&quot;Crude mortality rate per 100k&quot;,&quot;Age-standardized mortality rate per 100k&quot;))
+leg2=data.frame(x=xstart+.975*(xend-xstart),y=.93,label=&quot;Deaths&quot;)
+
+kim=\(x)ifelse(x&gt;=1e3,ifelse(x&gt;=1e6,paste0(x/1e6,&quot;M&quot;),paste0(x/1e3,&quot;k&quot;)),x)
+
+pct=(p[year==2021,]-p[year==2020,])/(p[year==1999,]-p[year==2020,])*100
+note=sprintf(&quot;Increase from 2020 to 2021 as percentage of decrease from 1999 to 2020: %.1f%% for raw deaths, %.1f%% for CMR, %.1f%% for ASMR. The blue cross shows 2022 deaths divided by vintage 2021 population estimates for 2021, like the 2022 CMR in Dowd&#39;s paper.&quot;,pct$dead,pct$cmr,pct$asmr)|&gt;str_wrap(40)
+
+sub=&quot;Population estimates were downloaded from www2.census.gov/programs-surveys/popest/
+tables. The age-standardized mortality rate was calculated by single year of age so that the vintage 2023 resident population estimates for the year 2020 were used as the standard population. As of October 2023, CDC WONDER still used the 2022 population estimates for 2023. CDC WONDER uses vintage 2021 resident population estimates for 2021, vintage 2022 population estimates for 2022, and so on, but here the 2000-2010 intercensal population estimates were used for 2000-2009, vintage 2020 estimates for 2010-2019, and vintage 2023 estimates for 2020-2023. In order to get rid of a jump in the population estimates between 2019 and 2020, the population estimates based on the 2010 census were multiplied by a linear slope so that they were equal in 2020 to the population estimates based on the 2020 census.&quot;
+
+ggplot(xy,aes(x,y))+
+geom_hline(yintercept=c(0,1),color=&quot;black&quot;,linewidth=.23,lineend=&quot;square&quot;)+
+geom_vline(xintercept=c(xstart-.5,xend+.5),color=&quot;black&quot;,linewidth=.23,lineend=&quot;square&quot;)+
+geom_line(aes(y=cmr),color=color1[1],linewidth=.4)+
+geom_line(aes(y=asmr),color=color1[2],linewidth=.4)+
+geom_line(aes(y=dead),color=color2[1],linewidth=.4)+
+annotate(geom=&quot;point&quot;,x=2022,y=annoy,shape=4,size=1,color=color1[1])+
+annotate(geom=&quot;label&quot;,x=2010.5,y=.5,size=2.3,lineheight=1.15,label=note,fill=alpha(&quot;white&quot;,.7),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.3,&quot;lines&quot;),label.size=.2,hjust=0,vjust=.5)+
+geom_label(data=leg1,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.85),label.r=unit(0,&quot;pt&quot;),label.padding=unit(1,&quot;pt&quot;),label.size=0,color=color1,size=2.5,hjust=0)+
+geom_label(data=leg2,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.85),label.r=unit(0,&quot;pt&quot;),label.padding=unit(1,&quot;pt&quot;),label.size=0,color=color2,size=2.5,hjust=1)+
+labs(title=&quot;CDC WONDER, ages 15-44: underlying cause of death C00-D48 (Neoplasms)&quot;,x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=xbreak,labels=xlab)+
+scale_y_continuous(limits=c(0,1),breaks=seq(0,1,,length(ybreak)),labels=ybreak,sec.axis=sec_axis(trans=~.+0,breaks=seq(0,1,,length(ybreak2)),labels=kim(ybreak2)))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.text.x=element_text(angle=90,vjust=.5,hjust=1,margin=margin(3)),
+  axis.ticks=element_line(linewidth=.23,color=&quot;black&quot;),
+  axis.ticks.length=unit(3,&quot;pt&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.title=element_text(size=8),
+  legend.position=&quot;none&quot;,
+  panel.background=element_blank(),
+  plot.margin=margin(5,5,5,5),
+  plot.subtitle=element_text(size=7,margin=margin(,,4)),
+  plot.title=element_text(size=7,face=2,margin=margin(1,,4)))
+ggsave(&quot;1.png&quot;,width=4.3,height=2.8,dpi=380*4)
+
+system(paste0(&quot;magick 1.png -resize 25% 1.png;mar=30;w=`identify -format %w 1.png`;magick 1.png \\( -size $[w-mar*2]x -font Arial -interline-spacing -3 -pointsize 38 caption:&#39;&quot;,sub,&quot;&#39; -gravity southwest -splice $[mar]x14 \\) -append 1.png&quot;))</pre>
+</div>
+<p>The US Census Bureau published resident population estimates for mid-2022 in December 2022, but CDC WONDER kept using the 2021 resident population estimates for the year 2022 until approximately January 2024. Dowd's team retrieved the data from CDC WONDER in late 2023 when it still used 2021 population estimates for 2022, so they got higher CMR in 2022 than 2021 similar to my blue cross in the plot above. But in the plot above I downloaded the population estimates manually from the website of the Census Bureau in 2024 when they had already published population estimates for the years 2022 and 2023.</p>
 <p>The 2023 population estimates had not yet been added to CDC WONDER at the time when I downloaded the data below, so the 2023 population size is identical to 2022:</p>
 <pre>&gt; t=read.csv(&quot;http://sars2.net/f/wondercanceryearlysingle.csv&quot;)|&gt;subset(age%in%15:44)
 &gt; a=aggregate(t[,3:4],t[,2,drop=F],sum)
@@ -871,82 +942,7 @@ system(&quot;f=0.png;w=`identify -format %w $f`;convert -interline-spacing -2 -g
 [1] 12.48556
 &gt; a$dead[a$year==2022]/a$pop[a$year==2021]*1e5
 [1] 12.63225</pre>
-<p>Here's code for producing the previous plot:</p>
-<pre>library(ggplot2)
-
-t=read.csv(&quot;http://sars2.net/f/wondercanceryearlysingle.csv&quot;)|&gt;subset(age%in%15:44)
-
-std=with(subset(t,year==2020),setNames(pop,age))
-
-year=sort(unique(t$year))
-
-xy=data.frame(x=year,cmr=tapply(t$dead,t$year,sum)/tapply(t$pop,t$year,sum)*1e5)
-xy$asmr=tapply(std[as.character(t$age)]/sum(std)*t$dead/t$pop,t$year,sum,na.rm=T)*1e5
-xy$dead=tapply(t$dead,t$year,sum)
-
-cand=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
-ymax=max(xy[,2:3]);ymin=min(xy[,2:3])
-ystep=cand[which.min(abs(cand-(ymax-ymin)/6))]
-ystart=ystep*floor(ymin/ystep)
-yend=ystep*ceiling(ymax/ystep)
-ybreak=seq(ystart,yend,ystep)
-xstart=min(xy$x);xend=max(xy$x)
-
-xlab=c(rbind(&quot;&quot;,xstart:xend),&quot;&quot;)
-xbreak=seq(xstart-.5,xend+.5,.5)
-
-ystep2=cand[which.min(abs(cand-(max(xy$dead)-min(xy$dead))/6))]
-ystart2=ystep2*floor(min(xy$dead)/ystep2)
-yend2=ystep2*ceiling(max(xy$dead)/ystep2)
-ybreak2=seq(ystart2,yend2,ystep2)
-
-xy$cmr=(xy$cmr-ystart)/(yend-ystart)
-xy$asmr=(xy$asmr-ystart)/(yend-ystart)
-xy$dead=(xy$dead-ystart2)/(yend2-ystart2)
-
-color1=c(hcl(225,110,45),&quot;#cc0000&quot;)
-color2=&quot;black&quot;
-
-leg1=data.frame(x=xstart+.025*(xend-xstart),y=seq(.93,0,,11)[1:2],label=c(&quot;Crude mortality rate per 100k&quot;,&quot;Age-standardized mortality rate per 100k&quot;))
-leg2=data.frame(x=xstart+.975*(xend-xstart),y=.93,label=&quot;Deaths&quot;)
-
-kim=\(x)ifelse(x&gt;=1e3,ifelse(x&gt;=1e6,paste0(x/1e6,&quot;M&quot;),paste0(x/1e3,&quot;k&quot;)),x)
-
-inc=((xy[23,]-xy[22,])/(xy[1,]-xy[22,]))*100
-note=sprintf(&quot;Increase from 2020 to 2021 as percentage of decrease from 1999 to 2020: %.1f%% for raw deaths, %.1f%% for CMR, %.1f%% for ASMR. The blue cross shows 2022 deaths divided by 2021 population size, like the 2022 CMR in Dowd&#39;s paper.&quot;,inc[4],inc[2],inc[3])|&gt;stringr::str_wrap(40)
-
-a=aggregate(t[,3:4],t[,2,drop=F],sum)
-annoy=(a$dead[a$year==2022]/a$pop[a$year==2021]*1e5-ystart)/(yend-ystart)
-
-ggplot(xy,aes(x,y))+
-geom_hline(yintercept=c(0,1),color=&quot;black&quot;,linewidth=.3,lineend=&quot;square&quot;)+
-geom_vline(xintercept=c(xstart-.5,xend+.5),color=&quot;black&quot;,linewidth=.3,lineend=&quot;square&quot;)+
-geom_line(aes(y=cmr),color=color1[1],linewidth=.4)+
-geom_line(aes(y=asmr),color=color1[2],linewidth=.4)+
-geom_line(aes(y=dead),color=color2[1],linewidth=.4)+
-annotate(geom=&quot;point&quot;,x=2022,y=annoy,shape=4,size=1,color=color1[1])+
-annotate(geom=&quot;label&quot;,x=2010.5,y=.5,size=2.3,lineheight=1.15,label=note,fill=alpha(&quot;white&quot;,.7),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.3,&quot;lines&quot;),label.size=.2,hjust=0,vjust=.5)+
-geom_label(data=leg1,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.85),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.04,&quot;lines&quot;),label.size=0,color=color1,size=2.5,hjust=0)+
-geom_label(data=leg2,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.85),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.04,&quot;lines&quot;),label.size=0,color=color2,size=2.5,hjust=1)+
-labs(title=&quot;CDC WONDER, ages 15-44: underlying cause of death C00-D48 (Neoplasms)&quot;,subtitle=stringr::str_wrap(&quot;Source: wonder.cdc.gov/mcd-icd10.html. The age-standardized mortality rate was calculated by single year of age using the 2020 population as the standard population. CDC WONDER uses the 2022 population estimates as the population size for 2023, so here the 2023 population size for each age was calculated by projecting the 2015-2022 linear trend to 2023 instead. CDC WONDER uses vintage 2020 population estimates for 2020 and vintage 2021 population estimates for 2021, which were also used here instead of replacing them with the vintage 2022 population estimates which sometimes have a large difference to the older vintages.&quot;,83),x=NULL,y=NULL)+
-coord_cartesian(clip=&quot;off&quot;,expand=F)+
-scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=xbreak,labels=xlab)+
-scale_y_continuous(limits=c(0,1),breaks=seq(0,1,,length(ybreak)),labels=ybreak,sec.axis=sec_axis(trans=~.+0,breaks=seq(0,1,,length(ybreak2)),labels=kim(ybreak2)))+
-guides(colour=guide_legend(override.aes=list(linewidth=.5)))+
-theme(axis.text=element_text(size=7,color=&quot;black&quot;),
-  axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
-  axis.ticks=element_line(linewidth=.3,color=&quot;black&quot;),
-  axis.ticks.x=element_line(color=alpha(&quot;black&quot;,c(1,0))),
-  axis.ticks.length=unit(.2,&quot;lines&quot;),
-  axis.title=element_text(size=8),
-  legend.position=&quot;none&quot;,
-  panel.background=element_rect(fill=&quot;white&quot;),
-  plot.background=element_rect(fill=&quot;white&quot;),
-  plot.margin=margin(.4,.4,.4,.4,&quot;lines&quot;),
-  plot.subtitle=element_text(size=7,margin=margin(0,0,.7,0,&quot;lines&quot;)),
-  plot.title=element_text(size=8,margin=margin(0,0,.6,0,&quot;lines&quot;)))
-ggsave(&quot;1.png&quot;,width=4.3,height=3.5,dpi=450)</pre>
-<p>In the next plot I first calculated a linear trend in CMR within each 5-year age group in 2010-2019, and then I multiplied the projected baseline by the population size of each age group in order to get the expected deaths for each age group, and I added together the expected deaths on each month. So my method allows plotting raw deaths on the y-axis while simultaneously calculating the baseline so that it accounts for changes to the size of different age groups. In my plot there's an inflection point in the slope of the baseline around the year 2017 after which the baseline becomes more flat. So when Dowd's team plotted raw deaths using a 2010-2019 linear baseline, they exaggerated excess deaths during COVID because the slope of the baseline was too steep. My plot also shows that in September 2021 and January 2022 when there's big spikes in COVID deaths, there's also more UCoD cancer deaths than in the surrounding months, so a part of the increase in UCoD cancer deaths might be due to COVID:</p>
+<p>In the next plot I first calculated a linear trend in CMR within each 5-year age group in 2010-2019, and then I multiplied the projected trend by the population size of each age group in order to get the expected deaths for each age group, and I added together the expected deaths for all ages to get the total expected deaths for each month. So my method allows plotting raw deaths on the y-axis while simultaneously calculating the baseline so that it accounts for changes to the size of different age groups. In my plot there's an inflection point in the slope of the baseline around the year 2017 after which the baseline becomes more flat. So when Dowd's team plotted raw deaths using a 2010-2019 linear baseline, they exaggerated excess deaths during COVID because the slope of the baseline was too steep. My plot also shows that in September 2021 and January 2022 when there's big spikes in COVID deaths, there's also more UCD cancer deaths than in the surrounding months, so a part of the increase in UCD cancer deaths might be due to COVID:</p>
 <div class="width7">
 <img src="i/statistic-dowd-3.png">
 </div>
@@ -1025,7 +1021,7 @@ ggsave(&quot;1.png&quot;,width=4.3,height=3.5,dpi=450)</pre>
 &gt; vintage2021=read.csv(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2020-2021/national/asrh/nc-est2021-agesex-res.csv&quot;)
 &gt; sum(vintage2021$POPESTIMATE2021[vintage2021$SEX==0&amp;vintage2021$AGE%in%75:84]) # vintage 2021 estimate for 2021 (same as WONDER)
 [1] 16206075</pre>
-<p>In the plot below when I used the vintage 2022 population estimates for the years 2020 and 2021, 2020 actually got a higher CMR than 2021 for UCoD neoplasms in ages 75-84:</p>
+<p>In the plot below when I used the vintage 2022 population estimates for the years 2020 and 2021, 2020 actually got a higher CMR than 2021 for UCD neoplasms in ages 75-84:</p>
 <div class="width6">
 <img src="i/debunk-dowd-8.png">
 </div>
