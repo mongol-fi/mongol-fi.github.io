@@ -851,6 +851,66 @@ system(&quot;f=0.png;w=`identify -format %w $f`;convert -interline-spacing -2 -g
 <div class="width6">
 <img src="i/statistic-dowd-4.png">
 </div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2);library(stringr)
+
+t=fread(&quot;http://sars2.net/f/wondercanceryearlysingle.csv&quot;)
+pop=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)
+
+t=merge(t,pop[,.(year,age,pop2=pop)],all=T)
+t[!is.na(pop2),pop:=pop2]
+p=t[age%in%15:44&amp;year!=2024,.(y=sum(dead)/sum(pop)*1e5,z=&quot;Mortality rate&quot;),.(x=year)]
+
+years=1999:2023
+p2=p[x%in%2010:2019,.(x=years,y=predict(lm(y~x),p),z=&quot;2010-2019 linear trend&quot;)]
+p3=p[x%in%1999:2019,.(x=years,y=predict(lm(y~poly(x,2)),p),z=&quot;1999-2019 polynomial trend&quot;)]
+p=rbind(p,p2,p3)[,z:=factor(z,unique(z))]
+
+ybreak=pretty(p$y,9);ystart=ybreak[1];yend=max(ybreak)
+xstart=years[1];xend=max(years)
+xbreak=seq(xstart-.5,xend+.5,.5);xlab=c(rbind(&quot;&quot;,xstart:xend),&quot;&quot;)
+
+color=c(&quot;black&quot;,hsv(22/36,1,.8),hsv(12/36,1,.65))
+
+ggplot(p,aes(x,y,color=z))+
+geom_hline(yintercept=c(ystart,yend),linewidth=.25,lineend=&quot;square&quot;)+
+geom_vline(xintercept=c(xstart-.5,xend+.5),linewidth=.25,lineend=&quot;square&quot;)+
+geom_vline(xintercept=c(2009.5,2019.5),linetype=5,linewidth=.25)+
+geom_line(linewidth=.35)+
+geom_point(aes(alpha=z),size=.5)+
+geom_line(data=p[z==z[1]],linewidth=.35)+
+labs(title=&quot;CDC WONDER, ages 15-44: crude mortality rate per 100,000 people for\nunderlying cause of death C00-D48 (neoplasms)&quot;,x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=xbreak,labels=xlab)+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
+scale_color_manual(values=color)+
+scale_alpha_manual(values=c(1,0,0))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.text.x=element_text(angle=90,vjust=.5,hjust=1,margin=margin(3)),
+  axis.ticks=element_line(linewidth=.25,color=&quot;black&quot;),
+  axis.ticks.length=unit(3,&quot;pt&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.background=element_rect(linewidth=.3),
+  legend.box.just=&quot;left&quot;,
+  legend.justification=c(1,1),
+  legend.key=element_blank(),
+  legend.key.height=unit(9,&quot;pt&quot;),
+  legend.key.width=unit(17,&quot;pt&quot;),
+  legend.margin=margin(-2,4,4,4),
+  legend.position=c(1,1),
+  legend.spacing.x=unit(1,&quot;pt&quot;),
+  legend.text=element_text(size=7,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  plot.margin=margin(5,5,5,5),
+  plot.subtitle=element_text(size=7,margin=margin(,,4)),
+  plot.title=element_text(size=7,face=2,margin=margin(1,,4)))
+ggsave(&quot;1.png&quot;,width=3.6,height=2.5,dpi=380*4)
+system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
+</div>
 <p>The preprint by Dowd's group only included plots for CMR and raw deaths but not ASMR. Relative to the decrease in mortality between the years 1999 and 2000, the increase between 2020 and 2021 was smaller for CMR than raw deaths, but it was even slightly smaller for ASMR than CMR:</p>
 <div class="width6">
 <img src="i/statistic-dowd-2.png">
@@ -896,7 +956,7 @@ note=sprintf(&quot;Increase from 2020 to 2021 as percentage of decrease from 199
 sub=&quot;Population estimates were downloaded from www2.census.gov/programs-surveys/popest/
 tables. The age-standardized mortality rate was calculated by single year of age so that the vintage 2023 resident population estimates for the year 2020 were used as the standard population. As of October 2023, CDC WONDER still used the 2022 population estimates for 2023. CDC WONDER uses vintage 2021 resident population estimates for 2021, vintage 2022 population estimates for 2022, and so on, but here the 2000-2010 intercensal population estimates were used for 2000-2009, vintage 2020 estimates for 2010-2019, and vintage 2023 estimates for 2020-2023. In order to get rid of a jump in the population estimates between 2019 and 2020, the population estimates based on the 2010 census were multiplied by a linear slope so that they were equal in 2020 to the population estimates based on the 2020 census.&quot;
 
-ggplot(xy,aes(x,y))+
+ggplot(p,aes(x,y))+
 geom_hline(yintercept=c(0,1),color=&quot;black&quot;,linewidth=.23,lineend=&quot;square&quot;)+
 geom_vline(xintercept=c(xstart-.5,xend+.5),color=&quot;black&quot;,linewidth=.23,lineend=&quot;square&quot;)+
 geom_line(aes(y=cmr),color=color1[1],linewidth=.4)+
@@ -946,7 +1006,117 @@ system(paste0(&quot;magick 1.png -resize 25% 1.png;mar=30;w=`identify -format %w
 <div class="width7">
 <img src="i/statistic-dowd-3.png">
 </div>
-<p>In the US young age groups had more COVID deaths in 2021 and 2022 relative to 2020, and old age groups had more COVID deaths in 2020 relative to 2021 and 2022, which might be because young age groups were less likely to be vaccinated.</p>
+<p>The plot above shows that ages 15 to 44 had a high number of COVID deaths in 2021 relative to 2020, which might partially explain why young age groups have high cancer deaths in 2021 relative to 2020. In the United States and other countries, the total number of COVID deaths in 2021 as a percentage of the COVID deaths in 2020 was much higher in younger age groups than older age groups, which might be because younger age groups were less likely to be vaccinated in 2021. This shows the yearly number of deaths with UCD COVID from CDC WONDER:</p>
+<table>
+<tr><th>
+Age
+</th><th>
+2020
+</th><th>
+2021
+</th><th>
+2021 as percentage of 2020
+</th></tr>
+<tr><td>
+0
+</td><td>
+35
+</td><td>
+91
+</td><td>
+260%
+</td></tr>
+<tr><td>
+1-4
+</td><td>
+19
+</td><td>
+54
+</td><td>
+284%
+</td></tr>
+<tr><td>
+5-14
+</td><td>
+49
+</td><td>
+143
+</td><td>
+292%
+</td></tr>
+<tr><td>
+15-24
+</td><td>
+505
+</td><td>
+1405
+</td><td>
+278%
+</td></tr>
+<tr><td>
+25-34
+</td><td>
+2260
+</td><td>
+6134
+</td><td>
+271%
+</td></tr>
+<tr><td>
+35-44
+</td><td>
+6084
+</td><td>
+16011
+</td><td>
+263%
+</td></tr>
+<tr><td>
+45-54
+</td><td>
+16970
+</td><td>
+36884
+</td><td>
+217%
+</td></tr>
+<tr><td>
+55-64
+</td><td>
+42096
+</td><td>
+73731
+</td><td>
+175%
+</td></tr>
+<tr><td>
+65-74
+</td><td>
+76285
+</td><td>
+102721
+</td><td>
+135%
+</td></tr>
+<tr><td>
+75-84
+</td><td>
+97032
+</td><td>
+98808
+</td><td>
+102%
+</td></tr>
+<tr><td>
+85+
+</td><td>
+109529
+</td><td>
+80934
+</td><td>
+74%
+</td></tr>
+</table>
 <h2>
 <a href=#Ed_Dowd_Cancer_deaths_in_ages_75_84_at_CDC_WONDER id=Ed_Dowd_Cancer_deaths_in_ages_75_84_at_CDC_WONDER>Ed Dowd: Cancer deaths in ages 75-84 at CDC WONDER</a>
 </h2>
