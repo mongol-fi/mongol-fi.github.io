@@ -514,7 +514,7 @@ start  end
 <div class="width6">
 <img src="i/pradhan-perez.png">
 </div>
-<p>The paper erroneously says that the table above contains 14 matches out of which 12 are significant, even though actually there's 15 matches out of which 13 are so-called significant matches. The starting and ending positions in the last column seem to use zero-based indexing, because they are smaller by one than they would be in regular one-based indexing. One error in the table above is that <span class="quote">&quot;Simian immunodeficiency virus isolate TAN5 from Tanzania&quot;</span> should have the accession number JN091691.1, but it was accidentally given the same accession number as the sequence on the next row. Another error is that the ranges in the last column were accidentally swapped for AF003044 and JN091691. And another error is that on the last row the length of the match is indicated to be 30 bases even though the given starting and ending positions would give a length of only 20 bases, but it's because the starting position is too high by 10.</p>
+<p>The paper erroneously says that the table above contains 14 matches out of which 12 are significant, even though actually there's 15 matches out of which 13 are so-called significant matches. The starting and ending positions in the last column seem to use zero-based indexing, because they are smaller by one than they would be in regular one-based indexing. One error in the table above is that <span class="quote">&quot;Simian immunodeficiency virus isolate TAN5 from Tanzania&quot;</span> should have the accession number JN091691.1, but it was accidentally given the same accession number as the sequence on the next row. Another error is that the ranges in the last column were accidentally swapped for AF003044 and JN091691. And another error is that on the last row the length of the match is indicated to be 30 bases even though the given starting and ending positions would result in a length of only 20 bases, but it's because the starting position is too high by 10.</p>
 <p>When I downloaded all 15 sequences in the table and I did a BLAST search of them against SARS-CoV-2, there were no matches returned when I ran BLAST with the default settings:</p>
 <pre>$ cat perez # fixed errors mentioned above and converted to 1-based indexing
 JN230738.1 21138 21153
@@ -557,14 +557,147 @@ JF811228.1  1.3     16      16      100.000  minus    21851   21866  21851      
 KC187066.1  0.009   28      32      87.500   minus    21884   21915  21884       21915     true
 GU481454.1  0.009   32      39      82.051   minus    21914   21952  21914       21952     true
 LM999945.1  0.38    25      30      83.333   minus    21941   21970  21941       21970     true</pre>
-<p>However the output above shows that all of the matches have a high E-value, which explains why they were not returned when I ran BLAST with the default settings. In 4 out of 15 matches the E-value is above 1, which means that more than 1 similar matches would be expected to occur by chance. And even the lowest E-value is about 0.003.</p>
-<p>The output above shows that 10 out of 15 matches are on the minus strand, which means that HIV/SIV matched the reverse complement of the segment in SARS-CoV-2, so it means that the matched segment won't even code for the same amino acids in SARS-CoV-2 and HIV/SIV. For example the second sequence in Perez's table matches a Swedish HIV sequence from 2017. [<a href="https://www.ncbi.nlm.nih.gov/nuccore/MF373163">https://www.ncbi.nlm.nih.gov/nuccore/MF373163</a>] But it matches SARS-CoV-2 on the opposite strand so its translation is completely different:</p>
+<p>The E value is the number of matches that are expected to occur by chance for a given query length and a given database size. A bigger database size means higher E values. But here even though I had a tiny database that consisted of only 15 HIV sequences, 4 out of 15 matches above got an E value above 1, which means that more than 1 similar matches are expected to occur by chance even within my tiny database.</p>
+<p>The output above shows that 10 out of 15 matches are on the minus strand, which means that HIV/SIV matched the reverse complement of the segment in SARS-CoV-2, so it means that the matched segment won't even code for the same amino acids in SARS-CoV-2 and HIV/SIV. For example the second sequence in Perez's table matches a Swedish HIV sequence from 2017. [<a href="https://www.ncbi.nlm.nih.gov/nuccore/MF373163">https://www.ncbi.nlm.nih.gov/nuccore/MF373163</a>] But it matches SARS-CoV-2 on the opposite strand so the translation is completely different:</p>
 <pre>SARS-CoV-2:                HIV:
-
- --------------------&gt;      &lt;--------------------
- ATGCGTCATCATCTGAAGCAT      ATGCTTCAGATGATGACGCAT
+                            &lt;--------------------
+ --------------------&gt;      TACGAAGTCTACTACTGCGTA # reversed version of segment matched in SARS-CoV-2
+ ATGCGTCATCATCTGAAGCAT      ATGCTTCAGATGATGACGCAT # reversed version with complemented bases
 AATGCGTCATCATCTGAAGCATTT   TATGCTTCAGATGATGACGCATAT
  N  A  S  S  S  E  A  F     Y  A  S  D  D  D  A  Y</pre>
+<p>Out of the 5 matches on the plus strand in my BLAST output above, 2 are not in the same frame in SARS-CoV-2 and HIV/SIV so the amino acid translation is not the same (so only 3 out of the 15 matches in Perez's table are both on the right strand and the right frame):</p>
+<table>
+<tr><th>
+accession
+</th><th>
+SARS2 start
+</th><th>
+SARS2 end
+</th><th>
+HIV start
+</th><th>
+HIV end
+</th><th>
+SARS2 CDS start
+</th><th>
+HIV CDS start
+</th><th>
+SARS2 frame
+</th><th>
+HIV frame
+</th><th>
+frame matches
+</th></tr>
+<tr><td>
+JN230738
+</td><td>
+21138
+</td><td>
+21153
+</td><td>
+77
+</td><td>
+92
+</td><td>
+20899
+</td><td>
+77
+</td><td>
+0
+</td><td>
+1
+</td><td>
+false
+</td></tr>
+<tr><td>
+JF267434
+</td><td>
+21584
+</td><td>
+21601
+</td><td>
+284
+</td><td>
+301
+</td><td>
+47
+</td><td>
+284
+</td><td>
+1
+</td><td>
+1
+</td><td>
+true
+</td></tr>
+<tr><td>
+AF003044
+</td><td>
+21749
+</td><td>
+21768
+</td><td>
+845
+</td><td>
+864
+</td><td>
+212
+</td><td>
+845
+</td><td>
+1
+</td><td>
+1
+</td><td>
+true
+</td></tr>
+<tr><td>
+HQ644953
+</td><td>
+21757
+</td><td>
+21784
+</td><td>
+967
+</td><td>
+994
+</td><td>
+220
+</td><td>
+967
+</td><td>
+0
+</td><td>
+0
+</td><td>
+true
+</td></tr>
+<tr><td>
+L07625
+</td><td>
+21804
+</td><td>
+21829
+</td><td>
+6701
+</td><td>
+6726
+</td><td>
+267
+</td><td>
+23
+</td><td>
+2
+</td><td>
+1
+</td><td>
+false
+</td></tr>
+</table>
+<p>Next I tried using web BLAST to search for matches to Wuhan-Hu-1 within HIV sequences in the nt database: <a href="https://blast.ncbi.nlm.nih.gov/Blast.cgi">https://blast.ncbi.nlm.nih.gov/Blast.cgi</a>. I set the query field to <span class="quote">&quot;MN908947&quot;</span>, I switched the database to <span class="quote">&quot;Nucleotide collection (nr/nt)&quot;</span>, I set organism to <span class="quote">&quot;Human immundeficiency virus type 1 (taxid:11676)&quot;</span>, I selected the option to optimize for <span class="quote">&quot;Somewhat similar sequences (blastn)&quot;</span>, and under algorithm parameters I set <span class="quote">&quot;Expect threshold&quot;</span> to 1000. The default expect threshold is 0.05 which means that only result with an E value of 0.05 or lower are returned, so there were no results when I used the default expect threshold (because the default threshold is designed to not return matches that are highly likely to be due to chance). There were also no results when I used megablast which employs more strict matching criteria than blastn. However now my database was much bigger than my local mini-database that only contained 15 sequences, so now even my lowest E values were about 5.2, which means that about 5.2 similar matches are expected to occur by chance:</p>
+<div class="width14">
+<img src="i/pradhan-perez-7.jpg">
+</div>
 <p>The paper by Perez and Montagnier also included a second table of additional matches to HIV and SIV:</p>
 <div class="width6">
 <img src="i/pradhan-perez-2.png">
@@ -612,7 +745,7 @@ strand  start  end
 <div class="width6">
 <img src="i/pradhan-perez-6.jpg">
 </div>
-<p>The screenshot above shows that the match to the whole chromosome in <em>Plasmodium yoelii</em> is on the opposite strand as in SARS-CoV-2, but the match to the gene in <em>Plasmodium yoelii</em> is still on the same strand because the gene is on the reverse strand. And the part of the match after the gaps happens to be in the +2 frame in both <em>Plasmodium yoelii</em> and SARS-CoV-2 (but the match is still not impressive at all because it only has 36 out of 46 identical bases so the percentage identity is only about 78%):</p>
+<p>The screenshot above shows that the match to the whole chromosome in <em>Plasmodium yoelii</em> is on the opposite strand as in SARS-CoV-2, but the match to the gene in <em>Plasmodium yoelii</em> is still on the same strand because the gene is on the reverse strand. And the part of the match after the gaps happens to be in the +2 frame in both <em>Plasmodium yoelii</em> and SARS-CoV-2 (but the match is still not impressive at all because it has only 36 out of 46 identical bases so the percentage identity is only about 78%):</p>
 <pre>$ url=&#39;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&amp;rettype=fasta_cds_na&#39;
 $ curl &quot;$url&amp;id=MN908947&quot;&gt;sars2.na
 $ curl &quot;$url&amp;id=LK934642&quot;&gt;yoelii14.na
