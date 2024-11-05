@@ -73,6 +73,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Arkmedics_BLAST_searches_for_Pradhan_et_al_s_inserts>Arkmedic's BLAST searches for Pradhan et al.'s inserts</a></li>
 <li><a href=#Matches_to_env_in_LANLs_HIV_subtype_reference>Matches to env in LANL's HIV subtype reference</a></li>
 <li><a href=#May_2020_preprint_by_Perez_and_Montagnier>May 2020 preprint by Perez and Montagnier</a></li>
+<li><a href=#E_values_of_matches_to_Pradhans_first_two_inserts>E values of matches to Pradhan's first two inserts</a></li>
 </ul>
 
 <h2>
@@ -739,6 +740,38 @@ strand  start  end
 <div class="width10">
 <img src="i/pradhan-perez-9.png">
 </div>
+<h2>
+<a href=#E_values_of_matches_to_Pradhans_first_two_inserts id=E_values_of_matches_to_Pradhans_first_two_inserts>E values of matches to Pradhan's first two inserts</a>
+</h2>
+<p>The E value or expect value indicates how many similarly close matches are expected to occur by chance for the given query sequence and pool of searched sequences.</p>
+<p>You can try to go to the web GUI for blastp: <a href="https://blast.ncbi.nlm.nih.gov/Blast.cgi?PROGRAM=blastp">https://blast.ncbi.nlm.nih.gov/Blast.cgi?PROGRAM=blastp</a>. Then set query to <code>TNGTKR</code>, organism to <span class="quote">&quot;Viruses (taxid:10239)&quot;</span>, click <span class="quote">&quot;Add organism&quot;</span>, set the second organism to <span class="quote">&quot;SARS-CoV-2 (taxid:2697049)&quot;</span> and click the exclude checkbox next to it. It showed me that the matches to HIV got an E value of about 372, which means that about 372 similar matches with 6 out of 6 identical residues are expected to occur by chance. There were a total of 76 perfect matches with 6 out of 6 identical residues, so the expect score was about 5 times higher than the number of perfect matches.</p>
+<p>When I did another search in the whole nr database so that I didn't include the organism filters, then the E scores of perfect matches increased to about 54093, or about 145 times higher than with the filters because now the pool of subject sequences was much larger, and the E score is directly proportional to the effective length of the pool of subject sequences.</p>
+<p>The E score is calculated by the formula <code>E = m * n * 2^(-S)</code>, where <code>m</code> and <code>n</code> are the effective length of the query and database sequences and <code>S</code> is the bitscore. I don't know how to calculate the effective length, because it is calculated by subtracting a parameter called the length adjustment from the actual length to account for duplicate sequences and repetitive elements within sequences, so I believe you need to download the entire database to calculate the length adjustment. However since the E values are directly proportional to the effective length of the pool of subject sequences, from the ratio of my E scores you can calculate that the effective length of the whole nr database is about 145 times higher than the effective length of the subset of the nr database that contains viruses apart from SARS-CoV-2.</p>
+<p>Pradhan's second insert <code>HKNNKS</code> was 6 residues long like the first insert, but when I searched for the second insert among viruses other than SARS-CoV-2 in the nr database, the E value was now about 185 for the match to HIV. The results included 36 perfect matches, so the expect score was again about 5 times higher than the number of perfect matches. I believe the reason why both queries don't get the same E value even though they're the same length is that the algorithm assigns different scores to common amino acids and rare amino acids.</p>
+<p>The nr database contains a massive number of protein sequences for a few species of widely studied human viruses like SARS-CoV-2, HIV-1, and influenza A. But in order to restrict the search to a database that only has one or a few representative samples for each species of virus, you can search in the refseq_protein database instead and restrict the organism to viruses. It gave me an E value of about 33 for results that had a perfect match to Pradhan's first insert <code>TNGTKR</code> (but the results didn't include any HIV sequences, because the envelope protein of the HIV-1 refseq matches only 2 of 6 residues of <code>TNGTKR</code> at the spot where Pradhan's HIV sequences from Thailand match <code>TNGTKR</code>):</p>
+<div class="width8">
+<img src="i/pradhan-escore.jpg">
+</div>
+<p>So even within a fairly small pool of proteins from virus refseqs, the E values for perfect matches to the 6 aa insert were still very high.</p>
+<p>In the following code I created my own BLAST database for proteins from virus refseqs. For some reason it failed to download coding sequences for about half of all virus refseqs even though refseqs should usually have annotations for proteins. But anyway, I now got only a single perfect match to <code>TNGTKR</code> which was in the refseq for SARS-CoV-2, but the E value of the match was still 289 which is very high:</p>
+<pre>$ wget -q https://ftp.ncbi.nlm.nih.gov/refseq/release/viral/viral.1.1.genomic.fna.gz
+$ seqkit seq -ni viral.fa|curl -sd &quot;id=$(paste -sd, -)&quot; &#39;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&amp;rettype=fasta_cds_na&#39;&gt;viral.aa
+$ makeblastdb -dbtype prot -in viral.aa
+[...]
+$ echo $&#39;&gt;a\nTNGTKR&#39;|blastp -db viral.aa -evalue 1000
+[...]
+&gt;lcl|NC_045512.2_prot_YP_009724390.1_3 [gene=S] [locus_tag=GU280_gp02] # spike protein of refseq for SARS-CoV-2
+[db_xref=GeneID:43740568] [protein=surface glycoprotein]
+[protein_id=YP_009724390.1] [location=21563..25384] [gbkey=CDS]
+Length=1273
+
+ Score = 16.5 bits (31),  Expect = 289, Method: Composition-based stats.
+ Identities = 6/6 (100%), Positives = 6/6 (100%), Gaps = 0/6 (0%)
+
+Query  1   TNGTKR  6
+           TNGTKR
+Sbjct  73  TNGTKR  78
+[...]</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')

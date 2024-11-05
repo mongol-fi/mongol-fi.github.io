@@ -123,6 +123,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Find_longest_segment_of_Wuhan_Hu_1_that_matches_the_GRCh38_human_reference_genome>Find longest segment of Wuhan-Hu-1 that matches the GRCh38 human reference genome</a></li>
 <li><a href=#Plot_HIV_subtype_reference_with_year_on_x_axis_and_distance_to_specified_sample_on_y_axis>Plot HIV subtype reference with year on x-axis and distance to specified sample on y-axis</a></li>
 <li><a href=#Make_a_maximum_likelihood_tree_with_IQ_TREE_and_plot_it_with_ggtree>Make a maximum likelihood tree with IQ-TREE and plot it with ggtree</a></li>
+<li><a href=#Make_a_heatmap_for_ratio_of_synonymous_to_nonsynonymous_mutations>Make a heatmap for ratio of synonymous to nonsynonymous mutations</a></li>
 </ul>
 
 <h2>
@@ -2783,7 +2784,7 @@ emu()(curl -sd &quot;id=$(paste -sd,)&quot; &quot;https://eutils.ncbi.nlm.nih.go
 mkdir -p ~/bin;curl https://www.hiv.lanl.gov/repository/aids-db/PROGS/Snap/SNAP.pl&gt;~/bin/snap;chmod +x ~/bin/snap
 
 # run SNAP for a FASTA file converted to the format used by SNAP, where the ID is in the first column and the sequence is in the second column
-sna()(snap &lt;(sed &#39;s/ .*//&#39; &quot;$@&quot;|seqkit fx2tab))
+sna()(~/bin/snap &lt;(sed &#39;s/ .*//&#39; &quot;$@&quot;|seqkit fx2tab))
 
 # convert the results of a SNAP run with two sequences to a simple CSV format
 sna3()(sna &quot;$@&quot;;(echo position,synonymous,nonsynonymous,indel;awk &#39;/^[0-9]/{print$1,$7?$7:0,$8?$8:0,$2==&quot;indel&quot;}&#39; OFS=, $(ls -t codons.*|head -n1))&gt;snap.csv)
@@ -3083,13 +3084,88 @@ iqtree2 -nt auto -fast -s small5.fa</pre>
 <p><code>-nt auto</code> sets the number of threads automatically instead of using a single thread.</p>
 <p>The tree is unrooted but here I rerooted the tree so that I picked the sample that was the furthest from HXB2 as the outgroup:</p>
 <pre>library(ggtree)
+
 t=read.tree(&quot;small5.fa.treefile&quot;)
 t=ape::root(t,&quot;CPZ.CD.90.ANT&quot;,resolve.root=T)
+
 ggtree(t)+geom_tiplab()+xlim(0,2)
 ggsave(&quot;1.png&quot;,height=length(t$tip.label)*.15,width=5)
 system(&quot;mogrify -trim -bordercolor white -border 32 1.png&quot;)</pre>
 <div class="width4">
 <img src="i/scripts-iqtree.png">
+</div>
+<h2>
+<a href=#Make_a_heatmap_for_ratio_of_synonymous_to_nonsynonymous_mutations id=Make_a_heatmap_for_ratio_of_synonymous_to_nonsynonymous_mutations>Make a heatmap for ratio of synonymous to nonsynonymous mutations</a>
+</h2>
+<pre># download sarbecovirus sequences
+curl -sL sars2.net/f/sarbe.fa.xz|xz -dc&gt;sarbe.fa
+
+# efetch multi (download each accession from STDIN)
+emu()(curl -sd &quot;id=$(paste -sd,)&quot; &quot;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=${1:-nuccore}&amp;rettype=${2:-fasta}&amp;retmode=$3&quot;)
+
+# download nucleotide coding sequences of sarbecoviruses
+seqkit seq -ni sarbe.fa|emu &#39;&#39; fasta_cds_na&gt;sarbe.na
+
+# install SNAP
+mkdir -p ~/bin;curl https://www.hiv.lanl.gov/repository/aids-db/PROGS/Snap/SNAP.pl&gt;~/bin/snap;chmod +x ~/bin/snap
+
+# compile C++ program for making a percentage identity matrix
+curl -Ls sars2.net/f/pid.cpp&gt;pid.cpp;g++ pid.cpp -O3 -o ~/bin/pid
+
+# run SNAP for a FASTA file converted to the format used by SNAP, where the ID is in the first column and the sequence is in the second column
+sna()(~/bin/snap &lt;(sed &#39;s/ .*//&#39; &quot;$@&quot;|seqkit fx2tab))
+
+# run SNAP and make a space-delimited file for syn and nonsyn mutations in each pair of sequences
+sna2()(sna &quot;$@&quot;;awk &#39;/This is comparison/{x=$7;y=$8}/^[0-9]/{print x,y,$1,$7?$7:0,$8?$8:0}&#39; $(ls -t codons.*|head -n1)&gt;snap.tab)
+
+# codon align (align by translated amino acid sequence and insert gap triplets to nucleotide sequence)
+coda()(x=$(cat);seqkit seq -g&lt;&lt;&lt;&quot;$x&quot;|seqkit translate|mafft --quiet --thread 4 -|seqkit seq -s|gawk -F &#39;&#39; &#39;NR==FNR{gaps=0;for(i=1;i&lt;=NF;i++)if($i==&quot;-&quot;)a[NR][i-(gaps++)]++;next}{for(i=1;i&lt;=NF;i+=3){i2=(i-1)/3+1;for(j=1;j&lt;=a[FNR][i2];j++)printf&quot;---&quot;;printf&quot;%s&quot;,substr($0,i,3)};print&quot;&quot;}&#39; - &lt;(seqkit seq -gs&lt;&lt;&lt;&quot;$x&quot;)|paste &lt;(seqkit seq -n&lt;&lt;&lt;&quot;$x&quot;) -|seqkit tab2fx)
+
+# rename FASTA defline to use shorter names
+shorn()(sed -E $&#39;s/(,| surface| ORF1| orf1| genomic sequence).*//;s/Severe acute respiratory syndrome/SARS/;s/ isolate / /&#39;)
+
+# pick 24 random spike sequences and rename the sequences to include the sequence names on the defline (SARS1 is excluded here)
+seqkit grep -nrp gene=S,spike,surface sarbe.na|seqkit seq -m 3700|seqkit grep -svrp N|sed &#39;s/lcl|//;s/_cds_.*//&#39;|seqkit fx2tab|awk -F\\t &#39;NR==FNR{a[$1]=$2;next}{print&quot;&gt;&quot;$1&quot; &quot;a[$1]&quot;\n&quot;$2}&#39; &lt;(seqkit seq -n sarbe.fa|sed $&#39;s/ /\t/&#39;) -|seqkit grep -nrvp&#39;SARS coronavirus&#39;|shorn|seqkit shuffle|seqkit head -n24|coda&gt;snap.fa
+
+# run SNAP and make percentage identity matrix
+sna2&lt;snap.fa;~/bin/pid&lt;snap.fa&gt;snap.pid</pre>
+<!-- -->
+<pre>t=data.table::fread(&quot;snap.tab&quot;) # this is much faster for large files than read.csv
+t=t[,.(V4=sum(V4),V5=sum(V5)),.(V1,V2)] # V4 is syn, V5 is nonsyn, V1 is seq1, V2 is seq2
+t=rbind(t,t[,.(V1=V2,V2=V1,V4,V5)]) # add flipped pairs for each pair of compared sequences
+
+m=t[,xtabs(V4/V5~V1+V2)]
+
+name=sub(&quot;^&gt;&quot;,&quot;&quot;,grep(&quot;^&gt;&quot;,readLines(&quot;snap.fa&quot;),value=T))
+name=setNames(sub(&quot;^.*? &quot;,&quot;&quot;,name),sub(&quot; .*&quot;,&quot;&quot;,name))
+id=rownames(m)
+# rownames(m)=colnames(m)==paste0(name[rownames(m)],&quot; (&quot;,sub(&quot;\\.\\d+$&quot;,&quot;&quot;,rownames(m)),&quot;)&quot;) # include accessions
+rownames(m)=colnames(m)=name[rownames(m)] # don&#39;t include accessions
+
+dist=read.table(&quot;snap.pid&quot;,header=T,row.names=1,sep=&quot;\t&quot;)
+rownames(dist)=colnames(dist)=sub(&quot; .*&quot;,&quot;&quot;,rownames(dist))
+dist=dist[id,id]
+
+# reorder clustering tree based on first dimension in MDS to arrange similar branches together
+hc=as.hclust(reorder(as.dendrogram(hclust(dist(dist))),cmdscale(dist(dist),1)))
+
+disp=ifelse(m&gt;=10,round(m),sprintf(&quot;%.1f&quot;,m));disp[m==0]=0
+m=m^.6 # use curved scale similar to weak log scale for colors
+m[is.infinite(m)]=NA # replace ratios where nonsyn is zero with NA because pheatmap doesn&#39;t support infinite values
+
+maxcolor=max(m,na.rm=T)
+pal=hsv(c(21,21,21,16,11,6,3,0)/36,c(0,.25,rep(.5,6)),c(rep(1,8)))
+
+pheatmap::pheatmap(m,filename=&quot;1.png&quot;,display_numbers=disp,clustering_callback=\(...)hc,
+  legend=F,cellwidth=13,cellheight=13,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;gray90&quot;,number_color=&quot;black&quot;,
+  breaks=seq(0,maxcolor,,256),colorRampPalette(pal)(256))
+
+tit=&quot;Ratio of synonymous to nonsynonymous mutations in sarbecovirus spike sequences&quot;
+sub=&quot;Calculated with SNAP.pl: hiv.lanl.gov/content/sequence/SNAP/help_files/README.html. The ratio is an unadjusted ratio of raw mutation counts, and not a dS/dN ratio with Jukes-Cantor correction. The clustering tree is based on a nucleotide percentage identity matrix of spike sequences.&quot;
+system(paste0(&quot;f=1.png;mar=20;w=`identify -format %w $f`;magick \\( -size $[w-mar*2]x -font Arial-Bold -pointsize 45 caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\&#39;&#39;&quot;,tit),&quot;&#39; -splice $[mar]x20 \\) \\( -size $[w-mar*2]x -font Arial -pointsize 40 caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\&#39;&#39;&quot;,sub),&quot;&#39; -splice $[mar]x8 \\) \\( $f -splice x6 \\) -append 1.png&quot;))</pre>
+<div class="width8">
+<img src="i/scripts-synnonsynheat.png">
 </div>
 <script>
 let q=document.querySelectorAll('a,code,pre')

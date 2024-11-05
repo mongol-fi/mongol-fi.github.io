@@ -97,6 +97,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Clare_Craig_Sustained_excess_deaths_in_Sweden>Clare Craig: Sustained excess deaths in Sweden</a></li>
 <li><a href=#Aly_Cook_FOI_response_for_presentations_of_chest_pain_in_New_Zealand_in_ages_0_to_39>Aly Cook: FOI response for presentations of chest pain in New Zealand in ages 0 to 39</a></li>
 <li><a href=#Steve_Kirsch_CDC_graphic_about_unvaccinated_risk_of_infection_hospitalization_and_death>Steve Kirsch: CDC graphic about unvaccinated risk of infection, hospitalization, and death</a></li>
+<li><a href=#Jikkyleaks_Doctor_certified_cancer_deaths_in_Australia>Jikkyleaks: Doctor-certified cancer deaths in Australia</a></li>
 </ul>
 
 <h2>
@@ -847,7 +848,7 @@ system(&quot;f=0.png;w=`identify -format %w $f`;convert -interline-spacing -2 -g
 <div class="width4">
 <img src="i/statistic-dowd-1.jpg">
 </div>
-<p>However the x-axis in the plots above started in 2010, so you couldn't see that the the increase in mortality between 2020 and 2021 wasn't that big compared to the decrease in mortality since 1999. And you also couldn't see that the long-term trend in CMR between 1999 and 2019 looked curved so that it got flatter over time, and therefore the 2010-2019 linear trend used by Dowd's group might have been too steep relative to a longer-term quadratic trend:</p>
+<p>However the x-axis in the plots above started in 2010, so you couldn't see that the the increase in mortality between 2020 and 2021 wasn't that big compared to the decrease in mortality since 1999. And you also couldn't see that the long-term trend in CMR between 1999 and 2019 looked curved so that it got flatter over time, and therefore the 2010-2019 linear trend used by Dowd's group might have been too steep relative to a longer-term curved trend:</p>
 <div class="width6">
 <img src="i/statistic-dowd-4.png">
 </div>
@@ -865,7 +866,7 @@ p=t[age%in%15:44&amp;year!=2024,.(y=sum(dead)/sum(pop)*1e5,z=&quot;Mortality rat
 
 years=1999:2023
 p2=p[x%in%2010:2019,.(x=years,y=predict(lm(y~x),p),z=&quot;2010-2019 linear trend&quot;)]
-p3=p[x%in%1999:2019,.(x=years,y=predict(lm(y~poly(x,2)),p),z=&quot;1999-2019 polynomial trend&quot;)]
+p3=p[x%in%1999:2019,.(x=years,y=predict(lm(y~poly(x,2)),p),z=&quot;1999-2019 quadratic trend&quot;)]
 p=rbind(p,p2,p3)[,z:=factor(z,unique(z))]
 
 ybreak=pretty(p$y,9);ystart=ybreak[1];yend=max(ybreak)
@@ -1416,6 +1417,131 @@ system(&quot;mogrify -resize 25% 1.png&quot;)</pre>
 <p>However I think unvaccinated people gradually gain natural immunity over time, so vaccinated people end up losing the initial immunization advantage they had in 2021: [<a href=czech3.html#Age_standardized_hospitalization_rate_by_vaccination_status>czech3.html#Age_standardized_hospitalization_rate_by_vaccination_status</a>]</p>
 <div class="width6">
 <img src="i/czech-hospstandard.png">
+</div>
+<h2>
+<a href=#Jikkyleaks_Doctor_certified_cancer_deaths_in_Australia id=Jikkyleaks_Doctor_certified_cancer_deaths_in_Australia>Jikkyleaks: Doctor-certified cancer deaths in Australia</a>
+</h2>
+<p>Jikkyleaks posted this plot: [<a href="https://x.com/Jikkyleaks/status/1852894752053887004">https://x.com/Jikkyleaks/status/1852894752053887004</a>]</p>
+<div class="width6">
+<img src="i/statistic-jikkycancer-2.png">
+</div>
+<p>It's weird that the x-axis in the plot starts in 2017 even though the baseline was fitted against data from 2015 to 2020. There was also a low number of cancer deaths in 2020 partially due to reduced screening, so including 2020 in the baseline fitting period artificially pulls the baseline downwards.</p>
+<p>In the plot below I took data for yearly deaths by underlying cause of death from here: <a href="https://abs.gov.au/statistics/health/causes-death/causes-death-australia/latest-release#data-downloads">https://abs.gov.au/statistics/health/causes-death/causes-death-australia/latest-release#data-downloads</a>. However I wasn't able to produce Jikky's plot because I got lower deaths in 2020 than 2019, and I got 52,348 deaths in 2023 even though in Jikky's plot it's about 51,100. My plot also demonstrates how a 2014-2019 baseline is much steeper than a 2015-2020 baseline, because there was a low number of deaths in 2014 which further makes the baseline more steep, so the 2014-2019 baseline actually gave me negative excess deaths in 2023:</p>
+<div class="width5">
+<img src="i/statistic-jikkycancer-4.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>p=data.table::data.table(year=2014:2023)
+p$dead=c(44854,46640,46593,46690,48245,49722,48973,50694,51951,52348)
+
+p$trend=p[year&lt;2020,predict(lm(dead~year),p)]
+p$trend2=p[year%in%2015:2020,predict(lm(dead~year),p)]
+
+png(&quot;1.png&quot;,1600,1000,res=300)
+par(mar=c(4.6,2.7,1.8,.7),mgp=c(0,.6,0),adj=0,lend=&quot;square&quot;)
+
+tit=&quot;Deaths with UCD neoplasms (C00-D97) in Australia&quot;
+sub=&quot;Source: abs.gov.au/statistics/health/causes-death/causes-
+death-australia/latest-release#data-downloads, file
+\&quot;Underlying causes of death (Australia)\&quot;, Table 1.1.&quot;
+leg=c(&quot;Deaths with UCD neoplasms&quot;,&quot;2015-2019 linear trend&quot;,&quot;2015-2020 linear trend&quot;)
+
+ybreak=pretty(c(p$dead,p$trend,p$trend2));ylim=range(ybreak)
+xstart=min(p$year);xend=max(p$year)
+xbreak=xstart:xend
+
+plot(p$year,p$trend,type=&quot;n&quot;,main=tit,xlab=NA,ylab=NA,xaxs=&quot;i&quot;,yaxs=&quot;i&quot;,yaxt=&quot;n&quot;,xaxt=&quot;n&quot;,ylim=ylim,xlim=c(xstart-.5,xend+.5),cex.main=1)
+axis(2,at=ybreak,las=1,labels=paste0(ybreak/1e3,&quot;k&quot;))
+mtext(xbreak,side=1,line=.3,at=xbreak,las=1)
+lines(p$year,p$dead,lwd=1.5)
+points(p$year,p$dead,pch=20,cex=.6)
+lines(p$year,p$trend,type=&quot;l&quot;,lty=2,lwd=1.5)
+lines(p$year,p$trend2,type=&quot;l&quot;,lty=2,col=&quot;gray60&quot;,lwd=1.5)
+legend(&quot;topleft&quot;,legend=leg,lty=c(1,2,2),col=c(&quot;black&quot;,&quot;black&quot;,&quot;gray60&quot;),lwd=1.5)
+mtext(text=sub,side=1,line=3.3,adj=0,cex=.95)
+dev.off()</pre>
+</div>
+<p>However then I realized Jikky's plot used data for <span class="quote">&quot;doctor-certified&quot;</span> deaths from here: <a href="https://www.abs.gov.au/statistics/health/causes-death/provisional-mortality-statistics/jan-dec-2023">https://www.abs.gov.au/statistics/health/causes-death/provisional-mortality-statistics/jan-dec-2023</a>. For some reason the doctor-certified cancer deaths have had a sustained elevation above the baseline since 2021. However there was also a big increase in the doctor-certified deaths in the year 2020, which explains why Jikky got a higher number of deaths in 2020 than 2019:</p>
+<div class="width5">
+<img src="i/statistic-jikkycancer-3.png">
+</div>
+<p>Jikkyleaks wrote that <span class="quote">&quot;There is a 5-10% excess cancer mortality in Australia since 2021.&quot;</span> [<a href="https://x.com/Jikkyleaks/status/1852462792621928896">https://x.com/Jikkyleaks/status/1852462792621928896</a>] I don't know if he calculated excess deaths relative to something like a 2015-2020 average baseline, because even the 2015-2020 linear baseline used in his plot wouldn't produce such high excess deaths. However an increasing number of cancer deaths per year is expected due to the aging population structure. Cancer ASMR has remained roughly flat in Australia between 2020 and 2022, or it has even slightly decreased: [<a href="https://www.aihw.gov.au/reports/cancer/cancer-data-in-australia/contents/overview">https://www.aihw.gov.au/reports/cancer/cancer-data-in-australia/contents/overview</a>]</p>
+<div class="width6">
+<img src="i/statistic-jikkycancer-1.png">
+</div>
+<p>Someone on Twitter was wondering why the plot above showed there was a decrease in cancer deaths even though Jikky's plot showed there was an increase in deaths. However it's because Jikky's plot showed a raw number of deaths which does not account for changes to the age composition of the population. In the United States there is also a decreasing trend in cancer ASMR but an increasing trend in the raw number of cancer deaths:</p>
+<div class="width6">
+<img src="i/statistic-jikkycancer-5.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2);library(lubridate)
+
+t=fread(&quot;http://sars2.net/f/wondercanceryearly.csv&quot;)[year&lt;2024&amp;cause%like%&quot;UCD.*Mal&quot;]
+t=merge(t,fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)[year&gt;=2010][,dead:=NULL])
+t=merge(t[year==2020,.(age,std=pop/sum(pop))],t)
+
+p=t[,.(y=sum(dead/pop*std*1e5)),year][,group:=&quot;ASMR per 100,000 people&quot;]
+p=rbind(p,t[,.(y=sum(dead),group=&quot;Raw deaths&quot;),year])
+p$z=&quot;Actual mortality&quot;
+
+p1=p[year%in%2010:2019,.(year=2010:2023,z=&quot;2010-2019 linear trend&quot;,y=predict(lm(y~year),.(year=2010:2023))),group]
+p=rbind(p,p1)
+
+t$base=t[year&lt;2020,predict(lm(dead/pop~year),.(year=2010:2023)),age]$V1
+p=rbind(p,t[,.(y=sum(base*pop),z=&quot;Expected based on age composition&quot;,group=&quot;Raw deaths&quot;),year])
+
+p[,z:=factor(z,unique(z))]
+
+xstart=2010;xend=2023;xbreak=seq(xstart-.5,xend+.5,.5);xlab=c(rbind(&quot;&quot;,xstart:xend),&quot;&quot;)
+
+color=c(&quot;black&quot;,&quot;#0022cc&quot;,&quot;#009900&quot;)
+
+ggplot(p,aes(x=year,y=y))+
+facet_wrap(~group,ncol=1,dir=&quot;v&quot;,scales=&quot;free&quot;)+
+geom_text(data=p[,max(y),group],aes(label=group,y=V1),x=(xstart+xend)/2,vjust=1.4,size=grid::convertUnit(unit(7,&quot;pt&quot;),&quot;mm&quot;),fontface=2)+
+geom_vline(xintercept=2019.5,linetype=5,linewidth=.25)+
+geom_line(aes(color=z),linewidth=.35)+
+geom_point(aes(color=z,alpha=z),stroke=0,size=1)+
+labs(title=&quot;CDC WONDER, underlying cause of death malignant neoplasms (C00-C97)&quot;|&gt;stringr::str_wrap(72),subtitle=&quot;The age-standardized mortality rate was calculated by single year of age so that the 2020 resident population estimates were used as the standard population. In the green baseline first a liner trend for CMR in 2010-2019 was calculated for each age, and then the value of the projected trend was multiplied by the population size to get the expected deaths for each age.&quot;|&gt;stringr::str_wrap(91),x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=xbreak,labels=xlab,expand=expansion(0))+
+scale_y_continuous(labels=\(x)ifelse(x&gt;1e3,paste0(x/1e3,&quot;k&quot;),x),expand=expansion(.04))+
+scale_color_manual(values=color)+
+scale_alpha_manual(values=c(1,0,0))+
+coord_cartesian(clip=&quot;off&quot;)+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.text.x=element_text(margin=margin(3)),
+  axis.text.y=element_text(margin=margin(,1)),
+  axis.ticks.x=element_line(color=alpha(&quot;black&quot;,c(1,0))),
+  axis.ticks=element_line(linewidth=.25,color=&quot;black&quot;),
+  axis.ticks.length=unit(3,&quot;pt&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.title=element_text(size=8),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;horizontal&quot;,
+  legend.justification=&quot;right&quot;,
+  legend.key=element_rect(fill=alpha(&quot;white&quot;,0)),
+  legend.key.height=unit(10,&quot;pt&quot;),
+  legend.key.width=unit(17,&quot;pt&quot;),
+  legend.margin=margin(,,4),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(1.5,&quot;pt&quot;),
+  legend.text=element_text(size=7,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.25),
+  panel.spacing=unit(3,&quot;pt&quot;),
+  plot.margin=margin(4,5,4,5),
+  plot.subtitle=element_text(size=6.8,margin=margin(,,3)),
+  plot.title=element_text(size=7.4,face=2,margin=margin(1,,4)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=4.4,height=4,dpi=400*4)
+system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 </div>
 <script>
 let q=document.querySelectorAll('a,code,pre')
