@@ -75,7 +75,8 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Confidence_intervals_for_age_normalized_Moderna_Pfizer_ratio_by_month_of_vaccination>Confidence intervals for age-normalized Moderna-Pfizer ratio by month of vaccination</a></li>
 <li><a href=#The_record_level_data_includes_vaccination_entries_for_people_older_than_the_oldest_known_Czech_citizens>The record-level data includes vaccination entries for people older than the oldest known Czech citizens</a></li>
 <li><a href=#New_record_level_dataset_with_columns_for_infections_hospitalizations_and_comorbidity_index>New record-level dataset with columns for infections, hospitalizations, and comorbidity index</a></li>
-<li><a href=#Age_standardized_hospitalization_rate_by_vaccine_type>Age-standardized hospitalization rate by vaccine type</a></li>
+<li><a href=#Age_normalized_comorbidity_and_hospitalization_rates_in_new_UZIS_data>Age-normalized comorbidity and hospitalization rates in new UZIS data</a></li>
+<li><a href=#Age_standardized_hospitalization_rate_by_vaccine_type_in_new_UZIS_data>Age-standardized hospitalization rate by vaccine type in new UZIS data</a></li>
 </ul>
 
 <h2>
@@ -1223,7 +1224,7 @@ mutate_if(o,is.double,round,2)|&gt;print(r=F)</pre>
 <p>However, a closer look <strong>at the data raises many doubts.</strong></p>
 <p>1. <strong>The file contains 12,597,668 lines</strong> , which is suspiciously large. Even if the second, third, and other infections that are marked as duplicates in the data description are excluded, that leaves 12,125,969 rows, which is still a lot. There are not that many people in the Czech Republic, even if all the dead since 2020 are included.</p>
 <p>2. <strong>The file does not contain an (anonymized) person identifier</strong> , so it is not possible to match lines that belong to the same person. It is therefore not possible to link the data on vaccination with the data on death and its cause. Therefore, it is also impossible to find out what duplications are the reason for the previous point.</p>
-<p>3. When examining the <span class="quote">&quot;DatumUmrtiLPZ&quot;</span> column, we find that the numbers listed there approximately correspond to the course of death according to the CZSO. Until the end of 2022, the difference in the weekly number of deaths compared to the CZSO will not exceed one percent, but in the second half of 2024 it will already grow to tens of percent. <strong>Data on deaths are therefore usable until the end of 2023 at most</strong> . However, even the differences compared to the CZSO in the statistics for the weeks of 2020-2023 are suspicious and should not be there.</p>
+<p>3. When examining the <span class="quote">&quot;DatumUmrtiLPZ&quot;</span> column, we find that the numbers listed there approximately correspond to the course of death according to the CZSO. Until the end of 2022, the difference in the weekly number of deaths compared to the CZSO will not exceed one percent, but in the second half of 2024 it will already grow to tens of percent. <strong>Data on deaths are therefore usable until the end of 2023 at most</strong>. However, even the differences compared to the CZSO in the statistics for the weeks of 2020-2023 are suspicious and should not be there.</p>
 <p>4. A far bigger problem, however, is that a total of <strong>1,556,198 lines of the file contain no data</strong> (except for DCCI=0), i.e. neither birth nor gender data. Similarly, we have 63,606 rows that contain only the date of death, again without data on birth and sex. A substantial part of these deaths occurred in 2020, and when compared with the data from CSU, it is clear that these deaths actually occurred. Not only can these deaths not be matched to a cause of death, but they cannot even be assigned to a given age group and gender. It is therefore not possible to calculate any mortality rate, as it is always dramatically dependent on age and sex.</p>
 <p><strong>Thus, this data set is worthless for analysis.</strong> At the same time, its investigation already cost several statisticians hours of time. We will inform the ÚZIS about the problems described above through the applicant and request the publication of data in the same format as <a href=https://smis-lab.cz/2024/07/21/skutecne-dlouha-data-po-skutecne-dlouhe-dobe-aneb-vivat-cecija/>here</a>, with the fact that the relevant period will be extended at least until the end of 2023 and a column will be added as to whether the death was caused by covid or not.</p>
 </blockquote>
@@ -1267,17 +1268,17 @@ date of result
 <tr><td>
 Vylecen
 </td><td>
-healed
+week of recovery
 </td></tr>
 <tr><td>
 Umrti
 </td><td>
-died
+week of death
 </td></tr>
 <tr><td>
 Symptom
 </td><td>
-symptom
+was symptomatic at time of test
 </td></tr>
 <tr><td>
 TypTestu
@@ -1362,12 +1363,12 @@ primary reason for COVID hospitalization
 <tr><td>
 bin_Hospitalizace
 </td><td>
-hospitalization (bool)
+was hospitalized
 </td></tr>
 <tr><td>
 min_Hospitalizace
 </td><td>
-minimum hospitalization
+earliest week of hospitalization
 </td></tr>
 <tr><td>
 dni_Hospitalizace
@@ -1377,17 +1378,17 @@ days of hospitalization
 <tr><td>
 max_Hospitalizace
 </td><td>
-maximum hospitalization
+last week of hospitalization
 </td></tr>
 <tr><td>
 bin_JIP
 </td><td>
-ICU admission (bool)
+admitted to ICU
 </td></tr>
 <tr><td>
 min_JIP
 </td><td>
-minimum ICU stay
+earliest week of ICU stay
 </td></tr>
 <tr><td>
 dni_JIP
@@ -1397,17 +1398,17 @@ days in ICU
 <tr><td>
 max_JIP
 </td><td>
-maximum ICU stay
+last week of ICU stay
 </td></tr>
 <tr><td>
 bin_STAN
 </td><td>
-regular hospital ward stay (bool)
+hospitalized at regular hospital ward
 </td></tr>
 <tr><td>
 min_STAN
 </td><td>
-minimum regular ward stay
+earliest week of regular ward stay
 </td></tr>
 <tr><td>
 dni_STAN
@@ -1417,17 +1418,17 @@ days in regular ward
 <tr><td>
 max_STAN
 </td><td>
-maximum regular ward stay
+last week of regular ward stay
 </td></tr>
 <tr><td>
 bin_Kyslik
 </td><td>
-oxygen therapy (bool)
+received oxygen therapy
 </td></tr>
 <tr><td>
 min_Kyslik
 </td><td>
-minimum days of oxygen therapy
+earliest week of oxygen therapy
 </td></tr>
 <tr><td>
 dni_Kyslik
@@ -1437,17 +1438,17 @@ days of oxygen therapy
 <tr><td>
 max_Kyslik
 </td><td>
-maximum days of oxygen therapy
+last week of oxygen therapy
 </td></tr>
 <tr><td>
 bin_HFNO
 </td><td>
-high-flow nasal oxygen therapy (bool)
+received high-flow nasal oxygen therapy
 </td></tr>
 <tr><td>
 min_HFNO
 </td><td>
-minimum days of HFNO
+earliest week of HFNO
 </td></tr>
 <tr><td>
 dni_HFNO
@@ -1457,17 +1458,17 @@ days of HFNO
 <tr><td>
 max_HFNO
 </td><td>
-maximum days of HFNO
+last week of HFNO
 </td></tr>
 <tr><td>
 bin_UPV_ECMO
 </td><td>
-ultra-protective ventilation/ECMO (bool)
+received ultra-protective ventilation/ECMO
 </td></tr>
 <tr><td>
 min_UPV_ECMO
 </td><td>
-minimum days of UPV/ECMO
+earliest week of UPV/ECMO
 </td></tr>
 <tr><td>
 dni_UPV_ECMO
@@ -1477,7 +1478,7 @@ days of UPV/ECMO
 <tr><td>
 max_UPV_ECMO
 </td><td>
-maximum days of UPV/ECMO
+last week of UPV/ECMO
 </td></tr>
 <tr><td>
 Mutace
@@ -1487,7 +1488,7 @@ variant
 <tr><td>
 DatumUmrtiLPZ
 </td><td>
-date of death (linked to healthcare facility)
+date of death
 </td></tr>
 <tr><td>
 Long_COVID
@@ -1497,12 +1498,62 @@ long COVID diagnosis date
 <tr><td>
 DCCI
 </td><td>
-DCCI (Deyo-Charlson Comorbidity Index)
+Deyo-Charlson Comorbidity Index
 </td></tr>
 </table>
-<p>The comorbidity level is expressed as an integer between 0 and 5 in the column DCCI (Deyo-Charlson Comorbidity Index), where the value is zero for about 87% of rows:</p>
+<p>The <code>Infekce</code> column indicates whether the entry is for a person with no infection listed, or for the first, second, or third infection of the person. So part of the reason why there are more rows than people is probably because there's multiple rows for people with 2 or 3 infections. But I don't know why the maximum infection number is only 3 though:</p>
+<pre>&gt; t[,.N,Infekce]
+   Infekce       N
+1:      NA 7800263
+2:       1 4325706
+3:       2  450511
+4:       3   21188</pre>
+<p>There's about 1.6 million rows where the year of birth is missing. All except one of them are for people with no vaccine doses listed:</p>
+<pre>&gt; t[RokNarozeni==&quot;-&quot;,.N,OckovaciLatkaKod_Prvni_davka][N&gt;0][order(-N)]
+   OckovaciLatkaKod_Prvni_davka       N
+1:                              1630991 # about 1.6 million rows for unvaccinated people
+2:                         CO01       1 # one row for Pfizer</pre>
+<p>On most rows with missing year of birth, all other fields including the date of death are also missing, but there's 63695 rows where the year of birth is missing but the date of death is not missing (which are mostly in 2020 like the blog post by SMIS said):</p>
 <pre>&gt; t=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv&quot;)
-&gt; t[,.N,DCCI]|&gt;print(r=F)
+&gt; t[RokNarozeni==&quot;-&quot;&amp;DatumUmrtiLPZ!=&quot;&quot;,.N,.(year=substr(DatumUmrtiLPZ,1,4))][order(year)]
+   year     N
+1: 2020 37471
+2: 2021  9658
+3: 2022  5522
+4: 2023  6981
+5: 2024  4063</pre>
+<p>If rows with a missing date of birth are excluded and rows for second and third infections are excluded, then the new dataset has only about 10.5 million rows, which is about half a million less than the record-level dataset:</p>
+<pre>&gt; t[RokNarozeni!=&quot;-&quot;&amp;!(!is.na(Infekce)&amp;Infekce&gt;1),.N]
+[1] 10494977</pre>
+<p>The new UZIS dataset is missing about 15% of all deaths in 2020 even if you don't exclude the rows with a date of birth missing: [<a href="https://ec.europa.eu/eurostat/data/database">https://ec.europa.eu/eurostat/data/database</a>, <a href=czech2.html#Deaths_by_ICD_code_region_age_group_and_year>czech2.html#Deaths_by_ICD_code_region_age_group_and_year</a>]</p>
+<pre>&gt; rec=fread(&quot;CR_records.csv&quot;)
+&gt; reclev=rec[,.(reclev=.N),.(year=year(DatumUmrti))]
+&gt; eurostat=fread(&quot;http://sars2.net/f/czpopdead.csv&quot;)[,.(eurostat=sum(dead)),year]
+&gt; icd=fread(&quot;http://sars2.net/f/czicd.csv.gz&quot;)[,.(byicd=sum(dead)),year]
+&gt; me=merge(merge(reclev,eurostat),icd)
+&gt; ua=\(x,y,...){u=unique(x);y(u,...)[match(x,u)]}
+&gt; new=t[!(!is.na(Infekce)&amp;Infekce&gt;1),.(newuzis=.N),.(year=as.integer(substr(DatumUmrtiLPZ,1,4)))]
+&gt; merge(me,new,all=T)[year&gt;=2020]|&gt;print(r=F)
+ year reclev eurostat  byicd newuzis
+ 2020 129289   129289 129289  110177
+ 2021 139890   139891 139891  139687
+ 2022 120219   120219 120219  121464
+ 2023     NA       NA     NA  113807
+ 2024     NA       NA     NA   70941</pre>
+<p>However it's because the new dataset is missing all deaths in the first 9 weeks of 2020:</p>
+<pre>&gt; t[,.N,DatumUmrtiLPZ][order(DatumUmrtiLPZ)][1:6]
+   DatumUmrtiLPZ        N
+1:               12034894
+2:       2020-10     2277
+3:       2020-11     2289
+4:       2020-12     2318
+5:       2020-13     2290
+6:       2020-14     2322</pre>
+<h2>
+<a href=#Age_normalized_comorbidity_and_hospitalization_rates_in_new_UZIS_data id=Age_normalized_comorbidity_and_hospitalization_rates_in_new_UZIS_data>Age-normalized comorbidity and hospitalization rates in new UZIS data</a>
+</h2>
+<p>The column for the Deyo-Charlson Comorbidity Index shows a comorbidity level expressed as an integer between 0 and 5, where the value is 0 for about 87% of rows:</p>
+<pre>&gt; t[,.N,DCCI]|&gt;print(r=F)
  DCCI        N
     0 10961996
     1   876443
@@ -1561,11 +1612,6 @@ DCCI (Deyo-Charlson Comorbidity Index)
    2015-2019 0.0456251469  472393
    2020-2024 0.0141874725  163736
  RokNarozeni         DCCI       N</pre>
-<p>For some reason there's about 1.6 million rows where the year of birth is missing. All except one of them are for unvaccinated people:</p>
-<pre>&gt; t[RokNarozeni==&quot;-&quot;,.N,OckovaciLatkaKod_Prvni_davka][N&gt;0][order(-N)]
-   OckovaciLatkaKod_Prvni_davka       N
-1:                              1630991 # about 1.6 million rows for unvaccinated people
-2:                         CO01       1 # one row for Pfizer</pre>
 <p>Next I calculated an age-normalized excess comorbidity percentage for each vaccine type. I excluded people with a year of birth missing but I didn't exclude rows for second and third infections. I derived the expected total DCCI for each vaccine type by multiplying the number of people in each age group with the average DCCI index for the age group among all rows where the year of birth was not missing, and then I divided the actual total DCCI with the expected total DCCI, subtracted 1, and multiplied the result by 100. The excess comorbidity percentage was now about -4.4% for Pfizer but -2.9% for Moderna, so the difference is not big enough to explain why Moderna would have about 30% higher mortality rate than Pfizer:</p>
 <pre>&gt; dcci=t[RokNarozeni!=&quot;-&quot;,.(dcci=sum(as.numeric(DCCI)),.N),.(code=OckovaciLatkaKod_Prvni_davka,born=RokNarozeni)]
 &gt; dcci=merge(dcci[,.(base=sum(dcci)/sum(N)),born],dcci)[,base:=base*N]
@@ -1591,23 +1637,8 @@ DCCI (Deyo-Charlson Comorbidity Index)
 5: CO04   COVID-19 Vaccine Janssen      21.9  429960
 6: CO07                  Nuvaxovid     222.9    5898 # Novavax
 7: CO20 Comirnaty Omicron XBB.1.5.     145.8    2068</pre>
-<p>The <code>Infekce</code> column indicates whether the entry is for a person with no infection listed, or for the first, second, or third infection of the person. So part of the reason why there are more rows than people is probably because there's multiple rows for people with 2 or 3 infections. But I don't know why the maximum infection number is only 3 though:</p>
-<pre>&gt; t[,.N,Infekce]
-   Infekce       N
-1:      NA 7800263
-2:       1 4325706
-3:       2  450511
-4:       3   21188</pre>
-<p>The type of test is empty on about 63% of rows, PCR on 33% of rows, and antigen on 5% of rows. About 98% of rows with an infection number listed also have a type of test listed:</p>
-<pre>&gt; t[,.N,TypTestu]
-   TypTestu       N
-1:          7885962
-2:      PCR 4099653
-3:       AG  612053
-&gt; t[!is.na(Infekce),mean(TypTestu!=&quot;&quot;)]
-[1] 0.9821364</pre>
 <h2>
-<a href=#Age_standardized_hospitalization_rate_by_vaccine_type id=Age_standardized_hospitalization_rate_by_vaccine_type>Age-standardized hospitalization rate by vaccine type</a>
+<a href=#Age_standardized_hospitalization_rate_by_vaccine_type_in_new_UZIS_data id=Age_standardized_hospitalization_rate_by_vaccine_type_in_new_UZIS_data>Age-standardized hospitalization rate by vaccine type in new UZIS data</a>
 </h2>
 <p>Based on the new CSV file published by UZIS in November 2024, it's now possible to calculate hospitalization rate by vaccine type.</p>
 <p>In the following code in order to calculate an age-standardized hospitalization rate, I subtracted the start of the 5-year ranges of year of birth from 2020 to assign people to 5-year age groups based on their age on December 31st 2020 (because for example all people born in 1950-1954 belong to the age group 70-74 on December 31st 2020). I didn't bother accounting for the aging of people over time.</p>
@@ -1623,7 +1654,8 @@ DCCI (Deyo-Charlson Comorbidity Index)
 Show code
 </button><pre>library(data.table);library(ggplot2)
 
-<h2><a href=#t_fread_quot_Otevrena_data_NR_26_30_COVID_19_prehled_populace_2024_01_csv_quot id=t_fread_quot_Otevrena_data_NR_26_30_COVID_19_prehled_populace_2024_01_csv_quot>t=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv&quot;)</a></h2>
+t=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv&quot;)
+
 isoweek=\(year,week,weekday=7){d=as.Date(paste0(year,&quot;-1-4&quot;));d-(as.integer(format(d,&quot;%w&quot;))+6)%%7-1+7*(week-1)+weekday}
 getweek=\(x)isoweek(as.integer(substr(x,1,4)),as.integer(substr(x,6,7)))
 ua=\(x,y,...){u=unique(x);y(u,...)[match(x,u)]}
@@ -1695,6 +1727,10 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   plot.title=element_text(size=7.5,face=&quot;bold&quot;,margin=margin(1,,3)))
 ggsave(&quot;1.png&quot;,width=4,height=2.2,dpi=380*4)
 system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
+</div>
+<p>Here's my old plot for ASMR by vaccine type for comparison, where you can see that the spike in ASMR in the last two months of 2021 is more pronounced for Janssen and AstraZeneca which are viral vector vaccines but the spike is more flat for Moderna and Pfizer which are mRNA vaccines (even though the difference might not necessarily be due to efficacy, but it might also be if people with a higher COVID mortality risk were more likely to get certain types of vaccines): [<a href=czech2.html#ASMR_by_month_and_vaccine_type>czech2.html#ASMR_by_month_and_vaccine_type</a>]</p>
+<div class="width7">
+<img src="i/czech-asmrtype.png">
 </div>
 <script>
 let q=document.querySelectorAll('a,code,pre')
