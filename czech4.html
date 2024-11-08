@@ -74,6 +74,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Kirschs_calculation_for_mortality_rate_by_batch>Kirsch's calculation for mortality rate by batch</a></li>
 <li><a href=#Confidence_intervals_for_age_normalized_Moderna_Pfizer_ratio_by_month_of_vaccination>Confidence intervals for age-normalized Moderna-Pfizer ratio by month of vaccination</a></li>
 <li><a href=#The_record_level_data_includes_vaccination_entries_people_older_than_the_oldest_known_Czech_citizens>The record-level data includes vaccination entries people older than the oldest known Czech citizens</a></li>
+<li><a href=#New_record_level_dataset_with_columns_for_infections_hospitalizations_and_comorbidity_index>New record-level dataset with columns for infections, hospitalizations, and comorbidity index</a></li>
 </ul>
 
 <h2>
@@ -1185,6 +1186,362 @@ mutate_if(o,is.double,round,2)|&gt;print(r=F)</pre>
 11:          F         1912       &lt;NA&gt;       &lt;NA&gt;
 12:          F         1912       &lt;NA&gt;       &lt;NA&gt;</pre>
 <p>However according to the Czech-language Wikipedia, there have not been male Czech citizens older than 107 years since at least 2010. [<a href="https://cs.wikipedia.org/wiki/Seznam_nejstar%C5%A1%C3%ADch_obyvatel_%C4%8Ceska">https://cs.wikipedia.org/wiki/Seznam_nejstar%C5%A1%C3%ADch_obyvatel_%C4%8Ceska</a>]</p>
+<h2>
+<a href=#New_record_level_dataset_with_columns_for_infections_hospitalizations_and_comorbidity_index id=New_record_level_dataset_with_columns_for_infections_hospitalizations_and_comorbidity_index>New record-level dataset with columns for infections, hospitalizations, and comorbidity index</a>
+</h2>
+<p>In November 2024 ÚZIS (the Czech institute of health information and statistics) published a new dataset which contains columns for infections and hospitalizations. However the year of birth is only given in 5-year ranges and dates of vaccination and death are given on a weekly and not daily precision. SMIS published the following blog post about the data (translated from Czech): [<a href="https://smis-lab.cz/2024/11/07/dalsi-velka-datova-sada-uzis-zverejnena/">https://smis-lab.cz/2024/11/07/dalsi-velka-datova-sada-uzis-zverejnena/</a>]</p>
+<blockquote>
+<p>After a long time, we received <a href=https://www.nzip.cz/data/2135-covid-19-prehled-populace>another large data set</a> from ÚZIS. At first glance, this seems like a holy grail, as the field descriptions indicate that the data contains individual-level information on birth quintile, gender, calendar weeks of all covid vaccines, calendar week of death, and cause of death (covid/non-covid). In addition, the data includes information on tests and covid hospitalizations. No country in the world has yet (completely incomprehensible to us) published such a data set.</p>
+<p>However, a closer look <strong>at the data raises many doubts.</strong></p>
+<p>1. <strong>The file contains 12,597,668 lines</strong> , which is suspiciously large. Even if the second, third, and other infections that are marked as duplicates in the data description are excluded, that leaves 12,125,969 rows, which is still a lot. There are not that many people in the Czech Republic, even if all the dead since 2020 are included.</p>
+<p>2. <strong>The file does not contain an (anonymized) person identifier</strong> , so it is not possible to match lines that belong to the same person. It is therefore not possible to link the data on vaccination with the data on death and its cause. Therefore, it is also impossible to find out what duplications are the reason for the previous point.</p>
+<p>3. When examining the <span class="quote">&quot;DatumUmrtiLPZ&quot;</span> column, we find that the numbers listed there approximately correspond to the course of death according to the CZSO. Until the end of 2022, the difference in the weekly number of deaths compared to the CZSO will not exceed one percent, but in the second half of 2024 it will already grow to tens of percent. <strong>Data on deaths are therefore usable until the end of 2023 at most</strong> . However, even the differences compared to the CZSO in the statistics for the weeks of 2020-2023 are suspicious and should not be there.</p>
+<p>4. A far bigger problem, however, is that a total of <strong>1,556,198 lines of the file contain no data</strong> (except for DCCI=0), i.e. neither birth nor gender data. Similarly, we have 63,606 rows that contain only the date of death, again without data on birth and sex. A substantial part of these deaths occurred in 2020, and when compared with the data from CSU, it is clear that these deaths actually occurred. Not only can these deaths not be matched to a cause of death, but they cannot even be assigned to a given age group and gender. It is therefore not possible to calculate any mortality rate, as it is always dramatically dependent on age and sex.</p>
+<p><strong>Thus, this data set is worthless for analysis.</strong> At the same time, its investigation already cost several statisticians hours of time. We will inform the ÚZIS about the problems described above through the applicant and request the publication of data in the same format as <a href=https://smis-lab.cz/2024/07/21/skutecne-dlouha-data-po-skutecne-dlouhe-dobe-aneb-vivat-cecija/>here</a>, with the fact that the relevant period will be extended at least until the end of 2023 and a column will be added as to whether the death was caused by covid or not.</p>
+</blockquote>
+<p>The file contains these columns:</p>
+<table>
+<tr><th>
+column
+</th><th>
+translation
+</th></tr>
+<tr><td>
+ID
+</td><td>
+ID
+</td></tr>
+<tr><td>
+Infekce
+</td><td>
+infection
+</td></tr>
+<tr><td>
+Pohlavi
+</td><td>
+sex
+</td></tr>
+<tr><td>
+RokNarozeni
+</td><td>
+year of birth
+</td></tr>
+<tr><td>
+DatumPozitivity
+</td><td>
+date of positivity
+</td></tr>
+<tr><td>
+DatumVysledku
+</td><td>
+date of result
+</td></tr>
+<tr><td>
+Vylecen
+</td><td>
+healed
+</td></tr>
+<tr><td>
+Umrti
+</td><td>
+died
+</td></tr>
+<tr><td>
+Symptom
+</td><td>
+symptom
+</td></tr>
+<tr><td>
+TypTestu
+</td><td>
+type of test
+</td></tr>
+<tr><td>
+Datum_Prvni_davka
+</td><td>
+first dose date
+</td></tr>
+<tr><td>
+Datum_Druha_davka
+</td><td>
+second dose date
+</td></tr>
+<tr><td>
+Datum_Treti_davka
+</td><td>
+third dose date
+</td></tr>
+<tr><td>
+Datum_Ctvrta_davka
+</td><td>
+fourth dose date
+</td></tr>
+<tr><td>
+Datum_Pata_davka
+</td><td>
+fifth dose date
+</td></tr>
+<tr><td>
+Datum_Sesta_davka
+</td><td>
+sixth dose date
+</td></tr>
+<tr><td>
+Datum_Sedma_davka
+</td><td>
+seventh dose date
+</td></tr>
+<tr><td>
+OckovaciLatkaKod_Prvni_davka
+</td><td>
+first dose vaccine type code
+</td></tr>
+<tr><td>
+OckovaciLatkaKod_Druha_davka
+</td><td>
+second dose vaccine type code
+</td></tr>
+<tr><td>
+OckovaciLatkaKod_Treti_davka
+</td><td>
+third dose vaccine type code
+</td></tr>
+<tr><td>
+OckovaciLatkaKod_Ctvrta_davka
+</td><td>
+fourth dose vaccine type code
+</td></tr>
+<tr><td>
+OckovaciLatkaKod_Pata_davka
+</td><td>
+fifth dose vaccine type code
+</td></tr>
+<tr><td>
+OckovaciLatkaKod_Sesta_davka
+</td><td>
+sixth dose vaccine type code
+</td></tr>
+<tr><td>
+OckovaciLatkaKod_Sedma_davka
+</td><td>
+seventh dose vaccine type code
+</td></tr>
+<tr><td>
+PrimPricinaHospCOVID
+</td><td>
+primary reason for COVID hospitalization
+</td></tr>
+<tr><td>
+bin_Hospitalizace
+</td><td>
+hospitalization (bool)
+</td></tr>
+<tr><td>
+min_Hospitalizace
+</td><td>
+minimum hospitalization
+</td></tr>
+<tr><td>
+dni_Hospitalizace
+</td><td>
+days of hospitalization
+</td></tr>
+<tr><td>
+max_Hospitalizace
+</td><td>
+maximum hospitalization
+</td></tr>
+<tr><td>
+bin_JIP
+</td><td>
+ICU admission (bool)
+</td></tr>
+<tr><td>
+min_JIP
+</td><td>
+minimum ICU stay
+</td></tr>
+<tr><td>
+dni_JIP
+</td><td>
+days in ICU
+</td></tr>
+<tr><td>
+max_JIP
+</td><td>
+maximum ICU stay
+</td></tr>
+<tr><td>
+bin_STAN
+</td><td>
+regular hospital ward stay (bool)
+</td></tr>
+<tr><td>
+min_STAN
+</td><td>
+minimum regular ward stay
+</td></tr>
+<tr><td>
+dni_STAN
+</td><td>
+days in regular ward
+</td></tr>
+<tr><td>
+max_STAN
+</td><td>
+maximum regular ward stay
+</td></tr>
+<tr><td>
+bin_Kyslik
+</td><td>
+oxygen therapy (bool)
+</td></tr>
+<tr><td>
+min_Kyslik
+</td><td>
+minimum days of oxygen therapy
+</td></tr>
+<tr><td>
+dni_Kyslik
+</td><td>
+days of oxygen therapy
+</td></tr>
+<tr><td>
+max_Kyslik
+</td><td>
+maximum days of oxygen therapy
+</td></tr>
+<tr><td>
+bin_HFNO
+</td><td>
+high-flow nasal oxygen therapy (bool)
+</td></tr>
+<tr><td>
+min_HFNO
+</td><td>
+minimum days of HFNO
+</td></tr>
+<tr><td>
+dni_HFNO
+</td><td>
+days of HFNO
+</td></tr>
+<tr><td>
+max_HFNO
+</td><td>
+maximum days of HFNO
+</td></tr>
+<tr><td>
+bin_UPV_ECMO
+</td><td>
+ultra-protective ventilation/ECMO (bool)
+</td></tr>
+<tr><td>
+min_UPV_ECMO
+</td><td>
+minimum days of UPV/ECMO
+</td></tr>
+<tr><td>
+dni_UPV_ECMO
+</td><td>
+days of UPV/ECMO
+</td></tr>
+<tr><td>
+max_UPV_ECMO
+</td><td>
+maximum days of UPV/ECMO
+</td></tr>
+<tr><td>
+Mutace
+</td><td>
+variant
+</td></tr>
+<tr><td>
+DatumUmrtiLPZ
+</td><td>
+date of death (linked to healthcare facility)
+</td></tr>
+<tr><td>
+Long_COVID
+</td><td>
+long COVID diagnosis date
+</td></tr>
+<tr><td>
+DCCI
+</td><td>
+DCCI (Deyo-Charlson Comorbidity Index)
+</td></tr>
+</table>
+<p>The comorbidity level is expressed as an integer between 0 and 5 in the column DCCI (Deyo-Charlson Comorbidity Index), where the value is zero for about 87% of rows:</p>
+<pre>&gt; t=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv&quot;)
+&gt; t[,.N,DCCI]|&gt;print(r=F)
+ DCCI        N
+    0 10961996
+    1   876443
+    2   347656
+    3   169019
+    4    92154
+    5   150400</pre>
+<p>The average comorbidity index was about 0.31 for people with first dose type Comirnaty but about 0.38 for people with first dose type SPIKEVAX:</p>
+<pre>&gt; rec=fread(&quot;Czech/data/CR_records.csv&quot;)
+&gt; k=grep(&quot;OckovaciLatka_&quot;,names(rec));k2=k-1
+&gt; codes=rec[,.(type=unlist(rec[,..k],,F),code=unlist(rec[,..k2],,F))][!duplicated(code)]
+&gt; a=t[,.(DCCI=mean(DCCI),.N),.(code=OckovaciLatkaKod_Prvni_davka)]
+&gt; merge(codes,a)[order(-N)][N&gt;=1e3]
+   code                       type      DCCI       N
+1: CO01                  Comirnaty 0.3055174 5820268
+2:                                 0.1620386 5330971
+3: CO02                   SPIKEVAX 0.3800446  546257
+4: CO03                  VAXZEVRIA 0.5026497  460052
+5: CO04   COVID-19 Vaccine Janssen 0.2669109  429960
+6: CO07                  Nuvaxovid 0.3323160    5898
+7: CO20 Comirnaty Omicron XBB.1.5. 0.5976789    2068</pre>
+<p>The comorbidity index peaks in people who were born in 1925-1929, so this file might be a better reflection of the actual level of comorbidities than the file <code>ockovani-profese.csv</code> (where the proportion of people who were indicated to have a chronic illness peaked in ages 65-69 but it was very low in the oldest age groups, which might be if the data about chronic illness was not listed for people who qualified to be vaccinated based on their age):</p>
+<pre> RokNarozeni         DCCI       N
+           - 0.0002066227 1630992
+   1860-1864 0.0000000000       1
+   1865-1869 0.0000000000       2
+   1870-1874 0.0000000000       1
+   1875-1879 0.0000000000       2
+   1880-1884 0.0000000000       2
+   1890-1894 0.0000000000       1
+   1895-1899 0.0000000000       1
+   1900-1904 0.0000000000      69
+   1905-1909 0.0000000000      45
+   1910-1914 0.0579710145      69
+   1915-1919 0.7040000000     375
+   1920-1924 0.9064161207    8089
+   1925-1929 0.9732974675   45726 # highest comorbidity index
+   1930-1934 0.9454279068  132412
+   1935-1939 0.8325555678  226075
+   1940-1944 0.7322019785  401112
+   1945-1949 0.6178468076  596779
+   1950-1954 0.5035088189  672876
+   1955-1959 0.4384776532  648236
+   1960-1964 0.4118506011  665654
+   1965-1969 0.3435418951  706825
+   1970-1974 0.2727757004  869150
+   1975-1979 0.2238727484  956530
+   1980-1984 0.1820616173  781988
+   1985-1989 0.1483075026  739558
+   1990-1994 0.1286849167  693842
+   1995-1999 0.1152187225  525826
+   2000-2004 0.1038220172  511510
+   2005-2009 0.0908365436  587704
+   2010-2014 0.0850617850  560087
+   2015-2019 0.0456251469  472393
+   2020-2024 0.0141874725  163736
+ RokNarozeni         DCCI       N</pre>
+<p>Next I calculated an age-normalized excess comorbidity percentage for each vaccine type, where I derived the expected total DCCI for each vaccine type by multiplying the number of people in each age group with the average DCCI index for the age group among all rows of the dataset, and then I divided the actual total DCCI with the expected total DCCI, subtracted 1, and multiplied the result by 100. The excess comorbidity percentage was now only about 2 percentage points higher for Moderna than Pfizer, so it's not enough to explain an approximately 30% difference in ASMR. The excess age-normalized percentage of comorbidities was much higher for unvaccinated people than vaccinated people, which is further evidence of the healthy vaccinee effect:</p>
+<pre>&gt; merge(codes,a[,.(excesspct=round((sum(DCCI)/sum(base)-1)*100,1),N=sum(N)),code])[order(-N)][N&gt;=1e3]
+   code                       type excesspct       N
+1: CO01                  Comirnaty      -4.4 5820268
+2:                                      16.0 5330971
+3: CO02                   SPIKEVAX      -2.9  546257
+4: CO03                  VAXZEVRIA      -8.7  460052
+5: CO04   COVID-19 Vaccine Janssen      -7.4  429960
+6: CO07                  Nuvaxovid      42.3    5898
+7: CO20 Comirnaty Omicron XBB.1.5.      35.9    2068</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
