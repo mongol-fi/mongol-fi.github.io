@@ -73,7 +73,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Plot_for_raw_deaths_by_weeks_after_vaccination>Plot for raw deaths by weeks after vaccination</a></li>
 <li><a href=#Kirschs_calculation_for_mortality_rate_by_batch>Kirsch's calculation for mortality rate by batch</a></li>
 <li><a href=#Confidence_intervals_for_age_normalized_Moderna_Pfizer_ratio_by_month_of_vaccination>Confidence intervals for age-normalized Moderna-Pfizer ratio by month of vaccination</a></li>
-<li><a href=#The_record_level_data_includes_vaccination_entries_people_older_than_the_oldest_known_Czech_citizens>The record-level data includes vaccination entries people older than the oldest known Czech citizens</a></li>
+<li><a href=#The_record_level_data_includes_vaccination_entries_for_people_older_than_the_oldest_known_Czech_citizens>The record-level data includes vaccination entries for people older than the oldest known Czech citizens</a></li>
 <li><a href=#New_record_level_dataset_with_columns_for_infections_hospitalizations_and_comorbidity_index>New record-level dataset with columns for infections, hospitalizations, and comorbidity index</a></li>
 </ul>
 
@@ -1167,7 +1167,7 @@ mutate_if(o,is.double,round,2)|&gt;print(r=F)</pre>
   2022-12     0    0.00     0     0.26   NaN  NaN   NaN
  vaxmonth dead1   base1 dead2    base2 ratio  low  high</pre>
 <h2>
-<a href=#The_record_level_data_includes_vaccination_entries_people_older_than_the_oldest_known_Czech_citizens id=The_record_level_data_includes_vaccination_entries_people_older_than_the_oldest_known_Czech_citizens>The record-level data includes vaccination entries people older than the oldest known Czech citizens</a>
+<a href=#The_record_level_data_includes_vaccination_entries_for_people_older_than_the_oldest_known_Czech_citizens id=The_record_level_data_includes_vaccination_entries_for_people_older_than_the_oldest_known_Czech_citizens>The record-level data includes vaccination entries for people older than the oldest known Czech citizens</a>
 </h2>
 <p>The record-level dataset contains an entry for a man whose year of birth is 1912 but who got vaccinated in 2023 when he would've been 110 or 111 years old:</p>
 <pre>&gt; t=fread(&quot;curl https://github.com/skirsch/Czech/blob/main/data/CR_records.csv.xz|xz -dc&quot;)
@@ -1214,7 +1214,7 @@ ID
 <tr><td>
 Infekce
 </td><td>
-infection
+order of infection
 </td></tr>
 <tr><td>
 Pohlavi
@@ -1489,15 +1489,16 @@ DCCI (Deyo-Charlson Comorbidity Index)
 &gt; a=t[,.(DCCI=mean(DCCI),.N),.(code=OckovaciLatkaKod_Prvni_davka)]
 &gt; merge(codes,a)[order(-N)][N&gt;=1e3]
    code                       type      DCCI       N
-1: CO01                  Comirnaty 0.3055174 5820268
-2:                                 0.1620386 5330971
-3: CO02                   SPIKEVAX 0.3800446  546257
-4: CO03                  VAXZEVRIA 0.5026497  460052
+1: CO01                  Comirnaty 0.3055174 5820268 # Pfizer
+2:                                 0.1620386 5330971 # unvaccinated
+3: CO02                   SPIKEVAX 0.3800446  546257 # Moderna
+4: CO03                  VAXZEVRIA 0.5026497  460052 # AstraZeneca
 5: CO04   COVID-19 Vaccine Janssen 0.2669109  429960
-6: CO07                  Nuvaxovid 0.3323160    5898
+6: CO07                  Nuvaxovid 0.3323160    5898 # Novavax
 7: CO20 Comirnaty Omicron XBB.1.5. 0.5976789    2068</pre>
-<p>The comorbidity index peaks in people who were born in 1925-1929, so this file might be a better reflection of the actual level of comorbidities than the file <code>ockovani-profese.csv</code> (where the proportion of people who were indicated to have a chronic illness peaked in ages 65-69 but it was very low in the oldest age groups, which might be if the data about chronic illness was not listed for people who qualified to be vaccinated based on their age):</p>
-<pre> RokNarozeni         DCCI       N
+<p>The comorbidity index peaks in people who were born in 1925-1929, so this new dataset might be a better reflection of the actual level of comorbidities than the earlier file <code>ockovani-profese.csv</code> (where the proportion of people who were indicated to have a chronic illness peaked in ages 65-69 but it was very low in the oldest age groups, which might be if information about chronic illness was not listed for people who qualified to be vaccinated based on their age):</p>
+<pre>&gt; t[,.(DCCI=mean(DCCI),.N),RokNarozeni][order(RokNarozeni)]|&gt;print(r=F)
+ RokNarozeni         DCCI       N
            - 0.0002066227 1630992
    1860-1864 0.0000000000       1
    1865-1869 0.0000000000       2
@@ -1532,16 +1533,43 @@ DCCI (Deyo-Charlson Comorbidity Index)
    2015-2019 0.0456251469  472393
    2020-2024 0.0141874725  163736
  RokNarozeni         DCCI       N</pre>
-<p>Next I calculated an age-normalized excess comorbidity percentage for each vaccine type, where I derived the expected total DCCI for each vaccine type by multiplying the number of people in each age group with the average DCCI index for the age group among all rows of the dataset, and then I divided the actual total DCCI with the expected total DCCI, subtracted 1, and multiplied the result by 100. The excess comorbidity percentage was now only about 2 percentage points higher for Moderna than Pfizer, so it's not enough to explain an approximately 30% difference in ASMR. The excess age-normalized percentage of comorbidities was much higher for unvaccinated people than vaccinated people, which is further evidence of the healthy vaccinee effect:</p>
+<p>Next I calculated an age-normalized excess comorbidity percentage for each vaccine type, where I derived the expected total DCCI for each vaccine type by multiplying the number of people in each age group with the average DCCI index for the age group among all rows of the dataset, and then I divided the actual total DCCI with the expected total DCCI, subtracted 1, and multiplied the result by 100. The excess comorbidity percentage was now about -4.4% for Pfizer but -2.9% for Moderna, so the difference is not big enough to explain why Moderna would have about 30% higher mortality rate than Pfizer. The excess age-normalized percentage of comorbidities was much higher for unvaccinated people than vaccinated people, which serves as further evidence of the healthy vaccinee effect:</p>
 <pre>&gt; merge(codes,a[,.(excesspct=round((sum(DCCI)/sum(base)-1)*100,1),N=sum(N)),code])[order(-N)][N&gt;=1e3]
    code                       type excesspct       N
-1: CO01                  Comirnaty      -4.4 5820268
-2:                                      16.0 5330971
-3: CO02                   SPIKEVAX      -2.9  546257
-4: CO03                  VAXZEVRIA      -8.7  460052
+1: CO01                  Comirnaty      -4.4 5820268 # Pfizer
+2:                                      16.0 5330971 # unvaccinated
+3: CO02                   SPIKEVAX      -2.9  546257 # Moderna
+4: CO03                  VAXZEVRIA      -8.7  460052 # AstraZeneca
 5: CO04   COVID-19 Vaccine Janssen      -7.4  429960
-6: CO07                  Nuvaxovid      42.3    5898
+6: CO07                  Nuvaxovid      42.3    5898 # Novavax
 7: CO20 Comirnaty Omicron XBB.1.5.      35.9    2068</pre>
+<p>When I used a similar method to calculate an age-normalized excess hospitalization percentage by the type of the first vaccine dose, Moderna was about 6 percentage points higher than Pfizer (but my calculation was not adjusted for exposure time or varying hospitalization rates over time):</p>
+<pre>&gt; ho=t[,.(hosp=sum(bin_Hospitalizace,na.rm=T),.N),.(code=OckovaciLatkaKod_Prvni_davka,born=RokNarozeni)]
+&gt; ho=merge(t[,.(base=mean(!is.na(bin_Hospitalizace))),.(born=RokNarozeni)],ho)[,base:=base*N]
+&gt; merge(codes,ho[,.(excesspct=round((sum(hosp)/sum(base)-1)*100,1),N=sum(N)),code])[order(-N)][N&gt;=1e3]
+   code                       type excesspct       N
+1: CO01                  Comirnaty     -27.4 5820268 # Pfizer
+2:                                      91.6 5330971 # unvaccinated
+3: CO02                   SPIKEVAX     -21.7  546257 # Moderna
+4: CO03                  VAXZEVRIA     -28.0  460052 # AstraZeneca
+5: CO04   COVID-19 Vaccine Janssen      21.9  429960
+6: CO07                  Nuvaxovid     222.9    5898 # Novavax
+7: CO20 Comirnaty Omicron XBB.1.5.     145.8    2068</pre>
+<p>The <code>Infekce</code> column indicates whether the entry is for a person with no infection listed, or for the first, second, or third infection of the person. So the reason why there are more rows than people is probably partially because people with 2 or 3 infections have multiple rows. But I don't know why the maximum infection number is only 3 though:</p>
+<pre>&gt; t[,.N,Infekce]
+   Infekce       N
+1:      NA 7800263
+2:       1 4325706
+3:       2  450511
+4:       3   21188</pre>
+<p>The type of test is empty on about 63% of rows, PCR on 33% of rows, and antigen on 5% of rows. About 98% of rows with an infection number listed also have a type of test listed:</p>
+<pre>&gt; t[,.N,TypTestu]
+   TypTestu       N
+1:          7885962
+2:      PCR 4099653
+3:       AG  612053
+&gt; t[!is.na(Infekce),mean(TypTestu!=&quot;&quot;)]
+[1] 0.9821364</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
