@@ -1129,14 +1129,192 @@ Age
 <div class="width5">
 <img src="i/debunk-dowd-2.jpg">
 </div>
-<p>But then I realized the difference was probably because Alegria and Nunes wrote that they downloaded data from CDC WONDER in December 2022, so at the time CDC WONDER still probably used the 2021 population estimates as the population size for 2022, in the same way that in March 2024 when I took the screenshot below, WONDER still used the 2022 population estimates for 2023 and 2024:</p>
+<p>But then I realized the difference was probably because Alegria and Nunes wrote that they downloaded data from CDC WONDER in December 2022, so at the time CDC WONDER still probably used the 2021 population estimates as the population size for 2022, in the same way that in March 2024 when I took the screenshot below, CDC WONDER still used the 2022 population estimates for 2023 and 2024:</p>
 <div class="width5">
 <img src="i/debunk-dowd-4.jpg">
 </div>
 <p>In the table above if you calculate the mortality rate for 2022 using the 2021 population size, it's <code>176784/16206075*1e5</code> or about 1091, which matches Dowd's preprint.</p>
-<p>The light blue line here shows that the mortality rate in 2023 also gets a bit lower if you extrapolate the 2023 population size from the past trend instead of using the 2022 population size for 2023:</p>
+<p>In the plot below I used the population sizes returned by CDC WONDER, which still used 2022 population estimates for 2023 at the time I downloaded the data even though the 2023 population estimates had already been published at the time by the Census Bureau:</p>
 <div class="width6">
 <img src="i/debunk-dowd-3.png">
+</div>
+<p>However next I realized that the reason why the CMR increased between 2020 and 2021 is that CDC WONDER uses population estimates based on the 2010 census for 2010 to 2020 but population estimates based on the 2020 census from 2021 onwards. And if you look at the mid-year resident resident population estimate for ages 75 to 84, it fell from 16,451,547 in the vintage 2020 release that was based on the 2010 census to 15,822,264 in the vintage 2023 release that was based on the 2020 census:</p>
+<div class="width7">
+<img src="i/debunk-dowd-popest.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2)
+
+agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
+
+kim=\(x)ifelse(x&gt;=1e3,ifelse(x&gt;=1e6,paste0(x/1e6,&quot;M&quot;),paste0(x/1e3,&quot;k&quot;)),x)
+
+new=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/nc-est2023-agesex-res.csv&quot;)
+old=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/national/asrh/nc-est2020-agesex-res.csv&quot;)
+
+old=old[SEX==0&amp;AGE!=999,.(age=AGE,pop=unlist(.SD[,-(1:4)]),year=rep(2010:2020,each=.N))]
+new=new[SEX==0&amp;AGE!=999,.(age=AGE,pop=unlist(.SD[,-(1:3)]),year=rep(2020:2023,each=.N))]
+
+older=fread(&quot;https://www2.census.gov/programs-surveys/popest/tables/2000-2010/intercensal/national/us-est00int-01.csv&quot;)
+older=older[6:26,c(1,3:12,14)][,.(age=as.numeric(sub(&quot;\\D*(\\d+).*&quot;,&quot;\\1&quot;,sub(&quot;Under 5&quot;,0,V1))),pop=as.numeric(gsub(&quot;,&quot;,&quot;&quot;,unlist(.SD[,-1]))),year=rep(2000:2010,each=.N))]
+
+oldest=fread(&quot;https://www2.census.gov/programs-surveys/popest/tables/2000-2009/national/asrh/nc-est2009-01.csv&quot;)
+oldest=oldest[6:26,c(1,2:11)][,.(age=as.numeric(sub(&quot;\\D*(\\d+).*&quot;,&quot;\\1&quot;,sub(&quot;Under 5&quot;,0,V1))),pop=as.numeric(gsub(&quot;,&quot;,&quot;&quot;,unlist(.SD[,-1]))),year=rep(2009:2000,each=.N))]
+
+won=fread(&quot;http://sars2.net/f/wondercanceryearlysingle.csv&quot;)[age&lt;85,.(year,pop,age)]
+won=rbind(won,fread(&quot;http://sars2.net/f/wondercanceryearlyten.csv&quot;)[cause==cause[1]&amp;age==85,.(year,pop,age)])
+
+p=cbind(oldest,z=&quot;2000-2009&quot;)
+p=rbind(p,cbind(older,z=&quot;2000-2010 intercensal&quot;))
+p=rbind(p,cbind(old,z=&quot;2010-2020&quot;))
+p=rbind(p,cbind(new,z=&quot;2020-2023&quot;))
+p=rbind(p,cbind(won,z=&quot;CDC WONDER&quot;))
+
+p[,z:=factor(z,unique(z))]
+
+ages=0:4*20
+ages=c(0,25,45,65,75,85)
+
+p=p[,.(pop=sum(pop)),.(z,year,age=agecut(age,ages))]
+
+xstart=2000;xend=2023
+p=p[year%in%xstart:xend]
+
+ggplot(p,aes(x=year,y=pop))+
+coord_cartesian(clip=&quot;off&quot;)+
+facet_wrap(~age,ncol=2,dir=&quot;v&quot;,scales=&quot;free_y&quot;)+
+geom_vline(xintercept=c(2009.5,2019.5),color=&quot;gray80&quot;,linewidth=.23)+
+geom_line(aes(color=z,alpha=z),linewidth=.3)+
+geom_point(aes(color=z,shape=z,size=z),stroke=.2)+
+geom_text(fontface=2,data=p[,max(pop),age],aes(label=paste0(&quot;\n   &quot;,age,&quot;   \n&quot;),y=V1),x=xstart-.5,lineheight=.4,hjust=0,vjust=1,size=grid::convertUnit(unit(7,&quot;pt&quot;),&quot;mm&quot;))+
+labs(title=&quot;Mid-year resident population estimates published by US Census Bureau&quot;,x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=seq(xstart-.5,xend+.5,.5),labels=c(rbind(&quot;&quot;,ifelse(xstart:xend%%2==0,xstart:xend,&quot;&quot;)),&quot;&quot;),expand=expansion(0))+
+scale_y_continuous(labels=kim,breaks=\(x)Filter(\(y)y&gt;min(x)+(max(x)-min(x))*.05,pretty(x,4)),expand=expansion(.04))+
+scale_color_manual(values=c(&quot;#0055ff&quot;,&quot;#8844ff&quot;,&quot;#ff55ff&quot;,&quot;#ff5555&quot;,&quot;black&quot;))+
+scale_shape_manual(values=c(16,16,16,16,4))+
+scale_alpha_manual(values=c(1,1,1,1,0))+
+scale_size_manual(values=c(.7,.7,.7,.7,1))+
+guides(color=guide_legend(nrow=2,byrow=T))+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
+  axis.ticks=element_line(linewidth=.2,color=&quot;black&quot;),
+  axis.ticks.length=unit(3,&quot;pt&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.justification=&quot;left&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(8,&quot;pt&quot;),
+  legend.key.width=unit(17,&quot;pt&quot;),
+  legend.margin=margin(-2,,4),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(1,&quot;pt&quot;),
+  legend.text=element_text(size=7,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.23),
+  panel.spacing.x=unit(3,&quot;pt&quot;),
+  panel.spacing.y=unit(3,&quot;pt&quot;),
+  plot.margin=margin(5,5,5,5),
+  plot.subtitle=element_text(size=7,margin=margin(,,3)),
+  plot.title=element_text(size=7.4,face=2,margin=margin(1,,4)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=4,height=3,dpi=350*4)
+system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
+</div>
+<p>In the plot above the reason why the population estimates used by CDC WONDER are not perfectly equal to the magenta 2010-2020 line is because I used vintage 2020 population estimates for 2010-2020, but CDC WONDER uses vintage 2015 estimates for 2015, vintage 2016 estimates for 2016, and so on.</p>
+<p>In the plot above the 2000-2010 intercensal population estimates are based on both 2000 and 2010 censuses, and they were adjusted to get rid of the jump between the 2000-based and 2010-based population estimates. CDC WONDER uses the 2000-2010 intercensal population estimates for the years 2000 to 2009, but the 2010-2020 intercensal population estimates are only scheduled to be published in 2025 after which they will probably replace the old 2010-based population estimates at CDC WONDER, so for now CDC WONDER suffers from the jump in population estimates between 2020 and 2021.</p>
+<p>However while we are waiting for the new intercensal population estimates to be published, I developed a fairly straightforward way to adjust the 2010-2020 estimates to get rid of the jump. For example in ages 75 to 84, the ratio between the 2020-based vintage 2023 estimate for 2020 and the 2010-based vintage 2020 estimate for 2020 is <code>15822264/16451547</code> which is about 0.9617. So therefore I'm multiplying the population estimate for 2011 by about <code>.9+.1*.9617</code>, the population estimate for 2012 by about <code>.8+.2*.9617</code>, and so on: [<a href=ethical.html#Files_for_US_population_estimates_by_single_year_of_age_up_to_ages_100>ethical.html#Files_for_US_population_estimates_by_single_year_of_age_up_to_ages_100</a>]</p>
+<div class="width7">
+<img src="i/ethical-popmerge.png">
+</div>
+<p>When I used the adjusted population estimates to calculate cancer CMR in ages 75 to 84, I now got lower CMR in 2021 than 2020:</p>
+<div class="width6">
+<img src="i/statistic-dowd-improved.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2);library(stringr)
+
+kim=\(x)ifelse(x&gt;=1e3,ifelse(x&gt;=1e6,paste0(x/1e6,&quot;M&quot;),paste0(x/1e3,&quot;k&quot;)),x)
+
+t=fread(&quot;http://sars2.net/f/wondercanceryearlysingle.csv&quot;)
+pop=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)
+
+t$oldpop=t$pop;t[year&gt;2021,oldpop:=t[year==2021,rep(pop,each=2)]]
+
+t=merge(t,pop[,.(year,age,newpop=pop)],all=T)[!is.na(newpop),pop:=newpop]
+t=merge(t[year==2020,.(age,std=pop/sum(pop))],t)
+t=t[age%in%75:84&amp;year!=2024]
+
+a=t[,lapply(.SD,sum,na.rm=T),year,.SDcols=4:7]
+
+years=unique(t$year)
+p=a[,.(x=year,y=dead,old=NA,group=1,linetype=1,color=1,lab=&quot;Deaths&quot;)]
+p=rbind(p,a[,.(x=year,y=dead/pop*1e5,old=dead/oldpop*1e5,group=2,linetype=1,color=2,lab=&quot;CMR per 100k&quot;)])
+p=rbind(p,t[,.(y=sum(dead/pop*std)*1e5,old=sum(dead/oldpop*std)*1e5,group=3,linetype=1,color=3,lab=&quot;ASMR per 100k&quot;),.(x=year)])
+p=rbind(p,a[,.(x=year,y=pop,old=oldpop,group=4,linetype=1,color=4,lab=&quot;Population estimates&quot;)])
+p[,color:=factor(color)][,group:=factor(group)]
+
+xstart=1999;xend=2023
+xbreak=seq(xstart-.5,xend+.5,.5);xlab=c(rbind(&quot;&quot;,substr(xstart:xend,3,4)),&quot;&quot;)
+
+color=c(&quot;black&quot;,hcl(225,110,45),&quot;#cc0000&quot;,&quot;#00bb00&quot;)
+
+sub=&quot;\u00a0    Dowd&#39;s population estimates are the population sizes returned by CDC WONDER in 2023, when the 2021 population size was used for 2022 and 2023.
+     The improved population estimates use vintage 2020 population estimates for 2010-2019 and vintage 2023 population estimates for 2020-2023. In order to get rid of a jump in the population estimates between 2019 and 2020, the population estimates based on the 2010 census were multiplied by a linear slope so that they were equal in 2020 to the population estimates based on the 2020 census.
+     Population estimates were downloaded from www2.census.gov/programs-surveys/popest/
+tables. ASMR was calculated by single year of age so that the vintage 2023 resident population estimates for the year 2020 were used as the standard population.&quot;
+
+linelab=c(&quot;Dowd&#39;s population estimates&quot;,&quot;Improved population estimates&quot;)
+
+label=p[,.(min=min(y),max=max(y),min2=min(y[x&lt;2004]),max2=max(y[x&lt;2004])),group]
+p=merge(p,label[,.(laby=ifelse(min2&gt;(min+max)/2,min2-(max-min)*.2,max2+(max-min)*.2)),group])
+
+ggplot(p,aes(x,y,color=color))+
+facet_wrap(~group,ncol=1,scales=&quot;free&quot;)+
+geom_line(aes(linetype=linelab[2]),linewidth=.4)+
+geom_line(aes(y=old,linetype=linelab[1]),linewidth=.4)+
+geom_point(stroke=0,size=.8)+
+geom_text(data=p[rowid(lab)==1&amp;lab!=&quot;&quot;],aes(label=lab,y=laby),x=1999,hjust=0,size=2.5,show.legend=F)+
+labs(title=&quot;CDC WONDER, ages 75-84: underlying cause of death C00-D48 (Neoplasms)&quot;,x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=xbreak,labels=xlab,expand=expansion(0))+
+scale_y_continuous(breaks=pretty,labels=kim,expand=expansion(.03))+
+coord_cartesian(clip=&quot;off&quot;)+
+scale_color_manual(values=color)+
+scale_linetype_manual(values=c(&quot;42&quot;,&quot;solid&quot;),labels=linelab)+
+guides(color=&quot;none&quot;)+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.ticks=element_line(linewidth=.23,color=&quot;black&quot;),
+  axis.ticks.length=unit(3,&quot;pt&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.title=element_text(size=8),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.justification=c(1,1),
+  legend.key=element_blank(),
+  legend.key.height=unit(10,&quot;pt&quot;),
+  legend.key.width=unit(17,&quot;pt&quot;),
+  legend.margin=margin(,,4),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(1.5,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=7),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(linewidth=.3,fill=NA),
+  panel.spacing=unit(2,&quot;pt&quot;),
+  plot.margin=margin(5,5,5,5),
+  plot.title=element_text(size=7.4,face=2,margin=margin(1,,3)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=4.2,height=4,dpi=380*4)
+system(paste0(&quot;magick 1.png -resize 25% 1.png;mar=30;w=`identify -format %w 1.png`;magick 1.png \\( -size $[w-mar*2]x -font Arial -interline-spacing -3 -pointsize 38 caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&#39;&quot;,sub),&quot;&#39; -gravity southwest -splice $[mar]x14 \\) -append 1.png&quot;))</pre>
 </div>
 <p>Dowd's tweet said: <span class="quote">&quot;Excess Cancer as Underlying Cause (UC) for 75-84 saw -0.1% in 20 (z-score -0.3), +4.8% in 21 (z-score 10.1), +11.5% in 22 (z-score 24.0)&quot;</span>. When I used the 2021 population estimate for 2022 and I used a 2010-2019 linear trend like Dowd, for some reason my z-score for 2022 was about 22.1 and not 24.0. But my z-score fell to only about 6.0 when I used the 2022 population estimate for 2022 instead:</p>
 <pre>&gt; d=data.frame(year=2010:2023)
