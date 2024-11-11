@@ -2648,23 +2648,6 @@ Deaths from cause
 2024
 </th></tr>
 <tr><td>
-UCD J15.7 (Pneumonia due to Mycoplasma pneumoniae)
-</td><td>
-1-9
-</td><td>
-12
-</td><td>
-12
-</td><td>
-1-9
-</td><td>
-1-9
-</td><td>
-1-9
-</td><td>
-1-9
-</td></tr>
-<tr><td>
 MCD J15.7 (Pneumonia due to Mycoplasma pneumoniae)
 </td><td>
 17
@@ -2732,25 +2715,8 @@ MCD J18 (Pneumonia, organism unspecified) but not MCD COVID (U07)
 </td><td>
 7512
 </td></tr>
-<tr><td>
-UCD J18 (Pneumonia, organism unspecified
-</td><td>
-2608
-</td><td>
-2487
-</td><td>
-2891
-</td><td>
-2517
-</td><td>
-2377
-</td><td>
-2386
-</td><td>
-1680
-</td></tr>
 </table>
-<p>Ethical Skeptic has said that in his plots that display weekly data from 2018 onwards, he fits the baseline against data from only 2018 and 2019, so I suspect it was also the case here. However it probably causes the slope of his baseline to be pointed too much downwards like in my below:</p>
+<p>Ethical Skeptic has said that in his plots that display weekly data from 2018 onwards, he fits the baseline against data from only 2018 and 2019, so I suspect it was also the case here. However it probably causes the slope of his baseline to be pointed too much downwards like in my plot below:</p>
 <div class="width7">
 <img src="i/ethical-mycoplasma-3.png">
 </div>
@@ -2829,10 +2795,10 @@ ggsave(&quot;1.png&quot;,width=4.2,height=3.7,dpi=400*4)
 system(&quot;magick 1.png -resize 25% 1.png&quot;)
 system(&quot;qlmanage -p ~/1.png&amp;&gt;/dev/null&quot;)</pre>
 </div>
-<p>However I suspect some of the excess deaths with MCD J18 and not MCD COVID may have been due to deaths that included COVID as an undiagnosed contributory cause, because from the second panel of my plot above where I looked at MCD J18 deaths without excluding COVID deaths, you can see that there were about 363% excess deaths in 2021. So if even a small fraction of deaths that should've had MCD COVID were missing a diagnosis for COVID, it might explain several percentage points of excess deaths in the bottom panel that shows deaths with MCD J18 but not MCD COVID.</p>
-<p>And in any case I don't know if the increase in J18 deaths can be attributed to vaccines, because the period with elevated J18 deaths seems to have already started in 2020. In my plot above the percentage of excess deaths for UCD J18 is about 15% in 2020 but close to zero in 2021-2023.</p>
-<p>Ethical Skeptic said that he got about 40% excess deaths relative to his PFE-adjusted baseline, but in the bottom panel of my plot above which shows deaths with MCD J18 but not MCD COVID, I got only about 17% excess deaths in 2023 even relative to the light gray baseline that was fitted against deaths from 2018-2019. However Ethical Skeptic fitted his baseline against weekly data which might cause it to be steeper than my baseline fitted against yearly data, because there there was a high number of deaths in early 2018 and a low number of deaths in late 2019.</p>
-<p>In the next plot I calculated my gray baseline by first doing a linear regression of weekly data on all weeks in the MMWR years 2018 and 2019, and then I calculated the average difference between the actual deaths and the baseline on MMWR week 1 of 2018 and 2019 and I added the difference to the baseline for MMWR week 1 of each year, and similarly for other weeks. My baseline pointed even further downwards than Ethical Skeptic's baseline, so I got over 100% excess deaths on every week in the second half of 2023. But on the other hand I didn't get high excess deaths on the first weeks of 2018 like Ethical Skeptic, but it might be if he excluded early weeks of 2018 from his baseline fitting period, which would also explain why the slope of his baseline was not as extreme as in my plot:</p>
+<p>I suspect some of the excess deaths with MCD J18 and not MCD COVID may have been due to deaths that included COVID as an undiagnosed cause of death, because the number of MCD J18 deaths was about 5 times the baseline level in 2021 but nearly all excess MCD J18 deaths in 2021 also had MCD COVID. So if a diagnosis for COVID was missing for even a small part of deaths that should've had MCD COVID, it might explain a large part of excess deaths in my bottom panel that shows deaths with MCD J18 but not MCD COVID.</p>
+<p>And in any case I don't know if the increase in J18 deaths can be attributed to vaccines, because the period with elevated J18 deaths seems to have already started in 2020. In my plot above the percentage of excess deaths for UCD J18 is about 15% in 2020 but close to zero in 2021, 2022, and 2023.</p>
+<p>Ethical Skeptic said that he got about 40% excess deaths relative to his PFE-adjusted baseline, but in the bottom panel of my plot above which shows deaths with MCD J18 but not MCD COVID, I got only about 20% excess deaths in 2023 even relative to the light gray baseline that was fitted against deaths from 2018-2019. However Ethical Skeptic fitted his baseline against weekly data which might cause it to be steeper than my baseline fitted against yearly data, because there was a high number of deaths in early 2018 and a low number of deaths in late 2019.</p>
+<p>In the next plot I calculated my gray baseline by first doing a linear regression of weekly data for all weeks of the MMWR years 2018 and 2019, and then I calculated the average difference between the actual deaths and the baseline on MMWR week 1 of 2018 and 2019 and I added the difference to the baseline for MMWR week 1 of each year, and similarly for other weeks. My baseline pointed even further downwards than Ethical Skeptic's baseline, so I got over 100% excess deaths on every week in the second half of 2023. But on the other hand I didn't get high excess deaths on the first weeks of 2018 like Ethical Skeptic, which might be if he excluded early weeks of 2018 from his baseline fitting period, which would also explain why the slope of his baseline was not as extreme as in my plot:</p>
 <div class="width10">
 <img src="i/ethical-mycoplasma-4.png">
 </div>
@@ -2841,10 +2807,13 @@ system(&quot;qlmanage -p ~/1.png&amp;&gt;/dev/null&quot;)</pre>
 Show code
 </button><pre>library(data.table);library(ggplot2)
 
+ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
+
 t=fread(&quot;http://sars2.net/f/wonderj18weekly.csv&quot;)
 
 t=merge(t[cause==&quot;MCD J18&quot;],t[cause%like%&quot;and&quot;,.(date,and=dead)],all=T)
 p=t[,.(date=date-3,year,week,dead=dead-nafill(and,,0))]
+p[,dead:=ma(dead,3,2)]
 p$base=p[year&lt;2020,predict(lm(dead~date),p)]
 
 z=c(&quot;Actual deaths&quot;,&quot;2018-2019 seasonality-adjusted linear baseline&quot;,&quot;2018-2019 linear baseline&quot;)
@@ -2852,20 +2821,18 @@ p=merge(p[year&lt;2020,mean(dead-base),week],p)[,.(x=date,y=c(dead,base=base+V1,
 p[,z:=factor(z,unique(z))]
 
 ybreak=pretty(p$y)
-xstart=as.Date(&quot;2018-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
-xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=c(rbind(&quot;&quot;,2018:2023),&quot;&quot;)
+xstart=as.Date(&quot;2018-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
+xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=c(rbind(&quot;&quot;,2018:2024),&quot;&quot;)
 
 ggplot(p,aes(x,y))+
 geom_vline(xintercept=seq(xstart,xend,&quot;month&quot;),color=&quot;gray90&quot;,linewidth=.23)+
-geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray50&quot;,linewidth=.3)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray75&quot;,linewidth=.3)+
 geom_line(aes(color=z,linetype=z),linewidth=.3)+
-geom_point(aes(alpha=z),stroke=0,size=.6)+
-labs(x=NULL,y=NULL,title=&quot;CDC WONDER, ages 0 to 54: Weekly deaths with MCD J18 (Pneumonia, organism unspecified) but not MCD COVID&quot;)+
+labs(x=NULL,y=NULL,title=&quot;CDC WONDER, ages 0 to 54: Weekly deaths with MCD J18 (Pneumonia, organism unspecified) but not MCD COVID&quot;,caption=&quot;Deaths are displayed as a moving average where the window extends 3 weeks backwards and 2 weeks forwards.&quot;)+
 scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
 scale_y_continuous(limits=range(ybreak),breaks=ybreak)+
 scale_color_manual(values=c(&quot;black&quot;,&quot;gray60&quot;,&quot;gray60&quot;))+
 scale_linetype_manual(values=c(&quot;solid&quot;,&quot;solid&quot;,&quot;42&quot;))+
-scale_alpha_manual(values=c(1,0,0))+
 coord_cartesian(clip=&quot;off&quot;,expand=F)+
 theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   axis.text.y=element_text(margin=margin(,1.5)),
@@ -2880,7 +2847,7 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   legend.key=element_rect(fill=alpha(&quot;white&quot;,0)),
   legend.key.height=unit(10,&quot;pt&quot;),
   legend.key.width=unit(18,&quot;pt&quot;),
-  legend.margin=margin(,,3),
+  legend.margin=margin(,,2),
   legend.position=&quot;top&quot;,
   legend.spacing.x=unit(1.5,&quot;pt&quot;),
   legend.spacing.y=unit(0,&quot;pt&quot;),
@@ -2889,8 +2856,9 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   panel.background=element_blank(),
   panel.border=element_rect(fill=NA,linewidth=.25),
   panel.spacing=unit(1,&quot;pt&quot;),
-  plot.margin=margin(3,4,3,4),
-  plot.title=element_text(size=7,face=2,margin=margin(2,,2),hjust=1))
+  plot.margin=margin(4,4,4,4),
+  plot.caption=element_text(size=7,margin=margin(2)),
+  plot.title=element_text(size=7,face=2,margin=margin(1,,1),hjust=1))
 ggsave(&quot;1.png&quot;,width=5.5,height=2.2,dpi=400*4)
 system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 </div>
