@@ -574,7 +574,7 @@ system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 <div class="spoiler">
 <button>
 Show code
-</button><pre>library(data.table);library(stringr);library(ggplot2)
+</button><pre> library(data.table);library(stringr);library(ggplot2)
 
 t=fread(&quot;http://sars2.net/f/uspopdeadmonthly.csv&quot;)
 t[,date:=as.Date(paste0(date,&quot;-1&quot;))]
@@ -583,47 +583,46 @@ xstart=as.Date(&quot;2011-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
 xbreak=seq(xstart,xend,&quot;6 month&quot;)
 xlab=c(rbind(&quot;&quot;,2011:2023),&quot;&quot;)
 
-p=t[date&gt;=xstart&amp;date&lt;=xend]
-p=p[,.(y=sum(dead)/sum(persondays)*365e5,z=&quot;Actual deaths&quot;),.(x=date)]
+a=t[date&gt;=xstart&amp;date&lt;=xend,.(y=sum(dead)/sum(persondays)*365e5,z=&quot;Actual deaths&quot;),.(x=date)]
 
 dates=unique(p$x)
-p1=p[year(x)%in%2018:2019,.(x=dates,y=predict(lm(y~x),.(x=dates)),z=&quot;2018-2019 linear trend&quot;)]
-p2=p[year(x)%in%2011:2019,.(x=dates,y=predict(lm(y~x),.(x=dates)),z=&quot;2011-2019 linear trend&quot;)]
+p=rbind(a,a[year(x)%in%2011:2019,.(x=dates,y=predict(lm(y~x),.(x=dates)),z=&quot;2011-2019 linear trend&quot;)])
+p=rbind(p,a[year(x)%in%2018:2019,.(x=dates,y=predict(lm(y~x),.(x=dates)),z=&quot;2018-2019 linear trend&quot;)])
+p[,z:=factor(z,unique(z))]
 
-p=rbind(p,p1,p2)[,z:=factor(z,unique(z))]
-
-ybreak=pretty(p$y);ystart=min(p$y);yend=max(p$y)
-
-color=c(&quot;black&quot;,&quot;gray60&quot;,&quot;black&quot;)
+ybreak=pretty(p$y)
+color=c(&quot;black&quot;,&quot;black&quot;,&quot;gray60&quot;)
 
 ggplot(p,aes(x=x+15,y))+
 geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray90&quot;,linewidth=.25)+
-geom_vline(xintercept=c(as.Date(&quot;2018-1-1&quot;),as.Date(&quot;2020-1-1&quot;)),linetype=2,linewidth=.25)+
-geom_vline(xintercept=c(xstart,xend),linewidth=.25,lineend=&quot;square&quot;)+
-geom_hline(yintercept=c(ystart,yend),linewidth=.25,lineend=&quot;square&quot;)+
+geom_vline(xintercept=c(as.Date(&quot;2018-1-1&quot;),as.Date(&quot;2020-1-1&quot;)),linetype=&quot;11&quot;,linewidth=.25)+
 geom_line(aes(color=z,linetype=z),linewidth=.3)+
 geom_point(data=p[z==&quot;Actual deaths&quot;],size=.4,show.legend=F)+
 labs(title=&quot;CDC WONDER: Monthly deaths from all causes per 100,000 person-years&quot;,x=NULL,y=NULL)+
-scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
-scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab,expand=c(0,0))+
+scale_y_continuous(limits=range(ybreak),breaks=ybreak,expand=c(.02,0))+
 scale_color_manual(values=color)+
-scale_linetype_manual(values=c(1,2,2))+
-coord_cartesian(clip=&quot;off&quot;,expand=F)+
+scale_linetype_manual(values=c(&quot;solid&quot;,&quot;42&quot;,&quot;42&quot;))+
+coord_cartesian(clip=&quot;off&quot;)+
 theme(axis.text=element_text(size=7,color=&quot;black&quot;),
-  axis.ticks.length=unit(0,&quot;pt&quot;),
+  axis.text.y=element_text(margin=margin(,1.5)),
+  axis.ticks=element_line(linewidth=.25),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.x=element_line(color=alpha(&quot;black&quot;,c(1,0))),
   legend.background=element_blank(),
   legend.box.background=element_rect(fill=alpha(&quot;white&quot;,1),color=&quot;black&quot;,linewidth=.25),
   legend.box.just=&quot;left&quot;,
   legend.justification=c(0,1),
   legend.key=element_blank(),
-  legend.key.width=unit(17,&quot;pt&quot;),
-  legend.key.height=unit(11,&quot;pt&quot;),
+  legend.key.width=unit(19,&quot;pt&quot;),
+  legend.key.height=unit(10,&quot;pt&quot;),
   legend.margin=margin(-3,4,3,4,&quot;pt&quot;),
   legend.position=c(0,1),
   legend.spacing.x=unit(1.5,&quot;pt&quot;),
   legend.text=element_text(size=6.5,vjust=.5),
   legend.title=element_blank(),
   panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.25),
   plot.margin=margin(5,5,5,5),
   plot.title=element_text(size=7.3,face=2,margin=margin(1,,3)))
 ggsave(&quot;1.png&quot;,width=4,height=2.4,dpi=380*4)
@@ -2620,18 +2619,19 @@ system(&quot;qlmanage -p ~/1.png&amp;&gt;/dev/null&quot;)</pre>
 <p>Ethical Skeptic posted this tweet: [<a href="https://x.com/EthicalSkeptic/status/1855881320808731038">https://x.com/EthicalSkeptic/status/1855881320808731038</a>]</p>
 <blockquote>
 <p>Mycoplasma Pneumonia Ages 0-54 Mortality +40%</p>
-<p>Often called <span class="quote">'walking pneumonia'</span>: - cough/sore throat - low grade fever - fatigue/body aches</p>
+<p>Often called <span class="quote">'walking pneumonia'</span>: - cough/sore throat<br> - low grade fever<br> - fatigue/body aches<br></p>
 <p>Antibiotics of limited help. Immunocompromised individuals are vulnerable.</p>
 <p><img src=i/ethical-mycoplasma-1.png class=width8></p>
 </blockquote>
-<p>When I did a query for deaths in ages 0-54 with UCD J15.7 (pneumonia due to Mycoplasma pneumoniae), there was a total of only 52 deaths in 2018-2024:</p>
+<p>In the plot above the PFE adjustment seems too extreme, because were there really that many people in ages 0 to 54 who were on the verge of death so they would've died soon anyway if they hadn't died of COVID in 2020?</p>
+<p>But anyway, when I did a query for deaths in ages 0-54 with UCD J15.7 (pneumonia due to Mycoplasma pneumoniae), there was a total of only 52 deaths in 2018-2024:</p>
 <div class="width5">
 <img src="i/ethical-mycoplasma-2.jpg">
 </div>
-<p>The bottom of Ethical Skeptic's plot shows that it also includes deaths from J18 (pneumonia unspecified), which actually accounts for virtually all deaths in his plot:</p>
+<p>The small text at the bottom of Ethical Skeptic's plot shows that the plot also includes deaths from J18 (pneumonia unspecified), which actually accounts for virtually all deaths in his plot:</p>
 <table>
 <tr><th>
-cause
+Deaths from cause
 </th><th>
 2018
 </th><th>
@@ -2750,7 +2750,7 @@ UCD J18 (Pneumonia, organism unspecified
 1680
 </td></tr>
 </table>
-<p>Ethical Skeptic has said that in his plots that display weekly data from 2018 onwards, he fits the baseline against data from only 2018 and 2019, so I suspect it was also the case here. However it probably causes the slope of his baseline to be pointed too much downwards like in my below (and the problem might be even worse with a baseline fitted against weekly data, because there was a high number of deaths in early 2018 and a low number of deaths in late 2019):</p>
+<p>Ethical Skeptic has said that in his plots that display weekly data from 2018 onwards, he fits the baseline against data from only 2018 and 2019, so I suspect it was also the case here. However it probably causes the slope of his baseline to be pointed too much downwards like in my below:</p>
 <div class="width7">
 <img src="i/ethical-mycoplasma-3.png">
 </div>
@@ -2829,8 +2829,71 @@ ggsave(&quot;1.png&quot;,width=4.2,height=3.7,dpi=400*4)
 system(&quot;magick 1.png -resize 25% 1.png&quot;)
 system(&quot;qlmanage -p ~/1.png&amp;&gt;/dev/null&quot;)</pre>
 </div>
-<p>However I suspect some of the excess deaths with MCD J18 and not MCD COVID may have been due to COVID, because if COVID is not excluded then in the year 2021 the number of deaths with MCD J18 was about 4.5 times higher than in the year 2019.</p>
-<p>And in any case the period with elevated J18 deaths seems to have started in 2020, so it doesn't necessarily make sense to attribute the increase in deaths to vaccines. In my plot above the percentage of excess deaths for UCD J18 was about 15% in 2020 but close to zero in 2021-2023.</p>
+<p>However I suspect some of the excess deaths with MCD J18 and not MCD COVID may have been due to deaths that included COVID as an undiagnosed contributory cause, because from the second panel of my plot above where I looked at MCD J18 deaths without excluding COVID deaths, you can see that there were about 363% excess deaths in 2021. So if even a small fraction of deaths that should've had MCD COVID were missing a diagnosis for COVID, it might explain several percentage points of excess deaths in the bottom panel that shows deaths with MCD J18 but not MCD COVID.</p>
+<p>And in any case I don't know if the increase in J18 deaths can be attributed to vaccines, because the period with elevated J18 deaths seems to have already started in 2020. In my plot above the percentage of excess deaths for UCD J18 is about 15% in 2020 but close to zero in 2021-2023.</p>
+<p>Ethical Skeptic said that he got about 40% excess deaths relative to his PFE-adjusted baseline, but in the bottom panel of my plot above which shows deaths with MCD J18 but not MCD COVID, I got only about 17% excess deaths in 2023 even relative to the light gray baseline that was fitted against deaths from 2018-2019. However Ethical Skeptic fitted his baseline against weekly data which might cause it to be steeper than my baseline fitted against yearly data, because there there was a high number of deaths in early 2018 and a low number of deaths in late 2019.</p>
+<p>In the next plot I calculated my gray baseline by first doing a linear regression of weekly data on all weeks in the MMWR years 2018 and 2019, and then I calculated the average difference between the actual deaths and the baseline on MMWR week 1 of 2018 and 2019 and I added the difference to the baseline for MMWR week 1 of each year, and similarly for other weeks. My baseline pointed even further downwards than Ethical Skeptic's baseline, so I got over 100% excess deaths on every week in the second half of 2023. But on the other hand I didn't get high excess deaths on the first weeks of 2018 like Ethical Skeptic, but it might be if he excluded early weeks of 2018 from his baseline fitting period, which would also explain why the slope of his baseline was not as extreme as in my plot:</p>
+<div class="width10">
+<img src="i/ethical-mycoplasma-4.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2)
+
+t=fread(&quot;http://sars2.net/f/wonderj18weekly.csv&quot;)
+
+t=merge(t[cause==&quot;MCD J18&quot;],t[cause%like%&quot;and&quot;,.(date,and=dead)],all=T)
+p=t[,.(date=date-3,year,week,dead=dead-nafill(and,,0))]
+p$base=p[year&lt;2020,predict(lm(dead~date),p)]
+
+z=c(&quot;Actual deaths&quot;,&quot;2018-2019 seasonality-adjusted linear baseline&quot;,&quot;2018-2019 linear baseline&quot;)
+p=merge(p[year&lt;2020,mean(dead-base),week],p)[,.(x=date,y=c(dead,base=base+V1,base),z=rep(z,each=.N))]
+p[,z:=factor(z,unique(z))]
+
+ybreak=pretty(p$y)
+xstart=as.Date(&quot;2018-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
+xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=c(rbind(&quot;&quot;,2018:2023),&quot;&quot;)
+
+ggplot(p,aes(x,y))+
+geom_vline(xintercept=seq(xstart,xend,&quot;month&quot;),color=&quot;gray90&quot;,linewidth=.23)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray50&quot;,linewidth=.3)+
+geom_line(aes(color=z,linetype=z),linewidth=.3)+
+geom_point(aes(alpha=z),stroke=0,size=.6)+
+labs(x=NULL,y=NULL,title=&quot;CDC WONDER, ages 0 to 54: Weekly deaths with MCD J18 (Pneumonia, organism unspecified) but not MCD COVID&quot;)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
+scale_y_continuous(limits=range(ybreak),breaks=ybreak)+
+scale_color_manual(values=c(&quot;black&quot;,&quot;gray60&quot;,&quot;gray60&quot;))+
+scale_linetype_manual(values=c(&quot;solid&quot;,&quot;solid&quot;,&quot;42&quot;))+
+scale_alpha_manual(values=c(1,0,0))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.text.y=element_text(margin=margin(,1.5)),
+  axis.ticks=element_line(linewidth=.25,color=&quot;black&quot;),
+  axis.ticks.length=unit(3,&quot;pt&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.title=element_text(size=8),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;horizontal&quot;,
+  legend.justification=&quot;right&quot;,
+  legend.key=element_rect(fill=alpha(&quot;white&quot;,0)),
+  legend.key.height=unit(10,&quot;pt&quot;),
+  legend.key.width=unit(18,&quot;pt&quot;),
+  legend.margin=margin(,,3),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(1.5,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=7,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.25),
+  panel.spacing=unit(1,&quot;pt&quot;),
+  plot.margin=margin(3,4,3,4),
+  plot.title=element_text(size=7,face=2,margin=margin(2,,2),hjust=1))
+ggsave(&quot;1.png&quot;,width=5.5,height=2.2,dpi=400*4)
+system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
+</div>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
