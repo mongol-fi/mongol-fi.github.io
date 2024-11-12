@@ -182,6 +182,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Kirschs_histogram_of_batch_mortality_rates>Kirsch's histogram of batch mortality rates</a></li>
 <li><a href=#Kirschs_calculation_for_mortality_rate_of_batches_38_and_34_during_the_first_year_from_vaccination>Kirsch's calculation for mortality rate of batches 38 and 34 during the first year from vaccination</a></li>
 <li><a href=#New_OIA_responses_to_Chris_Johnston>New OIA responses to Chris Johnston</a></li>
+<li><a href=#Deaths_in_Chris_Johnstons_OIA_response_as_percentage_of_average_deaths_in_2023>Deaths in Chris Johnston's OIA response as percentage of average deaths in 2023</a></li>
 </ul></li>
 </ul>
 
@@ -8360,6 +8361,81 @@ system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 2: 2021 168630
 3: 2022 175650
 4: 2023 182420</pre>
+<h3>
+<a href=#Deaths_in_Chris_Johnstons_OIA_response_as_percentage_of_average_deaths_in_2023 id=Deaths_in_Chris_Johnstons_OIA_response_as_percentage_of_average_deaths_in_2023>Deaths in Chris Johnston's OIA response as percentage of average deaths in 2023</a>
+</h3>
+<p>Canceledmouse has said that there is no evidence of vaccine efficacy in the New Zealand OIA data. So I pointed out to him that in March 2022 when New Zealand was hit by COVID, the increase in deaths compared to February 2022 was higher in unvaccinated people than vaccinated people:</p>
+<div class="width6">
+<img src="i/moar-pctincrease-1.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2)
+
+t=fread(&quot;http://sars2.net/f/nz_monthly_vax_status_deaths_foia.csv&quot;,na=&quot;&lt;5&quot;)
+
+p=t[month_of_death!=&quot;Total&quot;,.(dead=sum(nafill(count,,2),na.rm=T)),.(month=month_of_death,vax=ifelse(last_dose_number==0,&quot;Unvaccinated&quot;,&quot;Vaccinated&quot;))]
+
+p[,month:=as.Date(paste0(month,&quot;-1&quot;))]
+p[,dead:=dead/days_in_month(month)]
+
+p=merge(p[month&gt;=&quot;2023-1-1&quot;&amp;month&lt;=&quot;2023-9-1&quot;,.(base=mean(dead)),vax],p)[,y:=dead/base*100]
+
+xstart=as.Date(&quot;2021-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
+xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=c(rbind(&quot;&quot;,2021:2023),&quot;&quot;)
+ybreak=pretty(p$dead,7);ystart=0;yend=max(ybreak)
+
+color=c(&quot;black&quot;,&quot;#ff7777&quot;)
+
+month1=as.Date(&quot;2022-2-1&quot;);month2=as.Date(&quot;2022-3-1&quot;)
+hl=p[month==month2][,prev:=p[month==month1]$y]
+hl=hl[,.(month,vax,y,label=sprintf(&quot;+%.0f%%&quot;,((y/prev-1)*100)))]
+
+ggplot(p,aes(x=month+15,y=y))+
+geom_vline(xintercept=seq(xstart,xend,&quot;3 month&quot;),color=&quot;gray85&quot;,linewidth=.3)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray65&quot;,linewidth=.3)+
+geom_vline(xintercept=c(xstart,xend),linewidth=.3,lineend=&quot;square&quot;)+
+geom_hline(yintercept=c(0,300),linewidth=.3,lineend=&quot;square&quot;)+
+geom_hline(yintercept=100,linetype=&quot;42&quot;,linewidth=.3,lineend=&quot;square&quot;)+
+annotate(geom=&quot;rect&quot;,xmin=as.Date(&quot;2023-1-1&quot;),xmax=as.Date(&quot;2023-10-1&quot;),ymin=0,ymax=300,fill=&quot;gray80&quot;,alpha=.5)+
+geom_line(aes(color=vax),linewidth=.4)+
+geom_point(aes(color=vax),size=.5)+
+geom_text(data=hl,aes(label=label,color=vax),size=2,vjust=-.7,show.legend=F)+
+annotate(geom=&quot;label&quot;,x=as.Date(&quot;2022-2-1&quot;),y=222,label=&quot;Percentage increase between February and March 2022&quot;|&gt;stringr::str_wrap(34),fill=alpha(&quot;white&quot;,1),label.r=unit(3,&quot;pt&quot;),label.padding=unit(3,&quot;pt&quot;),label.size=.2,size=2.4,lineheight=1,hjust=0)+
+labs(title=&quot;NZ OIA response: Monthly deaths divided by number of days in month\nas percentage of average in January to September 2023&quot;,caption=paste0(&quot;Source: fyi.org.nz/request/25021-number-of-covid19-vax-deaths-by-age-band-location-and-month&quot;),x=NULL,y=NULL)+
+scale_x_date(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
+scale_y_continuous(limits=c(ystart,300),breaks=seq(0,300,50),labels=\(x)paste0(x,&quot;%&quot;))+
+scale_color_manual(values=color)+
+coord_cartesian(ylim=c(0,300),clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.ticks=element_line(linewidth=.3),
+  axis.ticks.x=element_line(color=alpha(&quot;black&quot;,c(1,0))),
+  axis.ticks.length=unit(3,&quot;pt&quot;),
+  legend.background=element_rect(fill=&quot;white&quot;,color=&quot;black&quot;,linewidth=.3),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.justification=c(0,1),
+  legend.key.height=unit(10,&quot;pt&quot;),
+  legend.key.width=unit(15,&quot;pt&quot;),
+  legend.key=element_blank(),
+  legend.margin=margin(3,5,3,4),
+  legend.position=c(0,1),
+  legend.spacing.x=unit(1.5,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=7),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  plot.margin=margin(4,4,4,4),
+  plot.caption=element_text(size=6.4,margin=margin(3,,)),
+  plot.title=element_text(size=7.5,face=&quot;bold&quot;,margin=margin(1,,3)))
+ggsave(&quot;1.png&quot;,width=4,height=2.2,dpi=380*4)
+system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
+</div>
+<p>The number of unvaccinated and vaccinated people didn't change that much after January 2022. But in early 2022 the temporal HVE was still waning out so vaccinated people had an increasing trend in deaths and unvaccinated people had a decreasing trend in deaths. So even if NZ hadn't been hit by COVID in March 2022, the number of deaths in vaccinated people might have increased by about 3% between February and March 2022 in the same way that it increased by about 3% between January and February 2022 (when the number of deaths per month is divided by the number of days per month like in my plot above). But on the other hand unvaccinated people had much lower deaths per day in February than January 2022 even though the population size of unvaccinated people no longer decreased by that much in the elderly age groups which account for more deaths, so the decreasing trend in deaths might have been expected to continue between February and March if New Zealand hadn't been hit by COVID. So if you account for the opposite trends in mortality in early 2022, then the increase in deaths in March 2022 is even bigger in unvaccinated people relative to vaccinated people:</p>
+<div class="width6">
+<img src="i/moar-pctincrease-2.png">
+</div>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
