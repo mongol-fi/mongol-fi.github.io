@@ -747,12 +747,50 @@ system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 <h3>
 <a href=#Were_there_98_vaccinated_people_in_2023 id=Were_there_98_vaccinated_people_in_2023>Were there 98% vaccinated people in 2023?</a>
 </h3>
-<p>The paper by Hulscher et al. said: <span class="quote">&quot;Approximately 98% of the King County population received at least one dose of a COVID-19 vaccine by 2023.&quot;</span> The authors took the percentage of vaccinated people from this website: <a href="https://data.tennessean.com/covid-19-vaccine-tracker/washing-ton/king-county/53033/">https://data.tennessean.com/covid-19-vaccine-tracker/washing-ton/king-county/53033/</a>. I got an error when I tried to access the website outside of the US, but I was able to access it with a free US VPN server of Proton VPN: <a href="https://protonvpn.com">https://protonvpn.com</a>. The number of vaccinated people in the dataset seems to be identical to this CDC dataset: <a href="https://data.cdc.gov/Vaccinations/COVID-19-Vaccinations-in-the-United-States-County/8xkx-amqh">https://data.cdc.gov/Vaccinations/COVID-19-Vaccinations-in-the-United-States-County/8xkx-amqh</a>. However the percentage of vaccinated people out of the total population is different. For example on January 4th 2022 the Tennessean dataset has 1,903,416 vaccinated people which matches the CDC data but it has 87.99% vaccinated people which doesn't match the CDC data:</p>
+<p>The paper by Hulscher et al. said: <span class="quote">&quot;Approximately 98% of the King County population received at least one dose of a COVID-19 vaccine by 2023.&quot;</span> The authors took the percentage of vaccinated people from this website: <a href="https://data.tennessean.com/covid-19-vaccine-tracker/washing-ton/king-county/53033/">https://data.tennessean.com/covid-19-vaccine-tracker/washing-ton/king-county/53033/</a>. I got an error when I tried to access the website outside of the US, but I was able to access it with a free US VPN server from Proton VPN: <a href="https://protonvpn.com">https://protonvpn.com</a>. The number of vaccinated people in the dataset seems to be identical to this CDC dataset: <a href="https://data.cdc.gov/Vaccinations/COVID-19-Vaccinations-in-the-United-States-County/8xkx-amqh">https://data.cdc.gov/Vaccinations/COVID-19-Vaccinations-in-the-United-States-County/8xkx-amqh</a>. However the percentage of vaccinated people out of the total population is different. For example on January 4th 2022 the Tennessean dataset has 1,903,416 vaccinated people which matches the CDC data, but it has 87.99% vaccinated people which doesn't match the CDC data:</p>
 <pre>&gt; t=fread(&quot;COVID-19_Vaccinations_in_the_United_States_County_20240227.csv&quot;)
-&gt; t[Date==&quot;01/04/2022&quot;&amp;FIPS==53033,.(Date,count=Administered_Dose1_Recip,pct=Administered_Dose1_Pop_Pct,pop=Census2019)]
-         Date   count  pct     pop
-1: 01/04/2022 1903416 84.5 2252782 # population is vintage 2019 resident population estimate for mid-2019</pre>
-<p><code>1903416/.8799</code> would give a population size of about 2163219, which is much lower than either the OFM or Census Bureau population estimates. On December 7th 2022 the Tennessean dataset has 2,120,471 vaccinated people which is 98.02% of the population size, but <code>2163304.427667823</code> is about 2163304. On March 22th 2021 there's 510,930 or 23.62% vaccinated people, and again <code>510930/.2362</code> is about 2163124. So all three population sizes are so similar that I guess Tennessean just uses a fixed population size throughout the dataset. But I don't know if Tennessean uses old population estimates or if they use something like civilian population estimates instead of resident population estimates.</p>
+&gt; t[Date==&quot;01/04/2022&quot;&amp;FIPS==53033,.(Date,vaxcount=Administered_Dose1_Recip,vaxpoppct=Administered_Dose1_Pop_Pct,pop=Census2019)]
+         Date vaxcount vaxpoppct     pop
+1: 01/04/2022  1903416      84.5 2252782 # population is vintage 2019 resident population estimate for mid-2019</pre>
+<p>I estimated that Tennessean uses a fixed population size of about 2163216 for King County by taking the average value across three different dates for the number of vaccinated people divided by the proportion of vaccinated people:</p>
+<table>
+<tr><th>
+Date
+</th><th>
+Vaccinated people
+</th><th>
+Vaccinated percent
+</th><th>
+Estimated population size (from people divided by percent)
+</th></tr>
+<tr><td>
+2021-03-22
+</td><td>
+510930
+</td><td>
+23.62
+</td><td>
+2163124
+</td></tr>
+<tr><td>
+2022-01-04
+</td><td>
+1903416
+</td><td>
+87.99
+</td><td>
+2163219
+</td></tr>
+<tr><td>
+2022-12-07
+</td><td>
+2120471
+</td><td>
+98.02
+</td><td>
+2163304
+</td></tr>
+</table>
 <p>Here I think the OFM population estimates are probably the most accurate, but they're much higher than the Tennessean population estimate:</p>
 <div class="width6">
 <img src="i/statistic-king-15.png">
@@ -824,8 +862,8 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
 ggsave(&quot;1.png&quot;,width=4,height=3.1,dpi=380*4)
 system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 </div>
-<p>The Tennessean dataset only includes data up to December 7th 2022, when it says there were 98.02% vaccinated people, so Hulscher et al. used the last value included in the dataset as their figure for the number of vaccinated people in 2023. However the CDC dataset includes data up to May 10th 2023 when it has 2,150,280 vaccinated people in King County, which would be about 99.4% of the population size used by Tennessean (<code>2150280/2163216</code>).</p>
-<p>I don't think the percentage of vaccinated people would be as high as 98% anyway, because for example the percentage of vaccinated children under ages 10 is not very high. In the CDC dataset for COVID vaccinations by county state, there's many counties that have more vaccinated people than total people. I don't know if for example the dataset includes vaccinated people who have died.</p>
+<p>The Tennessean dataset only includes data up to December 7th 2022, when it says there were 98.02% vaccinated people, so Hulscher et al. used the last value included in the dataset as their figure for the percentage of vaccinated people in 2023. However the CDC dataset includes data up to May 10th 2023 when it has 2,150,280 vaccinated people in King County, which would be about 99.4% of the population size used by Tennessean (<code>2150280/2163216</code>).</p>
+<p>I don't think the percentage of vaccinated people would be as high as 98% anyway, because for example the percentage of vaccinated children under ages 10 is not very high. In the CDC dataset for COVID vaccinations by county state, there's many counties that have more vaccinated people than total people. So I don't know if for example the dataset includes vaccinated people who have died or moved outside the county.</p>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
