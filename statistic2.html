@@ -476,19 +476,122 @@ surveys/popest/datasets/2020-2023/national/asrh/nc-est2022-alldata-r-file0{1..8}
 for_US_population_estimates_by_single_year_of_age_up_to_ages_100).&quot;
 system(paste0(&quot;f=1.png;magick 1.png -resize 25% 1.png;mar=32;w=`identify -format %w $f`;magick \\( $f -gravity southwest -chop 0x20 \\) \\( -size $[w-mar*2]x -font Arial -interline-spacing -3 -pointsize 38 caption:&#39;&quot;,sub,&quot;&#39; -gravity southwest -splice $[mar]x20 \\) -append 1.png&quot;))</pre>
 </div>
-<p>If you simply look at the yearly total number of deaths in ages 45 and above in Washington State with both MCD COVID and MCD I00-I99, it was about 70% higher in 2021 than 2020:</p>
-<pre>&gt; and=fread(&quot;http://sars2.net/f/wonderwashingtoncardiacandcovid.csv&quot;)
-&gt; and[,.(dead=sum(dead)),.(year=substr(month,1,4))]|&gt;print(r=F)
- 2020 1614
- 2021 2766
- 2022 2134
- 2023  849
- 2024  473</pre>
-<p>The paper by Hulscher et al. included this plot which showed that the mid-year resident population estimates of King County decreased by about 0.94% between 2020 and 2021:</p>
+<p>Washington State has one of the highest percentages of UCD COVID deaths in 2021 and 2022 relative to UCD COVID deaths in 2020:</p>
+<pre>&gt; t=fread(&quot;http://sars2.net/f/wonderstatecovidvsall.csv&quot;)[cause==&quot;covid&quot;]
+&gt; a=merge(t[year==2020,.(dead,state)],t[year%in%2021:2022,sum(dead),state])
+&gt; a[,.(state,pct=V1/dead*100,`2021-2022`=V1,`2020`=dead)][order(-pct)][,pct:=round(pct,1)][]|&gt;print(r=F)
+                state   pct 2021-2022  2020
+                Maine 506.9      2129   420
+               Alaska 446.5      1027   230
+               Oregon 388.8      5583  1436
+        West Virginia 369.0      5476  1484
+              Vermont 346.5       499   144
+               Hawaii 331.3      1133   342
+              Wyoming 285.1      1317   462
+             Kentucky 279.3     11542  4133
+           Washington 254.9      8370  3284 # Washington State is 9th highest
+            Tennessee 253.2     17311  6838
+       North Carolina 252.0     19888  7892
+              Florida 242.9     46724 19237
+       South Carolina 238.6     12590  5277
+                Idaho 237.9      3231  1358
+                 Utah 236.3      3225  1365
+             Virginia 235.7     13723  5822
+              Georgia 227.1     21470  9456
+               Nevada 226.9      7347  3238
+        New Hampshire 221.7      1727   779
+             Oklahoma 220.5     10692  4848
+              Arizona 205.0     17315  8447
+                 Ohio 203.0     27621 13607
+              Alabama 199.7     13068  6544
+           California 198.0     62044 31338
+             Arkansas 194.6      6854  3523
+                Texas 191.6     59092 30844
+              Montana 187.0      2092  1119
+           New Mexico 181.9      5167  2841
+             Colorado 175.1      7559  4316
+             Michigan 172.1     19608 11391
+             Delaware 171.8      1732  1008
+               Kansas 169.5      5667  3344
+             Missouri 169.2     12081  7138
+          Mississippi 165.3      7383  4467
+         Pennsylvania 162.1     26916 16609
+              Indiana 154.1     13142  8529
+            Wisconsin 149.8      8140  5434
+             Maryland 139.1      8344  6000
+            Louisiana 133.0      8691  6534
+            Minnesota 129.2      6741  5218
+             Nebraska 120.7      2467  2044
+             Illinois 118.1     18581 15735
+                 Iowa 111.0      4812  4336
+         Rhode Island  95.5      1514  1585
+             New York  91.8     32804 35736
+        Massachusetts  86.3      8043  9319
+ District of Columbia  83.0       690   831
+         South Dakota  82.2      1229  1496
+          Connecticut  82.0      4744  5782
+           New Jersey  81.0     13370 16498
+         North Dakota  80.0       968  1210
+                state   pct 2021-2022  2020</pre>
+<p>This shows how in the year 2020 deaths with UCD COVID accounted for only about 5% of all deaths in Washington State, which was one of the lowest percentages out of any state:</p>
+<div class="width13">
+<img src="i/statistic-king-12.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ComplexHeatmap);library(circlize)
+
+t=fread(&quot;http://sars2.net/f/wonderstatecovidvsall.csv&quot;)[year&gt;=2020][,year:=factor(year,unique(year))]
+t=rbind(t[,.(dead=sum(dead),year=&quot;Total&quot;),.(cause,state)],t)
+t=rbind(t,t[,.(dead=sum(dead),state=&quot;Total&quot;),.(cause,year)])
+
+me=merge(t[cause==&quot;covid&quot;,.(year,state,covid=dead)],t[cause==&quot;all&quot;,.(year,state,dead)])
+
+m=me[,xtabs(covid/dead*100~year+state)]
+
+states=fread(&quot;https://github.com/cphalpert/census-regions/raw/master/us%20census%20bureau%20regions%20and%20divisions.csv&quot;)
+states[,order:=match(Division,strsplit(&quot;Total,New England,Middle Atlantic,East North Central,West North Central,South Atlantic,East South Central,West South Central,Mountain,Pacific&quot;,&quot;,&quot;)[[1]])]
+states[,Division:=sub(&quot;([WE]).* (South Central)&quot;,&quot;\\1 \\2&quot;,Division)]
+div=rbind(states[order(order),.(State,Division)],list(State=&quot;Total&quot;,Division=&quot;&quot;))
+
+m=m[,div$State];disp=round(m)
+
+colnames(m)[colnames(m)==&quot;District of Columbia&quot;]=&quot;DC&quot;
+
+png(&quot;0.png&quot;,w=ncol(m)*32+2000,h=nrow(m)*32+1000,res=120)
+ht_opt$COLUMN_ANNO_PADDING=unit(0,&quot;mm&quot;);ht_opt$ROW_ANNO_PADDING=unit(0,&quot;mm&quot;)
+
+Heatmap(m,
+  column_split=factor(div$Division,unique(div$Division)),
+  row_split=rep(letters[1:2],c(1,5)),
+  row_title=NULL,
+  column_title_gp=gpar(fontsize=16),
+  column_gap=unit(8,&quot;pt&quot;),
+  row_gap=unit(8,&quot;pt&quot;),
+  border=&quot;gray60&quot;,
+  width=unit(ncol(m)*32,&quot;pt&quot;),
+  height=unit(nrow(m)*32,&quot;pt&quot;),
+  show_column_names=F,
+  show_row_names=F,
+  cluster_columns=F,
+  cluster_rows=F,
+  show_heatmap_legend=F,
+  rect_gp=gpar(col=&quot;gray80&quot;,lwd=0),
+  top_annotation=columnAnnotation(text=anno_text(gt_render(colnames(m),padding=unit(c(3,3,3,3),&quot;mm&quot;)),just=&quot;left&quot;,rot=90,location=unit(0,&quot;npc&quot;),gp=gpar(fontsize=17,border=&quot;gray60&quot;,lwd=1))),
+  left_annotation=rowAnnotation(text=anno_text(gt_render(rownames(m),padding=unit(c(3,3,3,3),&quot;mm&quot;)),just=&quot;right&quot;,location=unit(1,&quot;npc&quot;),gp=gpar(fontsize=17,border=&quot;gray60&quot;,lwd=1))),
+  right_annotation=rowAnnotation(text=anno_text(gt_render(rownames(m),padding=unit(c(3,3,3,3),&quot;mm&quot;)),just=&quot;left&quot;,location=unit(0,&quot;npc&quot;),gp=gpar(fontsize=17,border=&quot;gray60&quot;,lwd=1))),
+  col=colorRamp2(seq(0,max(m),,256),sapply(seq(1,0,,256),\(i)rgb(i,i,i))),
+  cell_fun=\(j,i,x,y,w,h,fill)grid.text(round(disp[i,j]),x,y,gp=gpar(fontsize=16,col=ifelse(abs(m[i,j])&gt;=.45*max(m),&quot;white&quot;,&quot;black&quot;))))
+dev.off()
+
+system(&quot;mogrify -trim 0.png;magick -gravity north -font Arial-Bold \\( -size `identify -format %w 0.png`x -pointsize 34 caption:&#39;CDC WONDER: Percentage of deaths with underlying cause COVID out of all deaths&#39; \\) \\( 0.png -splice 0x18 \\) -append -trim -bordercolor white -border 20 1.png&quot;)</pre>
+</div>
+<p>The paper by Hulscher et al. also included this plot which showed that the mid-year resident population estimates of King County decreased by about 0.94% between 2020 and 2021:</p>
 <div class="width6">
 <img src="i/statistic-king-7.png">
 </div>
-<p>Hulscher et al. wrote that they used population estimates for King County published by the US Census Bureau and cited this URL as their source: <a href="https://www2.census.gov/programs-surveys/popest/tables/">https://www2.census.gov/programs-surveys/popest/tables/</a>. Uncle John Returns pointed out that the drop in population size between 2020 and 2021 was missing from the Population Interim Estimates (PIE) published by the Washington State Department of Health: [<a href="https://x.com/UncleJo46902375/status/1855602491083161778">https://x.com/UncleJo46902375/status/1855602491083161778</a>]</p>
+<p>Hulscher et al. wrote that they used population estimates published by the US Census Bureau and cited this URL as their source: <a href="https://www2.census.gov/programs-surveys/popest/tables/">https://www2.census.gov/programs-surveys/popest/tables/</a>. Uncle John Returns pointed out that the drop in population size between 2020 and 2021 was missing from the Population Interim Estimates (PIE) published by the Washington State Department of Health: [<a href="https://x.com/UncleJo46902375/status/1855602491083161778">https://x.com/UncleJo46902375/status/1855602491083161778</a>]</p>
 <div class="width6">
 <img src="i/statistic-king-8.png">
 </div>
@@ -586,7 +689,7 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
 ggsave(&quot;1.png&quot;,width=3.8,height=2.9,dpi=350*4)
 system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 </div>
-<p>A decrease in population size between mid-2020 and mid-2021 doesn't seem to be supported by data for births minus deaths plus net migration either. Uncle John Returns pointed out that on CDC WONDER King County had 46,942 births and 14,779 deaths between July 2020 and June 2021: [<a href="https://x.com/UncleJo46902375/status/1855697015671513127">https://x.com/UncleJo46902375/status/1855697015671513127</a>]</p>
+<p>The OFM/PIE population estimates seem more accurate than the Census Bureau's population estimates, because a decrease in population size between mid-2020 and mid-2021 doesn't seem to be supported by data for births minus deaths plus net migration. Uncle John Returns pointed out that on CDC WONDER King County had 46,942 births and 14,779 deaths between July 2020 and June 2021: [<a href="https://x.com/UncleJo46902375/status/1855697015671513127">https://x.com/UncleJo46902375/status/1855697015671513127</a>]</p>
 <div class="width4">
 <img src="i/statistic-king-10.png">
 </div>
