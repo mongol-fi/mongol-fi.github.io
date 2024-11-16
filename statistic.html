@@ -1614,7 +1614,7 @@ legend(&quot;topleft&quot;,legend=leg,lty=c(1,2,2),col=c(&quot;black&quot;,&quot
 mtext(text=sub,side=1,line=3.3,adj=0,cex=.95)
 dev.off()</pre>
 </div>
-<p>However then I realized Jikky's plot used data for <span class="quote">&quot;doctor-certified&quot;</span> deaths from here: <a href="https://www.abs.gov.au/statistics/health/causes-death/provisional-mortality-statistics/jan-dec-2023">https://www.abs.gov.au/statistics/health/causes-death/provisional-mortality-statistics/jan-dec-2023</a>. For some reason the doctor-certified cancer deaths have had a sustained elevation above the baseline since 2021. However there was also a big increase in the doctor-certified deaths in the year 2020, which explains why Jikky got a higher number of deaths in 2020 than 2019:</p>
+<p>However then I realized Jikky's plot used data for <span class="quote">&quot;doctor-certified&quot;</span> deaths from here: <a href="https://www.abs.gov.au/statistics/health/causes-death/provisional-mortality-statistics/jan-dec-2023">https://www.abs.gov.au/statistics/health/causes-death/provisional-mortality-statistics/jan-dec-2023</a>. For some reason the doctor-certified cancer deaths have had a sustained elevation above the baseline since 2021. Unlike the previous dataset the doctor-certified deaths were also higher in 2020 than 2019:</p>
 <div class="width5">
 <img src="i/statistic-jikkycancer-3.png">
 </div>
@@ -1622,7 +1622,7 @@ dev.off()</pre>
 <div class="width6">
 <img src="i/statistic-jikkycancer-1.png">
 </div>
-<p>Someone on Twitter was wondering why the plot above showed there was a decrease in cancer deaths even though Jikky's plot showed there was an increase in deaths. However it's because Jikky's plot showed a raw number of deaths which does not account for changes to the age composition of the population. In the United States there is also a decreasing trend in cancer ASMR but an increasing trend in the raw number of cancer deaths:</p>
+<p>Someone on Twitter was wondering why the ASMR plot above showed there was a decrease in cancer deaths even though Jikky's plot showed there was an increase in deaths. However it's because Jikky's plot showed a raw number of deaths which does not account for changes to the age composition of the population. In the United States there is also a decreasing trend in cancer ASMR but an increasing trend in the raw number of cancer deaths:</p>
 <div class="width6">
 <img src="i/statistic-jikkycancer-5.png">
 </div>
@@ -1692,6 +1692,89 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   strip.background=element_blank(),
   strip.text=element_blank())
 ggsave(&quot;1.png&quot;,width=4.4,height=4,dpi=400*4)
+system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
+</div>
+<p>In Jikky's plot the number of doctor-certified cancer deaths was only about 1% above the baseline, even though it might have seemed like a fairly large increase if you didn't pay attention to the y-axis units, because the years 2015 to 2020 all fell fairly close to the baseline, so the deviation from the baseline in 2021 was fairly large relative to the average deviation from the baseline during the fitting period. However in my next plot where I plotted monthly data and I started the y-axis from zero, the increase in deaths in 2021 seems much smaller in comparison, even though I got about 1.1% excess deaths in 2021 which was similar to Jikky's plot that had about 1.6% excess deaths in 2021. However a prepandemic linear trend for raw deaths might be too low because the actual trend in raw deaths is curved upwards due to the aging population, so in the bottom plot below where I plotted ASMR instead of raw deaths, I got only about 0.2% total excess deaths in 2021:</p>
+<div class="width6">
+<img src="i/statistic-jikkycancer-6.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2);library(lubridate);library(ggtext)
+
+cul=\(x,y)y[cut(x,c(y,Inf),,T,F)]
+
+t=fread(&quot;http://sars2.net/f/australiacancerdoctor.csv&quot;)
+t[,date:=as.Date(paste0(year,&quot;-&quot;,month,&quot;-1&quot;))]
+t[,dayim:=days_in_month(date)]
+
+p=t[,.(date,month,year,y=c(dead/dayim,asmr/dayim*365),group=rep(c(&quot;Monthly deaths divided by number of days in month&quot;,&quot;ASMR per 100,000 person-years&quot;),each=.N))]
+p[,group:=factor(group,unique(group))]
+
+dates=unique(p$date)
+p=merge(p,p[year&lt;2020,.(date=dates,base=predict(lm(y~date),.(date=dates))),group])
+p=merge(p[year&lt;2020,.(monthly=mean(y-base)),.(month,group)],p)
+
+pct=p[,.(pct=(sum(y)/sum(base)-1)*100),.(date=as.Date(paste0(year,&quot;-7-1&quot;)),group)]
+
+lab=c(&quot;Actual mortality&quot;,&quot;2015-2019 linear baseline&quot;,&quot;Baseline adjusted for seasonality&quot;,&quot;Difference from seasonality-adjusted baseline&quot;)
+p=p[,.(x=date,group,y=c(y,base,base+monthly,y-base-monthly),z=factor(rep(lab,each=.N),unique(lab)))]
+
+pct=merge(p[,.(y=min(y)),group],pct)
+
+xstart=as.Date(&quot;2015-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
+xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=c(rbind(&quot;&quot;,2015:2023),&quot;&quot;)
+
+ggplot(p,aes(x=x+14,y))+
+facet_wrap(~group,ncol=1,dir=&quot;v&quot;,scales=&quot;free&quot;)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray85&quot;,linewidth=.25)+
+geom_vline(xintercept=as.Date(&quot;2020-1-1&quot;),linetype=&quot;44&quot;,linewidth=.3)+
+geom_line(data=p[z!=lab[4]],aes(linetype=z,color=z),linewidth=.3)+
+geom_line(data=p[z==z[1]],aes(linetype=z,color=z),linewidth=.3)+
+geom_point(aes(alpha=z),stroke=0,size=.6)+
+geom_rect(data=p[z==lab[4]],aes(xmin=x,xmax=x%m+%months(1),ymin=pmin(0,y),ymax=pmax(0,y),fill=z),linewidth=.1,color=&quot;gray40&quot;)+
+geom_text(data=pct,aes(x=date,y=y,label=paste0(ifelse(pct&gt;0,&quot;+&quot;,&quot;&quot;),sprintf(&quot;%.1f&quot;,pct),&quot;%&quot;)),vjust=1,size=2.4)+
+labs(title=&quot;Doctor-certified cancer deaths in Australia&quot;,subtitle=&quot;Source: abs.gov.au/statistics/health/causes-death/provisional-mortality-statistics/jan-dec-2023.\nThe data is by date of occurrence. The numbers show the yearly excess mortality percentage.&quot;,x=NULL,y=NULL)+
+scale_x_continuous(expand=c(0,0),limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
+scale_y_continuous(expand=c(.08,0,.03,0),breaks=\(x)pretty(x,6))+
+scale_color_manual(values=c(&quot;black&quot;,&quot;gray60&quot;,&quot;gray60&quot;,&quot;gray40&quot;))+
+scale_fill_manual(values=rep(&quot;gray60&quot;,4))+
+scale_linetype_manual(values=c(&quot;solid&quot;,&quot;42&quot;,&quot;solid&quot;,&quot;solid&quot;))+
+scale_alpha_manual(values=c(1,0,0,0),guide=&quot;none&quot;)+
+guides(fill=guide_legend(order=3,keyheight=unit(1,&quot;pt&quot;)),color=guide_legend(order=1),linetype=guide_legend(order=1))+
+coord_cartesian(clip=&quot;off&quot;)+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.ticks.x=element_line(color=alpha(&quot;black&quot;,c(1,0))),
+  axis.ticks=element_line(linewidth=.3,color=&quot;black&quot;),
+  axis.ticks.length=unit(3,&quot;pt&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.title=element_text(size=8),
+  legend.background=element_blank(),
+  legend.key=element_blank(),
+  legend.key.height=unit(2,&quot;pt&quot;),
+  legend.key.width=unit(17,&quot;pt&quot;),
+  legend.position=&quot;bottom&quot;,
+  legend.justification=&quot;right&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.box.margin=margin(),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.margin=margin(3),
+  legend.text=element_text(size=7,vjust=.5),
+  legend.title=element_blank(),
+  legend.direction=&quot;vertical&quot;,
+  legend.box=&quot;horizontal&quot;,
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.spacing=unit(0,&quot;pt&quot;),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.3),
+  panel.spacing.y=unit(2,&quot;pt&quot;),
+  plot.margin=margin(5,5,5,5),
+  plot.subtitle=element_text(size=6.5,margin=margin(,,4)),
+  plot.title=element_text(size=7.4,face=2,margin=margin(1,,3)),
+  strip.background=element_blank(),
+  strip.text=element_text(size=7,face=2,margin=margin(,,2)))
+ggsave(&quot;1.png&quot;,width=4.2,height=4.4,dpi=400*4)
 system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 </div>
 <script>
