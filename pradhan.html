@@ -72,8 +72,8 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Shell_code_for_making_colorized_amino_acid_aligments>Shell code for making colorized amino acid aligments</a></li>
 <li><a href=#Arkmedics_BLAST_searches_for_Pradhan_et_al_s_inserts>Arkmedic's BLAST searches for Pradhan et al.'s inserts</a></li>
 <li><a href=#Matches_to_env_in_LANLs_HIV_subtype_reference>Matches to env in LANL's HIV subtype reference</a></li>
-<li><a href=#May_2020_preprint_by_Perez_and_Montagnier>May 2020 preprint by Perez and Montagnier</a></li>
 <li><a href=#E_values_of_matches_to_Pradhans_first_two_inserts>E values of matches to Pradhan's first two inserts</a></li>
+<li><a href=#May_2020_preprint_by_Perez_and_Montagnier>May 2020 preprint by Perez and Montagnier</a></li>
 </ul>
 
 <h2>
@@ -227,7 +227,7 @@ NP_057850.1 RVLAEAMSQVTNSATIMMQRGNFRNQRKIVKCFNCGKEGHTARNCRAPRKKGCWKCGKEG
 <h2>
 <a href=#Shell_code_for_making_colorized_amino_acid_aligments id=Shell_code_for_making_colorized_amino_acid_aligments>Shell code for making colorized amino acid aligments</a>
 </h2>
-<p>Here's code for making the colorized amino acid alignments:</p>
+<p>Here's code for making amino acid alignments similar to the previous sections of this file:</p>
 <pre># download whole genome sequences of sarbecoviruses
 curl -sL sars2.net/f/sarbe.fa.xz|xz -dc&gt;sarbe.fa
 
@@ -500,6 +500,38 @@ V3   296   331
 V4   385   418
 V5   460   469</pre>
 <h2>
+<a href=#E_values_of_matches_to_Pradhans_first_two_inserts id=E_values_of_matches_to_Pradhans_first_two_inserts>E values of matches to Pradhan's first two inserts</a>
+</h2>
+<p>The E value or expect value indicates how many similarly close matches are expected to occur by chance for the given query sequence and pool of searched sequences.</p>
+<p>You can try to go to the web GUI for blastp: <a href="https://blast.ncbi.nlm.nih.gov/Blast.cgi?PROGRAM=blastp">https://blast.ncbi.nlm.nih.gov/Blast.cgi?PROGRAM=blastp</a>. Then set query to <code>TNGTKR</code>, organism to <span class="quote">&quot;Viruses (taxid:10239)&quot;</span>, click <span class="quote">&quot;Add organism&quot;</span>, set the second organism to <span class="quote">&quot;SARS-CoV-2 (taxid:2697049)&quot;</span> and click the exclude checkbox next to it. It showed me that the matches to HIV got an E value of about 372, which means that about 372 similar matches with 6 out of 6 identical residues are expected to occur by chance. There were a total of 76 perfect matches with 6 out of 6 identical residues, so the expect score was about 5 times higher than the actual number of perfect matches.</p>
+<p>When I did another search in the whole nr database so that I didn't include the organism filters, then the E scores of perfect matches increased to about 54093. So they were now about 145 times higher than with the filters because now the pool of subject sequences was much larger, and the E score is directly proportional to the effective length of the pool of subject sequences.</p>
+<p>The E score is calculated by the formula <code>E = m * n * 2^(-S)</code>, where <code>m</code> and <code>n</code> are the effective length of the query and database sequences and <code>S</code> is the bitscore. I don't know how to calculate the effective length, because it is calculated by subtracting a parameter called the length adjustment from the actual length to account for duplicate sequences and repetitive elements within sequences, so I believe you need to download the entire database to calculate the length adjustment. However since the E values are directly proportional to the effective length of the pool of subject sequences, from the ratio of my E scores you can calculate that the effective length of the whole nr database is about 145 times higher than the effective length of the subset of the nr database that contains viruses apart from SARS-CoV-2.</p>
+<p>Pradhan's second insert <code>HKNNKS</code> was 6 residues long like the first insert, but when I searched for the second insert among viruses other than SARS-CoV-2 in the nr database, the E value was now about 185 for the match to HIV. The results included 36 perfect matches, so the expect score was again about 5 times higher than the number of perfect matches. I believe the reason why both queries don't get the same E value even though they're the same length is that the algorithm assigns different scores to common amino acids and rare amino acids.</p>
+<p>The nr database contains a massive number of protein sequences for a few species of widely studied human viruses like SARS-CoV-2, HIV-1, and influenza A. But in order to restrict the search to a database that only has one or a few representative samples for each species of virus, you can search in the refseq_protein database instead and restrict the organism to viruses. It gave me an E value of about 33 for results that had a perfect match to Pradhan's first insert <code>TNGTKR</code> (but the results didn't include any HIV sequences, because the envelope protein of the HIV-1 refseq matches only 2 of 6 residues of <code>TNGTKR</code> at the spot where Pradhan's HIV sequences from Thailand match <code>TNGTKR</code>):</p>
+<div class="width8">
+<img src="i/pradhan-escore.jpg">
+</div>
+<p>So even within a fairly small pool of proteins from virus refseqs, the E values for perfect matches to the 6 aa insert were still very high.</p>
+<p>In the following code I created my own BLAST database for proteins from virus refseqs. For some reason it failed to download coding sequences for about half of all virus refseqs even though refseqs should usually have annotations for proteins. But anyway, I now got only a single perfect match to <code>TNGTKR</code> which was in the refseq for SARS-CoV-2, but the E value of the match was still 289 which is very high:</p>
+<pre>$ wget -q https://ftp.ncbi.nlm.nih.gov/refseq/release/viral/viral.1.1.genomic.fna.gz
+$ seqkit seq -ni viral.fa|curl -sd &quot;id=$(paste -sd, -)&quot; &#39;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&amp;rettype=fasta_cds_na&#39;&gt;viral.aa
+$ makeblastdb -dbtype prot -in viral.aa
+[...]
+$ echo $&#39;&gt;a\nTNGTKR&#39;|blastp -db viral.aa -evalue 1000
+[...]
+&gt;lcl|NC_045512.2_prot_YP_009724390.1_3 [gene=S] [locus_tag=GU280_gp02] # spike protein of refseq for SARS-CoV-2
+[db_xref=GeneID:43740568] [protein=surface glycoprotein]
+[protein_id=YP_009724390.1] [location=21563..25384] [gbkey=CDS]
+Length=1273
+
+ Score = 16.5 bits (31),  Expect = 289, Method: Composition-based stats.
+ Identities = 6/6 (100%), Positives = 6/6 (100%), Gaps = 0/6 (0%)
+
+Query  1   TNGTKR  6
+           TNGTKR
+Sbjct  73  TNGTKR  78
+[...]</pre>
+<h2>
 <a href=#May_2020_preprint_by_Perez_and_Montagnier id=May_2020_preprint_by_Perez_and_Montagnier>May 2020 preprint by Perez and Montagnier</a>
 </h2>
 <p>In May 2020 Jean-Claude Perez and Luc Montagnier published a preprint at Researchgate titled <span class="quote">&quot;COVID-19, SARS and Bats Coronaviruses Genomes Unexpected Exogenous RNA Sequences&quot;</span>. [<a href="https://www.researchgate.net/publication/341756383_COVID-19_SARS_and_Bats_Coronaviruses_Genomes_Unexpected_Exogenous_RNA_Sequences">https://www.researchgate.net/publication/341756383_COVID-19_SARS_and_Bats_Coronaviruses_Genomes_Unexpected_Exogenous_RNA_Sequences</a>]</p>
@@ -539,8 +571,9 @@ $ brew install blast
 $ makeblastdb -dbtype nucl -in perez.fa
 [...]
 $ fmt=&#39;sseqid evalue nident length pident sstrand qstart qend&#39;
-$ &lt;perezref.fa blastn -db perez.fa -outfmt &quot;6 $fmt&quot;</pre>
-<p>So therefore in order to use less strict matching criteria, I added the options <code>-word_size 5 -evalue 100</code> which gave me one or more matches for all 15 sequences. At first the starting position of my first match wasn't the same as in Perez's table, but I got the starting positions to match when I added the option <code>-task blastn</code> which switches to using more liberal matching criteria (and which is equivalent to choosing the option to optimize for <span class="quote">&quot;somewhat dissimilar sequences&quot;</span> in web BLAST):</p>
+$ &lt;perezref.fa blastn -db perez.fa -outfmt &quot;6 $fmt&quot;
+$ # no results</pre>
+<p>So therefore in order to use less strict matching criteria, I added the options <code>-word_size 5 -evalue 100</code> which gave me one or more matches for all 15 sequences. At first the starting position of one of my matches wasn't the same as in Perez's table, but I got the starting positions to match when I added the option <code>-task blastn</code> which switches to using more liberal matching criteria (and which is equivalent to choosing the option to optimize for <span class="quote">&quot;somewhat dissimilar sequences&quot;</span> in the web GUI for BLAST):</p>
 <pre>$ &lt;perezref.fa blastn -db perez.fa -outfmt &quot;6 $fmt&quot; -task blastn|awk &#39;$7&gt;=21073&amp;&amp;$8&lt;=22027&#39;|awk &#39;NR==FNR{a[$1]=$2&quot; &quot;$3;pos[$1]=NR;next}{print pos[$1],$0,a[$1]}&#39; perez -|awk &#39;{print$0,$8==$10&amp;&amp;$9==$11?&quot;true&quot;:&quot;false&quot;}&#39;|sort -rk12|sort -sgk3|awk &#39;!a[$1]++&#39;|sort -n|cut -d\  -f2-|(echo $fmt perezstart perezend matchesperez;cat)|column -t
 sseqid      evalue  nident  length  pident   sstrand  qstart  qend   perezstart  perezend  matchesperez
 JN230738.1  1.3     16      16      100.000  plus     21138   21153  21138       21153     true
@@ -671,7 +704,7 @@ L07625
 false
 </td></tr>
 </table>
-<p>Next I tried using web BLAST to search for matches to Wuhan-Hu-1 within HIV sequences in the nt database: <a href="https://blast.ncbi.nlm.nih.gov/Blast.cgi">https://blast.ncbi.nlm.nih.gov/Blast.cgi</a>. I set the query field to <span class="quote">&quot;MN908947&quot;</span>, I switched the database to <span class="quote">&quot;Nucleotide collection (nr/nt)&quot;</span>, I set organism to <span class="quote">&quot;Human immundeficiency virus type 1 (taxid:11676)&quot;</span>, I selected the option to optimize for <span class="quote">&quot;Somewhat similar sequences (blastn)&quot;</span>, and under algorithm parameters I set <span class="quote">&quot;Expect threshold&quot;</span> to 1000. The default expect threshold is 0.05 which means that only result with an E value of 0.05 or lower are returned, so there were no results when I used the default expect threshold (because the default threshold is designed to not return matches that are highly likely to be due to chance). There were also no results when I used megablast which employs more strict matching criteria than blastn. However now my database was much bigger than my local mini-database that only contained 15 sequences, so now even my lowest E values were about 5.2, which means that about 5.2 similar matches are expected to occur by chance:</p>
+<p>Next I tried using web BLAST to search for matches to Wuhan-Hu-1 within HIV sequences in the nt database: <a href="https://blast.ncbi.nlm.nih.gov/Blast.cgi">https://blast.ncbi.nlm.nih.gov/Blast.cgi</a>. I set the query field to <span class="quote">&quot;MN908947&quot;</span>, I switched the database to <span class="quote">&quot;Nucleotide collection (nr/nt)&quot;</span>, I set organism to <span class="quote">&quot;Human immundeficiency virus type 1 (taxid:11676)&quot;</span>, I selected the option to optimize for <span class="quote">&quot;Somewhat similar sequences (blastn)&quot;</span>, and under algorithm parameters I set <span class="quote">&quot;Expect threshold&quot;</span> to 1000. There were no results when I used megablast which employs more strict matching criteria than blastn. However now my database was much bigger than my local mini-database that only contained 15 sequences, so now even my lowest E values were about 5.2, which means that about 5.2 similar matches are expected to occur by chance:</p>
 <div class="width14">
 <img src="i/pradhan-perez-7.jpg">
 </div>
@@ -689,17 +722,17 @@ KM378564.1  3.8       22      27      81.481  minus    4696    4722   8752      
 EU184986.1  4.95e-05  33      38      86.842  minus    14341   14378  14341       14378     true
 AY516986.1  4.95e-05  26      28      92.857  plus     20374   20401  20374       20401     true
 HQ217329.1  4.95e-05  28      30      93.333  minus    20401   20430  20401       20430     true</pre>
-<p>Perez's table shows that the match on the first row matches positions 8751-8770 of his reference genome (i.e. 8752-8770 using one-based indexing and an inclusive end of the range). But that region of his reference genome does not actually match the HIV sequence on the first row even though the region 8736-8755 shown in my output above does, so he may have accidentally entered the wrong starting and ending positions on the first row.</p>
-<p>Only one out of the 4 matches above is on the plus strand, but it doesn't even match HIV, because it matches a part of a human genome that is included in an HIV integration site sequence, where the first 69 bases come from an HIV long terminal repeat but the rest of the sequence comes from a human genome: [<a href="https://www.ncbi.nlm.nih.gov/nuccore/AY516986">https://www.ncbi.nlm.nih.gov/nuccore/AY516986</a>]</p>
+<p>The first row of Perez's table is shown to match positions 8751 to 8770 of his reference genome (i.e. positions 8752 to 8770 using one-based indexing and an inclusive end of the range). But that region of his reference genome does not actually match the HIV sequence on the first row even though the region 8736 to 8755 shown in my output above does, so Perez may have accidentally entered the wrong starting and ending positions on the first row.</p>
+<p>Only one out of the 4 matches in Table 2 is on the plus strand, but it doesn't even match HIV, because it matches a part of a human genome that is included in an HIV integration site sequence, where the first 69 bases come from an HIV long terminal repeat but the rest of the sequence comes from a human genome: [<a href="https://www.ncbi.nlm.nih.gov/nuccore/AY516986">https://www.ncbi.nlm.nih.gov/nuccore/AY516986</a>]</p>
 <div class="width5">
 <img src="i/pradhan-perez-3.jpg">
 </div>
-<p>Perez wrote that in the match to the integration site sequence <span class="quote">&quot;addresses 20373 to 20401 comes from an HIV1 Integrase from a USA virus from 2004&quot;</span>. However he may have confused the term <span class="quote">&quot;integration site&quot;</span> with the HIV integrase enzyme which is contained within the pol gene. The integrase is located around positions 4,236 to 5,086 in HXB2, but the first 69 bases of the integration site sequence are identical to bases 112 to 180 of HXB2 (which is within the range of the 5' long terminal repeat):</p>
+<p>Perez wrote that in the match to the integration site sequence <span class="quote">&quot;addresses 20373 to 20401 comes from an HIV1 Integrase from a USA virus from 2004&quot;</span>. However he may have confused the term <span class="quote">&quot;integration site&quot;</span> with the HIV integrase enzyme which is contained within the pol gene. The integrase is located around positions 4,236 to 5,086 in HXB2, but the first 69 bases of the integration site sequence are identical to bases 112 to 180 of HXB2 (which is contained within the 5' long terminal repeat):</p>
 <pre>$ emu&lt;&lt;&lt;NC_001802&gt;hiv1.fa
 $ emu&lt;&lt;&lt;AY516986|seqkit subseq -r1:69|seqkit locate -if- hiv1.fa|cut -f4-7|column -t
 strand  start  end  matched
 +       112    180  gtctgttgtgtgactctggtaactagagatccctcagacccttttagtcagtgtggaaaatctctagca</pre>
-<p>Another major fail in the paper was that Perez thought that one of his matches to HIV was located at the start of the spike protein in RaTG13 but that it spanned both ORF1ab and spike in SARS-CoV-2. But that's because his nonstandard reference genome was missing the first 25 bases of Wuhan-Hu-1, so he should've subtracted 25 from Wuhan-Hu-1 coordinates when he identified the start of the spike protein:</p>
+<p>Another major fail in Perez's paper was that he thought that one of his matches to HIV was located at the start of the spike protein in RaTG13 but that it spanned both ORF1ab and the spike protein in SARS-CoV-2. But that's because his nonstandard reference genome was missing the first 25 bases of Wuhan-Hu-1, so he should've subtracted 25 from Wuhan-Hu-1 coordinates when he identified the start of the spike protein:</p>
 <div class="width6">
 <img src="i/pradhan-perez-4.jpg">
 </div>
@@ -707,71 +740,39 @@ strand  start  end  matched
 <div class="width6">
 <img src="i/pradhan-perez-5.jpg">
 </div>
-<p>However the matching sequence is in the +1 frame in SARS-CoV-2 but 0 frame in <em>Plasmodium yoelii</em>, so Perez's amino acid translation of the region in SARS-CoV-2 is wrong:</p>
+<p>However the matching sequence is in the +1 frame in SARS-CoV-2 but 0 frame in <em>Plasmodium yoelii</em>, so Perez's amino acid translation of the match in SARS-CoV-2 is wrong:</p>
 <pre>$ url=&#39;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&amp;rettype=fasta_cds_na&#39;
 $ curl &quot;$url&amp;id=MN908947&quot;&gt;sars2.na
 $ curl &quot;$url&amp;id=LM993664&quot;&gt;yoelii.na
 $ seqkit locate -pCACAAGTCAAACAAATTTACAAAACACCACCAATTAAAGAT sars2.na|cut -f4-6|column -t
 strand  start  end
-+       2348   2388 # (2348-1)%3 is 1
++       2348   2388 # (2348-1)%3 is 1 frame
 $ seqkit locate -pCACAAATCAAACAAATTTACAAAACACAAACCAAAAAAAAAT yoelii.na|cut -f4-6|column -t
 strand  start  end
-+       106    147 # (106-1)%3 is 0
++       106    147 # (106-1)%3 is 0 frame
 +       106    147</pre>
-<p>Next the authors presented a second match to the same rodent parasite which they initially said appeared to be located downstream in the same protein as the first match, even though actually the match was located in a different chromosome and a different protein (and the authors later corrected their own initial impression and wrote that <span class="quote">&quot;it is therefore clear that this second region of Yoelii does not coincide with the extension downstream of the sequence <span class="quote">'Fam a'</span>&quot;</span>). However for some reason the authors still decided to concatenate the two unrelated matches together. The second match has a high E-value of 0.16, and it has two gaps near the start in SARS-CoV-2 which means that the segments before and after the gaps are in different frames:</p>
+<p>Next the authors presented a second match to the same rodent parasite which they initially said appeared to be located downstream in the same protein as the first match, even though actually the match was located in a different chromosome and a different protein, and in fact the authors later corrected their own initial impression and wrote that <span class="quote">&quot;it is therefore clear that this second region of Yoelii does not coincide with the extension downstream of the sequence <span class="quote">'Fam a'</span>&quot;</span>. However for some reason the authors still decided to concatenate the two unrelated matches together. The second match to <em>Plasmodium yoelii</em> has two gaps near the start in SARS-CoV-2 which means that the segments before and after the gaps are in different frames:</p>
 <div class="width6">
 <img src="i/pradhan-perez-6.jpg">
 </div>
-<p>The screenshot above shows that the match to the whole chromosome in <em>Plasmodium yoelii</em> is on the opposite strand as in SARS-CoV-2, but the match to the gene in <em>Plasmodium yoelii</em> is still on the same strand because the gene is on the reverse strand. And the part of the match after the gaps happens to be in the +2 frame in both <em>Plasmodium yoelii</em> and SARS-CoV-2 (but the match is still not impressive at all because it has only 36 out of 46 identical bases so the percentage identity is only about 78%):</p>
+<p>The screenshot above shows that the match to the whole chromosome in <em>Plasmodium yoelii</em> is on the minus strand, but the match to the gene in <em>Plasmodium yoelii</em> is still on the plus strand because the gene is on the reverse strand. And the part of the match after the gaps happens to be in the +2 frame in both <em>Plasmodium yoelii</em> and SARS-CoV-2. But the match is still not impressive at all because it has only 36 out of 46 identical bases so the percentage identity is only about 78%:</p>
 <pre>$ url=&#39;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&amp;rettype=fasta_cds_na&#39;
 $ curl &quot;$url&amp;id=MN908947&quot;&gt;sars2.na
-$ curl &quot;$url&amp;id=LK934642&quot;&gt;yoelii14.na
+$ curl &quot;$url&amp;id=LK934642&quot;&gt;yoelii14.na # protein coding sequences within chromosome 14
 $ seqkit locate -pCAAAACACCACCAATTAAAGATTTTGGTGGTTTTAATTTTTCACAA sars2.na|cut -f4-6|column -t
 strand  start  end
 +       2367   2412 # (2367-1)%3 is 2
 $ seqkit locate -pCAAAATAAAACCAATTATATATTTTGATCATATTAATTTTTCAAAA yoelii14.na|cut -f4-6|column -t
 strand  start  end
 +       6903   6948 # (6903-1)%3 is 2</pre>
-<p>In the plot below I used web BLAST to search for Wuhan-Hu-1 within the nr/nt database, where I set species to HIV, task to blastn, expect threshold to 1000, and maximum results to 1000. I then kept scrolling the alignment view for a couple of minutes to fetch all results, I saved the source code of the web page, and I made a list of the starting and ending positions of each match, and I counted how many positions were covered by at least one match. The E values of the matches ranged between 5.2 and 776. When I divided the genome to 500-base blocks, the three blocks with the highest covered percentage were the blocks that started at positions 21001, 11001, and 21501, where two of the blocks roughly coincide to Perez's regions A and B which cover positions 21098 to 22027. However there was also a block in ORF3a which had almost as high coverage percentage as the block at the end of ORF1b that covered the first half of regions A and B. And when I included only matches on the plus strand, the block at the end of ORF1b got 0% coverage, and the block at the start of the spike protein got 14% coverage which was about as high as three random blocks in ORF1ab:</p>
+<p>In the plot below I used web BLAST to search for Wuhan-Hu-1 within the nr/nt database, where I set species to HIV, task to blastn, expect threshold to 1000, and maximum results to 1000. I then kept scrolling the alignment view for a couple of minutes to fetch all results, I saved the source code of the web page, and I made a list of the starting and ending positions of each match, and I counted how many positions were covered by at least one match. The E values of the matches ranged between 5.2 and 776. When I divided Wuhan-Hu-1 to 500-base blocks, the three blocks with the highest covered percentage were the blocks that started at positions 21001, 11001, and 21501, where two of the blocks roughly coincide to Perez's regions A and B which cover positions 21098 to 22027. However there was also a block in ORF3a which had almost as high coverage percentage as the block at the end of ORF1b that covered the first half of regions A and B. And when I included only matches on the plus strand, the block at the end of ORF1b got 0% coverage, and the block at the start of the spike protein got 14% coverage which was about as high as three random blocks in ORF1ab:</p>
 <div class="width10">
 <img src="i/pradhan-perez-8.png">
 </div>
-<p>Even though I included the top 1000 BLAST results in the plot above, there were many duplicate matches where different sequences of HIV matched the same segment, so there were only 82 unique starting positions among the matches. But next in order to search within a diverse set of HIV subtypes, I did a BLAST search within the HIV subtype reference published by the Los Alamos National Laboratory: <a href="https://www.hiv.lanl.gov/content/sequence/NEWALIGN/align.html">https://www.hiv.lanl.gov/content/sequence/NEWALIGN/align.html</a>. It contains 555 sequences that represent 165 different subtypes of HIV-1, but it also contains a few HIV-1 like SIV sequences from chimps and gorillas. I got zero results when I ran BLAST with the default options, but my number of results increased to 7 when I added the option <code>-task blastn</code> and to 609 when I also added the option <code>-evalue 1000</code>. There were 245 unique starting positions among the results, so now the matches were distributed more evenly because there weren't as many duplicate matches for the same region. And now even in the top panel which includes both strands, the two bars which correspond to Perez's regions A and B only had the 4th and 11th highest percentage of matches:</p>
+<p>Even though I included the top 1000 BLAST results in the plot above, there were many duplicate matches where different sequences of HIV matched the same segment, so there were only 82 unique starting positions among the matches. But next in order to search within a diverse set of HIV subtypes with only a few results by subtype, I did a BLAST search within the HIV subtype reference published by the Los Alamos National Laboratory: <a href="https://www.hiv.lanl.gov/content/sequence/NEWALIGN/align.html">https://www.hiv.lanl.gov/content/sequence/NEWALIGN/align.html</a>. It contains 555 sequences that represent 165 different subtypes of HIV-1, but it also contains a few HIV-1 like SIV sequences from chimps and gorillas. I got zero results when I searched for Wuhan-Hu-1 against the LANL subtype reference with the default options, but my number of results increased to 7 when I added the option <code>-task blastn</code> and to 609 when I also added the option <code>-evalue 1000</code>. There were 245 unique starting positions among the results, so now the matches were distributed more evenly because there weren't as many duplicate matches for the same region. And now even in the top panel which includes both strands, the two bars which correspond to Perez's regions A and B only had the 4th and 11th highest percentage of matches:</p>
 <div class="width10">
 <img src="i/pradhan-perez-9.png">
 </div>
-<h2>
-<a href=#E_values_of_matches_to_Pradhans_first_two_inserts id=E_values_of_matches_to_Pradhans_first_two_inserts>E values of matches to Pradhan's first two inserts</a>
-</h2>
-<p>The E value or expect value indicates how many similarly close matches are expected to occur by chance for the given query sequence and pool of searched sequences.</p>
-<p>You can try to go to the web GUI for blastp: <a href="https://blast.ncbi.nlm.nih.gov/Blast.cgi?PROGRAM=blastp">https://blast.ncbi.nlm.nih.gov/Blast.cgi?PROGRAM=blastp</a>. Then set query to <code>TNGTKR</code>, organism to <span class="quote">&quot;Viruses (taxid:10239)&quot;</span>, click <span class="quote">&quot;Add organism&quot;</span>, set the second organism to <span class="quote">&quot;SARS-CoV-2 (taxid:2697049)&quot;</span> and click the exclude checkbox next to it. It showed me that the matches to HIV got an E value of about 372, which means that about 372 similar matches with 6 out of 6 identical residues are expected to occur by chance. There were a total of 76 perfect matches with 6 out of 6 identical residues, so the expect score was about 5 times higher than the number of perfect matches.</p>
-<p>When I did another search in the whole nr database so that I didn't include the organism filters, then the E scores of perfect matches increased to about 54093, or about 145 times higher than with the filters because now the pool of subject sequences was much larger, and the E score is directly proportional to the effective length of the pool of subject sequences.</p>
-<p>The E score is calculated by the formula <code>E = m * n * 2^(-S)</code>, where <code>m</code> and <code>n</code> are the effective length of the query and database sequences and <code>S</code> is the bitscore. I don't know how to calculate the effective length, because it is calculated by subtracting a parameter called the length adjustment from the actual length to account for duplicate sequences and repetitive elements within sequences, so I believe you need to download the entire database to calculate the length adjustment. However since the E values are directly proportional to the effective length of the pool of subject sequences, from the ratio of my E scores you can calculate that the effective length of the whole nr database is about 145 times higher than the effective length of the subset of the nr database that contains viruses apart from SARS-CoV-2.</p>
-<p>Pradhan's second insert <code>HKNNKS</code> was 6 residues long like the first insert, but when I searched for the second insert among viruses other than SARS-CoV-2 in the nr database, the E value was now about 185 for the match to HIV. The results included 36 perfect matches, so the expect score was again about 5 times higher than the number of perfect matches. I believe the reason why both queries don't get the same E value even though they're the same length is that the algorithm assigns different scores to common amino acids and rare amino acids.</p>
-<p>The nr database contains a massive number of protein sequences for a few species of widely studied human viruses like SARS-CoV-2, HIV-1, and influenza A. But in order to restrict the search to a database that only has one or a few representative samples for each species of virus, you can search in the refseq_protein database instead and restrict the organism to viruses. It gave me an E value of about 33 for results that had a perfect match to Pradhan's first insert <code>TNGTKR</code> (but the results didn't include any HIV sequences, because the envelope protein of the HIV-1 refseq matches only 2 of 6 residues of <code>TNGTKR</code> at the spot where Pradhan's HIV sequences from Thailand match <code>TNGTKR</code>):</p>
-<div class="width8">
-<img src="i/pradhan-escore.jpg">
-</div>
-<p>So even within a fairly small pool of proteins from virus refseqs, the E values for perfect matches to the 6 aa insert were still very high.</p>
-<p>In the following code I created my own BLAST database for proteins from virus refseqs. For some reason it failed to download coding sequences for about half of all virus refseqs even though refseqs should usually have annotations for proteins. But anyway, I now got only a single perfect match to <code>TNGTKR</code> which was in the refseq for SARS-CoV-2, but the E value of the match was still 289 which is very high:</p>
-<pre>$ wget -q https://ftp.ncbi.nlm.nih.gov/refseq/release/viral/viral.1.1.genomic.fna.gz
-$ seqkit seq -ni viral.fa|curl -sd &quot;id=$(paste -sd, -)&quot; &#39;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&amp;rettype=fasta_cds_na&#39;&gt;viral.aa
-$ makeblastdb -dbtype prot -in viral.aa
-[...]
-$ echo $&#39;&gt;a\nTNGTKR&#39;|blastp -db viral.aa -evalue 1000
-[...]
-&gt;lcl|NC_045512.2_prot_YP_009724390.1_3 [gene=S] [locus_tag=GU280_gp02] # spike protein of refseq for SARS-CoV-2
-[db_xref=GeneID:43740568] [protein=surface glycoprotein]
-[protein_id=YP_009724390.1] [location=21563..25384] [gbkey=CDS]
-Length=1273
-
- Score = 16.5 bits (31),  Expect = 289, Method: Composition-based stats.
- Identities = 6/6 (100%), Positives = 6/6 (100%), Gaps = 0/6 (0%)
-
-Query  1   TNGTKR  6
-           TNGTKR
-Sbjct  73  TNGTKR  78
-[...]</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')

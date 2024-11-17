@@ -2465,6 +2465,37 @@ lines(p$year,p$trend,type=&quot;l&quot;,lty=2,lwd=1.5)
 legend(&quot;topleft&quot;,legend=leg,lty=c(1,2),lwd=1.5)
 dev.off()</pre>
 </div>
+<p>The next plot shows that since 2020 there's even more excess deaths with MCD I10 (<span class="quote">&quot;Essential (primary) hypertension&quot;</span>) than excess deaths with MCD N17.9 (<span class="quote">&quot;Acute renal failure, unspecified&quot;</span>). So is there also a hypertension Holocaust according to John Beaudoin? Or is the primary cause of most deaths not actually hypertension?</p>
+<div class="width7">
+<img src="i/ethical-kidney-8.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table)
+
+kimi=\(x){na=is.na(x);x[na]=0;e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;x[]=ifelse(abs(x)&lt;1e3,round(x),paste0(sprintf(paste0(&quot;%.&quot;,ifelse(e%%3==0,1,0),&quot;f&quot;),x/1e3^(e2-1)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2]));x[na]=&quot;NA&quot;;x}
+
+t=fread(&quot;http://sars2.net/f/wonderbymcd.csv&quot;)
+me=merge(t,t[year&lt;2020,mean(dead),code])
+m=me[,tapply(dead-V1,.(paste0(code,&quot;: &quot;,substr(cause,1,67)),year),c)]
+
+m=m[order(-rowSums(m[,-(1:2)],na.rm=T)),]
+m=m[rowSums(m,na.rm=T)&gt;0,][1:24,]
+
+maxcolor=max(abs(m),na.rm=T)
+exp=.8
+pal=hsv(rep(c(21,0)/36,5:4),c(1,.8,.6,.3,0,.3,.6,.8,1),c(.3,.65,1,1,1,1,1,.65,.3))
+
+pheatmap::pheatmap(sign(m)*abs(m)^exp,filename=&quot;1.png&quot;,display_numbers=kimi(m),
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=18,cellheight=14,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;gray90&quot;,
+  number_color=ifelse(!is.na(m)&amp;abs(m)^exp&gt;.7*(maxcolor^exp),&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(-maxcolor^exp,maxcolor^exp,,256),
+  colorRampPalette(pal)(256))
+
+system(&quot;w=`identify -format %w 1.png`;pad=26;magick -pointsize 44 -font Arial \\( -size $[w-pad] caption:&#39;CDC WONDER: Excess number of deaths by multiple cause of death relative to 2018-2019 average, top 24 causes shown sorted by 2020-2024 total&#39; -splice $[pad]x24 \\) 1.png -append 1.png&quot;)</pre>
+</div>
 <h2>
 <a href=#Excess_deaths_from_natural_causes id=Excess_deaths_from_natural_causes>Excess deaths from natural causes</a>
 </h2>

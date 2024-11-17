@@ -869,9 +869,66 @@ Week Ending Date  Observed Number  Average Expected Count  Percent Excess Estima
     7.9     6.0     6.8     4.2    10.4     5.6     6.2     7.6     6.6     3.8     6.3     5.3
 2023-01 2023-02 2023-03 2023-04 2023-05 2023-06 2023-07 2023-08 2023-09
     6.7      NA      NA      NA      NA      NA      NA      NA      NA</pre>
-<p>The heatmap below shows that in March 2020, there was a total of 16 states which had a sufficient number of COVID deaths that I was able to calculate the percentage of COVID deaths in ages 0-54 out of all COVID deaths. The percentage was about 14% in New York City, but it was higher in 4 out of the 16 states with data available: about 15% in Louisiana and Texas, about 17% in Illinois, and about 19% in Michigan. And in summer 2021, the percentage of COVID deaths in ages 0-54 reached above 30% in some southern states (<a href=stat.html#Make_a_heatmap_of_the_percentage_of_COVID_deaths_in_young_age_groups_by_state_and_month>R code</a>):</p>
-<div class="width8">
-<img src="i/us-states-deaths-under-age-55-percentage-by-month.png">
+<p>The heatmap below shows that the percentage of UCD COVID deaths in ages 0 to 54 out of all ages was about 14% in NYC in March 2020, but it was about 22% in Arizona and 21% in Alabama. And it was even higher in many states during the Delta wave in 2021. During the Delta wave there were still many unvaccinated people who had not yet acquired natural immunity, so vaccines gave a large immunization advantage to the older age groups where a larger percentage of people were vaccinated than in younger age groups. By 2022 the percentage of COVID deaths in young age out of all age groups had fallen down to a much lower level, but I believe it's because unvaccinated people gained natural immunity over time (because the ratio of unvaccinated to vaccinated COVID ASMR was also lower in 2022 than 2021):</p>
+<div class="width10">
+<img src="i/nopandemic-hockett-under55.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ComplexHeatmap);library(circlize)
+
+t=fread(&quot;http://sars2.net/f/wondercovid55plus.csv&quot;)
+t=rbind(t,t[state!=&quot;NYC&quot;,.(dead=sum(dead),state=&quot;Total&quot;),.(date,age)])
+t=merge(t[age==&quot;all&quot;,.(date,state,all=dead)],t[age==&quot;55plus&quot;],all=T)
+m=t[,tapply((all-dead)/all*100,.(state,date),c)]
+
+states=fread(&quot;https://github.com/cphalpert/census-regions/raw/master/us%20census%20bureau%20regions%20and%20divisions.csv&quot;)
+states=rbind(states[,.(State,Division)],data.table(State=c(&quot;NYC&quot;,&quot;Total&quot;),Division=c(&quot;&quot;)))
+states$order=match(states$Division,strsplit(&quot;,New England,Middle Atlantic,East North Central,West North Central,South Atlantic,East South Central,West South Central,Mountain,Pacific&quot;,&quot;,&quot;)[[1]])
+states$Division=sub(&quot;([WE])\\S* ([SN])\\S* Central&quot;,&quot;\\1 \\2 Central&quot;,states$Division)
+
+m=m[order(states$ord[match(rownames(m),states$State)]),]
+split=states$Division[match(rownames(m),states$State)]
+
+colnames(m)=sub(&quot;/&quot;,&quot;-&quot;,colnames(m))
+
+maxcolor=max(m,na.rm=T);exp=1.3
+
+png(&quot;0.png&quot;,w=ncol(m)*30+1000,h=nrow(m)*30+1000,res=72)
+
+ht_opt$COLUMN_ANNO_PADDING=unit(0,&quot;mm&quot;);ht_opt$ROW_ANNO_PADDING=unit(0,&quot;mm&quot;)
+
+Heatmap(abs(m)^exp*sign(m),
+  column_split=substring(colnames(m),1,4),
+  row_split=factor(split,unique(split)),
+  column_title=NULL,
+  row_title_gp=gpar(fontsize=19),
+  column_gap=unit(4,&quot;mm&quot;),
+  row_gap=unit(4,&quot;mm&quot;),
+  border=&quot;gray60&quot;,
+  width=unit(ncol(m)*30,&quot;pt&quot;),
+  height=unit(nrow(m)*30,&quot;pt&quot;),
+  show_column_names=F,
+  show_row_names=F,
+  cluster_columns=F,
+  cluster_rows=F,
+  show_heatmap_legend=F,
+  na_col=&quot;gray80&quot;,
+  rect_gp=gpar(col=&quot;gray80&quot;,lwd=0),
+  top_annotation=columnAnnotation(text=anno_text(gt_render(colnames(m),padding=unit(c(3,3,3,3),&quot;mm&quot;)),just=&quot;left&quot;,rot=90,location=unit(0,&quot;npc&quot;),gp=gpar(fontsize=19,border=&quot;gray60&quot;,lwd=1))),
+  bottom_annotation=columnAnnotation(text=anno_text(gt_render(colnames(m),padding=unit(c(3,3,3,3),&quot;mm&quot;)),just=&quot;left&quot;,rot=270,gp=gpar(fontsize=19,border=&quot;gray60&quot;,lwd=1))),
+  left_annotation=rowAnnotation(text=anno_text(gt_render(rownames(m),padding=unit(c(3,3,3,3),&quot;mm&quot;)),just=&quot;right&quot;,location=unit(1,&quot;npc&quot;),gp=gpar(fontsize=19,border=&quot;gray60&quot;,lwd=1))),
+  right_annotation=rowAnnotation(text=anno_text(gt_render(rownames(m),padding=unit(c(3,3,3,3),&quot;mm&quot;)),just=&quot;left&quot;,location=unit(0,&quot;npc&quot;),gp=gpar(fontsize=19,border=&quot;gray60&quot;,lwd=1))),
+  col=colorRamp2(seq(-maxcolor^exp,maxcolor^exp,,9),hsv(c(21,21,21,21,0,0,0,0,0)/36,c(.7,.7,.6,.3,0,.3,.6,.7,.7),c(.3,.65,1,1,1,1,1,.65,.3))),
+  cell_fun=\(j,i,x,y,w,h,fill)grid.text(round(m[i,j]),x,y,gp=gpar(fontsize=19,col=ifelse(abs(m[i,j])^exp&gt;=maxcolor^exp/2,&quot;white&quot;,&quot;black&quot;))))
+dev.off()
+
+system(&quot;pad=23;mogrify -trim 0.png;w=`identify -format %w 0.png`;convert -size $[w-pad*2]x -interline-spacing -2 -pointsize 26 \\( -font Arial-Bold caption:&#39;CDC WONDER: Percentage of COVID deaths in ages 0 to 54 out of all ages&#39; -splice $[pad]x \\) \\( -pointsize 24 -font Arial caption:&#39;COVID deaths are deaths with underlying cause U07. The states are state of residence and not occurrence. CDC WONDER suppresses the number of deaths on rows with 1-9 deaths, so in order to reduce the number of suppressed months, the number of deaths in ages 0-54 was calculated by subtracting deaths in ages 55 and above from deaths in all ages. A blank gray square is shown on months when ages 55 and above had less than 10 deaths. This plot is not adjusted for differences in age structure between states.&#39; -splice $[pad]x8 \\) \\( 0.png -splice 0x6 \\) -append -trim -bordercolor white -border 20 1.png&quot;)</pre>
+</div>
+<p>Even in NYC the percentage of COVID deaths in ages 0-54 out of all ages was higher during the Delta wave than in spring 2020:</p>
+<div class="width6">
+<img src="i/nopandemic-new-york-under-70-line.jpg">
 </div>
 <p>Hockett also posted the tweet below which showed the number of COVID deaths in ages 35-54 in NYC, and she asked <span class="quote">&quot;Why did New York City hospitals see more COVID-19 deaths among younger adults than anyplace else in the world?&quot;</span> [<a href="https://x.com/Wood_House76/status/1701623517207273775">https://x.com/Wood_House76/status/1701623517207273775</a>]</p>
 <div class="width5">
@@ -4693,8 +4750,8 @@ tap2=tap[names(tap)&lt;&quot;2020&quot;&amp;names(tap)&gt;=&quot;2018&quot;]
 </h3>
 <p>Sean Flanagan wrote: [<a href="https://x.com/SeanBFlanagan/status/1857707566907703297">https://x.com/SeanBFlanagan/status/1857707566907703297</a>]</p>
 <blockquote>
-<p>On Tulsi’s comment “….these pathogens know no borders…”, please urgently look into and explain what happened in New York City in Spring 2020 with a skyscraper deaths spike, but nowhere else across the “border” in NJ or CT etc….</p>
-<p>Smell 👃 Test… = 🐀</p>
+<p>On Tulsi's comment <span class="quote">&quot;....these pathogens know no borders...&quot;</span>, please urgently look into and explain what happened in New York City in Spring 2020 with a skyscraper deaths spike, but nowhere else across the <span class="quote">&quot;border&quot;</span> in NJ or CT etc....</p>
+<p>Smell 👃 Test... = 🐀</p>
 <p>It seems only Jessica Hockett <span class="citation">@JAHockett76</span> <span class="citation">@Wood_House76</span> has done the hard work deep dive analysis into NYC spring 2020 asking the obvious questions. Why are others in 🇺🇸 not joining Jessica in getting the answers?</p>
 </blockquote>
 <p>However counties in New Jersey had a similar spike in deaths as counties of New York City. And some counties of New York State outside of NYC also had very high mortality, like Rockland, Nassau, and Westchester:</p>
