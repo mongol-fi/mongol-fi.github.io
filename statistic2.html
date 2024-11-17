@@ -80,7 +80,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <h3>
 <a href=#Comparison_to_data_from_original_PDFs id=Comparison_to_data_from_original_PDFs>Comparison to data from original PDFs</a>
 </h3>
-<p>In November 2024 Nicolas Hulscher, Michael Cook, Raphael Stricker, and Peter A. McCullough published a paper titled <span class="quote">&quot;Excess Cardiopulmonary Arrest and Mortality after COVID-19 Vaccination in King County, Washington&quot;</span>: <a href="https://www.opastpublishers.com/open-access-articles/excess-cardiopulmonary-arrest-and-mortality-after-covid19-vaccination-in-king-county-washington.pdf">https://www.opastpublishers.com/open-access-articles/excess-cardiopulmonary-arrest-and-mortality-after-covid19-vaccination-in-king-county-washington.pdf</a>. King County is the most populous county of the Seattle metropolitan area.</p>
+<p>In November 2024 Nicolas Hulscher, Michael Cook, Raphael Stricker, and Peter McCullough published a paper titled <span class="quote">&quot;Excess Cardiopulmonary Arrest and Mortality after COVID-19 Vaccination in King County, Washington&quot;</span>: <a href="https://www.opastpublishers.com/open-access-articles/excess-cardiopulmonary-arrest-and-mortality-after-covid19-vaccination-in-king-county-washington.pdf">https://www.opastpublishers.com/open-access-articles/excess-cardiopulmonary-arrest-and-mortality-after-covid19-vaccination-in-king-county-washington.pdf</a>. The first author Nicolas Hulscher is a fellow at the McCullough Foundation. King County is the most populous county of the Seattle metropolitan area.</p>
 <p>The authors used data from PDFs published by the Emergency Medical Services Division of King County, which featured tables like this: [<a href="https://kingcounty.gov/en/dept/dph/health-safety/health-centers-programs-services/emergency-medical-services/reports-publications">https://kingcounty.gov/en/dept/dph/health-safety/health-centers-programs-services/emergency-medical-services/reports-publications</a>]</p>
 <div class="width6">
 <img src="i/statistic-king-1.jpg">
@@ -400,6 +400,64 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
 ggsave(&quot;1.png&quot;,width=3.5,height=2.4,dpi=400*4)
 system(&quot;mogrify -resize 25% 1.png&quot;)</pre>
 </div>
+<p>The long-term trend in all-cause deaths in King County seems to be similarly curved upwards, even though the trend in the 10 years before COVID seemed roughly linear:</p>
+<div class="width6">
+<img src="i/statistic-king-17.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2)
+
+t=fread(&quot;http://sars2.net/f/wonderkingcountyallcause.csv&quot;)
+t=merge(t[year%in%2010:2019,.(year=1999:2023,base=predict(lm(dead/pop~year),.(year=1999:2023))),age],t)
+
+a=t[,.(dead=sum(dead)),year]
+a$linear=a[year%in%2015:2019,predict(lm(dead~year),a)]
+a$quadra=a[year&lt;2020,predict(lm(dead~poly(year,2)),a)]
+
+p=a[,.(x=year,y=unlist(.SD[,-1]),z=rep(c(&quot;Actual deaths&quot;,&quot;2015-2019 linear baseline&quot;,&quot;1999-2019 quadratic trend&quot;),each=.N))]
+p[,z:=factor(z,unique(z))]
+
+ybreak=pretty(p$y,9);xstart=1999;xend=2023
+color=c(&quot;black&quot;,hsv(22/36,1,.8),&quot;#00aa00&quot;)
+
+ggplot(p,aes(x,y))+
+geom_line(aes(color=z),linewidth=.3)+
+geom_point(aes(alpha=z,color=z),stroke=0,size=.9)+
+geom_line(data=p[z==z[1]],aes(color=z),linewidth=.3)+
+labs(x=NULL,y=NULL,title=&quot;Yearly deaths in King County, Washington&quot;)+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=xstart:xend)+
+scale_y_continuous(limits=range(ybreak),breaks=ybreak)+
+scale_color_manual(values=color)+
+scale_alpha_manual(values=c(1,0,0))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
+  axis.ticks=element_line(linewidth=.3,color=&quot;black&quot;),
+  axis.ticks.length=unit(3,&quot;pt&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.background=element_rect(linewidth=.3),
+  legend.justification=c(0,1),
+  legend.key=element_blank(),
+  legend.key.height=unit(9,&quot;pt&quot;),
+  legend.key.width=unit(17,&quot;pt&quot;),
+  legend.position=c(0,1),
+  legend.margin=margin(4,4,4,4),
+  legend.spacing.x=unit(1,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=7,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.3),
+  panel.grid.major=element_blank(),
+  plot.margin=margin(5,5,5,5),
+  plot.subtitle=element_text(size=7,margin=margin(,,4)),
+  plot.title=element_text(size=7.6,face=2,margin=margin(1,,4)))
+ggsave(&quot;1.png&quot;,width=3.5,height=2.7,dpi=400*4)
+system(&quot;mogrify -resize 25% 1.png&quot;)</pre>
+</div>
 <h3>
 <a href=#Excess_deaths_may_have_been_due_to_COVID id=Excess_deaths_may_have_been_due_to_COVID>Excess deaths may have been due to COVID</a>
 </h3>
@@ -497,8 +555,8 @@ system(paste0(&quot;f=1.png;magick 1.png -resize 25% 1.png;mar=32;w=`identify -f
 <p>Washington State has one of the highest percentages of UCD COVID deaths in 2021 and 2022 relative to UCD COVID deaths in 2020:</p>
 <pre>&gt; t=fread(&quot;http://sars2.net/f/wonderstatecovidvsall.csv&quot;)[cause==&quot;covid&quot;]
 &gt; a=merge(t[year==2020,.(dead,state)],t[year%in%2021:2022,sum(dead),state])
-&gt; a[,.(state,pct=V1/dead*100,`2021-2022`=V1,`2020`=dead)][order(-pct)][,pct:=round(pct,1)][]|&gt;print(r=F)
-                state   pct 2021-2022  2020
+&gt; a[,.(state,pct=V1/dead*100,`2021+2022`=V1,`2020`=dead)][order(-pct)][,pct:=round(pct,1)][]|&gt;print(r=F)
+                state   pct 2021+2022  2020
                 Maine 506.9      2129   420
                Alaska 446.5      1027   230
                Oregon 388.8      5583  1436
@@ -550,7 +608,7 @@ system(paste0(&quot;f=1.png;magick 1.png -resize 25% 1.png;mar=32;w=`identify -f
           Connecticut  82.0      4744  5782
            New Jersey  81.0     13370 16498
          North Dakota  80.0       968  1210
-                state   pct 2021-2022  2020</pre>
+                state   pct 2021+2022  2020</pre>
 <p>This shows how in the year 2020 deaths with UCD COVID accounted for only about 5% of all deaths in Washington State, which was one of the lowest percentages out of any state:</p>
 <div class="width13">
 <img src="i/statistic-king-12.png">
@@ -710,15 +768,14 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
 ggsave(&quot;1.png&quot;,width=3.8,height=2.9,dpi=350*4)
 system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 </div>
-<p>The OFM/PIE population estimates seem more accurate than the Census Bureau's population estimates, because a decrease in population size between mid-2020 and mid-2021 doesn't seem to be supported by data for births minus deaths plus net migration. Uncle John Returns pointed out that on CDC WONDER King County had 46,942 births and 14,779 deaths between July 2020 and June 2021: [<a href="https://x.com/UncleJo46902375/status/1855697015671513127">https://x.com/UncleJo46902375/status/1855697015671513127</a>]</p>
-<div class="width4">
-<img src="i/statistic-king-10.png">
-</div>
+<p>I don't know if the OFM/PIE population estimates are more accurate than the Census Bureau's population estimates or not. At first I thought that a large decrease in population size between mid-2020 and mid-2021 didn't seem to be supported by data for births minus deaths plus net migration.</p>
+<p>On CDC WONDER I got 23,256 births and 14,779 deaths between July 2020 and June 2021 among residents of King County. [<a href="https://wonder.cdc.gov/natality-expanded-current.html">https://wonder.cdc.gov/natality-expanded-current.html</a>]</p>
 <p>In a discontinued Census Bureau dataset for migration by county which includes data up to the year 2020, in the year 2020 King County had an estimated net migration of -6,437 people: [<a href="https://fred.stlouisfed.org/series/NETMIGNACS053033">https://fred.stlouisfed.org/series/NETMIGNACS053033</a>]</p>
 <div class="width6">
 <img src="i/statistic-king-11.jpg">
 </div>
-<p>Assuming the same net migration between mid-2020 and mid-2021, <code>46942-14779-6437</code> would be 25,726 more people in 2021 than 2020, which is actually higher than the OFM/PIE population estimates where there's 17,375 more people in 2021 than 2020. (The OFM population estimates are for April 1st and not July 1st, but it shouldn't make much difference.)</p>
+<p>Assuming the same net migration between mid-2020 and mid-2021, <code>23256-14779-6437</code> would give 2,040 more people in mid-2021 than mid-2020, which is a much smaller increase than in the OFM population estimates where there's 17,375 more people in 2021 than 2020. (The OFM population estimates are for April 1st and not July 1st, but it shouldn't make much difference when you're comparing the difference between two adjacent years.)</p>
+<p>However later I found that the Census Bureau had published net migration estimates by county here in the file <code>co-est2021-comp-53.xlsx</code>: <a href="https://www2.census.gov/programs-surveys/popest/tables/2020-2021/counties/totals/">https://www2.census.gov/programs-surveys/popest/tables/2020-2021/counties/totals/</a>. In the file King County had a total population change of -20,266 between July 1st 2020 and July 1st 2021, where there were 23,082 births, 16,444 deaths, and net migration of -26,818. So if the net migration estimate is accurate, then it would explain a large decrease in population size between mid-2020 and mid-2021.</p>
 <h3>
 <a href=#1236_increase_in_excess_deaths id=1236_increase_in_excess_deaths>1236% increase in excess deaths</a>
 </h3>
