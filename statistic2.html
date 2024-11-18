@@ -62,7 +62,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <p>Part 1 is here: <a href=statistic.html>statistic.html</a>.</p>
 <h2 id=Contents><a href=#Contents>Contents</a></h2>
 <ul>
-<li><a href=#Nicolas_Hulscher_Yearly_cardiac_arrest_deaths_in_King_County_EMS_data>Nicolas Hulscher: Yearly cardiac arrest deaths in King County EMS data</a>
+<li><a href=#McCullough_Foundation_Paper_about_cardiac_arrests_in_King_County_EMS_data>McCullough Foundation: Paper about cardiac arrests in King County EMS data</a>
 <ul>
 <li><a href=#Comparison_to_data_from_original_PDFs>Comparison to data from original PDFs</a></li>
 <li><a href=#Excess_deaths_may_have_been_due_to_COVID>Excess deaths may have been due to COVID</a></li>
@@ -75,7 +75,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 </ul>
 
 <h2>
-<a href=#Nicolas_Hulscher_Yearly_cardiac_arrest_deaths_in_King_County_EMS_data id=Nicolas_Hulscher_Yearly_cardiac_arrest_deaths_in_King_County_EMS_data>Nicolas Hulscher: Yearly cardiac arrest deaths in King County EMS data</a>
+<a href=#McCullough_Foundation_Paper_about_cardiac_arrests_in_King_County_EMS_data id=McCullough_Foundation_Paper_about_cardiac_arrests_in_King_County_EMS_data>McCullough Foundation: Paper about cardiac arrests in King County EMS data</a>
 </h2>
 <h3>
 <a href=#Comparison_to_data_from_original_PDFs id=Comparison_to_data_from_original_PDFs>Comparison to data from original PDFs</a>
@@ -344,6 +344,15 @@ Dead
 <div class="width6">
 <img src="i/statistic-king-3.png">
 </div>
+<p>I'm not a fan of using z-scores to express the level of excess deaths, because people don't know how to interpret them correctly, and I think it's clearer to just express excess deaths as a percentage of the baseline. The z-scores can often change drastically depending on the range of years used for the baseline fitting period. In the King County cardiac arrest data the years 2015 to 2020 all fall close to the baseline but 2014 is far from the baseline, so here when I used a 2014-2020 baseline instead of a 2015-2020 baseline, my z-score for excess deaths in 2021 fell from about 13.2 to about 4.7:</p>
+<pre>&gt; d=data.table(year=2005:2023)
+&gt; d$dead=c(934,819,844,847,866,851,824,882,900,979,893,940,964,1009,1055,1116,1257,1300,1358)
+&gt; d$base1=d[year%in%2015:2020,predict(lm(dead~year),d)]
+&gt; d$base2=d[year%in%2014:2020,predict(lm(dead~year),d)]
+&gt; d[year==2021,dead-base1]/d[year%in%2015:2020,mean(abs(dead-base1))]
+[1] 13.24
+&gt; d[year==2021,dead-base2]/d[year%in%2014:2020,mean(abs(dead-base2))]
+[1] 4.662179</pre>
 <p>But anyway, the long-term trend in the number of deaths in the EMS data seems to be curved upwards, so here my excess number of deaths relative to the 2015-2020 linear baseline was even higher in 2010 than in 2021 or 2022:</p>
 <div class="width6">
 <img src="i/statistic-king-4.png">
@@ -548,11 +557,12 @@ system(paste0(&quot;f=1.png;magick 1.png -resize 25% 1.png;mar=32;w=`identify -f
 <h3>
 <a href=#Washington_State_had_a_low_number_of_COVID_deaths_in_2020 id=Washington_State_had_a_low_number_of_COVID_deaths_in_2020>Washington State had a low number of COVID deaths in 2020</a>
 </h3>
-<p>The paper by Hulscher et al. showed that there was a much higher number of excess deaths in 2021 than 2020. However compared to other US states, Washington State had an unusually low number of COVID deaths in 2020 relative to 2021 and 2022:</p>
+<p>The paper by Hulscher et al. showed that there was a much higher number of excess deaths in 2021 than 2020. However compared to other US states, Washington State had an unusually low number of COVID deaths in 2020 relative to 2021 and 2022, and the PCR positivity rate in Washington State was also low in 2020:</p>
 <div class="width6">
 <img src="i/statistic-king-5.png">
 </div>
-<p>Washington State has one of the highest percentages of UCD COVID deaths in 2021 and 2022 relative to UCD COVID deaths in 2020:</p>
+<p>The plot above is based on these datasets: <a href="https://data.cdc.gov/NCHS/Excess-Deaths-Associated-with-COVID-19/xkkf-xrst/about_data">https://data.cdc.gov/NCHS/Excess-Deaths-Associated-with-COVID-19/xkkf-xrst/about_data</a>, <a href="https://data.cdc.gov/Case-Surveillance/Weekly-United-States-COVID-19-Cases-and-Deaths-by-/pwn4-m3yp/about_data">https://data.cdc.gov/Case-Surveillance/Weekly-United-States-COVID-19-Cases-and-Deaths-by-/pwn4-m3yp/about_data</a>, <a href="https://healthdata.gov/dataset/COVID-19-Diagnostic-Laboratory-Testing-PCR-Testing/j8mb-icvb/about_data">https://healthdata.gov/dataset/COVID-19-Diagnostic-Laboratory-Testing-PCR-Testing/j8mb-icvb/about_data</a>, <a href="https://data.cdc.gov/Vaccinations/COVID-19-Vaccination-Trends-in-the-United-States-N/rh2h-3yt2/about_data">https://data.cdc.gov/Vaccinations/COVID-19-Vaccination-Trends-in-the-United-States-N/rh2h-3yt2/about_data</a>.</p>
+<p>Washington State is one of the states with the highest percentage of UCD COVID deaths in 2021 and 2022 relative to UCD COVID deaths in 2020:</p>
 <pre>&gt; t=fread(&quot;http://sars2.net/f/wonderstatecovidvsall.csv&quot;)[cause==&quot;covid&quot;]
 &gt; a=merge(t[year==2020,.(dead,state)],t[year%in%2021:2022,sum(dead),state])
 &gt; a[,.(state,pct=V1/dead*100,`2021+2022`=V1,`2020`=dead)][order(-pct)][,pct:=round(pct,1)][]|&gt;print(r=F)
@@ -768,22 +778,22 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
 ggsave(&quot;1.png&quot;,width=3.8,height=2.9,dpi=350*4)
 system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 </div>
-<p>I don't know if the OFM/PIE population estimates are more accurate than the Census Bureau's population estimates or not. At first I thought that a large decrease in population size between mid-2020 and mid-2021 didn't seem to be supported by data for births minus deaths plus net migration.</p>
-<p>On CDC WONDER I got 23,256 births and 14,779 deaths between July 2020 and June 2021 among residents of King County. [<a href="https://wonder.cdc.gov/natality-expanded-current.html">https://wonder.cdc.gov/natality-expanded-current.html</a>]</p>
-<p>In a discontinued Census Bureau dataset for migration by county which includes data up to the year 2020, in the year 2020 King County had an estimated net migration of -6,437 people: [<a href="https://fred.stlouisfed.org/series/NETMIGNACS053033">https://fred.stlouisfed.org/series/NETMIGNACS053033</a>]</p>
+<p>I don't know if the OFM population estimates are more accurate than the Census Bureau's population estimates or not. At first I thought that a large decrease in population size between mid-2020 and mid-2021 wasn't supported by data for births minus deaths plus net migration. On CDC WONDER I got 23,256 births and 14,779 deaths between July 2020 and June 2021 among residents of King County. [<a href="https://wonder.cdc.gov/natality-expanded-current.html">https://wonder.cdc.gov/natality-expanded-current.html</a>, <a href="https://wonder.cdc.gov/mcd.html">https://wonder.cdc.gov/mcd.html</a>]</p>
+<p>There's a discontinued Census Bureau dataset for migration by county which includes data up to the year 2020, where King County had an estimated net migration of -6,437 people in the year 2020: [<a href="https://fred.stlouisfed.org/series/NETMIGNACS053033">https://fred.stlouisfed.org/series/NETMIGNACS053033</a>]</p>
 <div class="width6">
 <img src="i/statistic-king-11.jpg">
 </div>
 <p>Assuming the same net migration between mid-2020 and mid-2021, <code>23256-14779-6437</code> would give 2,040 more people in mid-2021 than mid-2020, which is a much smaller increase than in the OFM population estimates where there's 17,375 more people in 2021 than 2020. (The OFM population estimates are for April 1st and not July 1st, but it shouldn't make much difference when you're comparing the difference between two adjacent years.)</p>
-<p>However later I found that the Census Bureau had published net migration estimates by county here in the file <code>co-est2021-comp-53.xlsx</code>: <a href="https://www2.census.gov/programs-surveys/popest/tables/2020-2021/counties/totals/">https://www2.census.gov/programs-surveys/popest/tables/2020-2021/counties/totals/</a>. In the file King County had a total population change of -20,266 between July 1st 2020 and July 1st 2021, where there were 23,082 births, 16,444 deaths, and net migration of -26,818. So if the net migration estimate is accurate, then it would explain a large decrease in population size between mid-2020 and mid-2021.</p>
+<p>However later I found that the Census Bureau has published net migration estimates by county here in the file <code>co-est2021-comp-53.xlsx</code>: <a href="https://www2.census.gov/programs-surveys/popest/tables/2020-2021/counties/totals/">https://www2.census.gov/programs-surveys/popest/tables/2020-2021/counties/totals/</a>. In the file King County had a total population change of -20,266 between July 1st 2020 and July 1st 2021, where there were 23,082 births, 16,444 deaths, and net migration of -26,818. So if the net migration estimate is accurate, then it would explain a large decrease in population size between mid-2020 and mid-2021.</p>
 <h3>
 <a href=#1236_increase_in_excess_deaths id=1236_increase_in_excess_deaths>1236% increase in excess deaths</a>
 </h3>
-<p>Peter McCullough posted a Substack article about the paper which said that excess deaths had increased by 1,236%: [<a href="https://x.com/P_McCulloughMD/status/1857107751756845319">https://x.com/P_McCulloughMD/status/1857107751756845319</a>]</p>
+<p>Peter McCullough wrote that excess deaths had increased by 1,236% in a Substack article their paper: [<a href="https://x.com/P_McCulloughMD/status/1857107751756845319">https://x.com/P_McCulloughMD/status/1857107751756845319</a>]</p>
 <div class="width5">
 <img src="i/statistic-king-13.jpg">
 </div>
-<p>The paper said: <span class="quote">&quot;Excess cardiopulmonary arrest deaths were estimated to have increased by 1,236% from 2020 to 2023, rising from 11 excess deaths (95% CI: -12, 34) in 2020 to 147 excess deaths (95% CI: 123, 170) in 2023.&quot;</span> I think it was misleading that McCullough's headline was based on the projected number of deaths for 2023 and not actual data. But anyway there were about 11.8% excess deaths in 2023 (<code>1392/1245-1</code>) and about 1.0% excess deaths in 2020 (<code>1121/1110-1</code>), so I guess an increase of 1236% sounds more exciting than an increase of 10.8 percentage points.</p>
+<p>The paper said: <span class="quote">&quot;Excess cardiopulmonary arrest deaths were estimated to have increased by 1,236% from 2020 to 2023, rising from 11 excess deaths (95% CI: -12, 34) in 2020 to 147 excess deaths (95% CI: 123, 170) in 2023.&quot;</span> I think it was misleading that McCullough's headline was not even based on actual data but on a projected number of deaths for 2023.</p>
+<p>But anyway there were about 11.8% excess deaths in 2023 (<code>1392/1245-1</code>) and about 1.0% excess deaths in 2020 (<code>1121/1110-1</code>). So I guess an increase of 1236% sounds more exciting than an increase of 10.8 percentage points.</p>
 <p>Peter Sweden also employed the trick in a Substack post where he said that there had been a 1101% increase in excess deaths in children. [<a href="https://skeptics.stackexchange.com/questions/53765/has-there-been-a-1101-increase-in-excess-deaths-among-children-aged-0-14-across">https://skeptics.stackexchange.com/questions/53765/has-there-been-a-1101-increase-in-excess-deaths-among-children-aged-0-14-across</a>] And USMortality used the same trick in one of his Substack posts, where he got about 11.2% excess deaths in 2022 and about 4.5% excess deaths in 2020, so he said there had been a 149% increase in excess deaths (because I guess an increase of 6.7 percentage points wouldn't have sounded as dramatic): [<a href="https://x.com/USMortality/status/1721410802857730423">https://x.com/USMortality/status/1721410802857730423</a>]</p>
 <div class="width5">
 <img src="i/statistic-king-14.jpg">
@@ -848,7 +858,7 @@ Estimated population size (from people divided by percent)
 2163304
 </td></tr>
 </table>
-<p>Here I think the OFM population estimates are probably the most accurate, but they're much higher than the Tennessean population estimate:</p>
+<p>Here you can see how both the Census Bureau and OFM population estimates are higher than the Tennessean population estimate:</p>
 <div class="width6">
 <img src="i/statistic-king-15.png">
 </div>
