@@ -865,6 +865,14 @@ ggsave(&quot;1.png&quot;,width=5.2,height=3.1,dpi=450)</pre>
 <div class="width5">
 <img src="i/ethical-wondernatality.jpg">
 </div>
+<p>CDC has also published the mortality data at CDC WONDER as plain text files in a fixed-width field format: <a href="https://www.cdc.gov/nchs/data_access/vitalstatsonline.htm#Mortality_Multiple">https://www.cdc.gov/nchs/data_access/vitalstatsonline.htm#Mortality_Multiple</a>. There's CSV versions of the files here: <a href="https://www.nber.org/research/data/mortality-data-vital-statistics-nchs-multiple-cause-death-data">https://www.nber.org/research/data/mortality-data-vital-statistics-nchs-multiple-cause-death-data</a>. The files contain one line for each dead person, but the state and county of residence and occurrence are omitted for privacy reasons. At first I got slightly more deaths in the files than at CDC WONDER, but I got the same count of deaths after I excluded lines where the tape location 20 for resident status was not 4 (foreign residents). So for example in 2020 I got 602,350 deaths where the UCD started with the letter C, which was identical to the result I got from CDC WONDER regardless of whether I looked at the final or provisional dataset:</p>
+<pre>$ wget https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/mortality/mort2020us.zip
+$ unzip mort2020us.zip
+$ awk &#39;{if(substr($0,20,1)==4)next;a[substr($0,102,4),substr($0,65,2),substr($0,71,3),substr($0,146,4)]++}ENDFILE{for(i in a)print i,a[i]}&#39; {SUBSEP,OFS}=, VS20MORT.DUSMCPUB_r20220105|tr -d \ &gt;temp
+$ sed 1q temp # year, month, age, UCD, deaths
+2020,09,024,W31,1
+$ awk -F, &#39;$4~/^C/{x+=$5}END{print x}&#39; temp
+602350</pre>
 <h2>
 <a href=#Deaths_associated_with_pregnancy_and_childbirth id=Deaths_associated_with_pregnancy_and_childbirth>Deaths associated with pregnancy and childbirth</a>
 </h2>
@@ -2465,7 +2473,7 @@ lines(p$year,p$trend,type=&quot;l&quot;,lty=2,lwd=1.5)
 legend(&quot;topleft&quot;,legend=leg,lty=c(1,2),lwd=1.5)
 dev.off()</pre>
 </div>
-<p>The next plot shows that since 2020 there's even more excess deaths with MCD I10 (<span class="quote">&quot;Essential (primary) hypertension&quot;</span>) than excess deaths with MCD N17.9 (<span class="quote">&quot;Acute renal failure, unspecified&quot;</span>). So is there also a hypertension Holocaust according to John Beaudoin? Or is the primary cause of most deaths not actually hypertension?</p>
+<p>The next plot shows that since 2020 there's even more excess deaths with MCD I10 (<span class="quote">&quot;Essential (primary) hypertension&quot;</span>) than excess deaths with MCD N17.9 (<span class="quote">&quot;Acute renal failure, unspecified&quot;</span>). So is there also a hypertension Holocaust according to John Beaudoin? Or is the primary cause of most excess deaths not actually hypertension?</p>
 <div class="width7">
 <img src="i/ethical-kidney-8.png">
 </div>
