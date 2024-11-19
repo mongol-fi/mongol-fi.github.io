@@ -4,7 +4,7 @@
 body{background:#292929;color:white;margin:6px 6px 6px max(6px, min(50vw - 270px, 100vw - 1100px))}
 body,td,th{font:14.5px/1.3 Arial,Helvetica,'Liberation Sans',sans-serif}
 p{max-width:540px}
-h1,h2,h2 a,h3 a,h2 a:visited,h3 a:visited{font-weight:normal;color:white}
+h1,h2,h3,h2 a,h3 a,h2 a:visited,h3 a:visited{font-weight:normal;color:white}
 h1{font-size:2.1em;margin-top:.9em}
 h2{font-size:1.7em}
 h3{font-size:1.3em}
@@ -18,7 +18,7 @@ table{border-collapse:collapse}
 td,th{border:1px solid #555;padding:2px 4px}
 th{background:#444;text-align:left;font-weight:bold}
 img{max-width:100%}
-blockquote{margin-left:0px;padding-left:40px;margin-right:0}
+blockquote{margin-left:0px;padding-left:40px;margin-right:0;overflow-x:hidden}
 blockquote p{max-width:480px}
 blockquote blockquote p{max-width:440px}
 blockquote blockquote blockquote p{max-width:400px}
@@ -793,7 +793,89 @@ system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 <img src="i/statistic-king-13.jpg">
 </div>
 <p>The paper said: <span class="quote">&quot;Excess cardiopulmonary arrest deaths were estimated to have increased by 1,236% from 2020 to 2023, rising from 11 excess deaths (95% CI: -12, 34) in 2020 to 147 excess deaths (95% CI: 123, 170) in 2023.&quot;</span> I think it was misleading that McCullough's headline was not even based on actual data but on a projected number of deaths for 2023.</p>
-<p>But anyway there were about 11.8% excess deaths in 2023 (<code>1392/1245-1</code>) and about 1.0% excess deaths in 2020 (<code>1121/1110-1</code>). So I guess an increase of 1236% sounds more exciting than an increase of 10.8 percentage points.</p>
+<p>But anyway there were about 11.8% excess deaths in 2023 (<code>1392/1245-1</code>) and about 1.0% excess deaths in 2020 (<code>1121/1110-1</code>). So I guess an increase of 1236% sounds more exciting than an increase of 10.8 percentage points:</p>
+<div class="width6">
+<img src="i/statistic-king-18.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2)
+
+d=data.table(year=2005:2023)
+d$dead=c(934,819,844,847,866,851,824,882,900,979,893,940,964,1009,1055,1116,1257,1300,1358)
+d$dead2=c(rep(NA,10),891,933,960,1012,1059,1121,1229,1310,1392)
+d$base=c(rep(NA,10),884,929,974,1019,1064,1110,1155,1200,1245)
+
+p=d[,.(x=year,y=c(dead,dead2,base),z=rep(c(&quot;Original PDFs&quot;,&quot;McCullough paper&quot;,&quot;McCullough baseline&quot;),each=.N))]
+p[,z:=factor(z,unique(z))]
+
+anno=p[x%in%c(2020,2023)&amp;z!=z[1]]
+minus=4
+seg=as.matrix(anno[,.(x=x-minus,xend=x,y,yend=y)])
+seg=rbind(seg,t(matrix(t(anno[order(x)][,x:=x-minus][,-3]),4))[,c(1,3,2,4)])
+
+lab=cbind(anno[1:2,1:2],base=anno[3:4][[2]])
+lab=lab[,.(x,y=(y+base)/2,label=paste0(&quot;(&quot;,y,&quot; - &quot;,base,&quot;) / &quot;,base,&quot; ≈ &quot;,sprintf(&quot;%.1f&quot;,(y/base-1)*100),&quot;% excess deaths&quot;))]
+
+note=&quot;(1392/1245-1)-(1121/1110-1): increase of about 10.8 percentage points
+(1392-1245)/(1121-1110)-1: increase of about 1236% (misleading headline)&quot;
+
+xstart=2005;xend=2023;ybreak=pretty(c(0,p$y),7);ystart=0;yend=max(ybreak)
+xbreak=seq(xstart-.5,xend+.5,.5);xlab=ifelse(xbreak%%1==0,xbreak,&quot;&quot;)
+
+color=c(&quot;black&quot;,&quot;#ff5555&quot;,&quot;#ff5555&quot;)
+
+cap=&quot;Sources: kingcounty.gov/en/dept/dph/health-safety/health-centers-programs-services/emergency-
+medical-services/reports-publications, Hulscher et al. 2024, \&quot;Excess Cardiopulmonary Arrest and
+Mortality after COVID-19 Vaccination in King County, Washington\&quot;.&quot;
+
+sub=str_wrap(&quot;The number of deaths in the paper by McCullough foundation is slightly different from the original PDFs because in the paper the number of dead patients was calculated by multiplying the number of treated patients by the rounded percentage of patients who didn&#39;t survive, and not by subtracting the number of patients who didn&#39;t survive from the number of treated patients. In the paper the number of deaths in 2023 was a linear projection of the number of deaths in 2021 and 2022, but the actual number of deaths in 2023 which was published in September 2024 was slightly lower than the projection. The McCullough paper also erroneously used 18% instead of 16% as the percentage of survived patients in 2021.&quot;,80)
+
+ggplot(p,aes(x,y))+
+geom_hline(yintercept=c(0,yend),linewidth=.3,lineend=&quot;square&quot;)+
+geom_vline(xintercept=c(xstart-.5,xend+.5),linewidth=.3,lineend=&quot;square&quot;)+
+geom_line(aes(linewidth=z,color=z,linetype=z))+
+geom_segment(data=as.data.frame(seg),aes(x=x,xend=xend,y=y,yend=yend),lineend=&quot;square&quot;,linewidth=.3,color=color[2])+
+geom_text(data=lab,aes(x=x-minus-.2,label=label),hjust=1,color=color[2],size=2.4)+
+annotate(geom=&quot;label&quot;,x=2023,y=500,label=note,hjust=1,color=color[2],label.r=unit(0,&quot;pt&quot;),label.padding=unit(4,&quot;pt&quot;),label.size=.3,size=2.4)+
+annotate(geom=&quot;label&quot;,x=2023,y=500,label=note,hjust=1,fill=&quot;transparent&quot;,label.r=unit(0,&quot;pt&quot;),label.padding=unit(4,&quot;pt&quot;),label.size=0,size=2.4)+
+geom_point(aes(color=z,shape=z,alpha=z,size=z),stroke=.4)+
+labs(x=NULL,y=NULL,title=&quot;Yearly cardiac arrest deaths in King County EMS data&quot;,subtitle=sub,caption=cap)+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=xbreak,labels=xlab)+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+scale_color_manual(values=color)+
+scale_linetype_manual(values=c(&quot;solid&quot;,&quot;solid&quot;,&quot;42&quot;))+
+scale_linewidth_manual(values=c(.4,.4,.4))+
+scale_shape_manual(values=c(16,16,16))+
+scale_size_manual(values=c(.9,.9,1.4))+
+scale_alpha_manual(values=c(1,1,0))+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;horizontal&quot;,
+  legend.justification=c(1,.5),
+  legend.key=element_blank(),
+  legend.key.height=unit(10,&quot;pt&quot;),
+  legend.key.width=unit(18,&quot;pt&quot;),
+  legend.margin=margin(1,,4),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(1.5,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=7),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  plot.margin=margin(4,4,4,4),
+  plot.subtitle=element_text(size=6.5,margin=margin(,,3)),
+  plot.caption=element_text(size=5.7,margin=margin(4),hjust=0),
+  plot.title=element_text(size=7.5,face=&quot;bold&quot;,margin=margin(1,,4)))
+ggsave(&quot;1.png&quot;,width=3.8,height=3.8,dpi=400*4)
+system(&quot;magick 1.png -resize 25% 1.png&quot;)
+</pre>
+</div>
 <p>Peter Sweden also employed the trick in a Substack post where he said that there had been a 1101% increase in excess deaths in children. [<a href="https://skeptics.stackexchange.com/questions/53765/has-there-been-a-1101-increase-in-excess-deaths-among-children-aged-0-14-across">https://skeptics.stackexchange.com/questions/53765/has-there-been-a-1101-increase-in-excess-deaths-among-children-aged-0-14-across</a>] And USMortality used the same trick in one of his Substack posts, where he got about 11.2% excess deaths in 2022 and about 4.5% excess deaths in 2020, so he said there had been a 149% increase in excess deaths (because I guess an increase of 6.7 percentage points wouldn't have sounded as dramatic): [<a href="https://x.com/USMortality/status/1721410802857730423">https://x.com/USMortality/status/1721410802857730423</a>]</p>
 <div class="width5">
 <img src="i/statistic-king-14.jpg">

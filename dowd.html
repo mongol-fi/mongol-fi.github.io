@@ -4,7 +4,7 @@
 body{background:#292929;color:white;margin:6px 6px 6px max(6px, min(50vw - 270px, 100vw - 1100px))}
 body,td,th{font:14.5px/1.3 Arial,Helvetica,'Liberation Sans',sans-serif}
 p{max-width:540px}
-h1,h2,h2 a,h3 a,h2 a:visited,h3 a:visited{font-weight:normal;color:white}
+h1,h2,h3,h2 a,h3 a,h2 a:visited,h3 a:visited{font-weight:normal;color:white}
 h1{font-size:2.1em;margin-top:.9em}
 h2{font-size:1.7em}
 h3{font-size:1.3em}
@@ -18,7 +18,7 @@ table{border-collapse:collapse}
 td,th{border:1px solid #555;padding:2px 4px}
 th{background:#444;text-align:left;font-weight:bold}
 img{max-width:100%}
-blockquote{margin-left:0px;padding-left:40px;margin-right:0}
+blockquote{margin-left:0px;padding-left:40px;margin-right:0;overflow-x:hidden}
 blockquote p{max-width:480px}
 blockquote blockquote p{max-width:440px}
 blockquote blockquote blockquote p{max-width:400px}
@@ -82,7 +82,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <img src="i/debunk-dowd-4.jpg">
 </div>
 <p>In the screenshot above if you calculate the mortality rate for 2022 by dividing the 2022 deaths by the 2021 population size, it's <code>176784/16206075*1e5</code> which is about 1091, so it matches the plot in Dowd's preprint.</p>
-<p>However next I realized why Dowd's team got higher CMR in 2021 than 2020, which is that CDC WONDER uses population estimates based on the 2010 census for 2020 but population estimates based on the 2020 census from 2021 onwards. And if you look at the mid-2020 resident population estimate for ages 75 to 84, it was about 4% lower in the 2020-based vintage 2023 release than in the 2010-based vintage 2020 release:</p>
+<p>Next I figured out why Dowd's team got higher CMR in 2021 than 2020, which is that CDC WONDER uses population estimates based on the 2010 census for 2020 but population estimates based on the 2020 census from 2021 onwards. And if you look at the mid-2020 resident population estimate for ages 75 to 84, it was about 4% lower in the 2020-based vintage 2023 release than in the 2010-based vintage 2020 release:</p>
 <pre># vintage 2020 release based on 2010 census (used for CDC WONDER&#39;s population sizes in 2020)
 old=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/national/asrh/nc-est2020-agesex-res.csv&quot;)
 old[AGE%in%75:84&amp;SEX==0,sum(POPESTIMATE2020)]
@@ -181,8 +181,8 @@ ggsave(&quot;1.png&quot;,width=4,height=3,dpi=350*4)
 system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 </div>
 <p>In the plot above my magenta line in 2010-2020 is not perfectly equal to the population estimates used by CDC WONDER, but it's because I used vintage 2020 population estimates for 2010-2020, but CDC WONDER uses vintage 2015 estimates for 2015, vintage 2016 estimates for 2016, and so on.</p>
-<p>In the plot above the 2000-2010 intercensal population estimates are based on both 2000 and 2010 censuses, and they were adjusted to get rid of the jump between the 2000-based and 2010-based population estimates. CDC WONDER uses the 2000-2010 intercensal population estimates for the years 2000 to 2009, but the 2010-2020 intercensal population estimates are only scheduled to be published in 2025 after which they will probably replace the old 2010-based population estimates at CDC WONDER, so for now CDC WONDER suffers from the jump in population estimates between 2020 and 2021.</p>
-<p>However while we are waiting for the new intercensal population estimates to be published, I developed a fairly straightforward way to adjust the 2010-2020 estimates to get rid of the jump. For example in ages 75 to 84, the ratio between the 2020-based vintage 2023 estimate for 2020 and the 2010-based vintage 2020 estimate for 2020 is <code>15822264/16451547</code> which is about 0.9617. So therefore I'm multiplying the population estimate for 2011 by about <code>.9+.1*.9617</code>, the population estimate for 2012 by about <code>.8+.2*.9617</code>, and so on (or actually in the plot below I'm doing the multiplication separately for each single year of age and then adding together the results for each age, but it's nearly equivalent to doing the multiplication for ages 75-84 aggregated together):</p>
+<p>In the plot above the 2000-2010 intercensal population estimates are based on both 2000 and 2010 censuses, so the intercensal estimates were adjusted to get rid of the jump between the 2000-based and 2010-based population estimates. CDC WONDER uses the 2000-2010 intercensal population estimates for the years 2000 to 2009, so eventually CDC WONDER will probably replace the 2010-2020 population estimates with the 2010-2020 intercensal estimates once they get published, but they are only scheduled to be published in 2025 so for now CDC WONDER suffers from the sudden jump in population size between 2020 and 2021.</p>
+<p>However while we are waiting for the new intercensal population estimates to be published, I developed a fairly straightforward way to adjust the 2010-2020 estimates to get rid of the jump. For example in ages 75 to 84, the ratio between the 2020-based vintage 2023 estimate for 2020 and the 2010-based vintage 2020 estimate for 2020 is <code>15822264/16451547</code> which is about 0.9617. So therefore I'm multiplying the population estimate for 2011 by about <code>.9+.1*.9617</code>, the population estimate for 2012 by about <code>.8+.2*.9617</code>, and so on (or actually in the plot below I'm doing the multiplication separately for each single year of age and then adding together the results for each age, but it produces close to identical results to doing the multiplication for ages 75-84 aggregated together):</p>
 <div class="width7">
 <img src="i/dowd-popmult.png">
 </div>
@@ -358,10 +358,10 @@ sd=sd(d$excess[fitting]) # standard deviation of excess deaths during fitting pe
 d$sigma=d$excess/sd # z-score of excess deaths divided by standard deviation
 
 d$sigma[d$year==2022]
-# 6.024771 (sigma for 2022 deaths divided by 2022 population size)
+# 6.024771 (z-score for 2022 deaths divided by 2022 population size)
 
 (d$dead[d$year==2022]/d$pop[d$year==2021]*1e5-d$trend[d$year==2022])/sd
-# 22.16794 (sigma for 2022 deaths divided by 2021 population size)
+# 22.16794 (z-score for 2022 deaths divided by 2021 population size)
 
 print.data.frame(mutate_if(d,is.double,round,1),row.names=F)
 # year   dead      pop    cmr  trend excess sigma
@@ -426,12 +426,35 @@ print(round(d,1),r=F)
 <div class="width6">
 <img src="i/debunk-dowd-6.jpg">
 </div>
-<p>The next plot also shows how 2022 was the first year when the mid-year population estimates included a large number of people born after mid-1946 (I used the population sizes returned by CDC WONDER, where the population size of ages 75-84 fell between 2020 and 2021 due to the switch to the 2020-based population estimates, even though it's not too easy to see from this plot):</p>
+<p>The next plot shows how 2022 was the first year when the mid-year population of the age group 75-84 included a large number of people born after mid-1946:</p>
 <div class="width6">
 <img src="i/debunk-dowd-7.png">
 </div>
-<p>An annoying feature at CDC WONDER is that it doesn't return population sizes for monthly or weekly data but only yearly data. However the US Census Bureau has actually released monthly population estimates by single year of age, even though they seem to be interpolated from quarterly population estimates. [<a href="https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/">https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/</a>, <a href="https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/national/asrh/">https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/national/asrh/</a>] In the next plot in order to get rid of a jump in population estimates after the switch from the 2010-based to 2020-based population estimates, I used the same method as earlier to multiply the 2010-based population estimates with a linear slope so that they matched the 2020-based estimates in 2020. [<a href=ethical.html#Files_for_US_population_estimates_by_single_year_of_age_up_to_ages_100>ethical.html#Files_for_US_population_estimates_by_single_year_of_age_up_to_ages_100</a>]</p>
-<p>In the plot below I calculated the blue line so that I first did a linear regression for the CMR of each age, and then I multiplied the population size of the age by the projected trend in CMR to get the expected deaths for the age, and then I added together the expected deaths for all ages. The plot shows that there was a sharp turning point in the expected number of deaths around mid-2021, which was when the people born in mid-1946 started to turn 75:</p>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table)
+
+old=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/national/asrh/nc-est2020-agesex-res.csv&quot;)
+new=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/nc-est2023-agesex-res.csv&quot;)
+
+old=old[SEX==0&amp;AGE!=999,.(age=AGE,pop=unlist(.SD[,-(1:4)]),year=rep(2010:2020,each=.N))]
+new=new[SEX==0&amp;AGE!=999,.(age=AGE,pop=unlist(.SD[,-(1:3)]),year=rep(2020:2023,each=.N))]
+
+m=rbind(old[year&lt;2020],new)[age%in%65:84,xtabs(pop~year+age)]
+disp=m;disp[]=sprintf(&quot;%.1f&quot;,m/1e6)
+maxcolor=max(m)
+
+pheatmap::pheatmap(m,filename=&quot;1.png&quot;,display_numbers=disp,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=17,cellheight=17,fontsize=9,fontsize_number=8,
+  border_color=NA,
+  number_color=ifelse(m&gt;maxcolor*.45,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(0,maxcolor,,256),
+  colorRampPalette(sapply(seq(1,0,,256),\(i)rgb(i,i,i)))(256))
+
+system(&quot;pad=22;w=`identify -format %w 1.png`;magick \\( -size $[w-pad*2]x -font Arial-Bold -pointsize 42 caption:&#39;Mid-year US resident population estimate in millions by age and year&#39; -splice $[pad]x16 \\) \\( -size $[w-pad*2] -font Arial -pointsize 38 caption:&#39;Vintage 2020 estimates based on the 2010 census were used for 2010 to 2019, and vintage 2023 estimates based on the 2020 census were used for 2021 to 2023. Source: www2.census.gov/programs-surveys/popest/datasets/{2010-2020/national/asrh/nc- est2020,2020-2023/national/asrh/nc-est2023}-agesex-res.csv.&#39; -splice $[pad]x10 \\) 1.png -append 1.png&quot;)</pre>
+</div>
+<p>An annoying feature at CDC WONDER is that it doesn't return population sizes for monthly or weekly data but only yearly data. However the US Census Bureau has actually released monthly population estimates by single year of age, even though they seem to be interpolated from quarterly population estimates. [<a href="https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/">https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/</a>, <a href="https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/national/asrh/">https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/national/asrh/</a>] In the next plot in order to get rid of a jump in population estimates after the switch from the 2010-based to 2020-based population estimates, I used the same method as earlier to multiply the 2010-based population estimates with a linear slope so that they matched the 2020-based estimates in 2020. [<a href=ethical.html#Files_for_US_population_estimates_by_single_year_of_age_up_to_ages_100>ethical.html#Files_for_US_population_estimates_by_single_year_of_age_up_to_ages_100</a>] In the plot below I calculated the blue line so that I first did a linear regression for the CMR of each age, and then I multiplied the population size of the age by the projected trend in CMR to get the expected deaths for the age, and then I added together the expected deaths for all ages. The plot shows that there was a sharp turning point in the expected number of deaths around mid-2021, which was when the people born in mid-1946 started to turn 75:</p>
 <div class="width6">
 <img src="i/debunk-dowd-9.png">
 </div>
