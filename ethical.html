@@ -79,7 +79,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Deaths_with_kidney_related_MCD_in_ages_0_to_64>Deaths with kidney-related MCD in ages 0 to 64</a></li>
 <li><a href=#Excess_deaths_from_natural_causes>Excess deaths from natural causes</a></li>
 <li><a href=#Deaths_from_pneunomia_with_unspecified_organism>Deaths from pneunomia with unspecified organism</a></li>
-<li><a href=#Is_there_still_excess_mortality_from_all_causes_in_2024>Is there still excess mortality from all causes in 2024?</a></li>
+<li><a href=#Is_there_still_excess_all_cause_mortality_in_2024>Is there still excess all-cause mortality in 2024?</a></li>
 </ul>
 
 <h2>
@@ -1906,11 +1906,11 @@ ggsave(&quot;1.png&quot;,width=5.5,height=2.2,dpi=400)</pre>
 <p>The following code corrects these shortcomings of the population estimates returned by CDC WONDER:</p>
 <ul>
 <li>CDC WONDER takes about a year to add the new resident population estimates published by the US Census Bureau. For example the Census Bureau published mid-year resident population population for 2023 in December 2023, but as of October 2024 CDC WONDER was still using the 2022 population estimates for 2023.</li>
-<li>CDC WONDER doesn't return population sizes for ages 85 and above, even though the US Census Bureau has published population estimates by single year of age up to ages 100+ from the year 2010 onwards. (The 2000-2010 population estimates by single year of age only go up to ages 85+ however, so in the following code I only included population estimates for 2010 and later years.)</li>
-<li>CDC WONDER uses population estimates based on the 2010 census for 2010 to 2020 but population estimates based on the 2020 census for 2021 and later years, so some age groups have a big jump in the population size between 2020 and 2021. The same problem does not exist between the switch from the estimates based on the 2000 census to the estimates based on the 2010 census, because CDC WONDER uses 2000-2010 intercensal estimates for 2000-2009 which have eliminated the jump in population size between 2010 and 2011, but the 2010-2020 intercensal estimates are not scheduled to be published until 2025.</li>
-<li>CDC WONDER uses vintage 2021 population estimates for 2021, vintage 2022 estimates for 2022, and so on, even though in later vintages the earlier estimates have often been revised considerably which might be because more mortality data had become available, and the Census Bureau recommends people to use the latest-vintage estimates.</li>
+<li>CDC WONDER doesn't return population sizes for ages 85 and above, even though the US Census Bureau has published population estimates by single year of age up to ages 100+ for 2010 and later years. (The 2000-2010 population estimates by single year of age only go up to ages 85+ however, so in the following code I only included population estimates for 2010 and later years.)</li>
+<li>CDC WONDER uses population estimates based on the 2010 census for 2010 to 2020 but population estimates based on the 2020 census for 2021 and later years, so some age groups have a big jump in the population size between 2020 and 2021. The same problem does not exist between the switch from the estimates based on the 2000 census to the estimates based on the 2010 census, because CDC WONDER uses 2000-2010 intercensal estimates for 2000-2009 which were modified to eliminate the jump in population size between 2010 and 2011, but the 2010-2020 intercensal estimates are not scheduled to be published until 2025.</li>
+<li>CDC WONDER uses vintage 2021 population estimates for 2021, vintage 2022 estimates for 2022, and so on, even though in later vintages the earlier estimates have often been revised considerably, and the Census Bureau recommends people to generally use the latest-vintage estimates.</li>
 </ul>
-<p>The following code downloads the 2020-2023 resident population estimates that are based on the 2020 census and the 2010-2020 resident population estimates that are based on the 2010 census: <a href="https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/">https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/</a>, <a href="https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/national/asrh/">https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/national/asrh/</a>.</p>
+<p>The following code downloads the 2020-2023 resident population estimates that are based on the 2020 census and the 2010-2020 resident population estimates that are based on the 2010 census: <a href="https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/">https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/</a>, <a href="https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/national/asrh/">https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/national/asrh/</a>. I also included mid-year population projections for 2024 and 2025: <a href="https://www2.census.gov/programs-surveys/popproj/datasets/2023/2023-popproj/">https://www2.census.gov/programs-surveys/popproj/datasets/2023/2023-popproj/</a>.</p>
 <p>In order to get rid of a sudden jump in the population estimates at the point when the new and old estimates are merged, the old estimates are multiplied by a linear slope so that they are the same in 2020 as the new estimates. For example for the age 80, the vintage 2023 population estimate for 2020 is 1,450,396 and the vintage 2020 estimate for 2020 is 1,526,957, so their ratio is about 0.9499, so I'm multiplying the old estimate by about <code>.9+.1*0.9499</code> for 2011, by about <code>.8+.2*0.9499</code> for 2012, and so on. (However a slight problem with my approach is that the mid-year population estimates for 2020 had already been reduced by COVID deaths, so COVID deaths in the first half of 2020 are reflected in the slope by which the population estimates for 2011 to 2019 are multiplied.)</p>
 <pre>old=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/national/asrh/nc-est2020-agesex-res.csv&quot;)
 new=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/nc-est2023-agesex-res.csv&quot;)
@@ -1924,12 +1924,41 @@ o=merge(merge(old[year==2020,.(age,old=pop)],new[year==2020,.(age,new=pop)])[,.(
 # multiply old population estimates by a linear slope so they match new estimates in 2020
 o=rbind(o[year!=2020,.(year,age,pop=round(pop*(1-(((year-2010)/10))*(1-ratio))))],new)
 
+# include population projections for 2024-2025
+proj=fread(&quot;https://www2.census.gov/programs-surveys/popproj/datasets/2023/2023-popproj/np2023_d1_mid.csv&quot;)
+proj=proj[SEX==0&amp;ORIGIN==0&amp;RACE==0&amp;YEAR%in%2024:2025,.(year=YEAR,age=rep(0:100,each=.N),pop=unlist(.SD[,-(1:5)]))]
+o=rbind(o,proj)
+
 # add a column for yearly deaths for the sake of convenience in calculating prepandemic mortality trends
-dead=fread(&quot;usyearlydead.csv&quot;)[year!=2024] # from CDC WONDER
-o=merge(o,dead,all=T)
+o=merge(o,fread(&quot;d/cd/usyearlydead.csv&quot;),all=T)
 
 fwrite(o[order(year,age)],&quot;uspopdead.csv&quot;,na=&quot;&quot;)</pre>
-<p>I uploaded the output here: <a href=f/uspopdead.csv>f/uspopdead.csv</a>. This is a similar file for monthly data: <a href=f/uspopdeadmonthly.csv>f/uspopdeadmonthly.csv</a>. Both files are used in some of my scripts on this page.</p>
+<p>I uploaded the output here: <a href=f/uspopdead.csv>f/uspopdead.csv</a>.</p>
+<p>The next script generates a similar file for monthly data. The script also includes population projections for 2024 and 2025, which were calculated by doing a spline interpolation of the population estimate on December 2023 and the Census Bureau's mid-year population projections for 2024 to 2026. I uploaded the output here: <a href=f/uspopdeadmonthly.csv>f/uspopdeadmonthly.csv</a>.</p>
+<pre>url=&quot;https://www2.census.gov/programs-surveys/popest/datasets/&quot;
+new=do.call(rbind,lapply(paste0(url,&quot;2020-2023/national/asrh/nc-est2023-alldata-r-file0&quot;,1:8,&quot;.csv&quot;),\(x)fread(x)))
+old=do.call(rbind,lapply(paste0(url,&quot;2010-2020/national/asrh/NC-EST2020-ALLDATA-R-File&quot;,sprintf(&quot;%02d&quot;,1:24),&quot;.csv&quot;),\(x)fread(x)))
+
+mult=new[YEAR==2020&amp;MONTH==4.2,.(age=AGE,new=TOT_POP)]
+mult=merge(mult,old[YEAR==2020&amp;MONTH==4,.(age=AGE,old=TOT_POP)])[,.(mult=new/old,age)]
+
+oldpop=old[YEAR!=2021&amp;MONTH!=4.2&amp;AGE!=999,.(year=YEAR,month=floor(MONTH),pop=TOT_POP,age=AGE)]
+newpop=new[AGE!=999,.(year=YEAR,month=floor(MONTH),pop=TOT_POP,age=AGE)]
+
+oldmod=oldpop[!(year==2020&amp;month&gt;4)]
+oldmod=merge(mult,oldmod[,.(year,month,pop,slope=seq(0,1,,.N)),age])
+oldmod=oldmod[,.(age,year,month,pop=pop*(slope*mult+(1-slope)*1))]
+
+proj=fread(&quot;https://www2.census.gov/programs-surveys/popproj/datasets/2023/2023-popproj/np2023_d1_mid.csv&quot;)
+proj=proj[SEX==0&amp;ORIGIN==0&amp;RACE==0&amp;YEAR%in%2024:2026,.(x=seq(7,,12,3),age=rep(0:100,each=.N),pop=unlist(.SD[,-(1:5)]))]
+proj=rbind(newpop[year==2023&amp;month==12,.(x=0,pop,age)],proj)
+proj=proj[,spline(x,pop,xout=1:24),age][,.(age,year=rep(2024:2025,each=.N),month=1:12,pop=round(y))]
+
+pop=rbind(oldmod,newpop,proj)
+dead=fread(&quot;http://sars2.net/f/usdeadmonthly.csv&quot;) # downloaded from CDC WONDER in November 2024
+o=merge(dead,pop,all=T)[,date:=sprintf(&quot;%d-%02d&quot;,year,month)][,.(age,year,month,date,dead,pop)]
+o[,persondays:=pop*lubridate::days_in_month(as.Date(paste0(date,&quot;-1&quot;)))]
+fwrite(o,&quot;uspopdeadmonthly.csv&quot;,na=&quot;&quot;)</pre>
 <p>This shows that particularly ages 90+ have a huge jump in population size between the switch from the estimates based on the 2010 census to the estimates based on the 2020 census:</p>
 <div class="width7">
 <img src="i/ethical-popmerge.png">
@@ -2023,18 +2052,14 @@ t2[age%in%80:84&amp;year==2021,sum(pop)]
 <div class="width7">
 <img src="i/ethical-popest.png">
 </div>
-<p>So if you need to combine my files with older population estimates for 2000-2009, you can just use the intercensal estimates. The seem to only be available by 5-year age groups up to ages 100+ on the website of the Census Bureau. But I don't know if CDC WONDER was given unpublished intercensal population estimates by single year of age, because their population estimates by single year of age seem to match the published intercensal estimates by 5-year age groups:</p>
-<pre>&gt; t=fread(&quot;https://www2.census.gov/programs-surveys/popest/tables/2000-2010/intercensal/national/us-est00int-01.csv&quot;,header=F)
-&gt; t[16,12] # aggregate value for ages 50 to 54 in 2000-2010 intercensal resident population estimates for 2009
-          V12
-1: 22,004,843
-&gt; t2=fread(&quot;https://www2.census.gov/programs-surveys/popest/tables/2000-2009/national/asrh/nc-est2009-01.csv&quot;)
-&gt; t2[24,2] # aggregate value for ages 50 to 54 in vintage 2009 resident population estimates for 2009
-           V2
-1: 21,761,391
-&gt; t3=fread(&quot;http://sars2.net/f/wondercanceryearlysingle.csv&quot;)
-&gt; t3[year==2009&amp;age%in%50:54,sum(pop)] # single years of age between 50 to 54 added together at CDC WONDER; matches intercensal estimates
-[1] 22004843</pre>
+<p>So if you need to combine my files with older population estimates for 2000-2009, you can just use the intercensal estimates. This file has population estimates by single year of age up to ages 85+: <a href="https://www2.census.gov/programs-surveys/popest/datasets/2000-2010/intercensal/national/us-est00int-alldata.csv">https://www2.census.gov/programs-surveys/popest/datasets/2000-2010/intercensal/national/us-est00int-alldata.csv</a>. This file has population estimates by 5-year age groups up to ages 100+: <a href="https://www2.census.gov/programs-surveys/popest/tables/2000-2010/intercensal/national/us-est00int-01.csv">https://www2.census.gov/programs-surveys/popest/tables/2000-2010/intercensal/national/us-est00int-01.csv</a>. Both files are identical to the population sizes used by CDC WONDER:</p>
+<pre>inter1=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2000-2010/intercensal/national/us-est00int-alldata.csv&quot;)
+inter5=fread(&quot;https://www2.census.gov/programs-surveys/popest/tables/2000-2010/intercensal/national/us-est00int-01.csv&quot;)
+wonder=fread(&quot;http://sars2.net/f/wondercanceryearlysingle.csv&quot;)
+
+inter1[YEAR==2009&amp;MONTH==7&amp;AGE%in%70:74,sum(TOT_POP)] # 9140722
+inter5[which(inter5[[1]]==&quot;.70 to 74 years&quot;)[1],unlist(.SD),.SDcols=which(inter5[4]==2009)] # &quot;9,140,722&quot;
+wonder[year==2009&amp;age%in%70:74,sum(pop)] # 9140722</pre>
 <h2>
 <a href=#Cancer_deaths_by_age_group id=Cancer_deaths_by_age_group>Cancer deaths by age group</a>
 </h2>
@@ -2597,7 +2622,7 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
 ggsave(&quot;1.png&quot;,width=4.6,height=2.9,dpi=400*4)
 system(&quot;mogrify -resize 25% 1.png&quot;)</pre>
 </div>
-<p>Ethical Skeptic's unadjusted baseline is similar to my blue baseline in the plot above and his PFE-adjusted baseline is a much more extreme version of my green baseline. By 2023 my green baseline has risen close to the blue baseline, but Ethical Skeptic's PFE-adjusted baseline is so low in 2023 that it's lower than his unadjusted baseline in 2018. I think his adjustment for mortality displacement is too heavy, and in addition to the PFE adjustment he should also adjust his baseline upwards because of the changing age structure.</p>
+<p>Ethical Skeptic's unadjusted baseline is similar to my blue baseline in the plot above and his PFE-adjusted baseline is a much more extreme version of my green baseline. By 2023 my green baseline has risen close to the blue baseline, but Ethical Skeptic's PFE-adjusted baseline is so low in 2023 that it's about as low as his unadjusted baseline was in 2018. I think his adjustment for mortality displacement is too heavy, and in addition to the PFE adjustment he should also adjust his baseline upwards because of the changing age structure.</p>
 <p>If Ethical Skeptic would plot ASMR instead of raw deaths, then he wouldn't even need to adjust for PFE to account for the reduction in population size due to COVID deaths. In the next plot which shows ASMR from natural causes, I got only about -0.1% total excess ASMR in 2023:</p>
 <div class="width7">
 <img src="i/ethical-naturalall-3.png">
@@ -2953,7 +2978,7 @@ system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 <img src="i/ethical-mycoplasma-5.png">
 </div>
 <h2>
-<a href=#Is_there_still_excess_mortality_from_all_causes_in_2024 id=Is_there_still_excess_mortality_from_all_causes_in_2024>Is there still excess mortality from all causes in 2024?</a>
+<a href=#Is_there_still_excess_all_cause_mortality_in_2024 id=Is_there_still_excess_all_cause_mortality_in_2024>Is there still excess all-cause mortality in 2024?</a>
 </h2>
 <p>Jeffrey Morris posted this plot by Truth in Numbers where the ASMR in 2024 was below the 2018-2019 average baseline: [<a href="https://x.com/jsm2334/status/1859343221677068406">https://x.com/jsm2334/status/1859343221677068406</a>]</p>
 <div class="width7">
@@ -2971,7 +2996,7 @@ system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 <div class="width6">
 <img src="i/ethical-allcause-6.png">
 </div>
-<p>In the next plot I adjusted the 2010-2020 population estimates using the same method as in the gray lines in my plot above. It reduced my total excess ASMR in 2024 from about 4.1% to about -1.7%, so it was a fairly large change of about 6 percentage points:</p>
+<p>In the next plot I adjusted the 2010-2020 population estimates using the same method as in the gray lines in my plot above. It reduced my total excess ASMR in 2024 from about 1.0% to about -4.6%:</p>
 <div class="width7">
 <img src="i/ethical-allcause-3.png">
 </div>
@@ -2990,32 +3015,35 @@ mult=merge(mult,old[YEAR==2020&amp;MONTH==4,.(age=AGE,old=TOT_POP)])[,.(mult=new
 oldpop=old[YEAR!=2021&amp;MONTH!=4.2&amp;AGE!=999,.(year=YEAR,month=floor(MONTH),pop=TOT_POP,age=AGE)]
 newpop=new[AGE!=999,.(year=YEAR,month=floor(MONTH),pop=TOT_POP,age=AGE)]
 
+proj=fread(&quot;https://www2.census.gov/programs-surveys/popproj/datasets/2023/2023-popproj/np2023_d1_mid.csv&quot;)
+proj=proj[SEX==0&amp;ORIGIN==0&amp;RACE==0&amp;YEAR%in%2024:2025,.(x=c(7,19),age=rep(0:100,each=.N),pop=unlist(.SD[,-(1:5)]))]
+proj=rbind(newpop[year==2023&amp;month==12,.(x=0,pop,age)],proj)
+newpop=rbind(newpop,proj[,spline(x,pop,xout=1:12),age][,.(age,year=2024,month=x,pop=y)])
+
 oldmod=oldpop[!(year==2020&amp;month&gt;4)]
 oldmod=merge(mult,oldmod[,.(year,month,pop,slope=seq(0,1,,.N)),age])
 oldmod=oldmod[,.(age,year,month,pop=pop*(slope*mult+(1-slope)*1))]
 
 a=cbind(rbind(oldpop[!(year==2020&amp;month&gt;=4)],newpop),group=&quot;Original unmodified population estimates&quot;)
 a=rbind(a,cbind(rbind(oldmod[!(year==2020&amp;month==4)],newpop),group=&quot;Population estimates for 2010 to March 2020 multiplied by linear slope&quot;))
-a=a[,.(date=sprintf(&quot;%d-%02d&quot;,year,month),pop,age,group)]
-a=rbind(a,a[date==&quot;2023-12&quot;,.(pop,age,group,date=rep(sprintf(&quot;%d-%02d&quot;,2024,1:12),each=.N))])
 
-a=merge(a,fread(&quot;d/cd/usdeadmonthly.csv&quot;)[date&lt;=&quot;2024-09&quot;])
+a=merge(a,fread(&quot;http://sars2.net/f/usdeadmonthly.csv&quot;)[!(year==2024&amp;month&gt;9)])
 
 census=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/nc-est2023-agesex-res.csv&quot;)
 census=census[SEX==0&amp;AGE!=999,.(age=AGE,std=ESTIMATESBASE2020)][,std:=std/sum(std)]
 a=merge(census,a)
-a[,date:=as.Date(paste0(date,&quot;-1&quot;))]
+a[,date:=as.Date(paste0(year,&quot;-&quot;,month,&quot;-1&quot;))]
 a[,group:=factor(group,unique(group))]
+a[,pop:=pop*days_in_month(date)]
 
-p=a[,.(asmr=sum(dead/pop/days_in_month(date)*std*365e5)),.(date,group)]
+p=a[,.(asmr=sum(dead/pop*std*365e5)),.(date,group)]
 
-p=merge(p[year(date)%in%2011:2019,.(date=unique(p$date),base=predict(lm(asmr~date),.(date=unique(p$date)))),group],p)
+p=merge(p[year(date)%in%2011:2019&amp;month(date)%in%5:9,.(date=unique(p$date),base=predict(lm(asmr~date),.(date=unique(p$date)))),group],p)
 p[,month:=month(date)]
 p=merge(p[year(date)%in%2011:2019,.(monthly=mean(asmr-base)),month],p)
 
-yearly=a[,.(pop=mean(pop),dead=sum(dead)),.(age,std,group,year=year(date))]
-yearly[year==2024,pop:=pop/4*3]
-yearly=yearly[,.(asmr=sum(dead/pop*std*1e5)),.(year,group)]
+yearly=a[,.(pop=sum(pop),dead=sum(dead)),.(age,std,group,year=year(date))]
+yearly=yearly[,.(asmr=sum(dead/pop*std*365e5)),.(year,group)]
 yearly=merge(yearly[year%in%2011:2019,.(year=2011:2024,base=predict(lm(asmr~year),.(year=2011:2024))),group],yearly)
 
 pct=yearly[,.(pct=(sum(asmr)/sum(base)-1)*100),.(year,group)][,x:=as.Date(paste0(year,&quot;-7-1&quot;))]
@@ -3029,13 +3057,14 @@ xstart=as.Date(&quot;2017-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
 xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=ifelse(month(xbreak)==7,year(xbreak),&quot;&quot;)
 
 sub=&quot;\u00a0     The data for deaths was retrieved from CDC WONDER on November 21st 2024 UTC, so some deaths are still missing in 2024 because of a registration delay.
-      The percentage above the year shows the yearly total excess mortality percentage, which was calculated based on yearly data so that only the first 9 months of 2024 were included.
+      The percentage above the year shows the yearly total excess mortality percentage.
       ASMR was calculated by single year of age so that the resident population estimates from the 2020 census were used as the standard population.
-      The baseline was calculated by doing a linear regression for monthly data in 2011 to 2019. In order to calculate the seasonality-adjusted baseline, the average difference between the actual ASMR and baseline during each January of 2011 to 2019 was added to the baseline for each January, and similarly for other months.
+      The baseline was calculated by doing a linear regression for monthly data in 2011 to 2019. Only May to September were included in the linear regression. In order to calculate the seasonality-adjusted baseline, the average difference between the actual ASMR and baseline during each January of 2011 to 2019 was added to the baseline for each January, and similarly for other months.
       Monthly resident population estimates by single year of age were downloaded from www2.census.
 gov/programs-surveys/popest/datasets/2020-2023/national/asrh/nc-est2023-alldata-r-file0[1-8].csv, and from the corresponding files in the 2010-2020 directory.
-      In the top panel vintage 2023 population estimates are used for April 2020 to December 2023 and vintage 2020 population estimates are used for January 2011 to March 2020. The population estimates in December 2023 are used for each month of 2024.
-      In the bottom panel the population estimates based on the 2010 census were multiplied by a linear slope so that they were equal to the population estimates based on the 2020 census in April 2020 when the two sets of estimates were merged. The old estimates covered a total of 121 months from April 2010 until April 2020, and for example for the age 80 the ratio between the new and old estimates was about 0.946, so the population estimate for age 80 was multiplied by about 1/121*0.946+120/121 in May 2010, by about 2/121*0.946+119/121 in June 2010, and so on.&quot;
+      In the top panel vintage 2023 population estimates are used for April 2020 to December 2023 and vintage 2020 population estimates are used for January 2011 to March 2020.
+      In the bottom panel the population estimates based on the 2010 census were multiplied by a linear slope so that they were equal to the population estimates based on the 2020 census in April 2020 when the two sets of estimates were merged. The old estimates covered a total of 121 months from April 2010 until April 2020, and for example for the age 80 the ratio between the new and old estimates was about 0.946, so the population estimate for age 80 was multiplied by about 1/121*0.946+120/121 in May 2010, by about 2/121*0.946+119/121 in June 2010, and so on.
+     Monthly population estimates for 2024 were calculated as a spline interpolation of the population estimate on December 2023 and mid-year population projections for 2024 and 2025: www2.census.gov/programs-surveys/popproj/datasets/2023/2023-popproj/np2023_d1_mid.csv.&quot;
 
 ggplot(p,aes(x=x+14,y))+
 facet_wrap(~group,ncol=1,dir=&quot;v&quot;,scales=&quot;free&quot;)+
@@ -3087,12 +3116,12 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   strip.text=element_text(size=7,face=2,margin=margin(,,2)))
 ggsave(&quot;1.png&quot;,width=4.7,height=3.9,dpi=400*4)
 system(paste0(&quot;mar=120;w=`identify -format %w 1.png`;magick 1.png \\( -size $[w-mar*2]x -font Arial -interline-spacing -4 -pointsize 152 caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\&#39;&quot;,sub),&quot;&#39; -gravity southwest -splice $[mar]x70 \\) -append 1.png&quot;))
-system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
+system(&quot;magick 1.png -resize 25% -colorspace Gray -colors 16 1.png&quot;)</pre>
 </div>
-<p>Ethical Skeptic would probably complain that in the plot above I didn't adjust my baseline for PFE. But I used ASMR which accounts for the reduction in population size due to COVID deaths. And Ethical Skeptic should not only adjust his baseline downwards to account for mortality displacement, but he should also adjust his baseline upwards to account for the changing age structure of the population.</p>
+<p>Ethical Skeptic would probably complain that in the plot above I didn't adjust my baseline for PFE. But I used ASMR which accounts for the reduction in population size due to COVID deaths. And Ethical Skeptic should not only adjust his baseline downwards to account for mortality displacement, but he should also adjust his baseline upwards to account for the changing age structure of the population. Ethical Skeptic seems to apply some kind of subjective judgment to determine the shape and magnitude of his so-called PFE arrival function, and I believe he hasn't published any code or methodology that would allow other people to reproduce his PFE-adjusted baseline exactly. But in contrast ASMR is easy to calculate objectively in a way that different authors end up getting identical results.</p>
 <p>USMortality implemented the same method I used above to adjust the 2010-2020 population estimates at Mortality Watch, after which he now also gets negative excess mortality for the United States in 2024: [<a href="https://x.com/USMortality/status/1856489943519920218">https://x.com/USMortality/status/1856489943519920218</a>]</p>
 <div class="width6">
-<img src="i/ethical-allcause-4.jpg">
+<img src="i/ethical-allcause-4.png">
 </div>
 <p>In the plot above USMortality used a 2017-2019 average baseline, but even when I changed the baseline to a 2011-2019 linear regression, I still got negative excess ASMR during each of the first three quarters of 2024: [<a href="https://www.mortality.watch/explorer/?c=USA&ct=quarterly&df=2018%2520Q1&bf=2011%2520Q1&bm=lin_reg">https://www.mortality.watch/explorer/?c=USA&amp;ct=quarterly&amp;df=2018%2520Q1&amp;bf=2011%2520Q1&amp;bm=lin_reg</a>]</p>
 <div class="width7">
