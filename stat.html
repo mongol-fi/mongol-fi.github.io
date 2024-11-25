@@ -1218,11 +1218,11 @@ system(&quot;mogrify -trim 0.png;convert 0.png -gravity northwest -splice x10 -s
 <p>CDC WONDER is an interface for making queries of the data from the National Vital Statistics System of the CDC. The data from NVSS has also been published here as fixed-width plain text files: <a href="https://www.cdc.gov/nchs/data_access/vitalstatsonline.htm#Mortality_Multiple">https://www.cdc.gov/nchs/data_access/vitalstatsonline.htm#Mortality_Multiple</a>. CDC's website only has links for downloading the data for the 7 most recent years, but you can download data for earlier years by simply replacing the year number in the URL.</p>
 <p>In the files the fields for county and state have been omitted for privacy reasons, and week of death is not available. But the files make it possible to avoid CDC WONDER's suppression of deaths when the number of deaths is less than 10. And they also contain information about which line of the death certificate each cause of appeared on, and you can see which causes of death are connected to the same person.</p>
 <p>When I exclude lines where column 20 for resident status is not 4 for foreign residents, the number of deaths in the files seems to be identical to the number of deaths returned by CDC WONDER.</p>
-<p>This downloads the file for 2022, filters out foreign residents, and prints the count of deaths for each combination of year and month of death, age, and UCD:</p>
+<p>This downloads the file for 2022, filters out foreign residents, and prints the count of deaths for each combination of year of death, month of death, age, and UCD:</p>
 <pre>$ wget https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/mortality/mort2022us.zip
 $ unzip mort2022us.zip
-$ awk &#39;{if(substr($0,20,1)==4)next;a[substr($0,102,4)&quot;,&quot;substr($0,65,2)&quot;,&quot;substr($0,71,3)&quot;,&quot;substr($0,146,4)]++}ENDFILE{for(i in a)print i&quot;,&quot;a[i];delete a}&#39; VS22MORT.DUSMCPUB_r20240307|head
-2022,12,054,W69 ,4
+$ awk &#39;{if(substr($0,20,1)==4)next;agetype=substr($0,70,1)==1;a[substr($0,102,4),substr($0,65,2),agetype==1||agetype==9?substr($0,71,3):0,substr($0,146,4)]++}ENDFILE{for(i in a)print i,a[i];delete a}&#39; {OFS,SUBSEP}=, VS22MORT.DUSMCPUB_r20240307|head
+2022,12,054,W69 ,4 # year month age UCD count
 2022,05,028,V872,1
 2022,05,074,I514,1
 2022,07,092,M259,1
@@ -1232,6 +1232,7 @@ $ awk &#39;{if(substr($0,20,1)==4)next;a[substr($0,102,4)&quot;,&quot;substr($0,
 2022,06,057,C509,60
 2022,06,041,C434,1
 2022,05,074,I516,26</pre>
+<p>The age field is 4 digits long, where it starts with 1 followed by the age in years for people who died at age 1 or above, with 9 for age not stated, and with 2, 4, 5, or 6 for infant deaths at age 0.</p>
 <p>This page has CSV versions of the data: <a href="https://www.nber.org/research/data/mortality-data-vital-statistics-nchs-multiple-cause-death-data">https://www.nber.org/research/data/mortality-data-vital-statistics-nchs-multiple-cause-death-data</a>. It's missing CSV files for 2021 and 2022 but you can use the following code to convert the fixed-width files for 2021 and 2022 to CSV. The following code downloads all CSV files starting from 1999, because the files for earlier years use ICD-9 instead of ICD-10 codes. And it then makes gzipped CSV files for a subset of columns from the files:</p>
 <pre># the downloads from nber.org were very slow so this launches parallel processes to download the files
 parallel wget -j30 ::: $(for i in {1999..2017};do echo https://data.nber.org/mortality/$i/mort$i.csv.zip;done) https://data.nber.org/nvss/mortality/csv/Mort20{18..20}US.PubUse.csv https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/mortality/mort202{1,2}us.zip
