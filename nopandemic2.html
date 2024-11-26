@@ -136,7 +136,7 @@ t=na.omit(data.table(readxl::read_excel(&quot;Table01.xlsx&quot;,skip=2)))
 coviddead=c(363,116,46,41,39,30,38,32,33,47,40,35,41,56,51,97,88,130,162,210,255,288,367,407,499,530,620,707,819,979,1112,1255,1329,1441,1607,1703,1850,2066,2237,2502,2713,2987,3253,3486,3942,4197,4610,4912,5686,6278,7075,7365,8017,8227,8942,9822,11084,11748,12866,14070,15174,16061,17259,18347,19229,20037,20443,20874,22012,22623,23586,24446,25783,27417,27760,26024,26237,27531,28188,27690,27437,27093,27200,27223,26753,26849,26190,25121,24827,24104,22756,21336,19309,17787,15069,12656,10416,8337,6321,4626,8773)
 
 weighted.mean(t$ex,coviddead) # 14.50457</pre>
-<p>Next I made the simulation below using data from ISTAT and Eurostat: <a href="http://dati.istat.it/Index.aspx?QueryId=42869&lang=en">http://dati.istat.it/Index.aspx?QueryId=42869&amp;lang=en</a>, <a href="https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/demo_r_mwk3_t?format=TSV">https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/demo_r_mwk3_t?format=TSV</a>. I used similar methodology as USMortality here: <a href="https://x.com/USMortality/status/1861154850102247849">https://x.com/USMortality/status/1861154850102247849</a>. Except unlike USMortality, I didn't simulate different people having different levels of health. When I simply assigned a fixed health multiplier to each person, the people with poor health tended to die at the start of the simulation which artificially elevated deaths at the start of the simulation compared to the end of the simulation. So I should've also modeled the health status of people getting worse over time so that over time new people would've gradually entered the verge of death, but it seemed too difficult to model realistically. But anyway, here in the red scenario where I simulated a spike in excess deaths in spring 2020, I got only about 4% less deaths in 2021-2024 than in the black scenario without the spike:</p>
+<p>Next I made the simulation below using data from ISTAT and Eurostat: <a href="http://dati.istat.it/Index.aspx?QueryId=42869&lang=en">http://dati.istat.it/Index.aspx?QueryId=42869&amp;lang=en</a>, <a href="https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/demo_r_mwk3_t?format=TSV">https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/demo_r_mwk3_t?format=TSV</a>. I used similar methodology as USMortality here: <a href="https://x.com/USMortality/status/1861154850102247849">https://x.com/USMortality/status/1861154850102247849</a>. Except unlike USMortality, I didn't simulate different people having different levels of health. When I simply assigned a fixed health multiplier to each person, the people with poor health tended to die at the start of the simulation which artificially elevated deaths at the start of the simulation compared to the end of the simulation. So I should've also modeled the health status of people getting worse over time so that over time new people would've gradually entered the verge of death, but it seemed too difficult to model realistically. But anyway, here in the red scenario where I simulated a spike in excess deaths in spring 2020, I got only about 3% less deaths in 2021-2024 than in the black scenario without the spike:</p>
 <div class="width6">
 <img src="i/np-bergamo-sim-1.png">
 </div>
@@ -156,7 +156,7 @@ mult=d[year==2020&amp;week%in%9:19,dead/(trend+weekly)]
 pop=c(7406,7625,7880,7909,8570,8867,9439,9725,9850,10350,10545,10991,11427,11617,11950,11864,11816,11905,11706,11809,11864,11769,11942,12225,11878,12078,12004,11527,11715,11477,11525,11993,11984,12231,12064,12631,12406,12205,12752,13256,13417,13627,14005,14351,14612,15773,16026,16577,17824,18126,18084,18163,17907,18161,18285,18240,18270,18805,18653,18690,17266,16377,15528,15325,14804,14145,13294,13184,12725,12372,12000,11680,11546,12114,11851,11748,10684,10850,8014,8288,7876,7855,7494,7977,7060,6379,5353,4372,4140,3445,2908,2471,2016,1701,1185,908,660,456,294,229,281)
 
 life=fread(&quot;http://sars2.net/f/bergamolifetable.csv&quot;)
-cmr=life[,sum(deaths)/sum(survivors),.(age=pmin(age,100))]$V1/52
+cmr=life[,sum(deaths)/(sum(deaths)+sum(survivors)),.(age=pmin(age,100))]$V1/52
 
 simweeks=52*7
 weekmult=rep(1,simweeks);weekmult[113:123]=mult
@@ -188,7 +188,7 @@ sum2=sim[week&gt;156,colSums(.SD)]
 note=stringr::str_wrap(sprintf(&quot;The scenario with the high-mortality event has %.1f%% more deaths in 2020 and %.1f%% less deaths in 2021 to 2024.&quot;,(sum[2]/sum[3]-1)*100,(sum2[3]/sum2[2]-1)*100),32)
 
 xstart=1;xend=simweeks+1;xbreak=seq(xstart,xend,26);xlab=c(rbind(&quot;&quot;,2018:2024),&quot;&quot;)
-ybreak=pretty(c(0,p$y),8);ystart=0;yend=max(p$y)+.02
+ybreak=pretty(c(0,p$y),8);ystart=0;yend=max(p$y)
 
 ggplot(p,aes(x,y))+
 geom_rect(xmin=113,xmax=123,ymin=0,ymax=yend,fill=&quot;#ffe5e5&quot;)+
