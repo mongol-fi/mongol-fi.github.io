@@ -124,19 +124,36 @@ me[age&gt;=50,weighted.mean(expectancy,excess)] # 12.98951 (life expectancy for 
 <img src="i/np-bergamo-pfe-arrival.png">
 </div>
 <p>However if the mean life expectancy of people who died in excess in NYC in 2020 was about 15 years, many of the people aren't expected to have died even 15 years after 2020, so the PFE adjustment should last much longer than until the end of October 2027.</p>
-<p>Ethical Skeptic came up with the figure of 6.6 years because he said the average age of COVID deaths in Florida was 82, and he got a life expectancy of 6.6 years for age 82 from somewhere (even though in the 2019 US life expectancy table it's about 8.2 years):</p>
+<p>Ethical Skeptic came up with the figure of 6.6 years because he said the average age of COVID deaths in Florida was 82, and he got a life expectancy of 6.6 years for age 82 from some unspecified source (even though in the 2019 US life expectancy table the life expectancy for age 82 is about 8.2 years):</p>
 <div class="width7">
 <img src="i/np-bergamo-bergamo-pfe-arrival-2.png">
 </div>
-<p>At CDC WONDER the average age of UCD COVID deaths was 73.8 in Florida when I excluded suppressed ages and treated ages 100+ as 100, and it was about 73.9 in the whole US. And the life expectancy for age 74 is about 13.1 years in the 2019 life table, so it's about twice as high as Ethical Skeptic's figure of 6.6 years. And when I calculated an average of 2019 life expectancies weighted by the number of UCD COVID deaths for each age, it was about 14.5 years:</p>
-<pre>download.file(&quot;https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Publications/NVSR/70-19/Table01.xlsx&quot;,&quot;Table01.xlsx&quot;)
+<p>At CDC WONDER the average age of UCD COVID deaths was 73.8 in Florida and about 73.9 in the whole US. And in the 2019 life table the life expectancy for age 74 is about 13.1 years, so it's about twice as high as Ethical Skeptic's figure of 6.6 years. And the average of life expectancies for each age weighted by the number of COVID deaths for the age was about 14.5 years:</p>
+<pre># 2019 life expectancy table for both sexes combined
+download.file(&quot;https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Publications/NVSR/70-19/Table01.xlsx&quot;,&quot;Table01.xlsx&quot;)
 t=na.omit(data.table(readxl::read_excel(&quot;Table01.xlsx&quot;,skip=2)))
 
-# UCD COVID deaths by single year of age from CDC WONDER (last value is 100 or above)
+# UCD COVID deaths by single year of age from CDC WONDER (last value is age 100 or above)
 coviddead=c(363,116,46,41,39,30,38,32,33,47,40,35,41,56,51,97,88,130,162,210,255,288,367,407,499,530,620,707,819,979,1112,1255,1329,1441,1607,1703,1850,2066,2237,2502,2713,2987,3253,3486,3942,4197,4610,4912,5686,6278,7075,7365,8017,8227,8942,9822,11084,11748,12866,14070,15174,16061,17259,18347,19229,20037,20443,20874,22012,22623,23586,24446,25783,27417,27760,26024,26237,27531,28188,27690,27437,27093,27200,27223,26753,26849,26190,25121,24827,24104,22756,21336,19309,17787,15069,12656,10416,8337,6321,4626,8773)
 
 weighted.mean(t$ex,coviddead) # 14.50457</pre>
-<p>Next I made the simulation below using data from ISTAT and Eurostat: <a href="http://dati.istat.it/Index.aspx?QueryId=42869&lang=en">http://dati.istat.it/Index.aspx?QueryId=42869&amp;lang=en</a>, <a href="https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/demo_r_mwk3_t?format=TSV">https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/demo_r_mwk3_t?format=TSV</a>. At first I also tried simulating different people having different levels of health, but I didn't find an accurate way to do it so I left it out of the simulation. When I simply assigned a fixed health multiplier to each person, the people with poor health tended to die at the start of the simulation which artificially elevated deaths at the start of the simulation compared to the end of the simulation. So I should've also modeled the health status of people getting worse over time so that over time new people would've gradually entered the verge of death, but it seemed too difficult to model realistically. But anyway, here in the red scenario where I simulated a spike in excess deaths in spring 2020, I got only about 3% less deaths in 2021-2024 than in the black scenario without the spike:</p>
+<p>The following code shows the average life expectancy by month for deaths with UCD COVID. I now calculated the life expectancy separately for males and females even though it didn't make much difference. CDC WONDER suppresses the number of deaths on rows with less than 10 deaths, so I got the number of COVID deaths from the fixed-width files for the NVSS data instead: <a href=stat.html#Download_fixed_width_and_CSV_files_for_the_NVSS_data_used_at_CDC_WONDER>stat.html#Download_fixed_width_and_CSV_files_for_the_NVSS_data_used_at_CDC_WONDER</a>. The life expectancy was unsurprisingly much higher in 2021 than 2020 (which is because the percentage of COVID deaths in 2021 relative to 2020 is much higher in working-age people than in elderly people, which might be because in 2021 working-age people were less likely to be vaccinated than elderly people):</p>
+<pre>dlf=\(x,y=sub(&quot;.*/&quot;,&quot;&quot;,x),...)for(i in 1:length(x))download.file(x[i],y[i],quiet=T,...)
+dlf(paste0(&quot;https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Publications/NVSR/70-19/Table0&quot;,2:3,&quot;.xlsx&quot;))
+
+ex=data.table(age=0:100,sex=rep(c(&quot;M&quot;,&quot;F&quot;),each=101))
+ex$ex=c(sapply(2:3,\(i)read_excel(paste0(&quot;Table0&quot;,i,&quot;.xlsx&quot;),skip=2,n_max=101)$ex))
+
+t=do.call(rbind,lapply(2020:2022,\(x)fread(paste0(x,&quot;.csv.gz&quot;))))
+a=t[age!=9999&amp;ucod==&quot;U071&quot;,.N,.(year,month=monthdth,sex,age=pmin(100,ifelse(age&lt;2000,age-1000,0)))]
+
+merge(ex,a)[,weighted.mean(ex,N),.(year,month)][,xtabs(round(V1)~year+month)]
+#       month
+# year    1  2  3  4  5  6  7  8  9 10 11 12
+#   2020 18 19 15 13 12 14 15 14 13 12 12 12
+#   2021 13 14 15 17 18 18 19 19 19 18 17 17
+#   2022 15 14 14 14 12 12 12 12 11 11 11 11</pre>
+<p>Next I made the simulation below using data from ISTAT and Eurostat: <a href="http://dati.istat.it/Index.aspx?QueryId=42869&lang=en">http://dati.istat.it/Index.aspx?QueryId=42869&amp;lang=en</a>, <a href="https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/demo_r_mwk3_t?format=TSV">https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/demo_r_mwk3_t?format=TSV</a>. At first I also tried simulating different people having different levels of health, but I didn't find an accurate way to do it so I left it out of the simulation. When I simply assigned a fixed health multiplier to each person, the people with poor health tended to die at the start of the simulation which artificially elevated deaths at the start of the simulation compared to the end of the simulation. So I should've also modeled the health status of people getting worse over time so that over time new people would've gradually entered the verge of death, but it seemed too difficult to model realistically. But anyway, here in the red scenario where I simulated a spike in excess deaths in spring 2020, I got only about 3.4% less deaths in 2021-2024 than in the black scenario without the spike:</p>
 <div class="width6">
 <img src="i/np-bergamo-sim-1.png">
 </div>
@@ -228,10 +245,184 @@ sub=paste0(&quot;Resident population estimates for Bergamo in 2019 were used as 
 sub=paste0(sub,&quot; Each year is exactly 52 weeks long. Births were not simulated. Seasonal variation in mortality or differences in the health of people were not simulated. The same seed was used for both scenarios so the scenarios are identical in 2018 and 2019.&quot;)
 system(paste0(&quot;mar=120;w=`identify -format %w 1.png`;magick 1.png \\( -size $[w-mar*2]x -font Arial -interline-spacing -4 -pointsize 146 caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\&#39;&quot;,sub),&quot;&#39; -gravity southwest -splice $[mar]x70 \\) -append -resize 25% -colors 256 1.png&quot;))</pre>
 </div>
-<p>The difference between my simulated scenarios is easier to see here where I truncated the y-axis and I plotted the deaths as moving averages. But the <span class="quote">&quot;PFE arrival function&quot;</span> is more like a square wave than a sine wave, and the PFE adjustment is more wide and shallow than in plots by ES (or actually my red line is about 3.4% lower on average than the black line in 2021-2024, so it's not much lower than the average depth of Ethical Skeptic's PFE arrival function in 2021-2024, but the depth is still shallower relative to the percentage of excess deaths which was much higher in Bergamo than the United States):</p>
+<p>The difference between my simulated scenarios is easier to see in the next plot where I truncated the y-axis and I plotted the deaths as moving averages. But in the case of Bergamo the excess deaths were concentrated to such a brief period of time that the <span class="quote">&quot;PFE arrival function&quot;</span> is more like a square wave than a sine wave, and the depth of the PFE adjustment is more shallow than in plots by ES (or actually my red line is about 3.4% lower on average than the black line in 2021-2024, so it's not much lower than the average depth of Ethical Skeptic's PFE arrival function in 2021-2024, but the depth is still shallower relative to the percentage of excess deaths which was higher in Bergamo than the United States):</p>
 <div class="width6">
 <img src="i/np-bergamo-sim-2.png">
 </div>
+<p>In the next plot for ASMR in Bergamo, there was a slight dip in ASMR below the baseline around mid-2020, but it might be random noise because many other years before 2020 had similar dips below the baseline. I used yearly population estimates on January 1st of each year interpolated to daily estimates, so the population size in mid-2020 was already partially reduced by COVID deaths in spring 2020 but it was still probably overestimated:</p>
+<div class="width6">
+<img src="i/np-bergamo-asmr.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>download.file(&quot;https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/demo_r_pjangrp3?format=TSV&quot;,&quot;demo_r_pjangrp3.tsv&quot;)
+
+library(data.table);library(ggplot2)
+
+seapre=\(x,y,xout=x,spar=.5){class(x)=class(xout)=&quot;Date&quot;
+  d=data.frame(x,y);lm=lm(y~x,d)
+  daily=tapply(y-predict(lm,list(x)),substr(x,6,10),mean)
+  daily=daily[names(daily)!=&quot;02-29&quot;]
+  daily[]=smooth.spline(rep(daily,3),spar=spar)$y[366:730]
+  daily[&quot;02-29&quot;]=mean(daily[c(&quot;02-28&quot;,&quot;03-01&quot;)])
+  data.frame(x=xout,y=predict(lm,list(x=xout))+daily[substr(xout,6,10)])}
+
+ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
+
+dead=fread(&quot;comuni_giornaliero_31agosto24.csv.gz&quot;,na=&quot;n.d.&quot;)[NOME_PROVINCIA==&quot;Bergamo&quot;]
+dead=dead[,.(age=c(0,1,1:20*5)[CL_ETA+1],year=rep(2011:2024,each=.N),month=GE%/%100,day=GE%%100,dead=unlist(.SD[,38:51]))]
+dead=dead[,.(dead=sum(dead,na.rm=T)),.(age=pmin(age,90)%/%5*5,year,month,date=as.Date(paste(year,month,day,sep=&quot;-&quot;)))]
+
+pop=fread(&quot;demo_r_pjangrp3.tsv&quot;,header=T,na=&quot;:&quot;)
+meta=fread(text=pop[[1]],header=F)
+pop=cbind(meta[,4],pop[,-1])[meta[,V2==&quot;T&quot;&amp;V5==&quot;ITC46&quot;&amp;!V4%in%c(&quot;TOTAL&quot;,&quot;Y_GE85&quot;,&quot;UNK&quot;)]]
+pop[,age:=ifelse(V4==&quot;Y_LT5&quot;,0,as.integer(sub(&quot;\\D+(\\d+).*&quot;,&quot;\\1&quot;,V4)))]
+pop=pop[,.(age,year=rep(2014:2023,each=.N),pop=as.integer(sub(&quot; .*&quot;,&quot;&quot;,unlist(.SD[,2:11],,F))))]
+pop[,date:=as.Date(paste0(year,&quot;-1-1&quot;))]
+pop=pop[,spline(date,pop,xout=unique(dead$date)),age][,.(date=`class&lt;-`(x,&quot;Date&quot;),pop=y,age)]
+
+me=merge(pop[date==&quot;2019-1-1&quot;,.(age,std=pop/sum(pop))],merge(pop,dead))
+a=me[,.(asmr=sum(dead/pop*std*365e5)),.(date,year,month)][order(date)][year!=2011]
+a$base=a[year%in%2013:2019,seapre(date,asmr,a$date,0)]$y
+
+lab=c(&quot;Actual ASMR&quot;,&quot;2013-2019 linear trend&quot;)
+p=a[,.(x=date,y=c(asmr,base),z=factor(rep(lab,each=.N),lab))]
+p[,y:=ma(y,10),z]
+
+xstart=as.Date(&quot;2013-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
+xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=ifelse(month(xbreak)==7,year(xbreak),&quot;&quot;)
+ybreak=p[,pretty(c(0,y),9)];ystart=0;yend=max(p$y)
+
+ggplot(p,aes(x,y))+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),linewidth=.25,color=&quot;gray85&quot;,lineend=&quot;square&quot;)+
+geom_hline(yintercept=c(ystart,yend),linewidth=.3,lineend=&quot;square&quot;)+
+geom_vline(xintercept=c(xstart,xend),linewidth=.3,lineend=&quot;square&quot;)+
+geom_line(aes(color=z),linewidth=.35)+
+labs(title=&quot;Daily ASMR per 100k person-years in Bergamo, ±10-day moving average&quot;,x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
+scale_color_manual(values=c(&quot;black&quot;,&quot;#58f&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.text.y=element_text(margin=margin(,1)),
+  axis.ticks=element_line(linewidth=.3),
+  axis.ticks.length=unit(3,&quot;pt&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.justification=c(0,1),
+  legend.key=element_blank(),
+  legend.key.height=unit(9,&quot;pt&quot;),
+  legend.key.width=unit(20,&quot;pt&quot;),
+  legend.background=element_rect(color=&quot;black&quot;,linewidth=.3),
+  legend.margin=margin(3,3,3,3),
+  legend.position=c(0,1),
+  legend.spacing.x=unit(1.5,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=7),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  plot.margin=margin(4,4,2,4),
+  plot.title=element_text(size=7.5,face=&quot;bold&quot;,margin=margin(1,,3)))
+ggsave(&quot;1.png&quot;,width=4,height=2.2,dpi=380*4)
+sub=&quot;ASMR was calculated by 5-year age groups so that the 2019 resident population estimates for Bergamo were used as the standard population. Daily deaths by day of occurrence are from istat.it/notizia/dati-di-mortalita-cosa-produce-listat. Population estimates by 5-year age groups are from the Eurostat dataset demo_r_pjangrp3.&quot;
+system(paste0(&quot;mar=86;w=`identify -format %w 1.png`;magick 1.png \\( -size $[w-mar*2]x -font Arial -interline-spacing -4 -pointsize 146 caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\&#39;&quot;,sub),&quot;&#39; -gravity southwest -splice $[mar]x70 \\) -append -resize 25% -colors 256 1.png&quot;))</pre>
+</div>
+<p>In the next plot I did a similar simulation for NYC as the earlier simulation for Bergamo. Now the number of deaths in the red scenario where I simulated the COVID event was afterwards only about 1.9% lower than in the black scenario without the COVID event. I don't know why the reduction was so much smaller than in the simulation for Bergamo, even though the total percentage of excess deaths in the first half of 2020 was only slightly higher in Bergamo than NYC:</p>
+<div class="width6">
+<img src="i/np-bergamo-nycsim.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2)
+
+simmonths=12*7
+monthmult=rep(1,simmonths)
+
+nyc=fread(&quot;http://sars2.net/f/nycmonthlydead.csv&quot;)
+fread(&quot;http://sars2.net/f/nycyearlydead.csv&quot;)[,sum(dead),year]
+monthmult[25:30]=merge(nyc[year&lt;2020,mean(dead),month],nyc)[year==2020,dead/V1][1:6]
+
+nypop=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/counties/asrh/CC-EST2020-ALLDATA6-36.csv&quot;)
+nypop=nypop[CTYNAME%like%&quot;Bronx|Kings|New York|Richmond|Queens&quot;&amp;YEAR==11&amp;AGEGRP&gt;0,sum(TOT_POP),AGEGRP]$V1[-1]
+
+pop=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)[year==2018]
+cmr=pop[,dead/pop]/365*12
+
+popfrac=pop[,sum(pop)/8.8e6]
+people=data.table(age=pop[,rep(age,pop/popfrac)])[,age:=age+runif(.N)]
+people$health=1 # don&#39;t model health of people
+# sd=1;people[,health:=2^rnorm(.N,log(2)*sd^2/-2,sd)] # include health multipliers in model
+
+sim=data.table(month=1:simmonths,dead=0,dead2=0)
+people2=copy(people)
+
+set.seed(0)
+for(i in 1:simmonths){
+  died=people[,rbinom(.N,1,pmin(1,cmr[age+1]*health*monthmult[i]))]
+  people=people[died!=1][,age:=pmin(100,age+1/12)]
+  sim$dead[i]=sum(died)
+}
+
+set.seed(0)
+for(i in 1:simmonths){
+  died=people2[,rbinom(.N,1,pmin(1,cmr[age+1]*health))]
+  people2=people2[died!=1][,age:=pmin(100,age+1/12)]
+  sim$dead2[i]=sum(died)
+}
+
+sim$base=sim[month&lt;25,predict(lm(dead~month),sim)]
+lab=c(&quot;With high-mortality event&quot;,&quot;No high-mortality event&quot;,&quot;2018-2019 linear trend&quot;)
+p=sim[,.(x=month,y=unlist(.SD[,-1]),z=factor(rep(lab,each=.N),lab))]
+
+sum=sim[month%in%25:30,colSums(.SD)]
+sum2=sim[month&gt;30,colSums(.SD)]
+note=stringr::str_wrap(sprintf(&quot;The scenario with the high-mortality event has %.1f%% more deaths in the first half of 2020 and %.1f%% less deaths between the second half of 2020 and 2024.&quot;,(sum[2]/sum[3]-1)*100,(sum2[3]/sum2[2]-1)*100),32)
+
+xstart=1;xend=simmonths+1;xbreak=seq(xstart,xend,6);xlab=c(rbind(&quot;&quot;,2018:2022),&quot;&quot;)
+ybreak=pretty(c(0,p$y),8);ystart=0;yend=max(p$y)+.02
+
+ggplot(p,aes(x+.5,y))+
+geom_vline(xintercept=seq(xstart,xend,12),linewidth=.3,color=&quot;gray83&quot;,lineend=&quot;square&quot;)+
+geom_hline(yintercept=c(ystart,yend),linewidth=.3,lineend=&quot;square&quot;)+
+geom_vline(xintercept=c(xstart,xend),linewidth=.3,lineend=&quot;square&quot;)+
+geom_line(aes(color=z,linetype=z),linewidth=.35)+
+geom_point(aes(color=z,alpha=z),stroke=0,size=.7)+
+labs(title=&quot;Simulation for deaths per month with high-mortality event&quot;,x=NULL,y=NULL)+
+annotate(geom=&quot;label&quot;,x=42,y=yend*.48,label=note,hjust=0,label.r=unit(2,&quot;pt&quot;),label.padding=unit(3,&quot;pt&quot;),label.size=.2,size=2.4,lineheight=.9)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
+scale_color_manual(values=c(&quot;#ff6666&quot;,&quot;black&quot;,&quot;gray60&quot;))+
+scale_alpha_manual(values=c(1,1,0))+
+scale_linetype_manual(values=c(&quot;solid&quot;,&quot;solid&quot;,&quot;42&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.ticks=element_line(linewidth=.3),
+  axis.ticks.length=unit(3,&quot;pt&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.justification=c(1,1),
+  legend.key=element_blank(),
+  legend.key.height=unit(9,&quot;pt&quot;),
+  legend.key.width=unit(20,&quot;pt&quot;),
+  legend.background=element_rect(color=&quot;black&quot;,linewidth=.3),
+  legend.margin=margin(3,3,3,3),
+  legend.position=c(1,1),
+  legend.spacing.x=unit(1.5,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=7),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  plot.margin=margin(4,4,2,4),
+  plot.title=element_text(size=7.5,face=&quot;bold&quot;,margin=margin(1,,3)))
+ggsave(&quot;1.png&quot;,width=3.7,height=2,dpi=380*4)
+
+sub=paste0(&quot;The initial population size was 8.8 million so that the size of each age in the mid-2018 US resident population estimates was divided by about 37.3 (because population estimates for NYC by single year of age were not available). US mortality rates in the year 2018 are used for each single year of age throughout the simulation, except in the high-mortality scenario the monthly mortality rates in the first half of 2020 were multiplied by the number of deaths during the month in NYC divided by the average number of deaths during the same month in NYC in 2018 and 2019.&quot;)
+sub=paste0(sub,&quot; The length of each month is 1/12 years. Births are not simulated. Seasonal variation in mortality or differences in the health of people were not simulated. The same seed was used for both scenarios so the scenarios are identical in 2018 and 2019.&quot;)
+system(paste0(&quot;mar=120;w=`identify -format %w 1.png`;magick 1.png \\( -size $[w-mar*2]x -font Arial -interline-spacing -4 -pointsize 146 caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\&#39;&quot;,sub),&quot;&#39; -gravity southwest -splice $[mar]x70 \\) -append -resize 25% -colors 256 1.png&quot;))</pre>
+</div>
+<p>In Ethical Skeptic's plots which display weekly excess deaths from 2018 onwards, he fits a linear baseline against deaths from only 2018 and 2019. However his baseline is often too low especially in 2023 and 2024, because the long-term trend in deaths is curved upwards due to the aging population, so in addition to adjusting his baseline downwards to account for the PFE, he should also adjust his baseline upwards to account for the aging population. In my simulation above between the second half of 2020 and 2024, the difference between the black line and gray 2018-2019 baseline was about twice as big than the difference between the black and red lines. But basically Ethical Skeptic should also adjust his linear baseline so it would be slightly curved upwards like the black line in my simulation above.</p>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
