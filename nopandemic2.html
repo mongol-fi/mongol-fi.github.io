@@ -249,16 +249,16 @@ system(paste0(&quot;mar=120;w=`identify -format %w 1.png`;magick 1.png \\( -size
 <div class="width6">
 <img src="i/np-bergamo-sim-2.png">
 </div>
-<p>In the next plot for ASMR in Bergamo, there was a slight dip in ASMR below the baseline around mid-2020, but it might be random noise because many other years before 2020 had similar dips below the baseline. I used yearly population estimates on January 1st of each year interpolated to daily estimates, so the population size in mid-2020 was already partially reduced by COVID deaths in spring 2020 but it was still probably overestimated:</p>
-<div class="width6">
-<img src="i/np-bergamo-asmr.png">
+<p>In the plot below which shows real data for deaths in Bergamo, there seems to be a clear reduction in deaths below the baseline in ages 90+ but not in younger age groups (but ages 90+ also had the biggest percentage reduction in population size in spring 2020):</p>
+<div class="width10">
+<img src="i/np-bergamo-byage.png">
 </div>
 <div class="spoiler">
 <button>
 Show code
-</button><pre>download.file(&quot;https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/demo_r_pjangrp3?format=TSV&quot;,&quot;demo_r_pjangrp3.tsv&quot;)
+</button><pre>library(data.table);library(ggplot2)
 
-library(data.table);library(ggplot2)
+ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
 
 seapre=\(x,y,xout=x,spar=.5){class(x)=class(xout)=&quot;Date&quot;
   d=data.frame(x,y);lm=lm(y~x,d)
@@ -268,40 +268,30 @@ seapre=\(x,y,xout=x,spar=.5){class(x)=class(xout)=&quot;Date&quot;
   daily[&quot;02-29&quot;]=mean(daily[c(&quot;02-28&quot;,&quot;03-01&quot;)])
   data.frame(x=xout,y=predict(lm,list(x=xout))+daily[substr(xout,6,10)])}
 
-ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
-
 dead=fread(&quot;comuni_giornaliero_31agosto24.csv.gz&quot;,na=&quot;n.d.&quot;)[NOME_PROVINCIA==&quot;Bergamo&quot;]
-dead=dead[,.(age=c(0,1,1:20*5)[CL_ETA+1],year=rep(2011:2024,each=.N),month=GE%/%100,day=GE%%100,dead=unlist(.SD[,38:51]))]
-dead=dead[,.(dead=sum(dead,na.rm=T)),.(age=pmin(age,90)%/%5*5,year,month,date=as.Date(paste(year,month,day,sep=&quot;-&quot;)))]
+de=dead[,.(age=c(0,1,1:20*5)[CL_ETA+1],year=rep(2011:2024,each=.N),month=GE%/%100,day=GE%%100,dead=unlist(.SD[,38:51]))]
+ages=c(0,40,60,80,90)
 
-pop=fread(&quot;demo_r_pjangrp3.tsv&quot;,header=T,na=&quot;:&quot;)
-meta=fread(text=pop[[1]],header=F)
-pop=cbind(meta[,4],pop[,-1])[meta[,V2==&quot;T&quot;&amp;V5==&quot;ITC46&quot;&amp;!V4%in%c(&quot;TOTAL&quot;,&quot;Y_GE85&quot;,&quot;UNK&quot;)]]
-pop[,age:=ifelse(V4==&quot;Y_LT5&quot;,0,as.integer(sub(&quot;\\D+(\\d+).*&quot;,&quot;\\1&quot;,V4)))]
-pop=pop[,.(age,year=rep(2014:2023,each=.N),pop=as.integer(sub(&quot; .*&quot;,&quot;&quot;,unlist(.SD[,2:11],,F))))]
-pop[,date:=as.Date(paste0(year,&quot;-1-1&quot;))]
-pop=pop[,spline(date,pop,xout=unique(dead$date)),age][,.(date=`class&lt;-`(x,&quot;Date&quot;),pop=y,age)]
+p=na.omit(de[,.(y=sum(dead,na.rm=T)),.(age=agecut(age,ages),x=as.Date(paste(year,month,day,sep=&quot;-&quot;)))])
+p=rbind(p,p[,.(y=sum(y),age=&quot;Total&quot;),x])[year(x)&gt;=2013]
+p=merge(p[year(x)&lt;2020,seapre(x,y,unique(p$x),0),age][,.(x,age,base=y)],p)
 
-me=merge(pop[date==&quot;2019-1-1&quot;,.(age,std=pop/sum(pop))],merge(pop,dead))
-a=me[,.(asmr=sum(dead/pop*std*365e5)),.(date,year,month)][order(date)][year!=2011]
-a$base=a[year%in%2013:2019,seapre(date,asmr,a$date,0)]$y
+lab=c(&quot;Actual deaths&quot;,&quot;2013-2019 linear trend&quot;)
+p=p[,.(x,y=c(y,base),z=factor(rep(lab,each=.N),lab),age)]
+p[,y:=ma(y,10),.(z,age)]
 
-lab=c(&quot;Actual ASMR&quot;,&quot;2013-2019 linear trend&quot;)
-p=a[,.(x=date,y=c(asmr,base),z=factor(rep(lab,each=.N),lab))]
-p[,y:=ma(y,10),z]
-
-xstart=as.Date(&quot;2013-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
+xstart=as.Date(&quot;2018-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
 xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=ifelse(month(xbreak)==7,year(xbreak),&quot;&quot;)
 ybreak=p[,pretty(c(0,y),9)];ystart=0;yend=max(p$y)
 
 ggplot(p,aes(x,y))+
+facet_wrap(~age,scales=&quot;free_y&quot;,dir=&quot;v&quot;,ncol=2)+
 geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),linewidth=.25,color=&quot;gray85&quot;,lineend=&quot;square&quot;)+
-geom_hline(yintercept=c(ystart,yend),linewidth=.3,lineend=&quot;square&quot;)+
-geom_vline(xintercept=c(xstart,xend),linewidth=.3,lineend=&quot;square&quot;)+
 geom_line(aes(color=z),linewidth=.35)+
-labs(title=&quot;Daily ASMR per 100k person-years in Bergamo, ±10-day moving average&quot;,x=NULL,y=NULL)+
+geom_label(data=p[,max(y,na.rm=T),age],aes(label=sprintf(&quot;\n   %s  \n&quot;,age),y=V1),x=xend,lineheight=.5,hjust=1,vjust=1,size=2.3,fill=alpha(&quot;white&quot;,1),label.r=unit(0,&quot;lines&quot;),label.padding=unit(0,&quot;lines&quot;),label.size=.25)+
+labs(title=&quot;Daily deaths in Bergamo by age group, ±10-day moving average&quot;,subtitle=&quot;Source: istat.it/notizia/dati-di-mortalita-cosa-produce-listat&quot;,x=NULL,y=NULL)+
 scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
-scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
+scale_y_continuous(breaks=\(x)pretty(x,7))+
 scale_color_manual(values=c(&quot;black&quot;,&quot;#58f&quot;))+
 coord_cartesian(clip=&quot;off&quot;,expand=F)+
 theme(axis.text=element_text(size=7,color=&quot;black&quot;),
@@ -309,24 +299,30 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   axis.ticks=element_line(linewidth=.3),
   axis.ticks.length=unit(3,&quot;pt&quot;),
   axis.ticks.length.x=unit(0,&quot;pt&quot;),
-  legend.direction=&quot;vertical&quot;,
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;horizontal&quot;,
   legend.justification=c(0,1),
   legend.key=element_blank(),
   legend.key.height=unit(9,&quot;pt&quot;),
   legend.key.width=unit(20,&quot;pt&quot;),
-  legend.background=element_rect(color=&quot;black&quot;,linewidth=.3),
-  legend.margin=margin(3,3,3,3),
-  legend.position=c(0,1),
+  legend.background=element_blank(),
+  legend.margin=margin(,,4),
+  legend.position=&quot;top&quot;,
   legend.spacing.x=unit(1.5,&quot;pt&quot;),
   legend.spacing.y=unit(0,&quot;pt&quot;),
   legend.text=element_text(size=7),
   legend.title=element_blank(),
   panel.background=element_blank(),
-  plot.margin=margin(4,4,2,4),
-  plot.title=element_text(size=7.5,face=&quot;bold&quot;,margin=margin(1,,3)))
-ggsave(&quot;1.png&quot;,width=4,height=2.2,dpi=380*4)
-sub=&quot;ASMR was calculated by 5-year age groups so that the 2019 resident population estimates for Bergamo were used as the standard population. Daily deaths by day of occurrence are from istat.it/notizia/dati-di-mortalita-cosa-produce-listat. Population estimates by 5-year age groups are from the Eurostat dataset demo_r_pjangrp3.&quot;
-system(paste0(&quot;mar=86;w=`identify -format %w 1.png`;magick 1.png \\( -size $[w-mar*2]x -font Arial -interline-spacing -4 -pointsize 146 caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\&#39;&quot;,sub),&quot;&#39; -gravity southwest -splice $[mar]x70 \\) -append -resize 25% -colors 256 1.png&quot;))</pre>
+  panel.border=element_rect(fill=NA,linewidth=.3),
+  panel.spacing.x=unit(2,&quot;pt&quot;),
+  panel.spacing.y=unit(4,&quot;pt&quot;),
+  plot.margin=margin(4,4,4,4),
+  plot.subtitle=element_text(size=7,margin=margin(1,,3)),
+  plot.title=element_text(size=7.5,face=&quot;bold&quot;,margin=margin(1,,3)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=5.8,height=4,dpi=380*4)
+system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
 </div>
 <p>In the next plot I did a similar simulation for NYC as the earlier simulation for Bergamo. Now the number of deaths in the red scenario where I simulated the COVID event was afterwards only about 1.9% lower than in the black scenario without the COVID event. I don't know why the reduction was so much smaller than in the simulation for Bergamo, even though the total percentage of excess deaths in the first half of 2020 was only slightly higher in Bergamo than NYC:</p>
 <div class="width6">
@@ -423,6 +419,17 @@ sub=paste0(sub,&quot; The length of each month is 1/12 years. Births are not sim
 system(paste0(&quot;mar=120;w=`identify -format %w 1.png`;magick 1.png \\( -size $[w-mar*2]x -font Arial -interline-spacing -4 -pointsize 146 caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\&#39;&quot;,sub),&quot;&#39; -gravity southwest -splice $[mar]x70 \\) -append -resize 25% -colors 256 1.png&quot;))</pre>
 </div>
 <p>In Ethical Skeptic's plots which display weekly excess deaths from 2018 onwards, he fits a linear baseline against deaths from only 2018 and 2019. However his baseline is often too low especially in 2023 and 2024, because the long-term trend in deaths is curved upwards due to the aging population, so in addition to adjusting his baseline downwards to account for the PFE, he should also adjust his baseline upwards to account for the aging population. In my simulation above between the second half of 2020 and 2024, the difference between the black line and gray 2018-2019 baseline was about twice as big than the difference between the black and red lines. But basically Ethical Skeptic should also adjust his linear baseline so it would be slightly curved upwards like the black line in my simulation above.</p>
+<p>Jean Fisch pointed out to Jessica Hockett that <span class="quote">&quot;the average age of a covid death was 80&quot;</span> and <span class="quote">&quot;80yo Italians have only an annual probabilitty of 4% of dying in each of the 3 subsequent years&quot;</span>. [<a href="https://x.com/Jean%5f%5fFisch/status/1861413598343663657">https://x.com/Jean%5f%5fFisch/status/1861413598343663657</a>] However it might be more accurate to calculate the weighted average of the probability of dying over the next year where the weight is the number of excess deaths or COVID deaths for each age. I didn't find deaths in Bergamo by single year of age. But when I multiplied the likelihood of dying over the next year from the 2019 US life table with the number of excess deaths for each age in NYC in 2020, the overall probability of dying over the next year was about 6.3%:</p>
+<pre># 2019 US life table for both sexes combined
+download.file(&quot;https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Publications/NVSR/70-19/Table01.xlsx&quot;,&quot;Table01.xlsx&quot;)
+qx=data.table(age=0:100,qx=readxl::read_excel(&quot;Table01.xlsx&quot;,skip=2,n_max=101)$qx)
+
+# yearly deaths from CDC WONDER where county of occurrence is one of 5 counties of NYC
+dead=fread(&quot;http://sars2.net/f/nycyearlydead.csv&quot;)[age&gt;=16]
+base=dead[year%in%2010:2019,.(year=2020,base=predict(lm(dead~year),.(year=2020))),age]
+
+me=merge(qx,merge(base,dead)[,.(excess=dead-base),age])
+me[,weighted.mean(qx,excess)] # 0.06320128 (about 6.3% chance of dying over next year)</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
