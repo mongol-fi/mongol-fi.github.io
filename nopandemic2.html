@@ -419,17 +419,34 @@ sub=paste0(sub,&quot; The length of each month is 1/12 years. Births are not sim
 system(paste0(&quot;mar=120;w=`identify -format %w 1.png`;magick 1.png \\( -size $[w-mar*2]x -font Arial -interline-spacing -4 -pointsize 146 caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\&#39;&quot;,sub),&quot;&#39; -gravity southwest -splice $[mar]x70 \\) -append -resize 25% -colors 256 1.png&quot;))</pre>
 </div>
 <p>In Ethical Skeptic's plots which display weekly excess deaths from 2018 onwards, he fits a linear baseline against deaths from only 2018 and 2019. However his baseline is often too low especially in 2023 and 2024, because the long-term trend in deaths is curved upwards due to the aging population, so in addition to adjusting his baseline downwards to account for the PFE, he should also adjust his baseline upwards to account for the aging population. In my simulation above between the second half of 2020 and 2024, the difference between the black line and gray 2018-2019 baseline was about twice as big than the difference between the black and red lines. But basically Ethical Skeptic should also adjust his linear baseline so it would be slightly curved upwards like the black line in my simulation above.</p>
-<p>Jean Fisch pointed out to Jessica Hockett that <span class="quote">&quot;the average age of a covid death was 80&quot;</span> and <span class="quote">&quot;80yo Italians have only an annual probabilitty of 4% of dying in each of the 3 subsequent years&quot;</span>. [<a href="https://x.com/Jean%5f%5fFisch/status/1861413598343663657">https://x.com/Jean%5f%5fFisch/status/1861413598343663657</a>] However it might be more accurate to calculate the weighted average of the probability of dying over the next year where the weight is the number of excess deaths or COVID deaths for each age. I didn't find deaths in Bergamo by single year of age. But when I multiplied the likelihood of dying over the next year from the 2019 US life table with the number of excess deaths for each age in NYC in 2020, the overall probability of dying over the next year was about 6.3%:</p>
+<p>Jean Fisch pointed out to Jessica Hockett that <span class="quote">&quot;the average age of a covid death was 80&quot;</span> and <span class="quote">&quot;80yo Italians have only an annual probabilitty of 4% of dying in each of the 3 subsequent years&quot;</span>. [<a href="https://x.com/Jean%5f%5fFisch/status/1861413598343663657">https://x.com/Jean%5f%5fFisch/status/1861413598343663657</a>] However it might be more accurate to calculate the weighted average of the probability of dying over the next year where the weight is the number of COVID deaths for each age. I didn't find deaths in Bergamo by single year of age. But when I multiplied the likelihood of dying over the next year from the 2019 US life table with the number of excess deaths for each age in NYC in 2020, the overall probability of dying over the next year was about 6.3%:</p>
 <pre># 2019 US life table for both sexes combined
 download.file(&quot;https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Publications/NVSR/70-19/Table01.xlsx&quot;,&quot;Table01.xlsx&quot;)
 qx=data.table(age=0:100,qx=readxl::read_excel(&quot;Table01.xlsx&quot;,skip=2,n_max=101)$qx)
 
-# yearly deaths from CDC WONDER where county of occurrence is one of 5 counties of NYC
+# yearly deaths from CDC WONDER where the county of occurrence is one of 5 counties of NYC
+# ages below 16 are excluded because they had years where the number of deaths was suppressed
 dead=fread(&quot;http://sars2.net/f/nycyearlydead.csv&quot;)[age&gt;=16]
 base=dead[year%in%2010:2019,.(year=2020,base=predict(lm(dead~year),.(year=2020))),age]
 
 me=merge(qx,merge(base,dead)[,.(excess=dead-base),age])
-me[,weighted.mean(qx,excess)] # 0.06320128 (about 6.3% chance of dying over next year)</pre>
+me[,weighted.mean(qx,excess)] # 0.06320128 (about 6.3% probability of dying over the next year)</pre>
+<p>In the next code for Bergamo I used 5-year age groups up to 90+ because I didn't find data for deaths by single year of age. But when I took a weighted average of 2019 mortality rates where the weight was the number of excess deaths for each age group on weeks 9 to 19 of 2020, the resulting likelihood of dying over the next year was about 7.0%:</p>
+<pre># Eurostat dataset for weekly deaths by NUTS3 region and 5-year age groups
+euro=fread(&quot;estat_demo_r_mweek3.tsv.gz&quot;,na=&quot;:&quot;)
+meta=fread(text=euro[[1]],header=F)
+euro=cbind(meta[,.(age=V4)],euro[,-1])[meta[,V3==&quot;T&quot;&amp;V5==&quot;ITC46&quot;&amp;!V4%in%c(&quot;TOTAL&quot;,&quot;Y_GE85&quot;,&quot;UNK&quot;)]]
+euro[,age:=ifelse(age==&quot;Y_LT5&quot;,0,as.integer(sub(&quot;\\D+(\\d+).*&quot;,&quot;\\1&quot;,age)))]
+eu=euro[,.(age,date=rep(names(.SD)[-1],each=.N),dead=as.integer(sub(&quot; .*&quot;,&quot;&quot;,unlist(.SD[,-1],,F))))]
+eu[,year:=as.integer(substr(date,1,4))][,week:=as.integer(substr(date,7,8))]
+
+a=eu[week%in%9:19,.(dead=sum(dead)),.(age,year)][year&gt;=2013]
+ex=merge(a[year==2020],a[,predict(lm(dead~year),.(year=2020)),age])[,.(age,excess=dead-V1)]
+
+# from dati.istat.it/Index.aspx?QueryId=42869
+pop=data.table(age=0:18*5,pop=c(39390,48231,56530,59100,59678,58801,59797,63250,70012,84326,90600,92658,79300,65720,59191,49584,38262,23689,13109))
+cmr=merge(pop,eu[year==2019,sum(dead),age])[,V1/pop]
+weighted.mean(cmr,ex$excess) # 0.07036192</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
