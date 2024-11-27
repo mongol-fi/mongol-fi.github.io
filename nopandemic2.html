@@ -164,7 +164,7 @@ Show code
 
 euro=fread(&quot;https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/demo_r_mwk3_t?format=TSV&quot;)
 x=unlist(euro[euro[[1]]%like%&quot;ITC46&quot;])[-1];x=x[x!=&quot;:&quot;]
-d=data.table(year=as.integer(substr(names(x),1,4)),week=as.integer(substr(names(x),7,8)))[,x:=1:.N]
+d=data.table(year=as.integer(substr(names(x),1,4)),week=as.integer(substr(names(x),7,8)))[,x:=.I]
 d$dead=as.integer(sub(&quot; .*&quot;,&quot;&quot;,x))
 d$trend=d[year%in%2013:2019,predict(lm(dead~x),d)]
 d=merge(d,d[year%in%2013:2019,.(weekly=mean(dead-trend)),week])
@@ -262,24 +262,18 @@ agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quo
 
 ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
 
-seapre=\(x,y,xout=x,spar=.5){class(x)=class(xout)=&quot;Date&quot;
-  d=data.frame(x,y);lm=lm(y~x,d)
-  daily=tapply(y-predict(lm,list(x)),substr(x,6,10),mean)
-  daily=daily[names(daily)!=&quot;02-29&quot;]
-  daily[]=smooth.spline(rep(daily,3),spar=spar)$y[366:730]
-  daily[&quot;02-29&quot;]=mean(daily[c(&quot;02-28&quot;,&quot;03-01&quot;)])
-  data.frame(x=xout,y=predict(lm,list(x=xout))+daily[substr(xout,6,10)])}
-
 dead=fread(&quot;comuni_giornaliero_31agosto24.csv.gz&quot;,na=&quot;n.d.&quot;)[NOME_PROVINCIA==&quot;Bergamo&quot;]
 dead=dead[,.(age=c(0,1,1:20*5)[CL_ETA+1],year=rep(2011:2024,each=.N),month=GE%/%100,day=GE%%100,dead=unlist(.SD[,38:51]))]
 ages=c(0,40,60,80,90)
 
-p=na.omit(dead[,.(y=sum(dead,na.rm=T)),.(age=agecut(age,ages),x=as.Date(paste(year,month,day,sep=&quot;-&quot;)))])
-p=rbind(p,p[,.(y=sum(y),age=&quot;Total&quot;),x])[year(x)&gt;=2013]
-p=merge(p[year(x)&lt;2020,seapre(x,y,unique(p$x),0),age][,.(x,age,base=y)],p)
+a=dead[,.(dead=sum(dead,na.rm=T)),.(age=agecut(age,ages),year,month,day)]
+a=a[,.(age,y=dead,x=as.Date(paste(year,month,day,sep=&quot;-&quot;)))]
+p=rbind(a,a[,.(y=sum(y),age=&quot;Total&quot;),x])[year(x)&gt;=2013][,yday:=yday(x)]
 
+p=merge(p[year(x)&lt;2020,{i=unique(p$x);.(x=i,trend=predict(lm(y~x),.(x=i)))},age],p)
+p=merge(p[year(x)&lt;2020,mean(y-trend),.(yday,age)],p)
 lab=c(&quot;Actual deaths&quot;,&quot;2013-2019 linear trend&quot;)
-p=p[,.(x,y=c(y,base),z=factor(rep(lab,each=.N),lab),age)]
+p=p[,.(x,y=c(y,trend+V1),age,z=factor(rep(lab,each=.N),lab))][order(x)]
 p[,y:=ma(y,10),.(z,age)]
 
 xstart=as.Date(&quot;2018-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
@@ -290,10 +284,10 @@ ggplot(p,aes(x,y))+
 facet_wrap(~age,scales=&quot;free&quot;,dir=&quot;v&quot;,ncol=2)+
 geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),linewidth=.25,color=&quot;gray85&quot;,lineend=&quot;square&quot;)+
 geom_line(aes(color=z),linewidth=.35)+
-geom_label(data=p[,max(y,na.rm=T),age],aes(label=sprintf(&quot;\n   %s  \n&quot;,age),y=V1),x=xend,lineheight=.5,hjust=1,vjust=1,size=2.3,fill=alpha(&quot;white&quot;,1),label.r=unit(0,&quot;lines&quot;),label.padding=unit(0,&quot;lines&quot;),label.size=.25)+
+geom_label(data=p[,max(y,na.rm=T),age],aes(label=sprintf(&quot;\n  %s  \n&quot;,age),y=V1),x=xend,lineheight=.5,hjust=1,vjust=1,size=2.3,fill=alpha(&quot;white&quot;,1),label.r=unit(0,&quot;pt&quot;),label.padding=unit(0,&quot;pt&quot;),label.size=.25)+
 labs(title=&quot;Daily deaths in Bergamo by age group, ±10-day moving average&quot;,subtitle=&quot;Source: istat.it/notizia/dati-di-mortalita-cosa-produce-listat&quot;,x=NULL,y=NULL)+
 scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
-scale_y_continuous(limits=c(0,NA),breaks=\(x)pretty(x,7))+
+scale_y_continuous(limits=c(0,NA),breaks=\(x)pretty(x,5))+
 scale_color_manual(values=c(&quot;black&quot;,&quot;#58f&quot;))+
 coord_cartesian(clip=&quot;off&quot;,expand=F)+
 theme(axis.text=element_text(size=7,color=&quot;black&quot;),
@@ -308,7 +302,7 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   legend.key.height=unit(9,&quot;pt&quot;),
   legend.key.width=unit(20,&quot;pt&quot;),
   legend.background=element_blank(),
-  legend.margin=margin(,,4),
+  legend.margin=margin(,,3),
   legend.position=&quot;top&quot;,
   legend.spacing.x=unit(1.5,&quot;pt&quot;),
   legend.spacing.y=unit(0,&quot;pt&quot;),
@@ -319,8 +313,8 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   panel.spacing.x=unit(2,&quot;pt&quot;),
   panel.spacing.y=unit(1,&quot;pt&quot;),
   plot.margin=margin(4,4,4,4),
-  plot.subtitle=element_text(size=7,margin=margin(1,,3)),
-  plot.title=element_text(size=7.5,face=&quot;bold&quot;,margin=margin(1,,3)),
+  plot.subtitle=element_text(size=7,margin=margin(,,1)),
+  plot.title=element_text(size=7.5,face=&quot;bold&quot;,margin=margin(,,3)),
   strip.background=element_blank(),
   strip.text=element_blank())
 ggsave(&quot;1.png&quot;,width=5.8,height=4,dpi=380*4)
@@ -340,27 +334,27 @@ ex=merge(a[year==2020],a[,predict(lm(dead~year),.(year=2020)),age])[,.(age,exces
 # resident population estimate on January 1st 2020 from dati.istat.it/Index.aspx?QueryId=42869
 pop=data.table(age=0:18*5,pop=c(35349,51917,58050,57058,57116,55881,59096,65303,76378,89485,91969,87414,72505,63069,61768,45496,40271,24711,15290))
 
-merge(ex,pop)[,.(age,poppct=round(excess/pop*100,3))]|&gt;print(r=F)
-# age poppct
-#   0 -0.005
-#   5  0.000
-#  10  0.001
-#  15  0.002
-#  20  0.000
-#  25 -0.002
-#  30  0.002
-#  35 -0.004
-#  40  0.004
-#  45  0.033
-#  50  0.062
-#  55  0.132
-#  60  0.267
-#  65  0.551
-#  70  0.986
-#  75  1.883
-#  80  2.942
-#  85  4.601
-#  90  7.162</pre>
+merge(ex,pop)[,.(age,excess=round(excess),pop,poppct=round(excess/pop*100,2))]|&gt;print(r=F)
+# age excess   pop poppct
+#   0     -2 35349  -0.01
+#   5      0 51917   0.00
+#  10      0 58050   0.00
+#  15      1 57058   0.00
+#  20      0 57116   0.00
+#  25     -1 55881   0.00
+#  30      1 59096   0.00
+#  35     -3 65303   0.00
+#  40      3 76378   0.00
+#  45     29 89485   0.03
+#  50     57 91969   0.06
+#  55    115 87414   0.13
+#  60    194 72505   0.27
+#  65    347 63069   0.55
+#  70    609 61768   0.99
+#  75    857 45496   1.88
+#  80   1185 40271   2.94
+#  85   1137 24711   4.60
+#  90   1095 15290   7.16</pre>
 <p>In the next plot I did a similar simulation for NYC as the earlier simulation for Bergamo. Now the number of deaths in the red scenario where I simulated the COVID event was only about 2.0% lower in 2021-2024 than in the black scenario without the COVID event. I don't know why the reduction was so much smaller than in the simulation for Bergamo, even though the total percentage of excess deaths in the first half of 2020 was only slightly higher in Bergamo than NYC:</p>
 <div class="width6">
 <img src="i/np-bergamo-nycsim.png">
@@ -455,7 +449,7 @@ system(paste0(&quot;mar=120;w=`identify -format %w 1.png`;magick 1.png \\( -size
 <p>Jean Fisch pointed out to Jessica Hockett that <span class="quote">&quot;the average age of a covid death was 80&quot;</span> and <span class="quote">&quot;80yo Italians have only an annual probabilitty of 4% of dying in each of the 3 subsequent years&quot;</span>. [<a href="https://x.com/Jean%5f%5fFisch/status/1861413598343663657">https://x.com/Jean%5f%5fFisch/status/1861413598343663657</a>] However it might be more accurate to calculate the weighted average of the probability of dying over the next year where the weight is the number of COVID deaths for each age. I didn't find deaths in Bergamo by single year of age. But when I multiplied the likelihood of dying over the next year from the 2019 US life table with the number of excess deaths for each age in NYC in 2020, the overall probability of dying over the next year was about 6.3%:</p>
 <pre># 2019 US life table for both sexes combined
 download.file(&quot;https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Publications/NVSR/70-19/Table01.xlsx&quot;,&quot;Table01.xlsx&quot;)
-qx=data.table(age=0:100,qx=readxl::read_excel(&quot;Table01.xlsx&quot;,skip=2,n_max=101)$qx)
+qx=setDT(readxl::read_excel(&quot;Table01.xlsx&quot;,skip=2,n_max=101))[,.(age=0:100,ex)]
 
 # yearly deaths from CDC WONDER where the county of occurrence is one of 5 counties of NYC
 # ages below 16 are excluded because they had years where the number of deaths was suppressed
@@ -465,8 +459,7 @@ base=dead[year%in%2010:2019,.(year=2020,base=predict(lm(dead~year),.(year=2020))
 me=merge(qx,merge(base,dead)[,.(excess=dead-base),age])
 me[,weighted.mean(qx,excess)] # 0.06320128 (about 6.3% probability of dying over the next year)</pre>
 <p>In the next code for Bergamo I used 5-year age groups up to 90+ because I didn't find data for deaths by single year of age. But when I took a weighted average of 2019 mortality rates where the weight was the number of excess deaths for each age group on weeks 9 to 19 of 2020, the resulting likelihood of dying over the next year was about 7.0%:</p>
-<pre># Eurostat dataset for weekly deaths by NUTS3 region and 5-year age groups
-euro=fread(&quot;estat_demo_r_mweek3.tsv.gz&quot;,na=&quot;:&quot;)
+<pre>euro=fread(&quot;estat_demo_r_mweek3.tsv.gz&quot;,na=&quot;:&quot;)
 meta=fread(text=euro[[1]],header=F)
 euro=cbind(meta[,.(age=V4)],euro[,-1])[meta[,V3==&quot;T&quot;&amp;V5==&quot;ITC46&quot;&amp;!V4%in%c(&quot;TOTAL&quot;,&quot;Y_GE85&quot;,&quot;UNK&quot;)]]
 euro[,age:=ifelse(age==&quot;Y_LT5&quot;,0,as.integer(sub(&quot;\\D+(\\d+).*&quot;,&quot;\\1&quot;,age)))]
