@@ -51,10 +51,8 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=prompt>&gt;</span> <span class=code>writeLines(&quot;j=paste0&quot;,&quot;~/.functions.R&quot;)</span>
 <span class=prompt>&gt;</span> <span class=code>source(&quot;~/.functions.R&quot;,attach(NULL,name=&quot;myfunctions&quot;))</span><span class=comment> # add this to `.Rprofile`</span>
 <span class=prompt>&gt;</span> <span class=code>j=9</span>
-<span class=prompt>&gt;</span> <span class=code>j(1,2)</span><span class=comment> # not overridden by variable assignment</span>
+<span class=prompt>&gt;</span> <span class=code>j(1,2)</span><span class=comment> # function definition was not overridden by variable assignment</span>
 <span class=output>[1] &quot;12&quot;</span>
-<span class=prompt>&gt;</span> <span class=code>j</span>
-<span class=output>9</span>
 <span class=prompt>&gt;</span> <span class=code>detach(&quot;myfunctions&quot;);j(1,2)</span><span class=comment> # disable custom functions</span>
 <span class=output>Error in j(1, 2) : could not find function &quot;j&quot;</span>
 <span class=output>
@@ -1086,7 +1084,7 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=output>[1] 1</span>
 <span class=output>
 <span class=title># calculate a distance matrix using a mean instead of sum of squared differences to reduce bias caused by NA values</span></span>
-<span class=comment># mean of squared differences is used because rows with many NA values get a low sum of squared differences to other rows</span>
+<span class=comment># mean of squared differences is used here because rows with many NA values get a low sum of squared differences to other rows</span>
 <span class=prompt>&gt;</span> <span class=code>m=matrix(1:9,3);m[2,3]=NA</span>
 <span class=prompt>&gt;</span> <span class=code>i=combn(nrow(m),2);d=rowMeans((m[i[1,],]-m[i[2,]])^2,na.rm=T);structure(d,class=&quot;dist&quot;,&quot;Size&quot;=nrow(m))</span>
 <span class=comment># a `dist` object is required to have a `Size` attribute which is set to the number of rows in the full square matrix</span>
@@ -1099,12 +1097,12 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=prompt>&gt;</span> <span class=code>system.time(read.csv(&quot;test.csv&quot;))</span>
 <span class=output>   user  system elapsed</span>
 <span class=output>  0.526   0.014   0.540</span>
-<span class=prompt>&gt;</span> <span class=code>system.time(as.data.frame(data.table::fread(&quot;test.csv&quot;,showProgress=F)))</span>
-<span class=output>   user  system elapsed</span>
-<span class=output>  0.016   0.002   0.018</span>
-<span class=prompt>&gt;</span> <span class=code>system.time(as.data.frame(readr::read_csv(&quot;test.csv&quot;,show_col_types=F)))</span>
+<span class=prompt>&gt;</span> <span class=code>system.time(as.data.frame(readr::read_csv(&quot;test.csv&quot;,show_col_types=F)))</span><span class=comment> # faster</span>
 <span class=output>   user  system elapsed</span>
 <span class=output>  0.161   0.012   0.062</span>
+<span class=prompt>&gt;</span> <span class=code>system.time(as.data.frame(data.table::fread(&quot;test.csv&quot;,showProgress=F)))</span><span class=comment> # fastest</span>
+<span class=output>   user  system elapsed</span>
+<span class=output>  0.016   0.002   0.018</span>
 <span class=output>
 <span class=title># replace NA values with an incrementing sequence starting from the previous non-NA value</span></span>
 <span class=prompt>&gt;</span> <span class=code>v=c(NA,NA,5,NA,NA,2,8,NA)</span>
@@ -1323,15 +1321,6 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=output>1 table(v) 65.32598</span>
 <span class=output>2   tab(v) 27.96704</span>
 <span class=output>
-<span class=title># faster `tapply`</span></span>
-<span class=prompt>&gt;</span> <span class=code>v=1:1e6;group=data.frame(g1=sample(letters[1:3],1e6,T);g2=sample(letters[24:26],1e6,T))</span>
-<span class=prompt>&gt;</span> <span class=code>tap=\(x,y,fun=sum,...){o=data.table(x)[,fun(x,...),data.frame(y)];tapply(o[[ncol(o)]],o[,-ncol(o),with=F],I)}</span>
-<span class=comment># `o[[ncol(o)]]` extracts the last column as a vector, and `o[,-ncol(o),with=F]` deletes the last column</span>
-<span class=prompt>&gt;</span> <span class=code>summary(microbenchmark(times=10,tapply(v,group,sum),tap(v,group))</span>
-<span class=output>                   expr    median</span>
-<span class=output>1 tapply(v, group, sum) 112.66548</span>
-<span class=output>2         tap(v, group)  30.62405</span>
-<span class=output>
 <span class=title># `expand.grid` for data.table</span></span>
 <span class=prompt>&gt;</span> <span class=code>CJ(month.abb[1:2],state.name[1:3],sorted=F)</span><span class=comment> # this was slightly faster than `expand.grid` but not much faster</span>
 <span class=comment># CJ stands for cross join</span>
@@ -1471,4 +1460,20 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=output>[1] 1 2</span>
 <span class=prompt>&gt;</span> <span class=code>v|&gt;Filter(f=\(x)x&lt;3)</span>
 <span class=output>[1] 1 2</span>
+<span class=output>
+<span class=title># rbind without having to specify column names</span></span>
+<span class=prompt>&gt;</span> <span class=code>d=data.frame(x=1:2,y=5:6);rbind(d,list(3,7))</span>
+<span class=output>  x y</span>
+<span class=output>1 1 5</span>
+<span class=output>2 2 6</span>
+<span class=output>3 3 7</span>
+<span class=output>
+<span class=title># add integer index for each unique combination of two or more columns</span></span>
+<span class=prompt>&gt;</span> <span class=code>d=data.table(year=rep(2020:2022,each=12),month=1:12)</span>
+<span class=prompt>&gt;</span> <span class=code>d=rbind(d,d)</span>
+<span class=prompt>&gt;</span> <span class=code>d[,totalmonth:=.GRP,.(year,month)]</span>
+<span class=prompt>&gt;</span> <span class=code>tail(d,2)</span>
+<span class=output>   year month totalmonth</span>
+<span class=output>1: 2022    11         35</span>
+<span class=output>2: 2022    12         36</span>
 </pre>
