@@ -2476,11 +2476,11 @@ for(i in 1:2){
 
 system(&quot;w=`identify -format %w i1.png`;pad=24;magick -pointsize 44 -font Arial \\( -size $[w-pad] caption:&#39;CDC WONDER: Yearly deaths with kidney-related MCD but not MCD COVID (causes with at least 5,000 total deaths shown)&#39; -splice $[pad]x24 -gravity south -splice x10 \\) -gravity northwest -font Arial-Bold -pointsize 40 \\( -size $[w-pad*2] caption:&#39;113 cause list \&quot;Nephritis, nephrotic syndrome and nephrosis\&quot; (N00-N07, N17-N19, N25-N27)&#39; -splice $[pad]x1 \\) i1.png \\( -size $[w-pad*2] caption:&#39;Other kidney-related causes of death&#39; -splice $[pad]x1 \\) i2.png -append 1.png;magick 1.png -dither none -colors 256 1.png&quot;)</pre>
 </div>
-<p>From the next table which shows deaths by UCD instead of MCD, you can also see that acute renal failure isn't as common as an underlying cause of death as chronic kidney disease, and deaths with UCD chronic kidney disease have remained roughly stable since 2019. You can also see that in addition to the decrease in N28.8 (Other specified disorders of kidney and ureter), the increase in N17.9 has also been mirrored by a decrease in N19 (unspecified renal failure):</p>
+<p>From the next table which shows deaths by UCD instead of MCD, you cansee that acute renal failure isn't as common as an underlying cause of death as chronic kidney disease, and deaths with UCD chronic kidney disease have remained roughly stable since 2019. You can also see that in addition to the decrease in N28.8 (Other specified disorders of kidney and ureter), the increase in N17.9 has also been mirrored by a decrease in N19 (unspecified renal failure):</p>
 <div class="width10">
 <img src="i/ethical-kidney-4.png">
 </div>
-<p>This also shows how the increase in N17 deaths might be explained by a decrease in N28.8 deaths:</p>
+<p>In my first plot of kidney-related deaths pre month, I only included causes of death that were included on the ICD 113 cause list under the label <span class="quote">&quot;Nephritis, nephrotic syndrome and nephrosis&quot;</span>. But in the next plot where I included all ICD codes between N00 and N28, there was no longer any clear increase in deaths above the prepandemic baseline since 2020, and in fact the deaths were far below the baseline in 2023 and 2024 (even though it might be due to a change in coding practices similar to the jump down at the start of 2011):</p>
 <div class="width7">
 <img src="i/ethical-kidney-9.png">
 </div>
@@ -2488,6 +2488,138 @@ system(&quot;w=`identify -format %w i1.png`;pad=24;magick -pointsize 44 -font Ar
 <div class="width6">
 <img src="i/ethical-kidney-5.png">
 </div>
+<p>Relative to the 2018-2019 average baseline I used in my plot, since 2020 there have been about 1.5 times as many excess deaths with MCD I10 (<span class="quote">&quot;Essential (primary) hypertension&quot;</span>) as excess deaths with MCD N17.9 (<span class="quote">&quot;Acute renal failure, unspecified&quot;</span>). So is there also a hypertension Holocaust according to John Beaudoin? Or is the primary cause of most excess deaths not actually hypertension?</p>
+<div class="width7">
+<img src="i/ethical-kidney-8.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table)
+
+kimi=\(x){na=is.na(x);x[na]=0;e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;x[]=ifelse(abs(x)&lt;1e3,round(x),paste0(sprintf(paste0(&quot;%.&quot;,ifelse(e%%3==0,1,0),&quot;f&quot;),x/1e3^(e2-1)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2]));x[na]=&quot;NA&quot;;x}
+
+t=fread(&quot;http://sars2.net/f/wonderbyicd.csv.gz&quot;)[year&gt;=2018&amp;type==&quot;MCD&quot;]
+me=merge(t,t[year&lt;2020,mean(dead),code])
+m=me[,tapply(dead-V1,.(paste0(code,&quot;: &quot;,substr(cause,1,67)),year),c)]
+
+m=m[order(-rowSums(m[,-(1:2)],na.rm=T)),]
+m=m[rowSums(m,na.rm=T)&gt;0,][1:24,]
+
+maxcolor=max(abs(m),na.rm=T)
+exp=.8
+pal=hsv(rep(c(21,0)/36,5:4),c(1,.8,.6,.3,0,.3,.6,.8,1),c(.3,.65,1,1,1,1,1,.65,.3))
+
+pheatmap::pheatmap(sign(m)*abs(m)^exp,filename=&quot;1.png&quot;,display_numbers=kimi(m),
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=18,cellheight=14,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;gray90&quot;,
+  number_color=ifelse(!is.na(m)&amp;abs(m)^exp&gt;.7*(maxcolor^exp),&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(-maxcolor^exp,maxcolor^exp,,256),
+  colorRampPalette(pal)(256))
+
+system(&quot;w=`identify -format %w 1.png`;pad=26;magick -pointsize 44 -font Arial \\( -size $[w-pad] caption:&#39;CDC WONDER: Excess number of deaths by multiple cause of death relative to 2018-2019 average, top 24 causes shown sorted by 2020-2024 total&#39; -splice $[pad]x24 \\) 1.png -append 1.png&quot;)</pre>
+</div>
+<p>From the fixed-width files for the NVSS data it's possible to see which set of causes of death each person had: <a href=stat.html#Download_fixed_width_and_CSV_files_for_the_NVSS_data_used_at_CDC_WONDER>stat.html#Download_fixed_width_and_CSV_files_for_the_NVSS_data_used_at_CDC_WONDER</a>. In the following code I retrieved the complete MCD list of 10 random people who died with MCD N17 in 2022. Two of them fairly young persons of age 54 and 64 with underlying cause of death COVID, and the other person also had bacterial pneumonia due to staphylocccus listed as MCD. But only one out of the ten people had a kidney-related UCD, even though that person's causes of death also included respiratory failure and cardiac arrest:</p>
+<pre>system(&quot;wget https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/mortality/mort2022us.zip;unzip mort2022us.zip&quot;)
+
+library(readr);library(readxl)
+
+t=setDT(read_fwf(&quot;VS22MORT.DUSMCPUB_r20240307&quot;,fwf_cols(restatus=c(20,20),age=c(70,73),ucod=c(146,149),enicon_1=c(167,170),enicon_2=c(174,177),enicon_3=c(181,184),enicon_4=c(188,191),enicon_5=c(195,198),enicon_6=c(202,205),enicon_7=c(209,212),enicon_8=c(216,219),enicon_9=c(223,226),enicon_10=c(230,233),enicon_11=c(237,240),enicon_12=c(244,247),enicon_13=c(251,254),enicon_14=c(258,261),enicon_15=c(265,268),enicon_16=c(272,275),enicon_17=c(279,282),enicon_18=c(286,289),enicon_19=c(293,296),enicon_20=c(300,303))))
+
+t=t[restatus!=4][,age:=ifelse(age%/%1000%in%c(1,9),age%%1000,0)]
+set.seed(0);sub=t[rowSums(t==&quot;N179&quot;,na.rm=T)&gt;0][sample(.N,10)]
+
+icd=setkey(fread(&quot;http://sars2.net/f/wonderbyicd.csv.gz&quot;)[rowid(code)==1][,code:=sub(&quot;.&quot;,&quot;&quot;,code,fixed=T)],&quot;code&quot;)
+
+l=na.omit(sub[,.(id=.I,age,pos=rep(0:20,each=.N),code=unlist(.SD[,-(1:2)],,F))])
+l$cause=icd[l$code,cause]
+
+l[,cat(paste0(&quot;age &quot;,age[1],&quot;, &quot;,paste0(ifelse(pos==0,&quot;UCD &quot;,paste0(&quot;MCD &quot;,pos,&quot;: &quot;)),code,&quot; &quot;,cause,collapse=&quot;\n&quot;),&quot;\n\n&quot;)),id]
+# age 83, UCD M628 Other specified disorders of muscle
+# MCD 1: A419 Septicaemia, unspecified
+# MCD 2: N179 Acute renal failure, unspecified
+# MCD 3: M628 Other specified disorders of muscle
+#
+# age 83, UCD I350 Aortic (valve) stenosis
+# MCD 1: A419 Septicaemia, unspecified
+# MCD 2: J152 Pneumonia due to staphylococcus
+# MCD 3: I509 Heart failure, unspecified
+# MCD 4: I350 Aortic (valve) stenosis
+# MCD 5: J960 Acute respiratory failure
+# MCD 6: R090 Asphyxia
+# MCD 7: N179 Acute renal failure, unspecified
+# MCD 8: N189 Chronic renal failure, unspecified
+#
+# age 67, UCD K566 Other and unspecified intestinal obstruction
+# MCD 1: J960 Acute respiratory failure
+# MCD 2: R090 Asphyxia
+# MCD 3: R068 Other and unspecified abnormalities of breathing
+# MCD 4: N179 Acute renal failure, unspecified
+# MCD 5: N183 Chronic kidney disease, stage 3
+# MCD 6: K566 Other and unspecified intestinal obstruction
+# MCD 7: I509 Heart failure, unspecified
+# MCD 8: E872 Acidosis
+# MCD 9: R579 Shock, unspecified
+# MCD 10: K720 Acute and subacute hepatic failure
+# MCD 11: K922 Gastrointestinal haemorrhage, unspecified
+#
+# age 86, UCD F03 Unspecified dementia
+# MCD 1: J969 Respiratory failure, unspecified
+# MCD 2: N179 Acute renal failure, unspecified
+# MCD 3: E86 Volume depletion
+# MCD 4: R636 Insufficient intake of food and water due to self neglect
+# MCD 5: F03 Unspecified dementia
+# MCD 6: F03 Unspecified dementia
+# MCD 7: R636 Insufficient intake of food and water due to self neglect
+# MCD 8: E86 Volume depletion
+# MCD 9: E878 Other disorders of electrolyte and fluid balance, not elsewhere classified
+#
+# age 79, UCD J841 Other interstitial pulmonary diseases with fibrosis
+# MCD 1: I959 Hypotension, unspecified
+# MCD 2: N179 Acute renal failure, unspecified
+# MCD 3: J841 Other interstitial pulmonary diseases with fibrosis
+#
+# age 64, UCD U071 COVID-19
+# MCD 1: J960 Acute respiratory failure
+# MCD 2: U071 COVID-19
+# MCD 3: J189 Pneumonia, unspecified
+# MCD 4: J152 Pneumonia due to staphylococcus
+# MCD 5: G931 Anoxic brain damage, not elsewhere classified
+# MCD 6: N179 Acute renal failure, unspecified
+#
+# age 54, UCD U071 COVID-19
+# MCD 1: J960 Acute respiratory failure
+# MCD 2: U071 COVID-19
+# MCD 3: J189 Pneumonia, unspecified
+# MCD 4: U071 COVID-19
+# MCD 5: J189 Pneumonia, unspecified
+# MCD 6: J982 Interstitial emphysema
+# MCD 7: J939 Pneumothorax, unspecified
+# MCD 8: A419 Septicaemia, unspecified
+# MCD 9: N179 Acute renal failure, unspecified
+# MCD 10: E878 Other disorders of electrolyte and fluid balance, not elsewhere classified
+#
+# age 75, UCD N179 Acute renal failure, unspecified
+# MCD 1: R090 Asphyxia
+# MCD 2: J969 Respiratory failure, unspecified
+# MCD 3: J841 Other interstitial pulmonary diseases with fibrosis
+# MCD 4: N179 Acute renal failure, unspecified
+# MCD 5: I469 Cardiac arrest, unspecified
+# MCD 6: F179 Mental and behavioural disorders due to use of tobacco, unspecified mental and behavioural disorder
+#
+# age 80, UCD C900 Multiple myeloma - Malignant neoplasms
+# MCD 1: N179 Acute renal failure, unspecified
+# MCD 2: A419 Septicaemia, unspecified
+# MCD 3: R688 Other specified general symptoms and signs
+# MCD 4: C900 Multiple myeloma - Malignant neoplasms
+#
+# age 78, UCD I64 Stroke, not specified as haemorrhage or infarction
+# MCD 1: I64 Stroke, not specified as haemorrhage or infarction
+# MCD 2: N179 Acute renal failure, unspecified
+# MCD 3: N189 Chronic renal failure, unspecified
+# MCD 4: J449 Chronic obstructive pulmonary disease, unspecified
+# MCD 5: D649 Anaemia, unspecified
+# MCD 6: I509 Heart failure, unspecified</pre>
 <p>In the UK there has actually been a large decrease in deaths with UCD acute renal failure (N17) since 2018, even though UCD chronic kidney disease (N18) has remained more stable: [<a href="https://www.nomisweb.co.uk/query/161.1/advanced.aspx">https://www.nomisweb.co.uk/query/161.1/advanced.aspx</a>]</p>
 <div class="width7">
 <img src="i/ethical-kidney-6.png">
@@ -2549,37 +2681,6 @@ points(p$year,p$dead,pch=20,cex=.6)
 lines(p$year,p$trend,type=&quot;l&quot;,lty=2,lwd=1.5)
 legend(&quot;topleft&quot;,legend=leg,lty=c(1,2),lwd=1.5)
 dev.off()</pre>
-</div>
-<p>The next plot shows that since 2020 there's even more excess deaths with MCD I10 (<span class="quote">&quot;Essential (primary) hypertension&quot;</span>) than excess deaths with MCD N17.9 (<span class="quote">&quot;Acute renal failure, unspecified&quot;</span>). So is there also a hypertension Holocaust according to John Beaudoin? Or is the primary cause of most excess deaths not actually hypertension?</p>
-<div class="width7">
-<img src="i/ethical-kidney-8.png">
-</div>
-<div class="spoiler">
-<button>
-Show code
-</button><pre>library(data.table)
-
-kimi=\(x){na=is.na(x);x[na]=0;e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;x[]=ifelse(abs(x)&lt;1e3,round(x),paste0(sprintf(paste0(&quot;%.&quot;,ifelse(e%%3==0,1,0),&quot;f&quot;),x/1e3^(e2-1)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2]));x[na]=&quot;NA&quot;;x}
-
-t=fread(&quot;http://sars2.net/f/wonderbyicd.csv.gz&quot;)[year&gt;=2018&amp;type==&quot;MCD&quot;]
-me=merge(t,t[year&lt;2020,mean(dead),code])
-m=me[,tapply(dead-V1,.(paste0(code,&quot;: &quot;,substr(cause,1,67)),year),c)]
-
-m=m[order(-rowSums(m[,-(1:2)],na.rm=T)),]
-m=m[rowSums(m,na.rm=T)&gt;0,][1:24,]
-
-maxcolor=max(abs(m),na.rm=T)
-exp=.8
-pal=hsv(rep(c(21,0)/36,5:4),c(1,.8,.6,.3,0,.3,.6,.8,1),c(.3,.65,1,1,1,1,1,.65,.3))
-
-pheatmap::pheatmap(sign(m)*abs(m)^exp,filename=&quot;1.png&quot;,display_numbers=kimi(m),
-  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=18,cellheight=14,fontsize=9,fontsize_number=8,
-  border_color=NA,na_col=&quot;gray90&quot;,
-  number_color=ifelse(!is.na(m)&amp;abs(m)^exp&gt;.7*(maxcolor^exp),&quot;white&quot;,&quot;black&quot;),
-  breaks=seq(-maxcolor^exp,maxcolor^exp,,256),
-  colorRampPalette(pal)(256))
-
-system(&quot;w=`identify -format %w 1.png`;pad=26;magick -pointsize 44 -font Arial \\( -size $[w-pad] caption:&#39;CDC WONDER: Excess number of deaths by multiple cause of death relative to 2018-2019 average, top 24 causes shown sorted by 2020-2024 total&#39; -splice $[pad]x24 \\) 1.png -append 1.png&quot;)</pre>
 </div>
 <h2>
 <a href=#Excess_deaths_from_natural_causes id=Excess_deaths_from_natural_causes>Excess deaths from natural causes</a>
