@@ -436,9 +436,9 @@ system(paste0(&quot;mar=120;w=`identify -format %w 1.png`;magick 1.png \\( -size
 <a href=#PFE_arrival_function_determined_from_monthly_deaths_by_age id=PFE_arrival_function_determined_from_monthly_deaths_by_age>PFE arrival function determined from monthly deaths by age</a>
 </h2>
 <p>In the next plot I calculated a PFE adjustment factor based on the number of UCD COVID deaths in 2020-2022. I got the number of deaths with UCD COVID by age and month from the fixed-width files for the NVSS data to avoid the suppression of deaths at CDC WONDER: <a href=stat.html#Download_fixed_width_and_CSV_files_for_the_NVSS_data_used_at_CDC_WONDER>stat.html#Download_fixed_width_and_CSV_files_for_the_NVSS_data_used_at_CDC_WONDER</a>.</p>
-<p>I converted the age in years at the time of death to an age in months by multiplying it by 12 and adding a random number between 0 and 11. For the sake of simplicity each month had a duration of one twelfth of a year. I interpolated mortality rates by age in months on a log scale from mortality rates by single year of age in 2019, and I extrapolated mortality rates for ages above 99 on a log scale. Each month I determined the number of people who died by multiplying the number of people for each age in months with the mortality rate for the age in months. And finally I calculated the PFE adjustment percent as <code>-monthly_deaths/total_US_deaths_in_2019*12</code>.</p>
+<p>I converted the age in years at the time of death to an age in months by multiplying it by 12 and adding a random number between 0 and 11. For the sake of simplicity each month had a duration of one twelfth of a year. I interpolated mortality rates by age in months on a log scale from mortality rates by single year of age in 2019, and I extrapolated mortality rates for ages above 99 on a log scale. Each month I determined the number of people who died by multiplying the number of people for each age in months with the mortality rate for the age in months. I also calculated a baseline model of how many people would've died each month without the elevated deaths, and I calculated the PFE adjustment percent as <code>-monthly_deaths/baseline_deaths*100</code>.</p>
 <p>I also applied a similar model to all-cause excess deaths relative to a seasonality-adjusted linear baseline for each age in 2011-2019.</p>
-<p>The maximum reduction to the baseline was only about 1.9% based on COVID deaths and about 2.2% based on all-cause deaths, so both were around one third of 6.02% which is the maximum reduction in a PFE adjustment curve that Ethical Skeptic posted on his blog:</p>
+<p>The maximum reduction to the baseline was only about 1.8% based on COVID deaths and about 2.2% based on all-cause deaths, so both were around one third of 6.02% which is the maximum reduction in a PFE adjustment curve that Ethical Skeptic posted on his blog:</p>
 <div class="width6">
 <img src="i/ethical-arrival.png">
 </div>
@@ -447,8 +447,11 @@ system(paste0(&quot;mar=120;w=`identify -format %w 1.png`;magick 1.png \\( -size
 Show code
 </button><pre>library(data.table);library(ggplot2)
 
+months=12*60;maxage=Inf
+
 t=do.call(rbind,lapply(2020:2022,\(i)fread(paste0(i,&quot;.csv.gz&quot;))[ucod==&quot;U071&quot;&amp;restatus!=4,.(age,month=(year-2020)*12+monthdth)]))
 t=t[age!=9999][,age:=ifelse(age&gt;1000,age%%1000,0)]
+t=t[age&lt;maxage]
 t[,age:=age*12+sample(0:11,.N,T)]
 covid=t[,.(pop=.N),.(month,age)]
 
@@ -456,13 +459,11 @@ pop=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)[year==2019]
 cmr=pop[age!=100,dead/pop]/12
 cmr=pmin(1,exp(spline(seq(7,,12,100),log(cmr),xout=0:(12*121))$y))
 
-months=12*60
-
-dead=double();prev=list()
+dead1=double();prev=NULL
 for(i in 1:months){
   cur=rbind(prev,covid[month==i])[,.(pop=sum(pop)),.(month,age)]
   died=cur[,cmr[pmin(age+1,length(cmr))]*pop]
-  dead[i]=sum(died)
+  dead1[i]=sum(died)
   prev=cur[,.(month=i+1,age=age+1,pop=pop-died)]
 }
 
@@ -470,14 +471,22 @@ all=fread(&quot;http://sars2.net/f/uspopdeadmonthly.csv&quot;)[year%in%2011:2022
 all[,date:=(year-2020)*12+month][,cmr:=dead/persondays]
 all=merge(all,all[year&lt;2020,.(date=unique(all$date),base=predict(lm(cmr~date),.(date=unique(all$date)))),age])
 all=merge(all[year&lt;2020,.(monthly=mean(cmr/base)),.(month,age)],all)
+all=all[age&lt;maxage]
 all=all[date%in%1:36,.(pop=sum(dead)-sum(base*persondays*monthly)),,.(age=age*12+6,month=date)]
 
-dead2=double();prev=list()
+dead2=double();prev=NULL
 for(i in 1:months){
   cur=rbind(prev,all[month==i])[,.(pop=sum(pop)),.(month,age)]
   died=cur[,cmr[pmin(age+1,length(cmr))]*pop]
   dead2[i]=sum(died)
   prev=cur[,.(month=i+1,age=age+1,pop=pop-died)]
+}
+
+dead0=double();cur=pop[age&lt;=maxage*12,.(age=age*12,pop,month=1)]
+for(i in 1:months){
+  died=cur[,cmr[pmin(age+1,length(cmr))]*pop]
+  dead0[i]=sum(died)
+  cur=cur[,.(month=i+1,age=age+1,pop=pop-died)][,.(pop=sum(pop)),.(month,age)]
 }
 
 pfe=c(-3.5,-4.9,-5.9,-5.9,-4.7,-2.9,-1.7,-1)
@@ -488,7 +497,7 @@ lab=&quot;My model based on UCD COVID deaths in 2020-2022&quot;
 lab=c(lab,&quot;My model based on all-cause excess deaths in 2020-2022&quot;)
 lab=c(lab,&quot;Approximation of Ethical Skeptic&#39;s PFE arrival function&quot;)
 
-p=data.table(x=1:months,y=-c(dead,dead2)/sum(pop$dead)*12*100)
+p=data.table(x=1:months,y=-c(dead1,dead2)/dead0*100)
 p[,z:=factor(rep(lab[1:2],each=.N/2),lab[1:2])]
 p=rbind(p,pfe[,z:=lab[3]])
 
@@ -502,27 +511,28 @@ geom_line(aes(color=z),linewidth=.35)+
 labs(title=&quot;PFE-adjusted baseline models&quot;,x=NULL,y=NULL)+
 scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
 scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,labels=\(x)paste0(x,&quot;%&quot;))+
-coord_cartesian(clip=&quot;off&quot;,expand=F)+
+coord_cartesian(ylim=c(ystart,yend),clip=&quot;off&quot;,expand=F)+
 scale_color_manual(values=c(&quot;#f6f&quot;,&quot;#f66&quot;,&quot;black&quot;))+
 theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
+  axis.text.y=element_text(margin=margin(,1)),
   axis.ticks=element_line(linewidth=.3),
   axis.ticks.length.x=unit(3,&quot;pt&quot;),
   legend.direction=&quot;vertical&quot;,
-  legend.justification=c(1,0),
+  legend.justification=c(1,.5),
   legend.key=element_blank(),
   legend.key.height=unit(9,&quot;pt&quot;),
-  legend.key.width=unit(20,&quot;pt&quot;),
+  legend.key.width=unit(17,&quot;pt&quot;),
   legend.background=element_rect(color=&quot;black&quot;,linewidth=.3),
-  legend.margin=margin(3,3,3,3),
-  legend.position=c(1,0),
+  legend.margin=margin(2,2,2,2),
+  legend.position=c(1,.5),
   legend.spacing.x=unit(1.5,&quot;pt&quot;),
   legend.spacing.y=unit(0,&quot;pt&quot;),
-  legend.text=element_text(size=7),
+  legend.text=element_text(size=6.8),
   legend.title=element_blank(),
   panel.background=element_blank(),
-  plot.margin=margin(4,11,2,4),
-  plot.title=element_text(size=7.2,face=&quot;bold&quot;,margin=margin(1,,3)))
+  plot.margin=margin(4,7,2,4),
+  plot.title=element_text(size=7.3,face=&quot;bold&quot;,margin=margin(1,,3)))
 ggsave(&quot;1.png&quot;,width=3.8,height=1.8,dpi=380*4)
 system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
 </div>
@@ -531,7 +541,7 @@ system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
 <div class="width5">
 <img src="i/np-bergamo-pfe-arrival.png">
 </div>
-<p>Ethical Skeptic's PFE adjustment is fully <span class="quote">&quot;expired&quot;</span> by October 2027 which means that after that point he will no longer subtract further deaths. But he said that in November 2024 his baseline was approximately 69% expired, which means that at that point he would've already subtracted about 69% of 668,592 deaths, which is about 460,000. However in the red line in my plot above I had only subtracted a total of 234,754 deaths by November 2024, which is only about half of his figure.</p>
+<p>Ethical Skeptic's PFE adjustment is fully <span class="quote">&quot;expired&quot;</span> by October 2027 which means that after that point he will no longer subtract further deaths. But he said that in November 2024 his baseline was approximately 69% expired, which means that at that point he would've already subtracted about 69% of 668,592 deaths, which is about 460,000. However in the red line in my plot above I had only subtracted a total of only about 227,000 deaths by the end of November 2024, which is only about half of his figure.</p>
 <p>Ethical Skeptic often applies heavy adjustment for the PFE even in plots for young age groups like 0-54. But based on these models for ages 0-54, the maximum reduction to the baseline up to the end of 2024 was only about 0.12% in the model based on COVID deaths and about 0.24% in the model based on all-cause deaths:</p>
 <div class="width6">
 <img src="i/ethical-arrival-2.png">
