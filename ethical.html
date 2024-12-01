@@ -61,6 +61,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 </style>
 <title>Comments to Ethical Skeptic</title>
 <h1>Comments to Ethical Skeptic - <a href=index.html>sars2.net</a></h1>
+<p>Further updates are added to part 2: <a href=ethical2.html>ethical2.html</a>.</p>
 <h2 id=Contents><a href=#Contents>Contents</a></h2>
 <ul>
 <li><a href=#Short_version>Short version</a></li>
@@ -81,9 +82,6 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Deaths_with_kidney_related_MCD_in_ages_0_to_64>Deaths with kidney-related MCD in ages 0 to 64</a></li>
 <li><a href=#Excess_deaths_from_natural_causes>Excess deaths from natural causes</a></li>
 <li><a href=#Deaths_from_pneunomia_with_unspecified_organism>Deaths from pneunomia with unspecified organism</a></li>
-<li><a href=#Is_there_still_excess_all_cause_mortality_in_2024>Is there still excess all-cause mortality in 2024?</a></li>
-<li><a href=#Should_the_PFE_adjustment_last_for_only_6_6_years>Should the PFE adjustment last for only 6.6 years?</a></li>
-<li><a href=#PFE_arrival_function_determined_from_monthly_deaths_by_age>PFE arrival function determined from monthly deaths by age</a></li>
 </ul>
 
 <h2>
@@ -110,6 +108,11 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <p>Ethical Skeptic posted a plot from OWID which showed that New Zealand had close to zero cumulative excess deaths since 2020, and he claimed OWID's baseline was inappropriate because when he compared it to another plot for crude mortality in New Zealand that started from the 1970s, the CMR decreased up to around 2005 but it increased afterwards, so the CMR from 2020 onwards was below a linear baseline he drew to approximate the decrease in CMR between 1970 and 2019.</p>
 <p>However the age composition of New Zealand has completely changed since the 1970s, so it doesn't make sense to use a 50-year long linear baseline fitted against CMR, and the percentage of people in elderly age groups is now much higher than in the 70s. When I fitted a quadratic baseline against ASMR data from 1992 to 2019 in New Zealand, I got negative total excess deaths in 2020 to 2023.</p>
 <p>Ethical Skeptic claimed that OWID's baseline was <span class="quote">&quot;paltered&quot;</span>, which is a term he has invented which means that 2020 or later years are included in the fitting period of the baseline. However actually OWID's baseline was fitted against the raw number of deaths in 2015 to 2019, so it doesn't fit his usual definition of what paltered means.</p>
+<p><b><u>Deaths with kidney-related MCD in ages 0 to 64</u></b></p>
+<p>Ethical Skeptic posted a plot where he included kidney-related causes of death under the ICD codes N00-07, N17-19, and N25-27, which are the causes of death that are included on the 113 cause list under the label <span class="quote">&quot;Nephritis, nephrotic syndrome and nephrosis&quot;</span>.</p>
+<p>His plot had a big increase in excess deaths during 2020 and 2021 after which the excess deaths remained a sustained elevated level. The increase was mostly due to deaths under N17.9 (acute renal failure, unspecified), which increased from about 64,000 deaths in 2020 to about 109,000 in 2022 if you look at MCD deaths that didn't have MCD COVID. However his plot was missing deaths with MCD N28.8 (other specified disorders of kidney and ureter), which fell from about 34,000 non-COVID MCD deaths in 2020 to about 3,000 in 2022.</p>
+<p>When I made a plot where I included deaths with any kidney-related MCD between N00 and N28 but not MCD COVID, the number of deaths since 2020 roughly fell on the prepandemic baseline.</p>
+<p>Part of the increase in deaths under N17.9 (acute renal failure, unspecified) might also be due to a decrease in deaths under N19 (unspecified renal failure). Between 2014 and 2023, the yearly number of UCD deaths increased from about 8,000 to 11,000 for N17.9 but it decreased from about 11,000 to about 5,000 for N19.</p>
 <p><b><u>Deaths from pneunomia with unspecified organism</u></b></p>
 <p>Ethical Skeptic posted a plot which he claimed showed deaths associated with <em>Mycoplasma pneumoniae</em> in ages 0 to 54. But actually his plot included three ICD codes which were J15.7 (<span class="quote">&quot;Pneumonia due to Mycoplasma pneumoniae&quot;</span>), J20.0 (<span class="quote">&quot;Acute bronchitis due to Mycoplasma pneumoniae&quot;</span>), and J18 (<span class="quote">&quot;Pneumonia, organism unspecified&quot;</span>). And the two ICD codes associated with <em>Mycoplasma pneumoniae</em> had close to zero total deaths but J18 accounted for about 99.8% to 99.9% of all deaths in his plot, so actually his plot showed deaths from pneumonia with unspecified organism.</p>
 <p>In the plot his baseline was pointed too much downwards because he fitted the baseline using only data from 2018 and 2019 and there was a low number of deaths in 2019.</p>
@@ -2484,6 +2487,110 @@ system(&quot;w=`identify -format %w i1.png`;pad=24;magick -pointsize 44 -font Ar
 <div class="width7">
 <img src="i/ethical-kidney-9.png">
 </div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2)
+
+t=fread(&quot;http://sars2.net/f/wonderkidneymonth.csv&quot;)[type==&quot;ucd&quot;]
+t[,date:=as.Date(paste(year,month,1,sep=&quot;-&quot;))]
+t[,dead:=dead/days_in_month(date)]
+
+p=t[,.(x=date,y=dead,z=factor(cause,unique(cause)),type=factor(&quot;Actual deaths&quot;))]
+p=rbind(p,p[year(x)%in%2013:2019,.(x=unique(p$x),type=&quot;2013-2019 baseline&quot;,y=predict(lm(y~x),.(x=unique(p$x)))),z])
+
+xstart=as.Date(&quot;1999-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
+xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=ifelse(month(xbreak)==7,year(xbreak),&quot;&quot;)
+ybreak=pretty(p$y,6);ystart=min(p$y);yend=max(p$y)*1.1
+
+color=c(&quot;black&quot;,hsv(c(0,3,27,12)/36,1,.8))
+lab=p[rowid(z)==1][order(z),.(z,x=as.Date(paste(c(2024,2024,2024,2024,2024),7,1,sep=&quot;-&quot;)),y=c(211,63,130,50,-6))]
+
+ggplot(p,aes(x+15,y))+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray90&quot;,linewidth=.25)+
+geom_hline(yintercept=c(ystart,0,yend),linewidth=.25,lineend=&quot;square&quot;)+
+geom_vline(xintercept=c(xstart,xend),linewidth=.25,lineend=&quot;square&quot;)+
+geom_text(data=lab,aes(label=z,color=z,x=x),size=2.3,hjust=1)+
+geom_line(aes(y=y,color=z,linetype=type),linewidth=.3)+
+labs(title=&quot;CDC WONDER: Monthly deaths by UCD, divided by number of days in month&quot;,,x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
+scale_color_manual(values=color)+
+scale_linetype_manual(values=c(&quot;solid&quot;,&quot;42&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
+  axis.text.y=element_text(margin=margin(,1)),
+  axis.ticks=element_line(linewidth=.25,color=&quot;black&quot;),
+  axis.ticks.length=unit(3,&quot;pt&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  legend.position=&quot;none&quot;,
+  panel.background=element_blank(),
+  plot.margin=margin(4,4,4,4),
+  plot.title=element_text(size=7,face=2,margin=margin(,,3)))
+ggsave(&quot;1.png&quot;,width=4.2,height=2.8,dpi=380*4)
+system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
+</div>
+<p>When I made a similar plot for MCD deaths, the number of MCD N00-N28 deaths with MCD COVID subtracted roughly fell on the prepandemic trend in 2020 to 2024:</p>
+<div class="width7">
+<img src="i/ethical-kidney-11.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2)
+
+t=fread(&quot;http://sars2.net/f/wonderkidneymonth.csv&quot;)
+t=t[,.(x=as.Date(paste(year,month,1,sep=&quot;-&quot;)),y=dead,z=factor(cause,unique(cause)),type)]
+t[,y:=y/lubridate::days_in_month(x)]
+
+p=rbind(t[type==&quot;mcd&quot;][,type:=1],dcast(t,z+x~type,value.var=&quot;y&quot;)[,.(z,x,type=2,y=mcd-nafill(and,,0))])
+p=rbind(p,p[type==1&amp;year(x)%in%2014:2019,.(x=unique(p$x),y=predict(lm(y~x),.(x=unique(p$x))),type=3),z])
+p[,type:=factor(type,,c(&quot;MCD COVID not subtracted&quot;,&quot;MCD COVID subtracted&quot;,&quot;2014-2019 linear trend&quot;))]
+
+xstart=as.Date(&quot;1999-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
+xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=ifelse(month(xbreak)==7,year(xbreak),&quot;&quot;)
+ybreak=pretty(p$y,6);ystart=0;yend=max(p$y)
+
+ggplot(p,aes(x+15,y))+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray90&quot;,linewidth=.25)+
+geom_hline(yintercept=c(ystart,0,yend),linewidth=.25,lineend=&quot;square&quot;)+
+geom_vline(xintercept=c(xstart,xend),linewidth=.25,lineend=&quot;square&quot;)+
+geom_line(aes(y=ifelse(y&lt;0,NA,y),color=z,alpha=type,linetype=type),linewidth=.3)+
+labs(title=&quot;CDC WONDER: Monthly MCD deaths divided by number of days in month&quot;,,x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
+scale_color_manual(values=c(&quot;black&quot;,hsv(c(0,3,27,12)/36,1,.8)))+
+scale_alpha_manual(values=c(1,.4,1))+
+scale_linetype_manual(values=c(&quot;solid&quot;,&quot;solid&quot;,&quot;42&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(color=guide_legend(order=1),linetype=guide_legend(order=2),alpha=guide_legend(order=2))+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
+  axis.text.y=element_text(margin=margin(,1)),
+  axis.ticks=element_line(linewidth=.25,color=&quot;black&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(3,&quot;pt&quot;),
+  legend.background=element_rect(fill=alpha(&quot;white&quot;,1),color=&quot;black&quot;,linewidth=.25),
+  legend.box=&quot;vertical&quot;,
+  legend.box.just=&quot;left&quot;,
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.justification=c(0,1),
+  legend.key=element_blank(),
+  legend.margin=margin(2,3,2,2),
+  legend.key.height=unit(7,&quot;pt&quot;),
+  legend.key.width=unit(17,&quot;pt&quot;),
+  legend.position=c(0,1),
+  legend.spacing.x=unit(0,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=7,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  plot.margin=margin(4,4,4,4),
+  plot.title=element_text(size=7,face=2,margin=margin(,,3)))
+ggsave(&quot;1.png&quot;,width=4.2,height=2.8,dpi=380*4)
+system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
+</div>
 <p>I thought that there might have been some particular underlying cause of death that would've accounted for the increase in deaths from MCD acute renal failure, but the next plot shows that the deaths seem to be distributed fairly evenly across various underlying causes, apart from about 70,000 deaths with UCD COVID. John Beaudoin has been saying that there have been about 155,000 excess deaths from acute renal failure in the United States, but he means MCD and not UCD deaths, and about half of his 155,000 excess deaths seem to have the underlying cause COVID:</p>
 <div class="width6">
 <img src="i/ethical-kidney-5.png">
@@ -3127,381 +3234,6 @@ system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 <div class="width9">
 <img src="i/ethical-mycoplasma-5.png">
 </div>
-<h2>
-<a href=#Is_there_still_excess_all_cause_mortality_in_2024 id=Is_there_still_excess_all_cause_mortality_in_2024>Is there still excess all-cause mortality in 2024?</a>
-</h2>
-<p>Jeffrey Morris posted this plot by Truth in Numbers where the ASMR in 2024 was below the 2018-2019 average baseline: [<a href="https://x.com/jsm2334/status/1859343221677068406">https://x.com/jsm2334/status/1859343221677068406</a>]</p>
-<div class="width7">
-<img src="i/ethical-allcause-1.png">
-</div>
-<p>Ethical Skeptic posted this tweet in response, where he got about 7.1% excess deaths in 2024: [<a href="https://x.com/EthicalSkeptic/status/1859361344975159394">https://x.com/EthicalSkeptic/status/1859361344975159394</a>]</p>
-<blockquote>
-<p>From practitioner experience:</p>
-<p>1. Regression is applied to stable troughs, not all data points, which may include volatile isolated surges - otherwise it is Gaussian blindness paltering (using a dishonest baseline).</p>
-<p>2. If 1.6 million EXCESS old persons die over a couple years, you must lower the anticipated death rate in subsequent years, or you are doing torfuscation (hiding the dead bodies).</p>
-<p>Both are dishonest and/or incompetent.</p>
-<p><img src=i/ethical-allcause-2.jpg class=width10></p>
-</blockquote>
-<p>In the plot by Truth in Numbers, the average ASMR on weeks 40 of 2018 and 2019 was drawn as a baseline, but if he would've used a prepandemic linear regression as the baseline then he might have gotten positive excess ASMR in 2024. He used 2010-based population estimates for 2018 to 2020 and 2020-based population estimates for 2021 onwards, which exaggerated his ASMR in 2024 relative to 2018 and 2019, because the population sizes of the oldest age groups dropped dramatically between the 2010-based and 2020-based population estimates:</p>
-<div class="width6">
-<img src="i/ethical-allcause-6.png">
-</div>
-<p>In the next plot I adjusted the 2010-2020 population estimates using the same method as in the gray lines in my plot above. It reduced my total excess ASMR in 2024 from about 1.0% to about -4.6%:</p>
-<div class="width7">
-<img src="i/ethical-allcause-3.png">
-</div>
-<div class="spoiler">
-<button>
-Show code
-</button><pre>library(data.table);library(lubridate);library(ggplot2)
-
-url=&quot;https://www2.census.gov/programs-surveys/popest/datasets/&quot;
-new=do.call(rbind,lapply(paste0(url,&quot;2020-2023/national/asrh/nc-est2023-alldata-r-file0&quot;,1:8,&quot;.csv&quot;),\(x)fread(x)))
-old=do.call(rbind,lapply(paste0(url,&quot;2010-2020/national/asrh/NC-EST2020-ALLDATA-R-File&quot;,sprintf(&quot;%02d&quot;,1:24),&quot;.csv&quot;),\(x)fread(x)))
-
-mult=new[YEAR==2020&amp;MONTH==4.2,.(age=AGE,new=TOT_POP)]
-mult=merge(mult,old[YEAR==2020&amp;MONTH==4,.(age=AGE,old=TOT_POP)])[,.(mult=new/old,age)]
-
-oldpop=old[YEAR!=2021&amp;MONTH!=4.2&amp;AGE!=999,.(year=YEAR,month=floor(MONTH),pop=TOT_POP,age=AGE)]
-newpop=new[AGE!=999,.(year=YEAR,month=floor(MONTH),pop=TOT_POP,age=AGE)]
-
-proj=fread(&quot;https://www2.census.gov/programs-surveys/popproj/datasets/2023/2023-popproj/np2023_d1_mid.csv&quot;)
-proj=proj[SEX==0&amp;ORIGIN==0&amp;RACE==0&amp;YEAR%in%2024:2025,.(x=c(7,19),age=rep(0:100,each=.N),pop=unlist(.SD[,-(1:5)]))]
-proj=rbind(newpop[year==2023&amp;month==12,.(x=0,pop,age)],proj)
-newpop=rbind(newpop,proj[,spline(x,pop,xout=1:12),age][,.(age,year=2024,month=x,pop=y)])
-
-oldmod=oldpop[!(year==2020&amp;month&gt;4)]
-oldmod=merge(mult,oldmod[,.(year,month,pop,slope=seq(0,1,,.N)),age])
-oldmod=oldmod[,.(age,year,month,pop=pop*(slope*mult+(1-slope)*1))]
-
-a=cbind(rbind(oldpop[!(year==2020&amp;month&gt;=4)],newpop),group=&quot;Original unmodified population estimates&quot;)
-a=rbind(a,cbind(rbind(oldmod[!(year==2020&amp;month==4)],newpop),group=&quot;Population estimates for 2010 to March 2020 multiplied by linear slope&quot;))
-
-a=merge(a,fread(&quot;http://sars2.net/f/usdeadmonthly.csv&quot;)[!(year==2024&amp;month&gt;9)])
-
-census=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/nc-est2023-agesex-res.csv&quot;)
-census=census[SEX==0&amp;AGE!=999,.(age=AGE,std=ESTIMATESBASE2020)][,std:=std/sum(std)]
-a=merge(census,a)
-a[,date:=as.Date(paste0(year,&quot;-&quot;,month,&quot;-1&quot;))]
-a[,group:=factor(group,unique(group))]
-a[,pop:=pop*days_in_month(date)]
-
-p=a[,.(asmr=sum(dead/pop*std*365e5)),.(date,group)]
-
-p=merge(p[year(date)%in%2011:2019&amp;month(date)%in%5:9,.(date=unique(p$date),base=predict(lm(asmr~date),.(date=unique(p$date)))),group],p)
-p[,month:=month(date)]
-p=merge(p[year(date)%in%2011:2019,.(monthly=mean(asmr-base)),month],p)
-
-yearly=a[,.(pop=sum(pop),dead=sum(dead)),.(age,std,group,year=year(date))]
-yearly=yearly[,.(asmr=sum(dead/pop*std*365e5)),.(year,group)]
-yearly=merge(yearly[year%in%2011:2019,.(year=2011:2024,base=predict(lm(asmr~year),.(year=2011:2024))),group],yearly)
-
-pct=yearly[,.(pct=(sum(asmr)/sum(base)-1)*100),.(year,group)][,x:=as.Date(paste0(year,&quot;-7-1&quot;))]
-
-lab=c(&quot;Actual ASMR&quot;,&quot;2011-2019 linear baseline&quot;,&quot;Baseline adjusted for seasonality&quot;,&quot;Difference from seasonality-adjusted baseline&quot;)
-p=p[,.(x=date,y=c(asmr,base,base+monthly,asmr-base-monthly),z=factor(rep(lab,each=.N),lab),group)]
-
-pct=merge(p[,.(y=min(y)),group],pct)
-
-xstart=as.Date(&quot;2017-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
-xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=ifelse(month(xbreak)==7,year(xbreak),&quot;&quot;)
-
-sub=&quot;\u00a0     The data for deaths was retrieved from CDC WONDER on November 21st 2024 UTC, so some deaths are still missing in 2024 because of a registration delay.
-      The percentage above the year shows the yearly total excess mortality percentage.
-      ASMR was calculated by single year of age so that the resident population estimates from the 2020 census were used as the standard population.
-      The baseline was calculated by doing a linear regression for monthly data in 2011 to 2019. Only May to September were included in the linear regression. In order to calculate the seasonality-adjusted baseline, the average difference between the actual ASMR and baseline during each January of 2011 to 2019 was added to the baseline for each January, and similarly for other months.
-      Monthly resident population estimates by single year of age were downloaded from www2.census.
-gov/programs-surveys/popest/datasets/2020-2023/national/asrh/nc-est2023-alldata-r-file0[1-8].csv, and from the corresponding files in the 2010-2020 directory.
-      In the top panel vintage 2023 population estimates are used for April 2020 to December 2023 and vintage 2020 population estimates are used for January 2011 to March 2020.
-      In the bottom panel the population estimates based on the 2010 census were multiplied by a linear slope so that they were equal to the population estimates based on the 2020 census in April 2020 when the two sets of estimates were merged. The old estimates covered a total of 121 months from April 2010 until April 2020, and for example for the age 80 the ratio between the new and old estimates was about 0.946, so the population estimate for age 80 was multiplied by about 1/121*0.946+120/121 in May 2010, by about 2/121*0.946+119/121 in June 2010, and so on.
-     Monthly population estimates for 2024 were calculated as a spline interpolation of the population estimate on December 2023 and mid-year population projections for 2024 and 2025: www2.census.gov/programs-surveys/popproj/datasets/2023/2023-popproj/np2023_d1_mid.csv.&quot;
-
-ggplot(p,aes(x=x+14,y))+
-facet_wrap(~group,ncol=1,dir=&quot;v&quot;,scales=&quot;free&quot;)+
-geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray85&quot;,linewidth=.25)+
-geom_vline(xintercept=as.Date(&quot;2020-1-1&quot;),linetype=&quot;44&quot;,linewidth=.3)+
-geom_line(data=p[z!=lab[4]],aes(linetype=z,color=z),linewidth=.3)+
-geom_line(data=p[z==z[1]],aes(linetype=z,color=z),linewidth=.3)+
-geom_point(aes(alpha=z),stroke=0,size=.6)+
-geom_rect(data=p[z==lab[4]],aes(xmin=x,xmax=x%m+%months(1),ymin=pmin(0,y),ymax=pmax(0,y),fill=z),linewidth=.1,color=&quot;gray40&quot;)+
-geom_text(data=pct,aes(x,y=y,label=paste0(ifelse(pct&gt;0,&quot;+&quot;,&quot;&quot;),sprintf(&quot;%.1f&quot;,pct),&quot;%&quot;)),vjust=.8,size=2.4)+
-labs(title=&quot;Age-standardized mortality rate per 100,000 person-years in United States&quot;,x=NULL,y=NULL)+
-scale_x_continuous(expand=c(0,0),limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
-scale_y_continuous(expand=c(.06,0,.03,0),breaks=\(x)pretty(x,6))+
-scale_color_manual(values=c(&quot;black&quot;,&quot;gray60&quot;,&quot;gray60&quot;,&quot;gray40&quot;))+
-scale_fill_manual(values=rep(&quot;gray60&quot;,4))+
-scale_linetype_manual(values=c(&quot;solid&quot;,&quot;42&quot;,&quot;solid&quot;,&quot;solid&quot;))+
-scale_alpha_manual(values=c(1,0,0,0),guide=&quot;none&quot;)+
-guides(fill=guide_legend(order=3,keyheight=unit(1,&quot;pt&quot;)),color=guide_legend(order=1),linetype=guide_legend(order=1))+
-coord_cartesian(clip=&quot;off&quot;)+
-theme(axis.text=element_text(size=7,color=&quot;black&quot;),
-  axis.ticks.x=element_line(color=alpha(&quot;black&quot;,c(1,0))),
-  axis.ticks=element_line(linewidth=.3,color=&quot;black&quot;),
-  axis.ticks.length=unit(3,&quot;pt&quot;),
-  axis.ticks.length.x=unit(0,&quot;pt&quot;),
-  axis.title=element_text(size=8),
-  legend.background=element_blank(),
-  legend.key=element_blank(),
-  legend.key.height=unit(9,&quot;pt&quot;),
-  legend.key.width=unit(19,&quot;pt&quot;),
-  legend.position=&quot;top&quot;,
-  legend.justification=&quot;left&quot;,
-  legend.spacing.x=unit(2,&quot;pt&quot;),
-  legend.box.margin=margin(),
-  legend.spacing.y=unit(0,&quot;pt&quot;),
-  legend.margin=margin(,,2),
-  legend.text=element_text(size=7,vjust=.5),
-  legend.title=element_blank(),
-  legend.direction=&quot;vertical&quot;,
-  legend.box=&quot;horizontal&quot;,
-  legend.box.spacing=unit(0,&quot;pt&quot;),
-  legend.spacing=unit(0,&quot;pt&quot;),
-  panel.background=element_blank(),
-  panel.border=element_rect(fill=NA,linewidth=.3),
-  panel.spacing.y=unit(2,&quot;pt&quot;),
-  plot.margin=margin(4,4,2,4),
-  plot.subtitle=element_text(size=6.5,margin=margin(,,4)),
-  plot.title=element_text(size=7.4,face=2,margin=margin(1,,3)),
-  strip.background=element_blank(),
-  strip.text=element_text(size=7,face=2,margin=margin(,,2)))
-ggsave(&quot;1.png&quot;,width=4.7,height=3.9,dpi=400*4)
-system(paste0(&quot;mar=120;w=`identify -format %w 1.png`;magick 1.png \\( -size $[w-mar*2]x -font Arial -interline-spacing -4 -pointsize 152 caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\&#39;&quot;,sub),&quot;&#39; -gravity southwest -splice $[mar]x70 \\) -append 1.png&quot;))
-system(&quot;magick 1.png -resize 25% -colorspace Gray -colors 16 1.png&quot;)</pre>
-</div>
-<p>Ethical Skeptic would probably complain that in the plot above I didn't adjust my baseline for PFE. But I used ASMR which accounts for the reduction in population size due to COVID deaths. And Ethical Skeptic should not only adjust his baseline downwards to account for mortality displacement, but he should also adjust his baseline upwards to account for the changing age structure of the population. Ethical Skeptic seems to apply some kind of subjective judgment to determine the shape and magnitude of his so-called PFE arrival function, and I believe he hasn't published any code or methodology that would allow other people to reproduce his PFE-adjusted baseline exactly. But in contrast ASMR is easy to calculate objectively in a way that different authors end up getting identical results.</p>
-<p>USMortality implemented the same method I used above to adjust the 2010-based population estimates at Mortality Watch, after which he now also gets negative excess mortality for the United States in 2024: [<a href="https://x.com/USMortality/status/1856489943519920218">https://x.com/USMortality/status/1856489943519920218</a>]</p>
-<div class="width6">
-<img src="i/ethical-allcause-4.png">
-</div>
-<p>In the plot above USMortality used a 2017-2019 average baseline, but even when I changed the baseline to a 2011-2019 linear regression, I still got negative excess ASMR during each of the first three quarters of 2024: [<a href="https://www.mortality.watch/explorer/?c=USA&ct=quarterly&df=2018%2520Q1&bf=2011%2520Q1&bm=lin_reg">https://www.mortality.watch/explorer/?c=USA&amp;ct=quarterly&amp;df=2018%2520Q1&amp;bf=2011%2520Q1&amp;bm=lin_reg</a>]</p>
-<div class="width7">
-<img src="i/ethical-allcause-5.png">
-</div>
-<h2>
-<a href=#Should_the_PFE_adjustment_last_for_only_6_6_years id=Should_the_PFE_adjustment_last_for_only_6_6_years>Should the PFE adjustment last for only 6.6 years?</a>
-</h2>
-<p>Ethical Skeptic wrote: <span class="quote">&quot;The <a href=https://theethicalskeptic.com/wp-content/uploads/2024/02/PFE-Arrival-Function-2.png>function we currently use for PFE</a> is described by 6.6 years (345 weeks - April 2021 - Oct 2027) of Chi-squared arrival, with an anticipated <em>x_mode</em> (function peak) of mid-late 2023 at 6.02% of Excess Non-Covid Natural Cause Mortality.&quot;</span> [<a href="https://theethicalskeptic.com/2024/11/20/the-state-of-things-pandemic/">https://theethicalskeptic.com/2024/11/20/the-state-of-things-pandemic/</a>] And he linked this image:</p>
-<div class="width4">
-<img src="i/np-bergamo-pfe-arrival.png">
-</div>
-<p>Ethical Skeptic came up with the figure of 6.6 years because he said the average age of COVID deaths in Florida was 82, and he got a life expectancy of 6.6 years for age 82: [<a href="https://theethicalskeptic.com/2024/11/20/the-state-of-things-pandemic/">https://theethicalskeptic.com/2024/11/20/the-state-of-things-pandemic/</a>]</p>
-<div class="width7">
-<img src="i/np-bergamo-bergamo-pfe-arrival-2.png">
-</div>
-<p>He got the life expectancy of 6.6 years based on the life expectancy for males listed at seniorliving.com (even though the life expectancy for females of age 82 was listed as 8.8 on the same website so I don't know why he didn't even take the average value of both sexes, and in the 2019 US life table the life expectancy for both sexes combined is about 8.2 years at age 82): [<a href="https://www.seniorliving.org/research/life-expectancy/calculator/">https://www.seniorliving.org/research/life-expectancy/calculator/</a>]</p>
-<div class="width5">
-<img src="i/ethical-seniorliving.png">
-</div>
-<p>At CDC WONDER the average age of UCD COVID deaths was 73.8 in Florida and about 73.9 in the whole US. And in the 2019 life table the life expectancy for age 74 is about 13.1 years, so it's about twice as high as Ethical Skeptic's figure of 6.6 years. And when I calculated the average of life expectancies for each age weighted by the number of COVID deaths for each age, it was about 14.5 years:</p>
-<pre># 2019 life table for both sexes combined
-download.file(&quot;https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Publications/NVSR/70-19/Table01.xlsx&quot;,&quot;Table01.xlsx&quot;)
-ex=read_excel(&quot;Table01.xlsx&quot;,skip=2,n_max=101)$ex
-
-# UCD COVID deaths by single year of age from CDC WONDER (last value is age 100 and above)
-coviddead=c(363,116,46,41,39,30,38,32,33,47,40,35,41,56,51,97,88,130,162,210,255,288,367,407,499,530,620,707,819,979,1112,1255,1329,1441,1607,1703,1850,2066,2237,2502,2713,2987,3253,3486,3942,4197,4610,4912,5686,6278,7075,7365,8017,8227,8942,9822,11084,11748,12866,14070,15174,16061,17259,18347,19229,20037,20443,20874,22012,22623,23586,24446,25783,27417,27760,26024,26237,27531,28188,27690,27437,27093,27200,27223,26753,26849,26190,25121,24827,24104,22756,21336,19309,17787,15069,12656,10416,8337,6321,4626,8773)
-
-weighted.mean(ex,coviddead) # 14.50457</pre>
-<p>The following code shows the average life expectancy by month of death for deaths with UCD COVID. I now calculated the life expectancy separately for males and females even though it didn't make much difference. CDC WONDER suppresses the number of deaths on rows with less than 10 deaths, so I got the number of COVID deaths from the fixed-width files for the NVSS data instead: <a href=stat.html#Download_fixed_width_and_CSV_files_for_the_NVSS_data_used_at_CDC_WONDER>stat.html#Download_fixed_width_and_CSV_files_for_the_NVSS_data_used_at_CDC_WONDER</a>. The life expectancy was unsurprisingly much higher in 2021 than 2020 (which is because the percentage of COVID deaths in 2021 relative to 2020 is much higher in working-age people than in elderly people, which might be because in 2021 working-age people were less likely to be vaccinated than elderly people):</p>
-<pre>dlf=\(x,y=sub(&quot;.*/&quot;,&quot;&quot;,x),...)for(i in 1:length(x))download.file(x[i],y[i],quiet=T,...)
-dlf(paste0(&quot;https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Publications/NVSR/70-19/Table0&quot;,2:3,&quot;.xlsx&quot;))
-
-ex=data.table(age=0:100,sex=rep(c(&quot;M&quot;,&quot;F&quot;),each=101))
-ex$ex=c(sapply(2:3,\(i)read_excel(paste0(&quot;Table0&quot;,i,&quot;.xlsx&quot;),skip=2,n_max=101)$ex))
-
-t=do.call(rbind,lapply(2020:2022,\(x)fread(paste0(x,&quot;.csv.gz&quot;))))
-a=t[restatus!=4&amp;age!=9999&amp;ucod==&quot;U071&quot;,.N,.(year,month=monthdth,sex,age=pmin(100,ifelse(age&lt;2000,age-1000,0)))]
-
-merge(ex,a)[,weighted.mean(ex,N),.(year,month)][,xtabs(round(V1)~year+month)]
-#       month
-# year    1  2  3  4  5  6  7  8  9 10 11 12
-#   2020 18 19 15 13 12 14 15 14 13 12 12 12
-#   2021 13 14 15 17 18 18 19 19 19 18 17 17
-#   2022 15 14 14 14 12 12 12 12 11 11 11 11</pre>
-<p>In the next plot I simulated two scenarios, where in both scenarios the population started out as one tenth of the mid-2018 US resident population estimates. In both scenarios I calculated the monthly mortality rates for each age by doing a projection of the linear trend in the mortality rate in 2011-2019, except in the red scenario I emulated the pattern of COVID deaths in 2020-2021 by multiplying the mortality rate for each combination of age and month by the ratio between the actual and seasonality-adjusted projection of the mortality rate for the same combination of age and month. I didn't emulate seasonality to make the difference between the two scenarios easier to see. But the COVID scenario got only about 1.5% less deaths in 2023-2024 than the scenario without the COVID event:</p>
-<div class="width6">
-<img src="i/ethical-sim.png">
-</div>
-<div class="spoiler">
-<button>
-Show code
-</button><pre>library(data.table);library(ggplot2)
-
-t=fread(&quot;http://sars2.net/f/uspopdeadmonthly.csv&quot;)[year%in%2011:2024]
-t[,date:=as.integer(factor(date))-84][,cmr:=dead/persondays]
-t=merge(t,t[year&lt;2020,.(date=unique(t$date),base=predict(lm(cmr~date),.(date=unique(t$date)))),age])
-t=merge(t[year&lt;2020,.(monthly=mean(cmr/base)),.(month,age)],t)
-rate=t[date&gt;0,.(base=base*365/12,mult=ifelse(date%in%25:48,cmr/(base*monthly),1)),,.(date,age)]
-
-set.seed(0)
-pop=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)[year==2020]
-people=pop[age&gt;0,rep(age,pop/10)];people=people2=people+runif(length(people))
-sim=data.table(month=1:84,dead=0,dead2=0)
-
-set.seed(0)
-for(i in 1:nrow(sim)){
-  died=runif(length(people))&lt;rate[date==i,base*mult][people]
-  people=pmin(100,people[!died]+1/12)
-  sim$dead[i]=sum(died)
-  print(i)
-}
-
-set.seed(0)
-for(i in 1:nrow(sim)){
-  died=runif(length(people2))&lt;rate[date==i,base][people2]
-  people2=pmin(100,people2[!died]+1/12)
-  sim$dead2[i]=sum(died)
-  print(i)
-}
-
-sim$base=sim[month&lt;25,predict(lm(dead~month),sim)]
-lab=c(&quot;With elevated mortality in 2020-2021&quot;,&quot;No elevated mortality in 2020-2021&quot;,&quot;2018-2019 linear trend&quot;)
-p=melt(sim,id=1)[,.(x=month,y=value,z=`levels&lt;-`(variable,lab))]
-
-sum=sim[month%in%25:48,colSums(.SD)];sum2=sim[month&gt;48,colSums(.SD)]
-note=stringr::str_wrap(sprintf(&quot;The scenario with elevated mortality in 2020-2021 has %.1f%% more deaths in 2020-2021 and %.1f%% less deaths in 2022-2024.&quot;,(sum[2]/sum[3]-1)*100,(sum2[3]/sum2[2]-1)*100),32)
-
-xstart=1;xend=nrow(sim)+1;xbreak=seq(xstart,xend,6);xlab=c(rbind(&quot;&quot;,2018:2024),&quot;&quot;)
-ybreak=pretty(c(0,p$y),8);ystart=0;yend=max(p$y)+.02
-
-ggplot(p,aes(x+.5,y))+
-geom_vline(xintercept=seq(xstart,xend,12),linewidth=.3,color=&quot;gray83&quot;,lineend=&quot;square&quot;)+
-geom_hline(yintercept=c(ystart,yend),linewidth=.3,lineend=&quot;square&quot;)+
-geom_vline(xintercept=c(xstart,xend),linewidth=.3,lineend=&quot;square&quot;)+
-geom_line(aes(color=z,linetype=z),linewidth=.35)+
-geom_point(aes(color=z,alpha=z),stroke=0,size=.7)+
-labs(title=&quot;Simulation for deaths per month in one tenth of US population&quot;,x=NULL,y=NULL)+
-annotate(geom=&quot;label&quot;,x=42,y=yend*.48,label=note,hjust=0,label.r=unit(2,&quot;pt&quot;),label.padding=unit(3,&quot;pt&quot;),label.size=.2,size=2.4,lineheight=.9)+
-scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
-scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
-scale_color_manual(values=c(&quot;#ff6666&quot;,&quot;black&quot;,&quot;gray60&quot;))+
-scale_alpha_manual(values=c(1,1,0))+
-scale_linetype_manual(values=c(&quot;solid&quot;,&quot;solid&quot;,&quot;42&quot;))+
-coord_cartesian(clip=&quot;off&quot;,expand=F)+
-theme(axis.text=element_text(size=7,color=&quot;black&quot;),
-  axis.ticks=element_line(linewidth=.3),
-  axis.ticks.length=unit(3,&quot;pt&quot;),
-  axis.ticks.length.x=unit(0,&quot;pt&quot;),
-  legend.direction=&quot;vertical&quot;,
-  legend.justification=c(0,0),
-  legend.key=element_blank(),
-  legend.key.height=unit(9,&quot;pt&quot;),
-  legend.key.width=unit(20,&quot;pt&quot;),
-  legend.background=element_rect(color=&quot;black&quot;,linewidth=.3),
-  legend.margin=margin(3,3,3,3),
-  legend.position=c(0,0),
-  legend.spacing.x=unit(1.5,&quot;pt&quot;),
-  legend.spacing.y=unit(0,&quot;pt&quot;),
-  legend.text=element_text(size=7),
-  legend.title=element_blank(),
-  panel.background=element_blank(),
-  plot.margin=margin(4,4,2,4),
-  plot.title=element_text(size=7.5,face=&quot;bold&quot;,margin=margin(1,,3)))
-ggsave(&quot;1.png&quot;,width=3.7,height=2,dpi=380*4)
-sub=paste0(&quot;The initial population for each age was one tenth of the mid-2018 US resident population estimates except infants of age zero were excluded, so the total initial population size was about 32 million people. The projection of a linear trend for CMR in 2011-2019 was used for each age throughout the simulation, except in the red scenario the mortality rate for each combination of month and age in 2020-2021 was multiplied by the ratio between the actual CMR for the age during the month and a seasonality-adjusted trend for CMR during the same month.&quot;)
-sub=paste0(sub,&quot; The length of each month is 1/12 years. Births are not simulated. Seasonal variation in mortality or differences in the health of people were not simulated. The same seed was used for both scenarios so the scenarios are identical in 2018 and 2019.&quot;)
-system(paste0(&quot;mar=120;w=`identify -format %w 1.png`;magick 1.png \\( -size $[w-mar*2]x -font Arial -interline-spacing -4 -pointsize 146 caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\&#39;&quot;,sub),&quot;&#39; -gravity southwest -splice $[mar]x70 \\) -append -resize 25% -colors 256 1.png&quot;))</pre>
-</div>
-<p>In the red scenario in the plot above, the number of deaths in 2024 was about 0.2% higher than the gray 2018-2019 baseline in 2024. In many of his plots Ethical Skeptic fits his baseline against deaths from 2018 and 2019 only, but the long-term trend in the raw number of deaths is curved upwards due to the aging population, so in addition to adjusting his baseline downwards to account for the PFE, he should also adjust the baseline upwards to account for the change to the age structure. But by 2024 the two adjustments should roughly cancel each other out based on my simulation above (even though Ethical Skeptic assumes that people with poor health relative to their age have been overrepresented among the people who have died in excess since 2020, which might justify an additional downwards shift of the baseline that was not considered in my simulation).</p>
-<h2>
-<a href=#PFE_arrival_function_determined_from_monthly_deaths_by_age id=PFE_arrival_function_determined_from_monthly_deaths_by_age>PFE arrival function determined from monthly deaths by age</a>
-</h2>
-<p>In the next plot I calculated a PFE adjustment factor based on the number of UCD COVID deaths in 2020-2022. I got the number of deaths with UCD COVID by age and month from the fixed-width files for the NVSS data to avoid the suppression of deaths at CDC WONDER: <a href=stat.html#Download_fixed_width_and_CSV_files_for_the_NVSS_data_used_at_CDC_WONDER>stat.html#Download_fixed_width_and_CSV_files_for_the_NVSS_data_used_at_CDC_WONDER</a>.</p>
-<p>I converted the age in years at the time of death to an age in months by multiplying it by 12 and adding a random number between 0 and 11. For the sake of simplicity each month had a duration of one twelfth of a year. I interpolated mortality rates by age in months on a log scale from mortality rates by single year of age in 2019, and I extrapolated mortality rates for ages above 99 on a log scale. Each month I determined the number of people who died by multiplying the number of people for each age in months with the mortality rate for the age in months. And finally I calculated the PFE adjustment percent as <code>-monthly_deaths/total_US_deaths_in_2019*12</code>.</p>
-<p>I also applied a similar model to all-cause excess deaths relative to a seasonality-adjusted linear baseline for each age in 2011-2019.</p>
-<p>The maximum reduction to the baseline was only about 1.9% based on COVID deaths and about 2.2% based on all-cause deaths, so both were around one third of 6.02% which is the maximum reduction in a PFE adjustment curve that Ethical Skeptic posted on his blog:</p>
-<div class="width6">
-<img src="i/ethical-arrival.png">
-</div>
-<div class="spoiler">
-<button>
-Show code
-</button><pre>library(data.table);library(ggplot2)
-
-t=do.call(rbind,lapply(2020:2022,\(i)fread(paste0(i,&quot;.csv.gz&quot;))[ucod==&quot;U071&quot;&amp;restatus!=4,.(age,month=(year-2020)*12+monthdth)]))
-t=t[age!=9999][,age:=ifelse(age&gt;1000,age%%1000,0)]
-t[,age:=age*12+sample(0:11,.N,T)]
-covid=t[,.(pop=.N),.(month,age)]
-
-pop=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)[year==2019]
-cmr=pop[age!=100,dead/pop]/12
-cmr=pmin(1,exp(spline(seq(7,,12,100),log(cmr),xout=0:(12*121))$y))
-
-months=12*60
-
-dead=double();prev=list()
-for(i in 1:months){
-  cur=rbind(prev,covid[month==i])[,.(pop=sum(pop)),.(month,age)]
-  died=cur[,cmr[pmin(age+1,length(cmr))]*pop]
-  dead[i]=sum(died)
-  prev=cur[,.(month=i+1,age=age+1,pop=pop-died)]
-}
-
-all=fread(&quot;http://sars2.net/f/uspopdeadmonthly.csv&quot;)[year%in%2011:2022]
-all[,date:=(year-2020)*12+month][,cmr:=dead/persondays]
-all=merge(all,all[year&lt;2020,.(date=unique(all$date),base=predict(lm(cmr~date),.(date=unique(all$date)))),age])
-all=merge(all[year&lt;2020,.(monthly=mean(cmr/base)),.(month,age)],all)
-all=all[date%in%1:36,.(pop=sum(dead)-sum(base*persondays*monthly)),,.(age=age*12+6,month=date)]
-
-dead2=double();prev=list()
-for(i in 1:months){
-  cur=rbind(prev,all[month==i])[,.(pop=sum(pop)),.(month,age)]
-  died=cur[,cmr[pmin(age+1,length(cmr))]*pop]
-  dead2[i]=sum(died)
-  prev=cur[,.(month=i+1,age=age+1,pop=pop-died)]
-}
-
-pfe=c(-3.5,-4.9,-5.9,-5.9,-4.7,-2.9,-1.7,-1)
-pfe=spline(seq(1,351,50),pfe,xout=seq(1,351,1/7))
-pfe=setDT(pfe)[,.(y=mean(y)),.(x=(x*7)%/%(365.25/12)+15)]
-
-lab=&quot;My model based on UCD COVID deaths in 2020-2022&quot;
-lab=c(lab,&quot;My model based on all-cause excess deaths in 2020-2022&quot;)
-lab=c(lab,&quot;Approximation of Ethical Skeptic&#39;s PFE arrival function&quot;)
-
-p=data.table(x=1:months,y=-c(dead,dead2)/sum(pop$dead)*12*100)
-p[,z:=factor(rep(lab[1:2],each=.N/2),lab[1:2])]
-p=rbind(p,pfe[,z:=lab[3]])
-
-xstart=1;xend=months+1;xbreak=seq(xstart,xend,12*2);xlab=seq(2020,,2,length(xbreak))
-ystart=floor(min(p$y));yend=0;ybreak=ystart:yend
-
-ggplot(p,aes(x,y))+
-geom_hline(yintercept=c(ystart,yend),linewidth=.3,lineend=&quot;square&quot;)+
-geom_vline(xintercept=c(xstart,xend),linewidth=.3,lineend=&quot;square&quot;)+
-geom_line(aes(color=z),linewidth=.35)+
-labs(title=&quot;PFE-adjusted baseline models&quot;,x=NULL,y=NULL)+
-scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
-scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,labels=\(x)paste0(x,&quot;%&quot;))+
-coord_cartesian(clip=&quot;off&quot;,expand=F)+
-scale_color_manual(values=c(&quot;#f6f&quot;,&quot;#f66&quot;,&quot;black&quot;))+
-theme(axis.text=element_text(size=7,color=&quot;black&quot;),
-  axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
-  axis.ticks=element_line(linewidth=.3),
-  axis.ticks.length.x=unit(3,&quot;pt&quot;),
-  legend.direction=&quot;vertical&quot;,
-  legend.justification=c(1,0),
-  legend.key=element_blank(),
-  legend.key.height=unit(9,&quot;pt&quot;),
-  legend.key.width=unit(20,&quot;pt&quot;),
-  legend.background=element_rect(color=&quot;black&quot;,linewidth=.3),
-  legend.margin=margin(3,3,3,3),
-  legend.position=c(1,0),
-  legend.spacing.x=unit(1.5,&quot;pt&quot;),
-  legend.spacing.y=unit(0,&quot;pt&quot;),
-  legend.text=element_text(size=7),
-  legend.title=element_blank(),
-  panel.background=element_blank(),
-  plot.margin=margin(4,11,2,4),
-  plot.title=element_text(size=7.2,face=&quot;bold&quot;,margin=margin(1,,3)))
-ggsave(&quot;1.png&quot;,width=3.8,height=1.8,dpi=380*4)
-system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
-</div>
-<p>In the plot above the reason why the red line is still so low in the 2070s is because young age groups had a lot of excess deaths from external causes in 2020-2022.</p>
-<p>In November 2024 Ethical Skeptic said that he currently subtracts a total of 668,592 deaths from his PFE-adjusted baseline, even though my approximation of his PFE arrival function was based on this old plot where he only subtracted 587,000 deaths:</p>
-<div class="width5">
-<img src="i/np-bergamo-pfe-arrival.png">
-</div>
-<p>Ethical Skeptic's PFE adjustment is fully <span class="quote">&quot;expired&quot;</span> by October 2027 which means that after that point he will no longer subtract further deaths. But he said that in November 2024 his baseline was approximately 69% expired, which means that at that point he would've already subtracted about 69% of 668,592 deaths, which is about 460,000. However in the red line in my plot above I had only subtracted a total of 234,754 deaths by November 2024, which is only about half of his figure.</p>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
