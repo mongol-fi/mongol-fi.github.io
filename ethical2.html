@@ -67,7 +67,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Is_there_still_excess_all_cause_mortality_in_2024>Is there still excess all-cause mortality in 2024?</a></li>
 <li><a href=#Should_the_PFE_adjustment_last_for_only_6_6_years>Should the PFE adjustment last for only 6.6 years?</a></li>
 <li><a href=#PFE_arrival_function_determined_from_monthly_deaths_by_age>PFE arrival function determined from monthly deaths by age</a></li>
-<li><a href=#Deaths_with_MCD_secondary_thrombocytopenia>Deaths with MCD secondary thrombocytopenia</a></li>
+<li><a href=#Deaths_with_secondary_thrombocytopenia>Deaths with secondary thrombocytopenia</a></li>
 </ul>
 
 <h2>
@@ -88,6 +88,95 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <p>In the plot by Truth in Numbers, the average ASMR on weeks 40 of 2018 and 2019 was drawn as a baseline, but if he would've used a prepandemic linear regression as the baseline then he might have gotten positive excess ASMR in 2024. He used 2010-based population estimates for 2018 to 2020 and 2020-based population estimates for 2021 onwards, which exaggerated his ASMR in 2024 relative to 2018 and 2019, because the population sizes of the oldest age groups dropped dramatically between the 2010-based and 2020-based population estimates:</p>
 <div class="width6">
 <img src="i/ethical-allcause-6.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2)
+
+agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
+
+kim=\(x)ifelse(x&gt;=1e3,ifelse(x&gt;=1e6,paste0(x/1e6,&quot;M&quot;),paste0(x/1e3,&quot;k&quot;)),x)
+
+new=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/nc-est2023-agesex-res.csv&quot;)
+old=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/national/asrh/nc-est2020-agesex-res.csv&quot;)
+
+old=old[SEX==0&amp;AGE!=999,.(age=AGE,pop=unlist(.SD[,-(1:4)]),year=rep(2010:2020,each=.N))]
+new=new[SEX==0&amp;AGE!=999,.(age=AGE,pop=unlist(.SD[,-(1:3)]),year=rep(2020:2023,each=.N))]
+
+older=fread(&quot;https://www2.census.gov/programs-surveys/popest/tables/2000-2010/intercensal/national/us-est00int-01.csv&quot;)
+older=older[6:26,c(1,3:12,14)][,.(age=as.numeric(sub(&quot;\\D*(\\d+).*&quot;,&quot;\\1&quot;,sub(&quot;Under 5&quot;,0,V1))),pop=as.numeric(gsub(&quot;,&quot;,&quot;&quot;,unlist(.SD[,-1]))),year=rep(2000:2010,each=.N))]
+
+oldest=fread(&quot;https://www2.census.gov/programs-surveys/popest/tables/2000-2009/national/asrh/nc-est2009-01.csv&quot;)
+oldest=oldest[6:26,c(1,2:11)][,.(age=as.numeric(sub(&quot;\\D*(\\d+).*&quot;,&quot;\\1&quot;,sub(&quot;Under 5&quot;,0,V1))),pop=as.numeric(gsub(&quot;,&quot;,&quot;&quot;,unlist(.SD[,-1]))),year=rep(2009:2000,each=.N))]
+
+mult=merge(old[year==2020],new[year==2020,.(age,new=pop)])[,.(ratio=new/pop,age)]
+mult=merge(old,mult)[,mult:=(year-2010)/10]
+mult=mult[,.(age,year,pop=((1-mult)*1+mult*ratio)*pop)]
+
+won=fread(&quot;http://sars2.net/f/wondercanceryearlysingle.csv&quot;)[age&lt;85,.(year,pop,age)]
+won=rbind(won,fread(&quot;http://sars2.net/f/wondercanceryearlyten.csv&quot;)[cause==cause[1]&amp;age==85,.(year,pop,age)])
+
+p=cbind(oldest,z=&quot;2000-2009&quot;)
+p=rbind(p,cbind(older,z=&quot;2000-2010 intercensal&quot;))
+p=rbind(p,cbind(old,z=&quot;2010-2020&quot;))
+p=rbind(p,cbind(mult,z=&quot;2010-2020 multiplied by linear slope&quot;))
+p=rbind(p,cbind(new,z=&quot;2020-2023&quot;))
+p=rbind(p,cbind(won,z=&quot;CDC WONDER&quot;))
+
+p[,z:=factor(z,unique(z))]
+
+ages=0:4*20
+ages=c(0,25,45,65,75,85)
+
+p=p[,.(pop=sum(pop)),.(z,year,age=agecut(age,ages))]
+
+xstart=2000;xend=2023
+p=p[year%in%xstart:xend]
+
+ggplot(p,aes(x=year,y=pop))+
+coord_cartesian(clip=&quot;off&quot;)+
+facet_wrap(~age,ncol=2,dir=&quot;v&quot;,scales=&quot;free_y&quot;)+
+geom_vline(xintercept=c(2009.5,2019.5),color=&quot;gray80&quot;,linewidth=.23)+
+geom_line(aes(color=z,alpha=z),linewidth=.3)+
+geom_point(aes(color=z,shape=z,size=z),stroke=.3)+
+geom_text(fontface=2,data=p[,max(pop),age],aes(label=paste0(&quot;\n   &quot;,age,&quot;   \n&quot;),y=V1),x=xstart-.5,lineheight=.4,hjust=0,vjust=1,size=grid::convertUnit(unit(7,&quot;pt&quot;),&quot;mm&quot;))+
+labs(title=&quot;Mid-year US resident population estimates by age group&quot;,subtitle=&quot;Source: www2.census.gov/programs-surveys/popest/datasets and CDC WONDER.&quot;,x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=seq(xstart-.5,xend+.5,.5),labels=c(rbind(&quot;&quot;,ifelse(xstart:xend%%2==0,xstart:xend,&quot;&quot;)),&quot;&quot;),expand=expansion(0))+
+scale_y_continuous(labels=kim,breaks=\(x)Filter(\(y)y&gt;min(x)+(max(x)-min(x))*.05,pretty(x,4)),expand=expansion(.04))+
+scale_color_manual(values=c(&quot;#0055ff&quot;,&quot;#8844ff&quot;,&quot;#ff55ff&quot;,&quot;gray50&quot;,&quot;#ff5555&quot;,&quot;black&quot;))+
+scale_shape_manual(values=c(16,16,16,16,16,4))+
+scale_alpha_manual(values=c(1,1,1,1,1,0))+
+scale_size_manual(values=c(.7,.7,.7,.7,.7,1))+
+guides(color=guide_legend(ncol=2,byrow=F))+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
+  axis.ticks=element_line(linewidth=.2,color=&quot;black&quot;),
+  axis.ticks.length=unit(3,&quot;pt&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.justification=&quot;left&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(8,&quot;pt&quot;),
+  legend.key.width=unit(17,&quot;pt&quot;),
+  legend.margin=margin(-2,,4),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(1,&quot;pt&quot;),
+  legend.text=element_text(size=7,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.23),
+  panel.spacing.x=unit(3,&quot;pt&quot;),
+  panel.spacing.y=unit(3,&quot;pt&quot;),
+  plot.margin=margin(5,5,5,5),
+  plot.subtitle=element_text(size=6.9,margin=margin(,,4)),
+  plot.title=element_text(size=7.4,face=2,margin=margin(1,,3)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=4,height=3,dpi=350*4)
+system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 </div>
 <p>In the next plot I adjusted the 2010-2020 population estimates using the same method as in the gray lines in my plot above. It reduced my total excess ASMR in 2024 from about 1.0% to about -4.6%:</p>
 <div class="width7">
@@ -443,8 +532,12 @@ system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
 <img src="i/np-bergamo-pfe-arrival.png">
 </div>
 <p>Ethical Skeptic's PFE adjustment is fully <span class="quote">&quot;expired&quot;</span> by October 2027 which means that after that point he will no longer subtract further deaths. But he said that in November 2024 his baseline was approximately 69% expired, which means that at that point he would've already subtracted about 69% of 668,592 deaths, which is about 460,000. However in the red line in my plot above I had only subtracted a total of 234,754 deaths by November 2024, which is only about half of his figure.</p>
+<p>Ethical Skeptic often applies heavy adjustment for the PFE even in plots for young age groups like 0-54. But based on these models for ages 0-54, the maximum reduction to the baseline up to the end of 2024 was only about 0.12% in the model based on COVID deaths and about 0.24% in the model based on all-cause deaths:</p>
+<div class="width6">
+<img src="i/ethical-arrival-2.png">
+</div>
 <h2>
-<a href=#Deaths_with_MCD_secondary_thrombocytopenia id=Deaths_with_MCD_secondary_thrombocytopenia>Deaths with MCD secondary thrombocytopenia</a>
+<a href=#Deaths_with_secondary_thrombocytopenia id=Deaths_with_secondary_thrombocytopenia>Deaths with secondary thrombocytopenia</a>
 </h2>
 <p>Ethical Skeptic posted this tweet: [<a href="https://x.com/EthicalSkeptic/status/1862983630462554150">https://x.com/EthicalSkeptic/status/1862983630462554150</a>]</p>
 <blockquote>
@@ -452,7 +545,7 @@ system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
 <p>This leaves NO DOUBT as to cause. It was not Covid-19.</p>
 <p><img src=i/ethical-thrombocytopenia-1.png class=width8></p>
 </blockquote>
-<p>Thrombocytopenia means abnormally low levels of platelets in the blood.</p>
+<p>Thrombocytopenia means an abnormally low level of platelets in the blood. Primary thrombocytopenia can be caused by genetic disorders like Wiskott-Aldrich syndrome or by autoimmune disorders which destroy platelets, like idiopathic thrombocytopenic purpura (ITP). Secondary thrombocytopenia can be cause by viral or bacterial infections, chemotherapy, medications like heaprin, diseases like lupus, or bone marrow disorders like leukemia or aplastic anemia.</p>
 <p>When I looked at UCD deaths instead of MCD deaths with MCD COVID subtracted, secondary thrombocytopenia didn't have a very clear increase in 2020 either, but there was a clear increase in 2020 for the related ICD codes D69.6 (thrombocytopenia, unspecified) and D68.9 (coagulation defect, unspecified):</p>
 <div class="width10">
 <img src="i/ethical-thrombocytopenia-2.png">
@@ -484,7 +577,7 @@ pheatmap::pheatmap(m^exp,filename=&quot;1.png&quot;,
 system(&quot;w=`identify -format %w 1.png`;pad=20;magick -pointsize 44 -font Arial-Bold \\( -size $[w-pad] caption:&#39;CDC WONDER: Yearly deaths by underlying cause of death (ICD codes starting with D6 with at least 1,000 total deaths)&#39; -splice $[pad]x24 \\) 1.png -append 1.png&quot;)</pre>
 </div>
 <p>However the plot above also shows that the number of D69.5 deaths increased about 5-fold between 2004 and 2005, so that there were about 100-200 deaths each year in 1999-2004, but from 2005 onwards there were about 1,000 deaths each year. So the increase between 2004 and 2005 was probably due to some change in coding practices, which might also explain the increase between 2021 and 2022.</p>
-<p>The next plot shows that the sharp increase in secondary thrombocytopenia in 2005 coincided with a sharp decrease in D69.6 (thrombocytopenia, unspecified):</p>
+<p>The next plot shows that in the sharp increase in secondary thrombocytopenia in 2005 coincided with a sudden decrease in unspecified thrombocytopenia (D69.6):</p>
 <div class="width7">
 <img src="i/ethical-thrombocytopenia-3.png">
 </div>
@@ -548,7 +641,7 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
 ggsave(&quot;1.png&quot;,width=4.2,height=2.8,dpi=380*4)
 system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
 </div>
-<p>And anyway if the increase in MCD secondary thrombocytopenia would've been caused by vaccines, then why was there only a small increase in 2021 but a sudden increase at the start of 2022? And why were the excess deaths much lower in 2021 than in 2024 when few people were still getting new vaccines?</p>
+<p>And anyway if the increase in MCD secondary thrombocytopenia would've been caused by vaccines, then why was there only a small increase in 2021 but a sudden increase at the start of 2022? And why were the excess deaths higher in 2024 when few people were getting vaccinated than in 2021?</p>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
