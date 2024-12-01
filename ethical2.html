@@ -451,42 +451,42 @@ months=12*60;maxage=Inf
 
 t=do.call(rbind,lapply(2020:2022,\(i)fread(paste0(i,&quot;.csv.gz&quot;))[ucod==&quot;U071&quot;&amp;restatus!=4,.(age,month=(year-2020)*12+monthdth)]))
 t=t[age!=9999][,age:=ifelse(age&gt;1000,age%%1000,0)]
-t=t[age&lt;maxage]
+t=t[age&lt;=maxage]
 t[,age:=age*12+sample(0:11,.N,T)]
 covid=t[,.(pop=.N),.(month,age)]
 
 pop=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)[year==2019]
-cmr=pop[age!=100,dead/pop]/12
-cmr=pmin(1,exp(spline(seq(7,,12,100),log(cmr),xout=0:(12*121))$y))
-
-dead1=double();prev=NULL
-for(i in 1:months){
-  cur=rbind(prev,covid[month==i])[,.(pop=sum(pop)),.(month,age)]
-  died=cur[,cmr[pmin(age+1,length(cmr))]*pop]
-  dead1[i]=sum(died)
-  prev=cur[,.(month=i+1,age=age+1,pop=pop-died)]
-}
+risk=pop[age&lt;100,.(age,risk=1-(1-dead/pop)^(1/12))]
+risk=c(risk$risk,risk[age&gt;=90,exp(predict(lm(log(risk)~age),.(age=100:120)))])
+risk=spline(seq(6,,12,121),risk,xout=0:(121*12-1))$y
 
 all=fread(&quot;http://sars2.net/f/uspopdeadmonthly.csv&quot;)[year%in%2011:2022]
 all[,date:=(year-2020)*12+month][,cmr:=dead/persondays]
 all=merge(all,all[year&lt;2020,.(date=unique(all$date),base=predict(lm(cmr~date),.(date=unique(all$date)))),age])
 all=merge(all[year&lt;2020,.(monthly=mean(cmr/base)),.(month,age)],all)
-all=all[age&lt;maxage]
-all=all[date%in%1:36,.(pop=sum(dead)-sum(base*persondays*monthly)),,.(age=age*12+6,month=date)]
+allcause=all[age&lt;=maxage&amp;date%in%1:36,.(pop=sum(dead)-sum(base*persondays*monthly)),,.(age=age*12+6,month=date)]
 
-dead2=double();prev=NULL
+dead0=double();cur=pop[age&lt;maxage*12,.(age=age*12+6,pop,month=1)]
 for(i in 1:months){
-  cur=rbind(prev,all[month==i])[,.(pop=sum(pop)),.(month,age)]
-  died=cur[,cmr[pmin(age+1,length(cmr))]*pop]
-  dead2[i]=sum(died)
+  died=cur[,risk[pmin(age+1,length(risk))]*pop]
+  dead0[i]=sum(died)
+  cur=cur[,.(month=i+1,age=age+1,pop=pop-died)][,.(pop=sum(pop)),.(month,age)]
+}
+
+dead1=double();prev=NULL
+for(i in 1:months){
+  cur=rbind(prev,covid[month==i])[,.(pop=sum(pop)),.(month,age)]
+  died=cur[,risk[pmin(age+1,length(risk))]*pop]
+  dead1[i]=sum(died)
   prev=cur[,.(month=i+1,age=age+1,pop=pop-died)]
 }
 
-dead0=double();cur=pop[age&lt;=maxage*12,.(age=age*12,pop,month=1)]
+dead2=double();prev=NULL
 for(i in 1:months){
-  died=cur[,cmr[pmin(age+1,length(cmr))]*pop]
-  dead0[i]=sum(died)
-  cur=cur[,.(month=i+1,age=age+1,pop=pop-died)][,.(pop=sum(pop)),.(month,age)]
+  cur=rbind(prev,allcause[month==i])[,.(pop=sum(pop)),.(month,age)]
+  died=cur[,risk[pmin(age+1,length(risk))]*pop]
+  dead2[i]=sum(died)
+  prev=cur[,.(month=i+1,age=age+1,pop=pop-died)]
 }
 
 pfe=c(-3.5,-4.9,-5.9,-5.9,-4.7,-2.9,-1.7,-1)
@@ -536,13 +536,52 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
 ggsave(&quot;1.png&quot;,width=3.8,height=1.8,dpi=380*4)
 system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
 </div>
-<p>In the plot above the reason why the red line is still so low in the 2070s is because young age groups had a lot of excess deaths from external causes in 2020-2022.</p>
+<p>Here's a simplified version of my code that only calculates the red model based on all-cause deaths:</p>
+<pre>months=12*60;maxage=Inf
+
+# monthly mortality risk by age in months for ages 0 to 120 (age 0 to 121*12-1 months)
+# risk for ages 100-120 is extrapolated on a log scale from risk for ages 90-99
+pop=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)[year==2019]
+risk=pop[age&lt;100,.(age,risk=1-(1-dead/pop)^(1/12))]
+risk=c(risk$risk,risk[age&gt;=90,exp(predict(lm(log(risk)~age),.(age=100:120)))])
+risk=spline(seq(6,,12,121),risk,xout=0:(121*12-1))$y
+
+# excess number of all-cause deaths by age in months and month in 2020-2022
+# a seasonality-adjusted linear baseline for CMR in 2011-2019 is used for each age
+# date 1 is January 2020 and date 36 is December 2022
+all=fread(&quot;http://sars2.net/f/uspopdeadmonthly.csv&quot;)[year%in%2011:2022&amp;age&lt;=maxage]
+all[,date:=(year-2020)*12+month][,cmr:=dead/persondays]
+dates=unique(all$date)
+all=merge(all,all[year&lt;2020,.(date=dates,base=predict(lm(cmr~date),.(date=dates))),age])
+all=merge(all[year&lt;2020,.(monthly=mean(cmr/base)),.(month,age)],all)
+allcause=all[date%in%1:36,.(pop=sum(dead)-sum(base*persondays*monthly)),.(age=age*12+6,month=date)]
+
+# baseline model
+dead0=double();cur=pop[age&lt;=maxage,.(age=age*12+6,pop,month=1)]
+for(i in 1:months){
+  died=cur[,risk[pmin(age+1,length(risk))]*pop]
+  dead0[i]=sum(died)
+  cur=cur[,.(month=i+1,age=age+1,pop=pop-died)][,.(pop=sum(pop)),.(month,age)]
+}
+
+# model based on all-cause excess deaths
+dead2=double();prev=NULL
+for(i in 1:months){
+  cur=rbind(prev,allcause[month==i])[,.(pop=sum(pop)),.(month,age)]
+  died=cur[,risk[pmin(age+1,length(risk))]*pop]
+  dead2[i]=sum(died)
+  prev=cur[,.(month=i+1,age=age+1,pop=pop-died)]
+}
+
+# baseline reduction percent for PFE-adjusted baseline (month 1 is January 2020)
+data.table(month=1:months,reductionpct=-dead/dead0*100)</pre>
+<p>In my model the reason why the red line is still so low in the 2070s is because young age groups had a lot of excess deaths from external causes in 2020-2022.</p>
 <p>In November 2024 Ethical Skeptic said that he currently subtracts a total of 668,592 deaths from his PFE-adjusted baseline, even though my approximation of his PFE arrival function was based on this old plot where he only subtracted 587,000 deaths:</p>
 <div class="width5">
 <img src="i/np-bergamo-pfe-arrival.png">
 </div>
-<p>Ethical Skeptic's PFE adjustment is fully <span class="quote">&quot;expired&quot;</span> by October 2027 which means that after that point he will no longer subtract further deaths. But he said that in November 2024 his baseline was approximately 69% expired, which means that at that point he would've already subtracted about 69% of 668,592 deaths, which is about 460,000. However in the red line in my plot above I had only subtracted a total of only about 227,000 deaths by the end of November 2024, which is only about half of his figure.</p>
-<p>Ethical Skeptic often applies heavy adjustment for the PFE even in plots for young age groups like 0-54. But based on these models for ages 0-54, the maximum reduction to the baseline up to the end of 2024 was only about 0.12% in the model based on COVID deaths and about 0.24% in the model based on all-cause deaths:</p>
+<p>Ethical Skeptic's PFE adjustment is fully <span class="quote">&quot;expired&quot;</span> by October 2027 which means that after that point he will no longer subtract further deaths. But he said that in November 2024 his baseline was approximately 69% expired, which means that at that point he would've already subtracted about 69% of 668,592 deaths, which is about 460,000. However in the red line in my plot above I had only subtracted a total of only about 243,000 deaths by the end of November 2024, which is only about half of his figure.</p>
+<p>Ethical Skeptic often applies heavy adjustment for the PFE even in plots for young age groups like 0-54. But based on these models for ages 0-54, the maximum reduction to the baseline up to the end of 2024 was only about 0.07% in the model based on COVID deaths and about 0.17% in the model based on all-cause deaths:</p>
 <div class="width6">
 <img src="i/ethical-arrival-2.png">
 </div>
