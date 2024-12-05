@@ -68,6 +68,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Should_the_PFE_adjustment_last_for_only_6_6_years>Should the PFE adjustment last for only 6.6 years?</a></li>
 <li><a href=#PFE_arrival_function_determined_from_monthly_deaths_by_age>PFE arrival function determined from monthly deaths by age</a></li>
 <li><a href=#Deaths_with_secondary_thrombocytopenia>Deaths with secondary thrombocytopenia</a></li>
+<li><a href=#Deaths_from_natural_causes_in_ages_2_17>Deaths from natural causes in ages 2-17</a></li>
 </ul>
 
 <h2>
@@ -436,7 +437,7 @@ system(paste0(&quot;mar=120;w=`identify -format %w 1.png`;magick 1.png \\( -size
 <a href=#PFE_arrival_function_determined_from_monthly_deaths_by_age id=PFE_arrival_function_determined_from_monthly_deaths_by_age>PFE arrival function determined from monthly deaths by age</a>
 </h2>
 <p>In the next plot I calculated a PFE adjustment factor based on the number of UCD COVID deaths in 2020-2022. I got the number of deaths with UCD COVID by age and month from the fixed-width files for the NVSS data to avoid the suppression of deaths at CDC WONDER: <a href=stat.html#Download_fixed_width_and_CSV_files_for_the_NVSS_data_used_at_CDC_WONDER>stat.html#Download_fixed_width_and_CSV_files_for_the_NVSS_data_used_at_CDC_WONDER</a>.</p>
-<p>I converted the age in years at the time of death to an age in months by multiplying it by 12 and adding a random number between 0 and 11. For the sake of simplicity each month had a duration of one twelfth of a year. I interpolated mortality rates by age in months on a log scale from mortality rates by single year of age in 2019, and I extrapolated mortality rates for ages above 99 on a log scale. Each month I determined the number of people who died by multiplying the number of people for each age in months with the mortality rate for the age in months. I also calculated a baseline model of how many people would've died each month without the elevated deaths, and I calculated the PFE adjustment percent as <code>-monthly_deaths/baseline_deaths*100</code>.</p>
+<p>I converted the age in years at the time of death to an age in months by multiplying the age by 12 and adding 6. For the sake of simplicity each month had a duration of one twelfth of a year. I converted the yearly crude mortality rate for each age in 2019 to a risk of dying per month with the formula <code>1-(1-cmr)^(1/12)</code>. I extrapolated mortality risk for ages 100 to 120 on a log scale from the mortality risk for ages 90 to 99. Each month I determined the number of people who died by multiplying the number of people for each age in months with the mortality risk for the age in months. I also calculated a baseline model of how many people would've died each month in a population which started out as the mid-2019 resident population estimates for each age. And then I calculated the PFE adjustment percent as <code>-monthly_deaths/baseline_deaths*100</code>.</p>
 <p>I also applied a similar model to all-cause excess deaths relative to a seasonality-adjusted linear baseline for each age in 2011-2019.</p>
 <p>The maximum reduction to the baseline was only about 1.8% based on COVID deaths and about 2.2% based on all-cause deaths, so both were around one third of 6.02% which is the maximum reduction in a PFE adjustment curve that Ethical Skeptic posted on his blog:</p>
 <div class="width6">
@@ -447,13 +448,10 @@ system(paste0(&quot;mar=120;w=`identify -format %w 1.png`;magick 1.png \\( -size
 Show code
 </button><pre>library(data.table);library(ggplot2)
 
-months=12*60;maxage=Inf
+months=12*60;minage=0;maxage=Inf
 
-t=do.call(rbind,lapply(2020:2022,\(i)fread(paste0(i,&quot;.csv.gz&quot;))[ucod==&quot;U071&quot;&amp;restatus!=4,.(age,month=(year-2020)*12+monthdth)]))
-t=t[age!=9999][,age:=ifelse(age&gt;1000,age%%1000,0)]
-t=t[age&lt;=maxage]
-t[,age:=age*12+sample(0:11,.N,T)]
-covid=t[,.(pop=.N),.(month,age)]
+covid=do.call(rbind,lapply(2020:2022,\(i)fread(paste0(i,&quot;.csv.gz&quot;))[ucod==&quot;U071&quot;&amp;restatus!=4,.(age,month=(year-2020)*12+monthdth)]))
+covid=covid[age!=9999][,age:=ifelse(age&lt;2000,age%%1000,0)][age&gt;=minage&amp;age&lt;=maxage,.(pop=.N),.(month,age=age*12+6)]
 
 pop=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)[year==2019]
 risk=pop[age&lt;100,.(age,risk=1-(1-dead/pop)^(1/12))]
@@ -464,9 +462,9 @@ all=fread(&quot;http://sars2.net/f/uspopdeadmonthly.csv&quot;)[year%in%2011:2022
 all[,date:=(year-2020)*12+month][,cmr:=dead/persondays]
 all=merge(all,all[year&lt;2020,.(date=unique(all$date),base=predict(lm(cmr~date),.(date=unique(all$date)))),age])
 all=merge(all[year&lt;2020,.(monthly=mean(cmr/base)),.(month,age)],all)
-allcause=all[age&lt;=maxage&amp;date%in%1:36,.(pop=sum(dead)-sum(base*persondays*monthly)),,.(age=age*12+6,month=date)]
+allcause=all[age&gt;=minage&amp;age&lt;=maxage&amp;date%in%1:36,.(pop=sum(dead)-sum(base*persondays*monthly)),,.(age=age*12+6,month=date)]
 
-dead0=double();cur=pop[age&lt;maxage*12,.(age=age*12+6,pop,month=1)]
+dead0=double();cur=pop[age&gt;=minage&amp;age&lt;=maxage,.(age=age*12+6,pop,month=1)]
 for(i in 1:months){
   died=cur[,risk[pmin(age+1,length(risk))]*pop]
   dead0[i]=sum(died)
@@ -536,28 +534,27 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
 ggsave(&quot;1.png&quot;,width=3.8,height=1.8,dpi=380*4)
 system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
 </div>
-<p>Here's a simplified version of my code that only calculates the red model based on all-cause deaths:</p>
-<pre>months=12*60;maxage=Inf
-
-# monthly mortality risk by age in months for ages 0 to 120 (age 0 to 121*12-1 months)
+<p>Here's a simplified version of my code that only calculates the red model that is based on all-cause deaths:</p>
+<pre># monthly mortality risk by age in months for ages 0 to 120 (age 0 to 121*12-1 months)
 # risk for ages 100-120 is extrapolated on a log scale from risk for ages 90-99
 pop=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)[year==2019]
 risk=pop[age&lt;100,.(age,risk=1-(1-dead/pop)^(1/12))]
 risk=c(risk$risk,risk[age&gt;=90,exp(predict(lm(log(risk)~age),.(age=100:120)))])
 risk=spline(seq(6,,12,121),risk,xout=0:(121*12-1))$y
 
-# excess number of all-cause deaths by age in months and month in 2020-2022
+# excess number of all-cause deaths by age and month in 2020-2022
 # a seasonality-adjusted linear baseline for CMR in 2011-2019 is used for each age
 # date 1 is January 2020 and date 36 is December 2022
-all=fread(&quot;http://sars2.net/f/uspopdeadmonthly.csv&quot;)[year%in%2011:2022&amp;age&lt;=maxage]
+all=fread(&quot;http://sars2.net/f/uspopdeadmonthly.csv&quot;)[year%in%2011:2022]
 all[,date:=(year-2020)*12+month][,cmr:=dead/persondays]
 dates=unique(all$date)
 all=merge(all,all[year&lt;2020,.(date=dates,base=predict(lm(cmr~date),.(date=dates))),age])
 all=merge(all[year&lt;2020,.(monthly=mean(cmr/base)),.(month,age)],all)
-allcause=all[date%in%1:36,.(pop=sum(dead)-sum(base*persondays*monthly)),.(age=age*12+6,month=date)]
+allcause=all[date%in%1:36,.(pop=sum(dead)-sum(base*persondays*monthly)),.(age,month=date)]
 
 # baseline model
-dead0=double();cur=pop[age&lt;=maxage,.(age=age*12+6,pop,month=1)]
+months=12*60
+dead0=double();cur=pop[,.(age=age*12+6,pop,month=1)]
 for(i in 1:months){
   died=cur[,risk[pmin(age+1,length(risk))]*pop]
   dead0[i]=sum(died)
@@ -575,13 +572,12 @@ for(i in 1:months){
 
 # baseline reduction percent for PFE-adjusted baseline (month 1 is January 2020)
 data.table(month=1:months,reductionpct=-dead2/dead0*100)</pre>
-<p>In my model the reason why the red line is still so low in the 2070s is because young age groups had a lot of excess deaths from external causes in 2020-2022.</p>
 <p>In November 2024 Ethical Skeptic said that he currently subtracts a total of 668,592 deaths from his PFE-adjusted baseline, even though my approximation of his PFE arrival function was based on this old plot where he only subtracted 587,000 deaths:</p>
 <div class="width5">
 <img src="i/np-bergamo-pfe-arrival.png">
 </div>
-<p>Ethical Skeptic's PFE adjustment is fully <span class="quote">&quot;expired&quot;</span> by October 2027 which means that after that point he will no longer subtract further deaths. But he said that in November 2024 his baseline was approximately 69% expired, which means that at that point he would've already subtracted about 69% of 668,592 deaths, which is about 460,000. However in the red line in my plot above I had only subtracted a total of only about 243,000 deaths by the end of November 2024, which is only about half of his figure.</p>
-<p>Ethical Skeptic often applies heavy adjustment for the PFE even in plots for young age groups like 0-54. But based on these models for ages 0-54, the maximum reduction to the baseline up to the end of 2024 was only about 0.013% in the model based on COVID deaths and about 0.028% in the model based on all-cause deaths:</p>
+<p>Ethical Skeptic's PFE adjustment is fully <span class="quote">&quot;expired&quot;</span> by October 2027 which means that after that point he will no longer subtract further deaths. But he said that in November 2024 his baseline was approximately 69% expired, which means that at that point he would've already subtracted about 69% of 668,592 deaths, which is about 460,000. However in the red line in my plot above I had only subtracted a total of only about 238,000 deaths by the end of November 2024, which is only about half of his figure.</p>
+<p>Ethical Skeptic often applies heavy adjustment for the PFE even in plots for young age groups like 0-54. But in my plot below for ages 0-54, the maximum reduction to the baseline up to the end of 2024 was only about 0.013% in the model based on COVID deaths and about 0.028% in the model based on all-cause deaths:</p>
 <div class="width6">
 <img src="i/ethical-arrival-2.png">
 </div>
@@ -691,6 +687,138 @@ ggsave(&quot;1.png&quot;,width=4.2,height=2.8,dpi=380*4)
 system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
 </div>
 <p>And anyway if the increase in MCD secondary thrombocytopenia would've been caused by vaccines, then why was there only a small increase in 2021 but a sudden increase at the start of 2022? And why were the excess deaths higher in 2024 when few people were getting vaccinated than in 2021?</p>
+<p>In the case that the increase in deaths with secondary thrombocytopenia would've been due to a change in coding practices, I thought the change might have occurred in some states but not others, or it might have been implemented earlier in some states and later in other states. However there seems to be a fairly uniform pattern across states where there was a clear increase in deaths between 2021 and 2022:</p>
+<div class="width6">
+<img src="i/ethical-thrombocytopenia-4.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>t=fread(&quot;http://sars2.net/f/wonderthrombostate.csv&quot;)
+
+disp=t[,tapply(dead,.(state,year),c)]
+disp=disp[rowSums(is.na(disp))&lt;2,]
+m=disp/apply(disp,1,max,na.rm=T)
+
+pal=sapply(255:0,\(i)rgb(i,i,i,maxColorValue=255))
+
+step=ceiling(nrow(m)/2)
+for(i in 1:2){
+  rows=((i-1)*step):min(nrow(m),i*step)
+  pheatmap::pheatmap(m[rows,],filename=paste0(&quot;i&quot;,i,&quot;.png&quot;),display_numbers=disp[rows,],
+    cluster_rows=F,cluster_cols=F,legend=F,cellwidth=15,cellheight=15,fontsize=9,fontsize_number=8,
+    border_color=NA,na_col=&quot;white&quot;,
+    number_color=ifelse(!is.na(m[rows,])&amp;m[rows,]&gt;.4,&quot;white&quot;,&quot;black&quot;),
+    breaks=seq(0,1,,256),
+    colorRampPalette(pal)(256))
+}
+
+system(&quot;magick i[12].png +append 1.png;w=`identify -format %w 1.png`;pad=26;magick -pointsize 42 -font Arial \\( -size $[w-pad*2] caption:&#39;CDC WONDER: Yearly deaths by state with MCD D69.5 (secondary thrombocytopenia). Each row has its own color scale where the maximum value is shown in black. States with data missing for more than one year are omitted. The data was retrieved on December 2nd 2024 UTC so some deaths in 2024 are still missing.&#39; -splice $[pad]x20 \\) 1.png -append 1.png&quot;)</pre>
+</div>
+<h2>
+<a href=#Deaths_from_natural_causes_in_ages_2_17 id=Deaths_from_natural_causes_in_ages_2_17>Deaths from natural causes in ages 2-17</a>
+</h2>
+<p>Ethical Skeptic posted this tweet: [<a href="https://x.com/EthicalSkeptic/status/1864371228309340602">https://x.com/EthicalSkeptic/status/1864371228309340602</a>]</p>
+<blockquote>
+<p>This is the pièce de résistance.</p>
+<p>Ages 2-17 Covid Deaths = 280 (270 post-vaccine) Ages 2-17 Post Inflection Excess Deaths = 5,478</p>
+<p>The worst part: this 22-sigma event has not ended.</p>
+<p><img src=i/ethical-217-1.png class=width8></p>
+</blockquote>
+<p>In the replies someone asked: <span class="quote">&quot;The <span class="quote">'from Covid (U07.1)'</span> line ends after Q1 2022 because...it goes to zero? Or are we missing data since then?&quot;</span> [<a href="https://x.com/41Adanac/status/1864418767444562232">https://x.com/41Adanac/status/1864418767444562232</a>] But Ethical Skeptic replied: <span class="quote">&quot;No, just no death certificates with Covid as UCoD since then reported by the states.&quot;</span> However actually most weeks had less than 10 deaths so the number of deaths was suppressed by CDC WONDER. There's a bunch of deaths with UCD COVID if you look at the fixed-width NVSS files where the deaths are not suppressed, even though the files only include monthly data but not weekly data.</p>
+<p>But anyway, when I did a query for deaths with UCD A-Q in ages 2-17, I also got a sustained elevation in deaths above the baseline since around May 2022, but I don't know how to explain it. So this looks like one case where Ethical Skeptic has found a genuine increase in deaths without having to rely on any of his tricks or adjustments:</p>
+<div class="width6">
+<img src="i/ethical-217-2.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2)
+
+t=fread(&quot;http://sars2.net/f/wondernaturalsingle.csv&quot;)
+t=t[age%in%2:17&amp;date!=&quot;2024-11&quot;,.(dead=sum(dead)),date]
+
+d=t[,.(x=as.Date(paste0(date,&quot;-1&quot;)),dead)]
+d[,dead:=dead/lubridate::days_in_month(x)]
+d$base=d[year(x)%in%2013:2019,predict(lm(dead~x),d)]
+d$base=d$base+d[year(x)%in%2013:2019,mean(dead-base),.(month=month(x))]$V1[month(d$x)]
+p=melt(d,id=1,,&quot;z&quot;,&quot;y&quot;)
+p[,z:=factor(z,unique(z),c(&quot;Actual deaths&quot;,&quot;2013-2019 linear baseline&quot;))]
+
+xstart=as.Date(&quot;2015-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
+p=p[x&gt;=xstart&amp;x&lt;=xend]
+xbreak=seq(xstart+182,xend,&quot;year&quot;);xlab=year(xbreak)
+ybreak=pretty(p$y,7);ystart=ybreak[1];yend=max(ybreak)
+
+ggplot(p,aes(x=x+14,y))+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray83&quot;,linewidth=.25)+
+geom_line(aes(color=z),linewidth=.3)+
+geom_point(aes(alpha=z,color=z),stroke=0,size=.6)+
+labs(x=NULL,y=NULL,title=&quot;CDC WONDER: Monthly deaths in ages 2-17 with UCD A-Q (natural causes\nwithout R codes, U codes, or COVID), divided by number of days in month&quot;,subtitle=&quot;The data was retrieved on December 5th 2024 UTC, so many deaths in 2024 are
+still missing because of a registration delay.&quot;)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
+scale_color_manual(values=c(&quot;black&quot;,&quot;blue&quot;))+
+scale_alpha_manual(values=c(1,0))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.text.y=element_text(margin=margin(,1.5)),
+  axis.ticks=element_line(linewidth=.25,color=&quot;black&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(2,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.background=element_rect(color=&quot;black&quot;,linewidth=.25),
+  legend.justification=c(0,1),
+  legend.key=element_blank(),
+  legend.key.height=unit(10,&quot;pt&quot;),
+  legend.key.width=unit(17,&quot;pt&quot;),
+  legend.position=c(0,1),
+  legend.spacing.x=unit(1,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.margin=margin(3,4,3,3),
+  legend.text=element_text(size=7,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.3),
+  plot.margin=margin(4,4,3,4),
+  plot.subtitle=element_text(size=7,margin=margin(,,3)),
+  plot.title=element_text(size=7.2,face=2,margin=margin(1,,3)))
+ggsave(&quot;1.png&quot;,width=3.9,height=2.4,dpi=400*4)
+system(&quot;magick 1.png -resize 25% PNG8:1.png&quot;)</pre>
+</div>
+<p>The next plot shows the causes of death which account for the highest number of excess deaths in 2020-2022 relative to the 2015-2019 linear trend. Many of the top causes seem to have already had a large increase between 2019 and 2020, even though it might be partially on artifact of how I selected the top causes based on the 2020-2022 total so it was biased towards selecting causes which were already elevated in 2020 and not just in 2021-2022. But the top 5 causes also include cancers of brain stem and asthma which didn't have a large increase above the baseline until 2022:</p>
+<div class="width7">
+<img src="i/ethical-217-3.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>icd=fread(&quot;http://sars2.net/f/wonderbyicd.csv.gz&quot;)[rowid(code)==1,.(cause,icd=sub(&quot;\\.&quot;,&quot;&quot;,code))]
+
+# sars2.net/stat.html#Download_fixed_width_and_CSV_files_for_the_NVSS_data_used_at_CDC_WONDER
+t=do.call(rbind,lapply(2013:2022,\(i)fread(paste0(i,&quot;.csv.gz&quot;))[age%in%1002:1017,.(ucd=ucod,year)]))
+
+a=t[,.(dead=.N),.(icd=ucd,year)]
+a=merge(do.call(CJ,lapply(a[,-3],unique)),a,all.x=T)[is.na(dead),dead:=0]
+
+a=a[a[year%in%2013:2019,.(year=2013:2022,base=predict(lm(dead~year),.(year=2013:2022))),icd],on=names(a)[1:2]]
+a=merge(icd,a)
+
+m=a[icd%like%&quot;[A-Q]&quot;,tapply(dead-base,.(paste0(icd,&quot;: &quot;,cause),year),c)]
+m=m[order(-rowSums(m[,ncol(m)-2:0])),][1:40,]
+
+maxcolor=max(abs(m))
+exp=.8
+pal=hsv(rep(c(21,0)/36,5:4),c(1,.8,.6,.3,0,.3,.6,.8,1),c(.3,.65,1,1,1,1,1,.65,.3))
+
+pheatmap::pheatmap(sign(m)*abs(m)^exp,filename=&quot;1.png&quot;,display_numbers=kimi(m),
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=14,cellheight=14,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;gray90&quot;,
+  number_color=ifelse(!is.na(m)&amp;abs(m)^exp&gt;.7*(maxcolor^exp),&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(-maxcolor^exp,maxcolor^exp,,256),
+  colorRampPalette(pal)(256))
+system(&quot;convert 1.png -extent 2000x 1.png;w=`identify -format %w 1.png`;pad=26;magick -pointsize 44 -font Arial \\( -size $[w-pad] caption:&#39;NVSS, ages 2 to 17: Excess number of deaths by underlying cause of death relative to 2015-2019 linear trend, top 40 causes shown sorted by 2020-2022 total&#39; -splice $[pad]x24 \\) 1.png -append 1.png&quot;)</pre>
+</div>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')

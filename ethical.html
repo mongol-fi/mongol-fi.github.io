@@ -59,8 +59,8 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
   .spoiler{display:none}
 }
 </style>
-<title>Comments to Ethical Skeptic</title>
-<h1>Comments to Ethical Skeptic - <a href=index.html>sars2.net</a></h1>
+<title>Comments to Ethical Skeptic (part 1)</title>
+<h1>Comments to Ethical Skeptic (part 1) - <a href=index.html>sars2.net</a></h1>
 <p>Further updates are added to part 2: <a href=ethical2.html>ethical2.html</a>.</p>
 <h2 id=Contents><a href=#Contents>Contents</a></h2>
 <ul>
@@ -1717,19 +1717,13 @@ Show code
 cul=\(x,y)y[cut(x,c(y,Inf),,T,F)]
 
 t=fread(&quot;http://sars2.net/f/wondermalignant5year.csv&quot;)
-
 pop=fread(&quot;http://sars2.net/f/uspopdeadmonthly.csv&quot;)
 t=merge(t,pop[,.(pop=sum(pop)),.(month=date,age=cul(age,c(0,1,1:20*5)))])
+t=t[,month:=as.Date(paste0(month,&quot;-1&quot;))][,dead:=dead/days_in_month(month)]
 
-t=t[,month:=as.Date(paste0(month,&quot;-1&quot;))]
-t[,dead:=dead/days_in_month(month)]
-
-months=sort(unique(t$month))
-base=t[!grepl(&quot;COVID&quot;,cause)&amp;year(month)%in%2011:2019][,dead:=nafill(dead,,0)]
-t=merge(base[,.(month=months,base=predict(lm(dead/pop~month),.(month=months))),.(age,cause)],t)
-t[,base:=base*pop]
-
-p=t[,.(base=sum(base),dead=sum(dead)),.(date=month,cause)]
+base=t[!cause%like%&quot;COVID&quot;&amp;year(month)%in%2011:2019][,dead:=nafill(dead,,0)]
+t=merge(base[,.(month=unique(t$month),base=predict(lm(dead/pop~month),.(month=unique(t$month)))),.(age,cause)],t)
+p=t[,.(base=sum(base*pop),dead=sum(dead)),.(date=month,cause)]
 
 and=fread(&quot;http://sars2.net/f/wondermalignantmcdandcovidmcd.csv&quot;)[age==&quot;all&quot;]
 and=and[,date:=as.Date(paste0(date,&quot;-1&quot;))][,.(date,andcovid=dead/days_in_month(date))]
@@ -1737,57 +1731,47 @@ p=rbind(p,merge(and,p[cause%like%&quot;Multiple&quot;])[,.(date,base=NA,cause=&q
 
 xstart=as.Date(&quot;2015-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
 p=p[date&gt;=xstart&amp;date&lt;=xend]
-xbreak=seq(xstart,xend,&quot;6 month&quot;)
-xlab=c(rbind(&quot;&quot;,2015:2023),&quot;&quot;)
-
-cand=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
-ymin=p[,min(base,dead,na.rm=T)];ymax=p[,max(base,dead,na.rm=T)]
-ystep=cand[which.min(abs(cand-(ymax-ymin)/7))]
-ystart=ystep*floor(ymin/ystep)
-yend=ystep*ceiling(ymax/ystep)
-ybreak=seq(ystart,yend,ystep)
-
-color=c(&quot;gray60&quot;,&quot;gray85&quot;,&quot;black&quot;)
+xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=ifelse(month(xbreak)==7,year(xbreak),&quot;&quot;)
+ybreak=pretty(p[,c(dead,base)],7);ystart=ybreak[1];yend=max(ybreak)
 
 ggplot(p,aes(x=date+14,y=dead,color=cause))+
 geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray90&quot;,linewidth=.25)+
 geom_hline(yintercept=c(ystart,yend),linewidth=.25,lineend=&quot;square&quot;)+
 geom_vline(xintercept=c(xstart,xend),linewidth=.25,lineend=&quot;square&quot;)+
 geom_line(linewidth=.3)+
-geom_point(stroke=0,size=.6,show.legend=F)+
-geom_line(aes(y=base),linetype=2,linewidth=.3)+
+geom_point(stroke=0,size=.6)+
+geom_line(aes(y=base),linetype=&quot;42&quot;,linewidth=.3,show.legend=F)+
 labs(title=&quot;CDC WONDER: Monthly deaths with cause C00-C97 (malignant neoplasms) divided by number of days in month&quot;|&gt;stringr::str_wrap(70),x=NULL,y=NULL)+
 scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
 scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
-scale_color_manual(values=color)+
+scale_color_manual(values=c(&quot;#44f&quot;,&quot;#bbf&quot;,&quot;black&quot;))+
 coord_cartesian(clip=&quot;off&quot;,expand=F)+
 theme(axis.text=element_text(size=7,color=&quot;black&quot;),
-  axis.ticks.x=element_line(color=alpha(&quot;black&quot;,c(1,0))),
   axis.ticks=element_line(linewidth=.25,color=&quot;black&quot;),
-  axis.ticks.length=unit(.2,&quot;lines&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(2,&quot;pt&quot;),
   axis.title=element_text(size=8),
   legend.background=element_blank(),
-  legend.box.just=&quot;left&quot;,
+  legend.box.background=element_rect(color=&quot;black&quot;,linewidth=.25),
   legend.justification=c(0,1),
   legend.key=element_blank(),
   legend.key.height=unit(10,&quot;pt&quot;),
   legend.key.width=unit(17,&quot;pt&quot;),
   legend.position=c(0,1),
-  legend.spacing.x=unit(2,&quot;pt&quot;),
-  legend.box.background=element_rect(fill=&quot;white&quot;,color=&quot;black&quot;,linewidth=.3),
-  legend.margin=margin(-2,5,4,4,&quot;pt&quot;),
+  legend.spacing.x=unit(1,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.margin=margin(3,4,3,3),
   legend.text=element_text(size=7,vjust=.5),
   legend.title=element_blank(),
   panel.background=element_blank(),
-  plot.margin=margin(5,5,5,5),
-  plot.title=element_text(size=7.6,face=2,margin=margin(2,,4)))
-ggsave(&quot;1.png&quot;,width=4.3,height=2.8,dpi=450)
+  plot.margin=margin(4,4,4,4),
+  plot.title=element_text(size=7.6,face=2,margin=margin(2,,3)))
+ggsave(&quot;1.png&quot;,width=4.3,height=2.8,dpi=400*4)
 
 sub=&quot;\u00a0     The dashed line is a baseline for expected deaths, which was calculated by first doing a linear regression for CMR for each 5-year age group in 2011-2019, then multiplying the monthly population estimates of each age group by the value of the projected linear trend, and then adding together the results for each age group. The baseline is not adjusted for seasonal variation in mortality, but the baseline is slightly higher in winter because the population estimates for elderly age groups were higher in winters.
       Monthly resident population estimates by single year of age are from www2.census.gov/
-programs-surveys/popest/datasets/2020-2022/national/asrh/nc-est2022-alldata-r-file0{1..8}.csv, and from the corresponding files in the 2010-2020 directory. In order to get rid of a sudden jump in population size after the switch from the 2010-2020 to 2020-2022 estimates, the 2010-2020 estimates were multiplied by a slope so that they matched the 2020-2022 estimates at the point where the estimates were merged.&quot;
-
-system(paste0(&quot;f=1.png;mar=30;w=`identify -format %w $f`;magick \\( $f -chop 0x10 \\) \\( -size $[w-mar*2]x -font Arial -interline-spacing -3 -pointsize 42 caption:&#39;&quot;,sub,&quot;&#39; -gravity southwest -splice $[mar]x20 \\) -append 1.png&quot;))</pre>
+programs-surveys/popest/datasets/2020-2023/national/asrh/nc-est2023-alldata-r-file0{1..8}.csv, and from the corresponding files in the 2010-2020 directory. In order to get rid of a sudden jump in population size after the switch from the 2010-2020 to 2020-2023 estimates, the 2010-based estimates were multiplied by a slope so that they matched the 2020-based estimates in April 2020 when the estimates were merged.&quot;
+system(paste0(&quot;f=1.png;mar=120;w=`identify -format %w $f`;magick \\( $f -chop 0x40 \\) \\( -size $[w-mar*2]x -font Arial -interline-spacing -3 -pointsize $[38*4] caption:&#39;&quot;,sub,&quot;&#39; -gravity southwest -splice $[mar]x80 \\) -append -resize 25% -colors 256 1.png&quot;))</pre>
 </div>
 <p>However I don't think the method of excess MCD normalization is justified, because there was already an increasing trend in the MCD to UCD ratio before COVID, and because deaths with MCD COVID account for basically all of the increase in the MCD to UCD ratio above the prepandemic trend.</p>
 <p>And if there would be some other cause of death which had a reduced MCD to UCD ratio since 2020 compared to the ratio before 2020, should people be applying a <span class="quote">&quot;negative excess MCD normalization&quot;</span> where they subtract a part of deaths when they plot UCD deaths?</p>

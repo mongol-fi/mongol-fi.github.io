@@ -1012,7 +1012,7 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=output>
 <span class=title># replace NA values with the previous non-NA value</span></span>
 <span class=prompt>&gt;</span> <span class=code>v=c(NA,5,NA,NA,3,NA,4)</span>
-<span class=prompt>&gt;</span> <span class=code>data.table::nafill(v,type=&quot;locf&quot;)</span><span class=comment> # LOCF means last observation carried forward</span>
+<span class=prompt>&gt;</span> <span class=code>data.table::nafill(v,type=&quot;locf&quot;)</span><span class=comment> # this only works with numeric types</span>
 <span class=output>[1] NA  5  5  5  3  3  4</span>
 <span class=prompt>&gt;</span> <span class=code>zoo::na.locf(v,na.rm=F)</span><span class=comment> # `na.rm=F` disables removing the NA value from the start</span>
 <span class=output>[1] NA  5  5  5  3  3  4</span>
@@ -1471,9 +1471,49 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=title># add integer index for each unique combination of two or more columns</span></span>
 <span class=prompt>&gt;</span> <span class=code>d=data.table(year=rep(2020:2022,each=12),month=1:12)</span>
 <span class=prompt>&gt;</span> <span class=code>d=rbind(d,d)</span>
-<span class=prompt>&gt;</span> <span class=code>d[,totalmonth:=.GRP,.(year,month)]</span>
+<span class=prompt>&gt;</span> <span class=code>d[,totalmonth:=.GRP,.(year,month)]</span><span class=comment> # .GRP is group index</span>
 <span class=prompt>&gt;</span> <span class=code>tail(d,2)</span>
 <span class=output>   year month totalmonth</span>
 <span class=output>1: 2022    11         35</span>
 <span class=output>2: 2022    12         36</span>
+<span class=output>
+<span class=title># get last 3 columns</span></span>
+<span class=prompt>&gt;</span> <span class=code>m=matrix(1:16,2);m[,ncol(m)-2:0]</span>
+<span class=output>     [,1] [,2] [,3]</span>
+<span class=output>[1,]   11   13   15</span>
+<span class=output>[2,]   12   14   16</span>
+<span class=output>
+<span class=title># fill in zeroes for missing combinations of variables</span></span>
+<span class=prompt>&gt;</span> <span class=code>df=data.frame(year=c(2023,2023,2024),sex=c(&quot;F&quot;,&quot;M&quot;,&quot;F&quot;),dead=c(4,2,3))</span>
+<span class=prompt>&gt;</span> <span class=code>dt=data.table(df);tib=tibble(df)</span>
+<span class=prompt>&gt;</span> <span class=code>merge(do.call(CJ,lapply(dt[,-3],unique)),d,all.x=T)[is.na(dead),dead:=0][]</span>
+<span class=comment># `all.x=T` adds rows with NA deaths for combinations of variables included in the first table but not second table</span>
+<span class=output>   year sex dead</span>
+<span class=output>1: 2023   F    4</span>
+<span class=output>2: 2023   M    2</span>
+<span class=output>3: 2024   F    3</span>
+<span class=output>4: 2024   M    0</span>
+<span class=prompt>&gt;</span> <span class=code>df2=rbind(df,cbind(expand.grid(lapply(df[-3],unique)),dead=0));df2[!duplicated(df2[,-3]),]</span><span class=comment> # base R</span>
+<span class=output>  year sex dead</span>
+<span class=output>1 2023   F    4</span>
+<span class=output>2 2023   M    2</span>
+<span class=output>3 2024   F    3</span>
+<span class=output>7 2024   M    0</span>
+<span class=prompt>&gt;</span> <span class=code>expand_grid(year=unique(tib$year),sex=unique(tib$sex))|&gt;left_join(tib)|&gt;mutate(dead=replace_na(dead,0))</span>
+<span class=comment># `left_join` is like `merge(all.x=T)`</span>
+<span class=comment># A tibble: 4 &#215; 3</span>
+<span class=output>   year sex    dead</span>
+<span class=output>  &lt;dbl&gt; &lt;chr&gt; &lt;dbl&gt;</span>
+<span class=output>1  2023 F         4</span>
+<span class=output>2  2023 M         2</span>
+<span class=output>3  2024 F         3</span>
+<span class=output>4  2024 M         0</span>
+<span class=prompt>&gt;</span> <span class=code>tib|&gt;complete(year,sex,fill=list(dead=0))</span><span class=comment> # from `tidyr`</span>
+<span class=comment># A tibble: 4 &#215; 3</span>
+<span class=output>   year sex    dead</span>
+<span class=output>  &lt;dbl&gt; &lt;chr&gt; &lt;dbl&gt;</span>
+<span class=output>1  2023 F         4</span>
+<span class=output>2  2023 M         2</span>
+<span class=output>3  2024 F         3</span>
+<span class=output>4  2024 M         0</span>
 </pre>

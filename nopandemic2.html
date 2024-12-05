@@ -18,8 +18,10 @@ table{border-collapse:collapse}
 td,th{border:1px solid #555;padding:2px 4px}
 th{background:#444;text-align:left;font-weight:bold}
 img{max-width:100%}
-blockquote{margin:0;padding-left:40px;overflow-x:hidden}
+blockquote{margin:0;padding-left:40px;margin-right:0;overflow-x:hidden}
 blockquote p{max-width:480px}
+blockquote p:first-child{margin-top:0}
+blockquote p:last-child{margin-bottom:0}
 blockquote blockquote p{max-width:440px}
 blockquote blockquote blockquote p{max-width:400px}
 blockquote,.quote,blockquote h1,blockquote h2,blockquote h3{color:hsl(50,100%,85%)}
@@ -63,6 +65,9 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <h2 id=Contents><a href=#Contents>Contents</a></h2>
 <ul>
 <li><a href=#Should_NYC_and_Bergamo_have_reduced_deaths_due_to_a_pull_forward_effect>Should NYC and Bergamo have reduced deaths due to a pull-forward effect?</a></li>
+<li><a href=#Denis_Rancourt_Did_over_half_of_death_certificates_for_COVID_refer_to_bacterial_pneumonia>Denis Rancourt: Did over half of death certificates for COVID refer to bacterial pneumonia?</a></li>
+<li><a href=#USMortality_Why_did_the_spike_in_excess_deaths_only_occur_in_spring_2020_if_the_virus_was_released_in_2019>USMortality: Why did the spike in excess deaths only occur in spring 2020 if the virus was released in 2019?</a></li>
+<li><a href=#Lombardy_had_lower_peak_weekly_excess_deaths_than_two_NUTS2_regions_of_Spain>Lombardy had lower peak weekly excess deaths than two NUTS2 regions of Spain</a></li>
 </ul>
 
 <h2>
@@ -355,7 +360,7 @@ merge(ex,pop)[,.(age,excess=round(excess),pop,poppct=round(excess/pop*100,2))]|&
 #  80   1185 40271   2.94
 #  85   1137 24711   4.60
 #  90   1095 15290   7.16</pre>
-<p>In the next plot I did a similar simulation for NYC as the earlier simulation for Bergamo. Now the number of deaths in the red scenario where I simulated the COVID event was only about 2.0% lower in 2021-2024 than in the black scenario without the COVID event. I don't know why the reduction was so much smaller than in the simulation for Bergamo, even though the total percentage of excess deaths in the first half of 2020 was only slightly higher in Bergamo than NYC:</p>
+<p>In the next plot I did a similar simulation for NYC as the earlier simulation for Bergamo. Now the number of deaths in the red scenario where I simulated the COVID event was only about 3.1% lower in 2021-2024 than in the black scenario without the COVID event. I don't know why the reduction was so much smaller than in the simulation for Bergamo, even though the total percentage of excess deaths in the first half of 2020 was only slightly higher in Bergamo than NYC:</p>
 <div class="width6">
 <img src="i/np-bergamo-nycsim.png">
 </div>
@@ -371,7 +376,7 @@ nyc=fread(&quot;http://sars2.net/f/nycmonthlydead.csv&quot;)
 monthmult[25:30]=merge(nyc[year&lt;2020,mean(dead),month],nyc)[year==2020,dead/V1][1:6]
 
 pop=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)[year==2018]
-cmr=pop[,dead/pop]/365*12
+cmr=pop[,dead/pop]/12
 
 popfrac=pop[,sum(pop)/8.8e6]
 people=data.table(age=pop[,rep(age,pop/popfrac)])[,age:=age+runif(.N)]
@@ -473,6 +478,356 @@ ex=merge(a[year==2020],a[,predict(lm(dead~year),.(year=2020)),age])[,.(age,exces
 pop=data.table(age=0:18*5,pop=c(39390,48231,56530,59100,59678,58801,59797,63250,70012,84326,90600,92658,79300,65720,59191,49584,38262,23689,13109))
 cmr=merge(pop,eu[year==2019,sum(dead),age])[,V1/pop]
 weighted.mean(cmr,ex$excess) # 0.07036192</pre>
+<h2>
+<a href=#Denis_Rancourt_Did_over_half_of_death_certificates_for_COVID_refer_to_bacterial_pneumonia id=Denis_Rancourt_Did_over_half_of_death_certificates_for_COVID_refer_to_bacterial_pneumonia>Denis Rancourt: Did over half of death certificates for COVID refer to bacterial pneumonia?</a>
+</h2>
+<p>In December 2024 Rancourt published a paper titled <span class="quote">&quot;Medical Hypothesis: Respiratory epidemics and pandemics without viral transmission&quot;</span>. [<a href="https://correlation-canada.org/respiratory-epidemics-without-viral-transmission/">https://correlation-canada.org/respiratory-epidemics-without-viral-transmission/</a>] In the paper he wrote: <span class="quote">&quot;Rancourt et al. (2021a) showed this in detail, into 2021 (their Figures 34a through 34i). They also pointed out that more than half of the deaths assigned as COVID-19 deaths could include life-threatening co-occurring bacterial pneumonia, according to CDC tabulations of death certificates, and that prescriptions of antibiotics were significantly reduced in the same period.&quot;</span></p>
+<p>The figures from his old paper showed data from CDC WONDER, where during COVID waves the number of deaths with MCD pneumonia was about half or more of the number of deaths with MCD COVID: [<a href="http://researchgate.net/publication/355574895">http://researchgate.net/publication/355574895</a>]</p>
+<div class="width6">
+<img src="i/np-rancourt-hypothesis-1.png">
+</div>
+<p>The figures included various forms of pneumonia and not only bacterial pneumonia, even though the paper didn't seem to specify which ICD codes were included under the label of pneumonia.</p>
+<p>The death record data used at CDC WONDER can be downloaded from here: <a href="https://cdc.gov/nchs/nvss/mortality_public_use_data.htm">https://cdc.gov/nchs/nvss/mortality_public_use_data.htm</a>. In the files for 2020-2022, about 51% of deaths with UCD U07.1 have MCD J18.9 (pneumonia, unspecified), which is by far the most common MCD for deaths with UCD COVID. The most common MCD for specifically bacterial pneumonia is J15.9 (Bacterial pneumonia, unspecified), which is only included for about 1.2% deaths with UCD COVID, followed by J15.2 (Pneumonia due to staphylococcus, 0.5%), J15.1 (Pneumonia due to Pseudomonas, 0.3%), and J15.0 (Pneumonia due to Klebsiella pneumoniae, 0.1%):</p>
+<pre>system(&quot;wget https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/mortality/mort202{0..2}us.zip;unzip mort202?us.zip&quot;)
+
+library(readr);library(data.table)
+
+t=do.call(rbind,lapply(Sys.glob(paste0(&quot;VS&quot;,20:22,&quot;MORT.*&quot;)),\(i)setDT(read_fwf(i,fwf_cols(restatus=c(20,20),age=c(70,73),ucod=c(146,149),enicon_1=c(167,170),enicon_2=c(174,177),enicon_3=c(181,184),enicon_4=c(188,191),enicon_5=c(195,198),enicon_6=c(202,205),enicon_7=c(209,212),enicon_8=c(216,219),enicon_9=c(223,226),enicon_10=c(230,233),enicon_11=c(237,240),enicon_12=c(244,247),enicon_13=c(251,254),enicon_14=c(258,261),enicon_15=c(265,268),enicon_16=c(272,275),enicon_17=c(279,282),enicon_18=c(286,289),enicon_19=c(293,296),enicon_20=c(300,303))))))
+
+t[age==9999,age:=NA][,age:=ifelse(age&lt;2000,age%%1000,0)]
+sub=t[restatus!=4&amp;ucod==&quot;U071&quot;]
+
+icd=setkey(fread(&quot;http://sars2.net/f/wonderbyicd.csv.gz&quot;)[rowid(code)==1][,code:=sub(&quot;.&quot;,&quot;&quot;,code,fixed=T)],&quot;code&quot;)
+
+mcd=na.omit(sub[,.(id=.I,age,pos=rep(1:20,each=.N),code=unlist(.SD[,-(1:3)],,F))])
+mcd$cause=icd[mcd$code,cause]
+o=merge(mcd[rowid(id,code)==1,.(pct=.N/sub[,.N]*100,age=mean(age)),code],icd)
+
+o[order(-pct)][1:200,writeLines(sprintf(&quot;%5.1f %4.1f %4-s %s&quot;,pct,age,code,cause))]</pre>
+<!-- -->
+<pre>100.0 73.5 U071 COVID-19
+ 50.7 72.7 J189 Pneumonia, unspecified
+ 25.3 72.8 J960 Acute respiratory failure
+ 16.3 72.8 J969 Respiratory failure, unspecified
+ 15.1 75.6 I10  Essential (primary) hypertension
+ 11.7 71.8 I469 Cardiac arrest, unspecified
+ 10.9 67.5 J80  Adult respiratory distress syndrome
+[...]
+  3.0 73.3 J129 Viral pneumonia, unspecified
+[...]
+  1.2 71.9 J159 Bacterial pneumonia, unspecified
+[...]
+  1.0 78.5 J690 Pneumonitis due to food and vomit
+[...]
+  0.6 69.3 A499 Bacterial infection, unspecified
+[...]
+  0.5 64.4 J152 Pneumonia due to staphylococcus
+[...]
+  0.3 66.1 J151 Pneumonia due to Pseudomonas
+[...]
+  0.2 68.5 A498 Other bacterial infections of unspecified site
+[...]
+  0.2 72.6 J181 Lobar pneumonia, unspecified
+[...]
+  0.2 69.4 J180 Bronchopneumonia, unspecified
+[...]
+  0.1 64.7 J150 Pneumonia due to Klebsiella pneumoniae
+[...]
+  0.1 72.8 J128 Other viral pneumonia</pre>
+<p>There's a total of 954,269 records with UCD COVID but only 21,350 records had any of the ICD codes that specifically designate bacterial pneumonia (J13-J15). There's of course a lot of people who had the MCD for unspecified pneumonia even though they actually had bacterial pneumonia or pneumonia that was due to a bacterial coinfection along with SARS-CoV-2.</p>
+<p>But in any case pneumonia is a symptom of COVID itself, so the looking at the prevalence of any form of pneumonia among people who died from COVID is not a reasonable way to estimate the prevalence of bacterial pneumonia among people who died from COVID.</p>
+<h2>
+<a href=#USMortality_Why_did_the_spike_in_excess_deaths_only_occur_in_spring_2020_if_the_virus_was_released_in_2019 id=USMortality_Why_did_the_spike_in_excess_deaths_only_occur_in_spring_2020_if_the_virus_was_released_in_2019>USMortality: Why did the spike in excess deaths only occur in spring 2020 if the virus was released in 2019?</a>
+</h2>
+<p>USMortality posted this tweet: [<a href="https://x.com/USMortality/status/1864219839725810048">https://x.com/USMortality/status/1864219839725810048</a>]</p>
+<div class="width6">
+<img src="i/np-marchpeak-1.png">
+</div>
+<p>His mortality data does not even include China or Iran, and in China the peak in COVID cases was around early February so the peak in COVID deaths may have been a week or two later. <a href=stat.html#Plot_COVID_cases_by_province_and_day_in_early_2020_in_China>[stat.html#Plot_COVID_cases_by_province_and_day_in_early_2020_in_China</a>]</p>
+<p>I posted this plot to him and asked that if you make a SEIR model with parameters similar to the COVID pandemic in 2020, then if you introduce a single infection in October 2019 then how long does it take for the deaths to rise clearly above zero relative to the eventual peak in deaths?</p>
+<div class="width6">
+<img src="i/np-marchpeak-2.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(deSolve);library(ggplot2)
+
+seir=\(time,state,parameters){
+  with(as.list(c(state,parameters)),{
+    dS&lt;--beta*S*I/N
+    dE=beta*S*I/N-sigma*E
+    dI=sigma*E-gamma*I
+    dR=gamma*I
+    dD=death_rate*I # deaths are a fraction of infected
+    list(c(dS,dE,dI,dR,dD))
+  })
+}
+
+N=8e9 # population size
+beta=0.3 # transmission rate
+sigma=1/5 # incubation period 5 days
+gamma=1/8 # infectious period 8 days
+death_rate=.0001 # infection fatality rate 0.01%
+
+xstart=0;xend=400;xstep=20;days=0:xend
+
+init=c(S=N-1,E=0,I=1,R=0,D=0)
+par=c(beta=beta,sigma=sigma,gamma=gamma,death_rate=death_rate,N=N)
+p=as.data.frame(ode(y=init,times=days,func=seir,parms=par))
+p$dead=diff(c(0,p$D))
+
+sub=paste0(&quot;A single infection was introduced
+on the first day of the simulation.
+Population size is 8 billion,
+transmission rate beta is 0.3,
+incubation rate sigma is 1/5 days,
+recovery rate gamma is 1/8 days,
+infection fatality rate is 0.01%.
+Total deaths &quot;,formatC(sum(p$dead),digits=0,format=&quot;f&quot;,big.mark=&quot;,&quot;),&quot;.&quot;)
+
+ybreak=pretty(p$dead);ystart=0;yend=max(p$dead)*1.04
+
+ggplot(p,aes(x=time,y=dead))+
+geom_vline(xintercept=c(xstart,xend),lineend=&quot;square&quot;,linewidth=.3)+
+geom_hline(yintercept=c(ystart,yend),lineend=&quot;square&quot;,linewidth=.3)+
+geom_line(color=&quot;red&quot;,linewidth=.8)+
+annotate(geom=&quot;label&quot;,label=sub,x=10,y=77e3,fill=&quot;white&quot;,label.r=unit(2,&quot;pt&quot;),label.padding=unit(3,&quot;pt&quot;),label.size=.2,size=2.5,hjust=0,lineheight=.9)+
+labs(x=&quot;Days since start of simulation&quot;,y=NULL,title=&quot;SEIR model for daily deaths&quot;)+
+scale_x_continuous(limits=c(xstart,xend),breaks=seq(xstart,xend,xstep))+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,labels=kim)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.ticks=element_line(linewidth=.3),
+  axis.ticks.length=unit(3,&quot;pt&quot;),
+  axis.title=element_text(size=7.5),
+  panel.background=element_blank(),
+  panel.grid=element_blank(),
+  plot.margin=margin(4,10,4,4,&quot;pt&quot;),
+  plot.title=element_text(face=2,size=8.4,margin=margin(1,,4)))
+ggsave(&quot;1.png&quot;,width=4,height=2.3,dpi=400*4)
+system(&quot;magick 1.png -resize 25% PNG8:1.png&quot;)</pre>
+</div>
+<p>A lot of people from the no-pandemic crowd claim that there were no detectable excess deaths before the day of the WHO pandemic declaration anywhere in the world, even though they don't even have mortality data for China. USMortality probably knows better because he has done a lot of work aggregating worldwide mortality data. But I pointed out to him anyway that in Bergamo the deaths had already reached about halfway to the peak on the day of the WHO pandemic declaration:</p>
+<div class="width6">
+<img src="i/np-marchpeak-3.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2)
+
+agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
+
+ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
+
+dead=fread(&quot;comuni_giornaliero_31agosto24.csv.gz&quot;,na=&quot;n.d.&quot;)[NOME_PROVINCIA==&quot;Bergamo&quot;]
+dead=dead[,.(age=c(0,1,1:20*5)[CL_ETA+1],year=rep(2011:2024,each=.N),month=GE%/%100,day=GE%%100,dead=unlist(.SD[,38:51]))]
+
+p=dead[,.(y=sum(dead)),.(x=yea(year,month,day))]
+
+xstart=as.Date(&quot;2019-1-1&quot;);xend=as.Date(&quot;2022-1-1&quot;)
+p=p[x&gt;=xstart&amp;x&lt;=xend]
+xbreak=seq(xstart+182,xend,&quot;year&quot;);xlab=year(xbreak)
+
+annox=as.Date(&quot;2020-3-11&quot;);annoy=p[x==annox,y]
+
+ggplot(p,aes(x,y))+
+geom_vline(xintercept=as.Date(&quot;2020-3-11&quot;),color=&quot;blue&quot;,linewidth=.3,linetype=&quot;42&quot;,lineend=&quot;square&quot;)+
+geom_vline(xintercept=seq(xstart,xend,&quot;month&quot;),linewidth=.25,color=&quot;gray85&quot;,lineend=&quot;square&quot;)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),linewidth=.3,color=&quot;black&quot;,lineend=&quot;square&quot;)+
+geom_line(linewidth=.35)+
+annotate(geom=&quot;label&quot;,x=annox-20,hjust=1,y=annoy,label=paste0(annoy,&quot; deaths on day\nof WHO pandemic\ndeclaration (March 11th)&quot;),size=2.4,label.size=.15,color=&quot;blue&quot;,fill=&quot;white&quot;,label.r=unit(2,&quot;pt&quot;),label.padding=unit(3,&quot;pt&quot;),label.size=.2,lineheight=.9)+
+annotate(geom=&quot;segment&quot;,x=annox-20,xend=annox,,y=annoy,yend=annoy,color=&quot;blue&quot;,linewidth=.3)+
+labs(title=&quot;Daily deaths in Bergamo&quot;,subtitle=&quot;Source: istat.it/notizia/dati-di-mortalita-cosa-produce-listat&quot;,x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
+scale_y_continuous(limits=c(0,NA),breaks=pretty)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.text.y=element_text(margin=margin(,1)),
+  axis.ticks=element_line(linewidth=.3),
+  axis.ticks.length=unit(3,&quot;pt&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;horizontal&quot;,
+  legend.justification=c(0,1),
+  legend.key=element_blank(),
+  legend.key.height=unit(9,&quot;pt&quot;),
+  legend.key.width=unit(20,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.margin=margin(,,3),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(1.5,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=7),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.3),
+  panel.spacing.x=unit(2,&quot;pt&quot;),
+  panel.spacing.y=unit(1,&quot;pt&quot;),
+  plot.margin=margin(4,4,4,4),
+  plot.subtitle=element_text(size=7,margin=margin(,,3)),
+  plot.title=element_text(size=7.5,face=&quot;bold&quot;,margin=margin(,,3)))
+ggsave(&quot;1.png&quot;,width=4,height=2.5,dpi=380*4)
+system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
+</div>
+<p>USMortality told me: <span class="quote">&quot;It's almost impossible for a single point emergence to cause peaks in the exact same week all over the world!&quot;</span> But I pointed out that the peak in deaths was not even close to the same week all over the world, and I posted this plot of countries with at least 80% monthly excess deaths at OWID in 2020:</p>
+<div class="width5">
+<img src="i/np-marchpeak-4.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>download.file(&quot;https://covid.ourworldindata.org/data/owid-covid-data.csv&quot;,&quot;owid-covid-data.csv&quot;)
+download.file(&quot;https://gist.githubusercontent.com/tadast/8827699/raw/61b2107766d6fd51e2bd02d9f78f6be081340efc/countries_codes_and_coordinates.csv&quot;,&quot;latlongiso3.csv&quot;)
+
+library(data.table)
+
+yemo=\(x){u=unique(x);format(u,&quot;%Y-%m&quot;)[match(x,u)]}
+
+t=fread(&quot;owid-covid-data.csv&quot;)
+
+lat=r(&quot;f/countrylatlongiso3&quot;)[,.(iso_code=`Alpha-3 code`,lat=`Latitude (average)`,long=`Longitude (average)`)]
+t=merge(t,lat)
+
+o[,continent:=factor(continent,c(&quot;North America&quot;,&quot;South America&quot;,&quot;Europe&quot;,&quot;Africa&quot;,&quot;Asia&quot;))]
+
+a=o[date&lt;=&quot;2020-12-31&quot;,.(excess=mean(excess_mortality,na.rm=T)),.(location,month=yemo(date),lat,long,continent)]
+a=a[location%in%a[excess&gt;=80,location]]
+
+a[,location:=factor(location,a[rowid(location)==1,location[order(continent,-lat+long)]])]
+
+m=a[,xtabs(excess~location+month)]
+
+disp=round(m)
+maxcolor=max0(m)
+pal=colorRampPalette(hex(HSV(c(210,210,210,210,0,0,0,0,0),c(.9,.75,.6,.3,0,.3,.6,.75,.9),c(.4,.65,1,1,1,1,1,.65,.4))))(256)
+
+pheatmap::pheatmap(m,filename=&quot;0.png&quot;,display_numbers=disp,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=16,cellheight=16,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;gray90&quot;,
+  number_color=ifelse(abs(m)&gt;maxcolor*.6,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(-maxcolor,maxcolor,,256),
+  pal)
+
+sub=&quot;Monthly excess percentage of deaths at OWID. Weekly data for excess deaths was converted to monthly by taking the average of weeks which ended during the month. The excess deaths are based on raw deaths and not CMR or ASMR, and they have a 2015-2019 linear trend that was adjusted for seasonal variation in mortality. Source: covid.ourworldindata.org/data/owid-covid-data.csv.&quot;
+system(paste0(&quot;mar=22;w=`identify -format %w 0.png`;convert \\( -size $[w-mar*2]x -font Arial -interline-spacing -3 -pointsize 38 caption:&#39;&quot;,sub,&quot;&#39; -splice $[mar]x10 \\) 0.png -append 1.png&quot;))</pre>
+</div>
+<p>In China reported COVID deaths already peaked around mid-February:</p>
+<div class="width10">
+<img src="i/np-marchpeak-5.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>cases=fread(&quot;https://github.com/cheongsa/Coronavirus-COVID-19-statistics-in-China/raw/master/China_daily_new_infections.csv&quot;,header=T)
+dead=fread(&quot;https://github.com/cheongsa/Coronavirus-COVID-19-statistics-in-China/raw/master/China_daily_new_deaths.csv&quot;,header=T)
+
+m=as.matrix(rowsum(cases[,-(1:4)],cases[[2]]))
+m[is.na(m)]=0
+colnames(m)=sub(&quot; .*&quot;,&quot;&quot;,colnames(m))
+rownames(m)=sub(&quot; (Uygur |Zhuang |Hui )?(Autonomous Region|Special Administrative Region|Municipality)&quot;,&quot;&quot;,rownames(m))
+m=rbind(m,&quot;Total cases&quot;=colSums(m),&quot;Deaths (Hubei)&quot;=colSums(dead[dead$Pro==&quot;Hubei&quot;,-(1:4)],na.rm=T),&quot;Total deaths&quot;=colSums(dead[,-(1:4)],na.rm=T))
+
+disp=ifelse(m&gt;=1e4,sprintf(&quot;%.0fk&quot;,m/1e3),ifelse(m&gt;=1e3,sprintf(&quot;%.1fk&quot;,m/1e3),m))
+max=apply(m,1,max,na.rm=T)
+max[is.infinite(max)]=NA
+m=m/max
+
+pheatmap::pheatmap(m,filename=&quot;1.png&quot;,display_numbers=disp,gaps_row=nrow(m)-3,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=16,cellheight=13,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;gray90&quot;,number_color=ifelse(!is.na(m)&amp;m&gt;.45,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(0,1,,256),sapply(255:0/255,\(i)rgb(i,i,i)))
+
+system(&quot;w=`identify -format %w 1.png`;convert \\( -size $[w-44]x -pointsize 40 -font Arial caption:&#39;COVID cases in China (github.com/cheongsa/Coronavirus-COVID-19-statistics-in-China). Each row has its own color scale where the maximum value is shown in black. On February 12th Hubei health authorities began including clinically diagnosed cases, such as cases with a chest CT scan showing signs of pneumonia even if a positive PCR test was not available, so many cases and deaths were added retroactively.&#39; -splice 22x20 \\) 1.png -append 1.png&quot;)</pre>
+</div>
+<h2>
+<a href=#Lombardy_had_lower_peak_weekly_excess_deaths_than_two_NUTS2_regions_of_Spain id=Lombardy_had_lower_peak_weekly_excess_deaths_than_two_NUTS2_regions_of_Spain>Lombardy had lower peak weekly excess deaths than two NUTS2 regions of Spain</a>
+</h2>
+<p>Bergamo is a NUTS3-level region within Lombardy which is a NUTS2-level region. But on Eurostat when I sorted NUTS2 regions by the peak weekly excess deaths in 2020, the two highest-ranking regions were Madrid and Castilla-La Mancha in central Spain, and Lombardy only came on third place:</p>
+<div class="width11">
+<img src="i/np-nuts2.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>download.file(&quot;https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/demo_r_mwk3_t?format=TSV&quot;,&quot;demo_r_mwk3_t.tsv&quot;)
+download.file(&quot;https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/demo_r_mwk2_ts?format=TSV&quot;,&quot;estat_demo_r_mwk2_ts.tsv&quot;)
+download.file(&quot;https://ec.europa.eu/eurostat/documents/345175/629341/NUTS2021.xlsx&quot;,&quot;NUTS2021.xlsx&quot;)
+
+library(data.table);library(ggplot2)
+
+ua=\(x,y,...){u=unique(x);y(u,...)[match(x,u)]}
+isoweek=\(year,week,weekday=7){d=as.Date(paste0(year,&quot;-1-4&quot;));d-(as.integer(format(d,&quot;%w&quot;))+6)%%7-1+7*(week-1)+weekday}
+
+nuts=setDT(readxl::read_excel(&quot;NUTS2021.xlsx&quot;,sheet=2))
+nuts=na.omit(nuts[,.(name=unlist(.SD[,2:4],,F),nuts=.SD[[1]])])[!name%like%&quot;Extra-Regio&quot;]
+
+euro=fread(&quot;estat_demo_r_mwk2_ts.tsv&quot;,na=&quot;:&quot;)
+euro=euro[euro[[1]]%like%&quot;^W,T&quot;]
+eu=melt(euro,id=1,,&quot;week&quot;,&quot;dead&quot;)
+eu[,week:=ua(week,\(x)isoweek(as.integer(substr(x,1,4)),as.integer(substr(x,7,8)),4))]
+eu=eu[,.(nuts=sub(&quot;.*,&quot;,&quot;&quot;,eu[[1]]),dead=as.integer(sub(&quot; .*&quot;,&quot;&quot;,dead)),week)]
+eu=merge(eu[year(week)==2019,.(base=mean(dead)),nuts],eu)
+eu=merge(nuts,eu)
+
+eu[,name:=paste0(nuts,&quot;: &quot;,sub(&quot;/.*&quot;,&quot;&quot;,name))]
+eu=eu[!nuts%like%&quot;LI00|ES64&quot;&amp;nchar(nuts)==4]
+pick=eu[year(week)==2020,max(dead/base),nuts][order(-V1)][1:24,nuts]
+p=eu[nuts%in%pick][,nuts:=factor(nuts,pick)]
+p[,pct:=dead/base*100]
+
+xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2021-1-1&quot;);xbreak=seq(xstart,xend,&quot;month&quot;)
+ybreak=p[,pretty(c(0,dead))]
+
+p=p[week&gt;=xstart&amp;week&lt;=xend]
+
+colors=read.csv(text=&quot;country,color
+ES,c6111a
+IT,009246
+FR,0055a4
+BE,000000
+SE,ffcd00
+CH,ff8888
+PL,888888
+BG,005000
+NL,ff9b00
+SK,cc44cc
+LI,8888ff&quot;)
+
+p[,country:=factor(substr(nuts,1,2),colors$country)]
+
+label=p[,.(pct=max(pct),hjust=as.integer(week[which.max(dead/base)]&lt;=as.Date(&quot;2020-7-1&quot;))),.(nuts,name,country)]
+
+ggplot(p,aes(x=week,y=pct))+
+facet_wrap(~nuts,ncol=4,strip.position=&quot;top&quot;,scales=&quot;free&quot;)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),linewidth=.25,color=&quot;gray85&quot;,lineend=&quot;square&quot;)+
+geom_hline(yintercept=100,linetype=&quot;22&quot;,linewidth=.3,color=&quot;gray50&quot;)+
+geom_line(aes(color=country),linewidth=.35)+
+geom_label(data=label,aes(hjust=hjust,x=c(xstart+3,xend-3)[hjust+1],label=name,color=country,y=pct),vjust=1.2,fill=alpha(&quot;white&quot;,.85),label.r=unit(0,&quot;pt&quot;),label.padding=unit(1,&quot;pt&quot;),label.size=0,size=2.4)+
+labs(title=&quot;Weekly deaths in 2020 as percentage of average weekly deaths in 2019 (Eurostat dataset demo_r_mwk2_ts)&quot;,subtitle=&quot;Sorted by peak weekly percentage. Two small regions were excluded because they had peaks due to noise caused by a small sample size.&quot;,x=NULL,y=NULL)+
+scale_x_date(limits=c(xstart,xend),breaks=xbreak)+
+scale_y_continuous(limits=c(0,NA),breaks=\(x)pretty(x,7)[-1])+
+scale_color_manual(values=paste0(&quot;#&quot;,colors$color))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.text.x=element_blank(),
+  axis.text.y=element_text(margin=margin(,1)),
+  axis.ticks=element_line(linewidth=.3),
+  axis.ticks.length=unit(-2,&quot;pt&quot;),
+  legend.position=&quot;none&quot;,
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.3),
+  panel.spacing.x=unit(2,&quot;pt&quot;),
+  panel.spacing.y=unit(2,&quot;pt&quot;),
+  plot.margin=margin(4,4,2,4),
+  plot.subtitle=element_text(size=7,margin=margin(,,3)),
+  plot.title=element_text(size=7.5,face=&quot;bold&quot;,margin=margin(1,,2)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=7.4,height=6,dpi=380*4)
+system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
+</div>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')

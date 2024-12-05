@@ -18,8 +18,10 @@ table{border-collapse:collapse}
 td,th{border:1px solid #555;padding:2px 4px}
 th{background:#444;text-align:left;font-weight:bold}
 img{max-width:100%}
-blockquote{margin-left:0px;padding-left:40px;margin-right:0;overflow-x:hidden}
+blockquote{margin:0;padding-left:40px;margin-right:0;overflow-x:hidden}
 blockquote p{max-width:480px}
+blockquote p:first-child{margin-top:0}
+blockquote p:last-child{margin-bottom:0}
 blockquote blockquote p{max-width:440px}
 blockquote blockquote blockquote p{max-width:400px}
 blockquote,.quote,blockquote h1,blockquote h2,blockquote h3{color:hsl(50,100%,85%)}
@@ -182,7 +184,7 @@ system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 </div>
 <p>In the plot above my magenta line in 2010-2020 is not perfectly equal to the population estimates used by CDC WONDER, but it's because I used vintage 2020 population estimates for 2010-2020, but CDC WONDER uses vintage 2015 estimates for 2015, vintage 2016 estimates for 2016, and so on.</p>
 <p>In the plot above the 2000-2010 intercensal population estimates are based on both 2000 and 2010 censuses, so the intercensal estimates were adjusted to get rid of the jump between the 2000-based and 2010-based population estimates. CDC WONDER uses the 2000-2010 intercensal population estimates for the years 2000 to 2009, so eventually CDC WONDER will probably replace the 2010-2020 population estimates with the 2010-2020 intercensal estimates once they get published, but they are only scheduled to be published in 2025 so for now CDC WONDER suffers from the sudden jump in population size between 2020 and 2021.</p>
-<p>However while we are waiting for the new intercensal population estimates to be published, I developed a fairly straightforward way to adjust the 2010-2020 estimates to get rid of the jump. For example in ages 75 to 84, the ratio between the 2020-based vintage 2023 estimate for 2020 and the 2010-based vintage 2020 estimate for 2020 is <code>15822264/16451547</code> which is about 0.9617. So therefore I'm multiplying the population estimate for 2011 by about <code>.9+.1*.9617</code>, the population estimate for 2012 by about <code>.8+.2*.9617</code>, and so on (or actually in the plot below I'm doing the multiplication separately for each single year of age and then adding together the results for each age, but it produces close to identical results to doing the multiplication for ages 75-84 aggregated together):</p>
+<p>However while we are waiting for the new intercensal population estimates to be published, I developed a fairly straightforward way to adjust the 2010-2020 estimates to get rid of the jump. For example in ages 75 to 84, the ratio between the 2020-based vintage 2023 estimate for 2020 and the 2010-based vintage 2020 estimate for 2020 is <code>15822264/16451547</code> which is about 0.9617. So therefore I'm multiplying the population estimate for 2011 by about <code>.9+.1*.9617</code>, the population estimate for 2012 by about <code>.8+.2*.9617</code>, and so on (or actually in the plot below I'm doing the multiplication separately for each single year of age and then adding together the results for each age, but the results are not much different from doing the multiplication for ages 75-84 aggregated together):</p>
 <div class="width7">
 <img src="i/dowd-popmult.png">
 </div>
@@ -342,12 +344,13 @@ ggsave(&quot;1.png&quot;,width=5,height=3.7,dpi=380*4)
 system(paste0(&quot;magick 1.png -resize 25% 1.png;mar=30;w=`identify -format %w 1.png`;magick 1.png \\( -size $[w-mar*2]x -font Arial -interline-spacing -3 -pointsize 38 caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&#39;&quot;,sub),&quot;&#39; -gravity southwest -splice $[mar]x14 \\) -append 1.png&quot;))</pre>
 </div>
 <p>Dowd's tweet said: <span class="quote">&quot;Excess Cancer as Underlying Cause (UC) for 75-84 saw -0.1% in 20 (z-score -0.3), +4.8% in 21 (z-score 10.1), +11.5% in 22 (z-score 24.0)&quot;</span>. When I used the 2021 population estimate for 2022 and I used a 2010-2019 linear trend like Dowd, for some reason my z-score for 2022 was about 22.2 and not 24.0. But my z-score fell to only about 6.0 when I used the 2022 population estimate for 2022 instead:</p>
-<pre>d=data.frame(year=2010:2023)
+<pre># yearly deaths in ages 75-84 with UCD C00-D48
+d=data.frame(year=2010:2023)
 d$dead=c(161735,159986,158811,157768,158844,158105,158660,160652,163543,165432,167957,169929,176784,183053)
 
-# Population estimates returned by CDC WONDER: 2010-based estimates
-# are used for 2010-2020 and 2020-based estimates are used from 2021
-# onwards. The 2022 population size is used for 2023.
+# population estimates returned by CDC WONDER
+# 2010-based estimates are used for 2010-2020 and 2020-based estimates are used from 2021 onwards
+# the 2022 population size is used for 2023
 d$pop=c(13061122,13175230,13272634,13446519,13682690,13923174,14233534,14706551,15394374,15969872,16451547,16206075,17520545,17520545)
 
 d$cmr=d$dead/d$pop*1e5
@@ -426,7 +429,7 @@ print(round(d,1),r=F)
 <div class="width6">
 <img src="i/debunk-dowd-6.jpg">
 </div>
-<p>The next plot shows how 2022 was the first year when the mid-year population of the age group 75-84 included a large number of people born after mid-1946:</p>
+<p>The next plot shows how 2022 was the first year when the mid-year population of the age group 75-84 included a large number of people born since mid-1946:</p>
 <div class="width6">
 <img src="i/debunk-dowd-7.png">
 </div>
@@ -453,6 +456,10 @@ pheatmap::pheatmap(m,filename=&quot;1.png&quot;,display_numbers=disp,
   colorRampPalette(sapply(seq(1,0,,256),\(i)rgb(i,i,i)))(256))
 
 system(&quot;pad=22;w=`identify -format %w 1.png`;magick \\( -size $[w-pad*2]x -font Arial-Bold -pointsize 42 caption:&#39;Mid-year US resident population estimate in millions by age and year&#39; -splice $[pad]x16 \\) \\( -size $[w-pad*2] -font Arial -pointsize 38 caption:&#39;Vintage 2020 estimates based on the 2010 census were used for 2010 to 2019, and vintage 2023 estimates based on the 2020 census were used for 2021 to 2023. Source: www2.census.gov/programs-surveys/popest/datasets/{2010-2020/national/asrh/nc- est2020,2020-2023/national/asrh/nc-est2023}-agesex-res.csv.&#39; -splice $[pad]x10 \\) 1.png -append 1.png&quot;)</pre>
+</div>
+<p>This also shows how the wave of baby boomers reached the 75-84 age group in 2021-2022:</p>
+<div class="width5">
+<img src="i/dowd-spout.gif">
 </div>
 <p>An annoying feature at CDC WONDER is that it doesn't return population sizes for monthly or weekly data but only yearly data. However the US Census Bureau has actually released monthly population estimates by single year of age, even though they seem to be interpolated from quarterly population estimates. [<a href="https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/">https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/</a>, <a href="https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/national/asrh/">https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/national/asrh/</a>] In the next plot in order to get rid of a jump in population estimates after the switch from the 2010-based to 2020-based population estimates, I used the same method as earlier to multiply the 2010-based population estimates with a linear slope so that they matched the 2020-based estimates in 2020. [<a href=ethical.html#Files_for_US_population_estimates_by_single_year_of_age_up_to_ages_100>ethical.html#Files_for_US_population_estimates_by_single_year_of_age_up_to_ages_100</a>] In the plot below I calculated the blue line so that I first did a linear regression for the CMR of each age, and then I multiplied the population size of the age by the projected trend in CMR to get the expected deaths for the age, and then I added together the expected deaths for all ages. The plot shows that there was a sharp turning point in the expected number of deaths around mid-2021, which was when the people born in mid-1946 started to turn 75:</p>
 <div class="width6">
@@ -741,7 +748,7 @@ Age
 <h2>
 <a href=#Paper_about_cancer_deaths_in_ages_15_to_44_in_England_and_Wales id=Paper_about_cancer_deaths_in_ages_15_to_44_in_England_and_Wales>Paper about cancer deaths in ages 15 to 44 in England and Wales</a>
 </h2>
-<p>(To be added. See this thread by Uncle John Returns in the meanwhile: <a href="https://x.com/UncleJo46902375/status/1783797036749402598">https://x.com/UncleJo46902375/status/1783797036749402598</a>.)</p>
+<p>(To be added. See these tweets by Uncle John Returns in the meanwhile: <a href="https://x.com/UncleJo46902375/status/1783797036749402598">https://x.com/UncleJo46902375/status/1783797036749402598</a>, <a href="https://x.com/UncleJo46902375/status/1859196341911536020">https://x.com/UncleJo46902375/status/1859196341911536020</a>.)</p>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
