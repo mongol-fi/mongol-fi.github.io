@@ -69,6 +69,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#PFE_arrival_function_determined_from_monthly_deaths_by_age>PFE arrival function determined from monthly deaths by age</a></li>
 <li><a href=#Deaths_with_secondary_thrombocytopenia>Deaths with secondary thrombocytopenia</a></li>
 <li><a href=#Deaths_from_natural_causes_in_ages_2_17>Deaths from natural causes in ages 2-17</a></li>
+<li><a href=#Cancer_mortality_in_ages_0_64_in_most_vaccinated_and_least_vaccinated_states>Cancer mortality in ages 0-64 in most-vaccinated and least vaccinated states</a></li>
 </ul>
 
 <h2>
@@ -786,7 +787,7 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
 ggsave(&quot;1.png&quot;,width=3.9,height=2.4,dpi=400*4)
 system(&quot;magick 1.png -resize 25% PNG8:1.png&quot;)</pre>
 </div>
-<p>The next plot shows the causes of death which account for the highest number of excess deaths in 2020-2022 relative to the 2015-2019 linear trend. Many of the top causes seem to have already had a large increase between 2019 and 2020, even though it might be partially on artifact of how I selected the top causes based on the 2020-2022 total so it was biased towards selecting causes which were already elevated in 2020 and not just in 2021-2022. But the top 5 causes also include cancers of brain stem and asthma which didn't have a large increase above the baseline until 2022:</p>
+<p>The next plot shows the causes of death which account for the highest number of excess deaths in 2020-2022 relative to the 2015-2019 linear trend. Many of the top causes seem to have already had a large increase between 2019 and 2020, even though it might be partially on artifact of how I sorted the causes based on the 2020-2022 total so it was biased towards selecting causes which were already elevated in 2020 and not just in 2021-2022. But the top 5 causes also include cancers of brain stem and asthma which didn't have a large increase above the baseline until 2022:</p>
 <div class="width7">
 <img src="i/ethical-217-3.png">
 </div>
@@ -818,6 +819,96 @@ pheatmap::pheatmap(sign(m)*abs(m)^exp,filename=&quot;1.png&quot;,display_numbers
   breaks=seq(-maxcolor^exp,maxcolor^exp,,256),
   colorRampPalette(pal)(256))
 system(&quot;convert 1.png -extent 2000x 1.png;w=`identify -format %w 1.png`;pad=26;magick -pointsize 44 -font Arial \\( -size $[w-pad] caption:&#39;NVSS, ages 2 to 17: Excess number of deaths by underlying cause of death relative to 2015-2019 linear trend, top 40 causes shown sorted by 2020-2022 total&#39; -splice $[pad]x24 \\) 1.png -append 1.png&quot;)</pre>
+</div>
+<h2>
+<a href=#Cancer_mortality_in_ages_0_64_in_most_vaccinated_and_least_vaccinated_states id=Cancer_mortality_in_ages_0_64_in_most_vaccinated_and_least_vaccinated_states>Cancer mortality in ages 0-64 in most-vaccinated and least vaccinated states</a>
+</h2>
+<p>Ethical Skeptic posted this tweet: [<a href="https://x.com/EthicalSkeptic/status/1864758742954442778">https://x.com/EthicalSkeptic/status/1864758742954442778</a>]</p>
+<blockquote>
+<p>Below, we compare Excess Cancer Mortality for the top 17 and bottom 14 states by vaccination percentage, for ages 0-64. Using differential trends and inflection points, we demonstrate the vaccine's impact on cancer mortality.</p>
+<p>Vax uptake differentials by state are mild, yet this effect still shows.</p>
+<p>Elevated Cancer (same analysis method both cohorts)<br> 🔸Top 17 Vaccinated States = 13.6%<br> 🔸Bottom 14 Vaccinated States = 6.4%</p>
+<p><img src=i/ethical-cancerstates-1.png class=width8></p>
+</blockquote>
+<p>I don't know why he didn't pick the same number of top states and bottom states, or if he cherrypicked the numbers to get a bigger difference between the top states and bottom states. He should've also posted a plot that would've showed the actual deaths and baseline in both groups of states, and ideally he would've used monthly data for the plot so he could've extended it further into the past than 2018. And he could've also included the middle 20 states for comparison, because if the difference in excess mortality between the top and bottom states was primarily explained by a difference in the percentage of vaccinated people, then you'd expect the middle states to have intermediate excess mortality.</p>
+<p>In the replies of the tweet he mentioned that he took state vaccination rates from this Statista dataset, so I used the same dataset below: <a href="https://statista.com/statistics/1202065/population-with-covid-vaccine-by-state-us/">https://statista.com/statistics/1202065/population-with-covid-vaccine-by-state-us/</a>.</p>
+<p>In the plot below I didn't even subtract deaths with MCD COVID, but when I used a 2014-2019 baseline, I still got negative total excess deaths in 2023 and 2024 in both the 17 most vaccinated states and 14 least vaccinated states, even though the 20 states in the middle had even greater negative excess mortality. I didn't adjust the baseline for changes to age composition so that my methodology would be similar to the methodology used by Ethical Skeptic, and I fitted the baseline against only April to September of each year. However the slope of the 2018-2019 baseline seems too steep, so the baseline appears to both be too low at the end of the x-axis and too high at the start of the x-axis:</p>
+<div class="width7">
+<img src="i/ethical-cancerstates-2.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2)
+
+order=&quot;RI MA VT ME CT NJ NM NY MD HI VA PA NC NH DE WA CA SD CO FL OR MN IL AZ NV TX KS UT WI OK NE AK SC IA AR MI ND MO KY GA MT WV OH AL TN IN ID LA MS WY&quot;
+order=state.name[match(strsplit(order,&quot; &quot;)[[1]],state.abb)]
+
+t=fread(&quot;http://sars2.net/f/wonderstatemalignant.csv&quot;)[!cause%like%&quot;COVID&quot;&amp;age==&quot;0-64&quot;&amp;date!=&quot;2024-11&quot;]
+g=c(&quot;15 most vaccinated states&quot;,&quot;Middle 20 states&quot;,&quot;15 least vaccinated states&quot;)
+t$group=g[2]
+t[state%in%order[1:15],group:=g[1]]
+t[state%in%tail(order,15),group:=g[3]]
+d=t[,.(dead=sum(dead)),,.(group=factor(group,g),date=as.Date(paste0(date,&quot;-1&quot;)))]
+
+d[,dead:=dead/lubridate::days_in_month(date)]
+d[,month:=month(date)]
+d$base=d[year(date)%in%2014:2019&amp;month%in%4:9,predict(lm(dead~date),.(date=unique(d$date))),group]$V1
+d$base2=d[year(date)%in%2018:2019&amp;month%in%4:9,predict(lm(dead~date),.(date=unique(d$date))),group]$V1
+d=merge(d[year(date)%in%2014:2019,.(monthly=mean(dead-base)),.(group,month)],d)
+d=merge(d[year(date)%in%2018:2019,.(monthly2=mean(dead-base2)),.(group,month)],d)
+lab=c(&quot;Actual deaths&quot;,&quot;2014-2019 linear trend&quot;,&quot;2018-2019 linear trend&quot;)
+p=d[,.(x=date,y=c(dead,base+monthly,base2+monthly2),z=factor(rep(lab,each=.N),lab),group)]
+
+p=merge(p[year(x)==2019,.(base=mean(y)),group],p)[,y:=y/base*100]
+
+xstart=as.Date(&quot;2010-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
+p=p[x%in%xstart:xend]
+xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=ifelse(month(xbreak)==7,year(xbreak),&quot;&quot;)
+ybreak=pretty(p$y,6);ystart=0;yend=max(p$y)
+yend=124.85733
+ggplot(p,aes(x+15,y))+
+facet_wrap(~group,ncol=1,strip.position=&quot;top&quot;)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray90&quot;,linewidth=.25)+
+geom_hline(yintercept=100,linewidth=.25,linetype=&quot;42&quot;,color=&quot;gray50&quot;)+
+geom_line(aes(y=ifelse(y&lt;0,NA,y),color=z),linewidth=.3)+
+geom_text(data=p[rowid(group)==1],aes(label=group),y=yend,x=pmean(xstart,xend),vjust=1.7,size=2.4,fontface=2)+
+labs(title=&quot;CDC WONDER, ages 0-64: Monthly deaths with MCD malignant neoplasms divided\nby number of days in month, shown as percentage of average value in year 2019&quot;,subtitle=stringr::str_wrap(&quot;The baseline was calcualted by first doing a linear regression for deaths in April to September of each year during the fitting period, then the regression was projected over the entire period, and then the average difference between actual deaths and the baseline during each January of the fitting period was added to the baseline for each January, and similarly for other months. The baseline was not adjusted for population size or age. The Statista dataset 1202065 was used to rank states by the percentage of vaccinated people as of April 2023.&quot;,88),x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
+scale_y_continuous(limits=c(85.54061,124.85733),breaks=pretty,labels=\(x)paste0(x,&quot;%&quot;))+
+scale_color_manual(values=c(&quot;black&quot;,&quot;blue&quot;,&quot;#aaf&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.text.y=element_text(margin=margin(,1)),
+  axis.ticks=element_line(linewidth=.25,color=&quot;black&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(3,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.justification=&quot;right&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(7,&quot;pt&quot;),
+  legend.key.width=unit(19,&quot;pt&quot;),
+  legend.margin=margin(,,4),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(1,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=7,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.25),
+  panel.spacing=unit(0,&quot;pt&quot;),
+  plot.margin=margin(3,3,3,3),
+  plot.subtitle=element_text(size=6.8,margin=margin(,,2)),
+  plot.title=element_text(size=7,face=2,margin=margin(1,,3)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=4.3,height=3.8,dpi=380*4)
+system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
+</div>
+<p>When I compared the 15 most vaccinated states against the 15 least vaccinated states instead, the excess deaths in 2023-2024 were much lower in both groups but the excess deaths were much higher in the middle group. And now also the slope of the 2018-2019 baseline was closer to the 2014-2019 baseline in both the top and bottom groups but further off in the middle group. So I don't know how many different combinations of top and bottom states Ethical Skeptic compared before he arrived at the magic combination of 17 and 14:</p>
+<div class="width7">
+<img src="i/ethical-cancerstates-3.gif">
 </div>
 <script>
 let q=document.querySelectorAll('a,code,pre')
