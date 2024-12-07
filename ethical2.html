@@ -70,6 +70,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Deaths_with_secondary_thrombocytopenia>Deaths with secondary thrombocytopenia</a></li>
 <li><a href=#Deaths_from_natural_causes_in_ages_2_17>Deaths from natural causes in ages 2-17</a></li>
 <li><a href=#Cancer_mortality_in_ages_0_64_in_most_vaccinated_and_least_vaccinated_states>Cancer mortality in ages 0-64 in most-vaccinated and least vaccinated states</a></li>
+<li><a href=#Would_using_ASMR_instead_of_raw_deaths_produce_an_invalid_decline_in_mortality>Would using ASMR instead of raw deaths produce an invalid decline in mortality?</a></li>
 </ul>
 
 <h2>
@@ -909,6 +910,104 @@ system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
 <p>When I compared the 15 most vaccinated states against the 15 least vaccinated states instead, the excess deaths in 2023-2024 were much lower in both groups but the excess deaths were much higher in the middle group. And now also the slope of the 2018-2019 baseline was closer to the 2014-2019 baseline in both the top and bottom groups but further off in the middle group. So I don't know how many different combinations of top and bottom states Ethical Skeptic compared before he arrived at the magic combination of 17 and 14:</p>
 <div class="width7">
 <img src="i/ethical-cancerstates-3.gif">
+</div>
+<p>In the plot above if you look at the light blue line in the bottom panel, it's a good demonstration of how a 2018-2019 baseline is sensitive to small variations in mortality during the fitting period, because there's a huge change to the slope of the baseline depending on whether I included the 14 or 15 least vaccinated states.</p>
+<h2>
+<a href=#Would_using_ASMR_instead_of_raw_deaths_produce_an_invalid_decline_in_mortality id=Would_using_ASMR_instead_of_raw_deaths_produce_an_invalid_decline_in_mortality>Would using ASMR instead of raw deaths produce an invalid decline in mortality?</a>
+</h2>
+<p>Ethical Skeptic keeps coming up with bogus reasons for why he cannot use ASMR in his plots. Here he claimed that if he used ASMR instead of raw deaths to calculate excess deaths for the ICD code for a cancer of cartilage, it would have somehow produced an invalid decline in the rate of the ICD code (even though it's not clear if he meant a decline in excess ASMR or in the actual ASMR): [<a href="https://x.com/EthicalSkeptic/status/1864865478671245561">https://x.com/EthicalSkeptic/status/1864865478671245561</a>]</p>
+<div class="width6">
+<img src="i/ethical-boneasmr-1.png">
+</div>
+<p>However here my excess deaths in 2020-2022 were negative when I plotted raw deaths but positive when I plotted ASMR, even though in both cases the excess deaths remained close to zero and roughly flat:</p>
+<div class="width7">
+<img src="i/ethical-boneasmr-2.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2)
+
+# http://sars2.net/stat.html#Download_fixed_width_and_CSV_files_for_the_NVSS_data_used_at_CDC_WONDER
+t=do.call(rbind,lapply(2010:2022,\(i)fread(paste0(i,&quot;.csv.gz&quot;))[restatus!=4]))
+
+a=t[rowSums(t==&quot;C419&quot;,na.rm=T)&gt;0]
+a=a[year&gt;=2011&amp;age&lt;65]
+a=a[,.(dead=.N),.(age=ifelse(age%%1000%in%c(1,9),age%%1000,0),year,month=monthdth)]
+
+pop=fread(&quot;http://sars2.net/f/uspopdeadmonthly.csv&quot;)
+a=merge(pop[,.(age,year,month,pop=persondays)],a)
+a=merge(pop[year==2020&amp;month==4,.(age,std=pop/sum(pop))],a)
+a[,x:=as.Date(paste(year,month,1,sep=&quot;-&quot;))]
+
+d=a[,.(y=sum(dead),group=&quot;Raw deaths&quot;),x]
+d=rbind(d,a[,.(y=sum(dead/pop*std*365e5),group=&quot;ASMR per 100,000 person-years&quot;),x])
+d[,group:=factor(group,unique(group))]
+
+d$base=d[year(x)&lt;2020,predict(lm(y~x),d[rowid(x)==1]),group]$V1
+d[,month:=month(x)]
+d=merge(d[year(x)&lt;2020,.(monthly=mean(y-base)),.(group,month)],d)
+
+lab=c(&quot;Actual mortality&quot;,&quot;2011-2019 baseline&quot;,&quot;Excess deaths&quot;)
+p=d[,.(x=rep(x,3),y=c(y,base+monthly,y-base-monthly),z=factor(rep(lab,each=.N),lab),group)]
+
+xstart=as.Date(&quot;2011-1-1&quot;);xend=as.Date(&quot;2023-1-1&quot;)
+xbreak=seq(xstart+182,xend,&quot;year&quot;);xlab=year(xbreak)
+ybreak=pretty(p$y,7);ystart=ybreak[1];yend=max(ybreak)
+
+pct=d[,.(pct=(sum(y)/sum(base+monthly)-1)*100),.(group,year=year(x))]
+pct[,x:=as.Date(paste0(year,&quot;-7-1&quot;))]
+pct=merge(p[,.(y=min(y)),group],pct)
+
+ggplot(p,aes(x=x+14,y))+
+facet_wrap(~group,ncol=1,dir=&quot;v&quot;,scales=&quot;free&quot;)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray85&quot;,linewidth=.25)+
+geom_vline(xintercept=as.Date(&quot;2020-1-1&quot;),linetype=&quot;44&quot;,linewidth=.3)+
+geom_line(data=p[z!=lab[3]],aes(linetype=z,color=z),linewidth=.3)+
+geom_line(data=p[z==z[1]],aes(linetype=z,color=z),linewidth=.3)+
+geom_point(aes(alpha=z),stroke=0,size=.6)+
+geom_rect(data=p[z==lab[3]],aes(xmin=x,xmax=x%m+%months(1),ymin=pmin(0,y),ymax=pmax(0,y),fill=z),linewidth=.1,color=&quot;gray40&quot;)+
+geom_text(data=pct,aes(x,y=y,label=paste0(ifelse(pct&gt;0,&quot;+&quot;,&quot;&quot;),sprintf(&quot;%.1f&quot;,pct),&quot;%&quot;)),vjust=.7,size=2.4,color=&quot;gray40&quot;)+
+labs(title=&quot;NVSS: Deaths in ages 0-64 with MCD C41.9 (Bone and articular cartilage,
+unspecified - Malignant neoplasms)&quot;,subtitle=&quot;The percentage above the year shows the yearly total excess mortality. ASMR was calculated by single year of age so that the vintage 2023 resident population estimates for April 2020 were used as the standard population. The 2010-based population estimates were multiplied by a linear slope to get rid of a sudden jump when they were merged with the 2020-based population estimates.&quot;|&gt;stringr::str_wrap(92),x=NULL,y=NULL)+
+scale_x_continuous(expand=c(0,0),limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
+scale_y_continuous(expand=c(.06,0,.03,0),breaks=\(x)pretty(x,6))+
+scale_color_manual(values=c(&quot;black&quot;,&quot;gray60&quot;,NA))+
+scale_fill_manual(values=c(NA,NA,&quot;gray60&quot;))+
+scale_linetype_manual(values=c(&quot;solid&quot;,&quot;solid&quot;,NA))+
+scale_alpha_manual(values=c(1,0,0),guide=&quot;none&quot;)+
+guides(color=guide_legend(order=1),linetype=guide_legend(order=1),fill=guide_legend(order=2,keyheight=unit(5,&quot;pt&quot;)))+
+coord_cartesian(clip=&quot;off&quot;)+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.ticks=element_line(linewidth=.3,color=&quot;black&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(3,&quot;pt&quot;),
+  axis.title=element_text(size=8),
+  legend.background=element_blank(),
+  legend.box=&quot;horizontal&quot;,
+  legend.box.margin=margin(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;horizontal&quot;,
+  legend.justification=&quot;right&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(5,&quot;pt&quot;),
+  legend.key.width=unit(19,&quot;pt&quot;),
+  legend.margin=margin(,,3),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=7,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.3),
+  panel.spacing.y=unit(2,&quot;pt&quot;),
+  plot.margin=margin(4,4,4,4),
+  plot.subtitle=element_text(size=7,margin=margin(1,,3)),
+  plot.title=element_text(size=7.4,face=2,margin=margin(1,,3)),
+  strip.background=element_blank(),
+  strip.text=element_text(size=7,face=2,margin=margin(,,2)))
+ggsave(&quot;1.png&quot;,width=4.5,height=3.9,dpi=400*4)
+system(&quot;magick 1.png -resize 25% -colorscale gray -colors 16 1.png&quot;)</pre>
 </div>
 <script>
 let q=document.querySelectorAll('a,code,pre')
