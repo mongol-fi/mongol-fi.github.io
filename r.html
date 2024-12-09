@@ -1487,13 +1487,13 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=prompt>&gt;</span> <span class=code>df=data.frame(year=c(2023,2023,2024),sex=c(&quot;F&quot;,&quot;M&quot;,&quot;F&quot;),dead=c(4,2,3))</span>
 <span class=prompt>&gt;</span> <span class=code>dt=data.table(df);tib=tibble(df)</span>
 <span class=prompt>&gt;</span> <span class=code>merge(do.call(CJ,lapply(dt[,-3],unique)),d,all.x=T)[is.na(dead),dead:=0][]</span>
-<span class=comment># `all.x=T` adds rows with NA deaths for combinations of variables included in the first table but not second table</span>
+<span class=comment># `all.x=T` adds rows with NA deaths for combinations of variables included in the first table but not the second table</span>
 <span class=output>   year sex dead</span>
 <span class=output>1: 2023   F    4</span>
 <span class=output>2: 2023   M    2</span>
 <span class=output>3: 2024   F    3</span>
 <span class=output>4: 2024   M    0</span>
-<span class=prompt>&gt;</span> <span class=code>df2=rbind(df,cbind(expand.grid(lapply(df[-3],unique)),dead=0));df2[!duplicated(df2[,-3]),]</span><span class=comment> # base R</span>
+<span class=prompt>&gt;</span> <span class=code>df2=rbind(df,cbind(expand.grid(lapply(df[-3],unique)),dead=0));df2[!duplicated(df2[-3]),]</span><span class=comment> # base R</span>
 <span class=output>  year sex dead</span>
 <span class=output>1 2023   F    4</span>
 <span class=output>2 2023   M    2</span>
@@ -1508,7 +1508,7 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=output>2  2023 M         2</span>
 <span class=output>3  2024 F         3</span>
 <span class=output>4  2024 M         0</span>
-<span class=prompt>&gt;</span> <span class=code>tib|&gt;complete(year,sex,fill=list(dead=0))</span><span class=comment> # from `tidyr`</span>
+<span class=prompt>&gt;</span> <span class=code>tib|&gt;tidyr::complete(year,sex,fill=list(dead=0))</span>
 <span class=comment># A tibble: 4 &#215; 3</span>
 <span class=output>   year sex    dead</span>
 <span class=output>  &lt;dbl&gt; &lt;chr&gt; &lt;dbl&gt;</span>
@@ -1516,4 +1516,21 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=output>2  2023 M         2</span>
 <span class=output>3  2024 F         3</span>
 <span class=output>4  2024 M         0</span>
+<span class=output>
+<span class=title># mean of two dates</span></span>
+<span class=prompt>&gt;</span> <span class=code>d1=as.Date(&quot;2020-1-1&quot;);d2=as.Date(&quot;2021-1-1&quot;)</span>
+<span class=prompt>&gt;</span> <span class=code>mean(d1,d2)</span><span class=comment> # this doesn&apos;t work</span>
+<span class=output>Error in mean.default(unclass(x), ...) :</span>
+<span class=output>  &apos;trim&apos; must be numeric of length one</span>
+<span class=prompt>&gt;</span> <span class=code>pmean(d1,d2)</span><span class=comment> # this works</span>
+<span class=output>[1] &quot;2020-07-02&quot;</span>
+<span class=output>
+<span class=title># add int and bool</span></span>
+<span class=prompt>&gt;</span> <span class=code>28+T</span>
+<span class=output>[1] 29</span>
+<span class=output>
+<span class=title># count how many days a month has in the Julian calendar</span></span>
+<span class=prompt>&gt;</span> <span class=code>d=data.table(year=c(0,100,2020,2020),month=c(2,2,2,3))</span>
+<span class=prompt>&gt;</span> <span class=code>d[,ifelse(month==2,28+(year%%4==0&amp;!(year%%100==0&amp;year%%400!=0)),(30:31)[month%%2+1])]</span>
+<span class=output>[1] 29 28 29 31</span>
 </pre>

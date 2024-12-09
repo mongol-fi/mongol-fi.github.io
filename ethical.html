@@ -465,7 +465,7 @@ Second_Booster       NaN   NaN   NaN   NaN</pre>
 <div class="width8">
 <img src="i/debunk-ethical-12.png">
 </div>
-<p>Another addendum (December 2024): I now made the plot below where I included the same MCD codes that were listed in Ethical Skeptic's plot, but in the light black line where I simply excluded X44, it reduced total excess deaths in 2020-2023 by more than half compared to the transparent brown line where I kept X44 on the code list. The black line does not include deaths which had only MCD X44 but not any of the other codes listed above, but it still includes deaths which had MCD X44 in addition to one of the other codes listed above. And there are also many other ICD codes for drug overdose besides X44. So the black line still includes many deaths where a drug overdose led to cardiac arrest, heart failure, or respiratory failure, and it includes deaths caused by a drug overdose where the cause has not been resolved (R96 and R99). So I think it explains why the black line has been elevated since 2020:</p>
+<p>Another addendum (December 2024): I now made the plot below where I included the same MCD codes that were listed in Ethical Skeptic's plot, but in the light black line where I simply excluded X44, it reduced total excess deaths in 2020-2023 by more than half compared to the light brown line where I kept X44 on the code list. The black line does not include deaths which had only MCD X44 but not any of the other codes listed above, but it does still include deaths which had MCD X44 in addition to one of the other codes listed above. And there are also many other ICD codes for drug overdose besides X44. So the black line still includes many deaths where a drug overdose led to cardiac arrest, heart failure, or respiratory failure, and it includes R96 and R99 deaths where the cause has not yet been resolved but which were due to a drug overdose. So I think it explains why the light black line has been elevated since 2020, even though part of the elevation might also be explained by COVID deaths, because even though I excluded deaths with MCD COVID from the light black line, it still has slight peaks remaining during COVID waves. But in either case the light black line was already clearly elevated in 2020, which is difficult to blame on the vaccines:</p>
 <div class="width7">
 <img src="i/ethical-blackbrown.png">
 </div>
@@ -2864,6 +2864,70 @@ points(p$year,p$dead,pch=20,cex=.6)
 lines(p$year,p$trend,type=&quot;l&quot;,lty=2,lwd=1.5)
 legend(&quot;topleft&quot;,legend=leg,lty=c(1,2),lwd=1.5)
 dev.off()</pre>
+</div>
+<p>In the next plot for MCD deaths in Connecticut, N17.9 increased from 463 to 990 between 2019 and 2023 but N19 fell from 438 to 230 and N28.8 fell from 361 to 37. So the increase in N17.9 was approximately equal to the decrease for N19 and N28.8 combined. And from the row at the bottom you can see that the total kidney-related deaths have remained roughly flat since 2013 if deaths with MCD COVID are excluded:</p>
+<div class="width10">
+<img src="i/ethical-kidney-connecticut.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table)
+
+t=fread(&quot;http://sars2.net/f/wonderconnecticutkidney.csv&quot;)
+t=t[order(cause%like%&quot;Total&quot;,code)]
+
+t=t[,label:=ifelse(cause%like%&quot;Total&quot;,cause,paste0(code,&quot;: &quot;,cause))][,label:=factor(label,unique(label))]
+
+m=t[,tapply(dead,.(label,year),c)];disp=ifelse(m&gt;=1000,sprintf(&quot;%.1fk&quot;,m/1e3),m)
+maxcolor=max(m,na.rm=T);exp=.6
+pal=hsv(c(21,21,12,6,3,0,0)/36,c(0,.5,.5,.5,.5,.5,0),rep(1:0,c(6,1)))
+
+pheatmap::pheatmap(m^exp,filename=&quot;1.png&quot;,display_numbers=disp,gaps_row=nrow(m)-2,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=15,cellheight=15,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;gray90&quot;,
+  number_color=ifelse(abs(m^exp)&gt;maxcolor^exp*.8,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(0,maxcolor^exp,,256),colorRampPalette(pal)(256))
+
+system(&quot;w=`identify -format %w 1.png`;pad=22;magick -interline-spacing -2 -pointsize 44 -font Arial-Bold -size $[w-pad*2] \\( caption:&#39;CDC WONDER: Yearly deaths in Connecticut by multiple cause of death, ICD code range N00 to N28&#39; -splice $[pad]x18 \\) -font Arial -pointsize 42 \\( caption:&#39;The deaths are by state of residence and not state of occurrence. The number of deaths was suppressed on years with less than 10 deaths, and ICD codes that had less than 10 deaths each year are not displayed, but suppressed deaths are still included on the total rows.&#39; -splice $[pad]x8 \\) \\( 1.png -shave x4 \\) -append 1.png&quot;)</pre>
+</div>
+<p>In the next plot the total excess deaths in 2022 are about 35,000 for N17.9 but -23,000 for N28.8 and -24,000 for N19. N28.8 has a big drop between 2020Q4 and 2022Q1 in the same way that N17.9 has a big increase over the same period of time:</p>
+<div class="width14">
+<img src="i/ethical-kidney-quarterly.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>icd=fread(&quot;http://sars2.net/f/wonderbyicd.csv.gz&quot;)[rowid(code)==1][,code:=sub(&quot;.&quot;,&quot;&quot;,code,fixed=T)]
+icd=icd[,setNames(cause,code)]
+
+v=do.call(rbind,lapply(2015:2022,\(i)fread(paste0(i,&quot;.csv.gz&quot;))[restatus!=4,.(.I,year,month=monthdth,age,ucd=ucod,mcd=unlist(.SD,,F)),.SDcols=patterns(&quot;enicon_&quot;)][mcd%like%&quot;N[012]|U07&quot;]))
+v=v[,age:=pmin(100,ifelse(age%/%1000%in%c(1,9),age%%1000,0))]
+
+sub=merge(v,v[mcd==&quot;U071&quot;,.(I,year,ignore=T)],all=T)[is.na(ignore)]
+a=sub[year&gt;=2015,.(dead=.N),.(mcd,year,q=(month+2)%/%3)]
+a=rbind(a,a[,.(dead=sum(dead),mcd=&quot;Total&quot;),.(year,q)])
+a=a[mcd%in%a[,sum(dead),mcd][V1&gt;=1000,mcd]]
+
+slope=a[mcd==&quot;Total&quot;&amp;year%in%2015:2019&amp;q%in%2:3,sum(dead),year][,predict(lm(V1~year),.(year=2015:2022))]
+a=merge(a[year%in%2015:2019,.(base=mean(dead)),.(mcd,q)],a)
+a[,base:=base*(slope/slope[3])[year-2015+1]]
+
+a[,lab:=ifelse(mcd==&quot;Total&quot;,mcd,paste0(sub(&quot;(...)(.)&quot;,&quot;\\1.\\2&quot;,mcd),&quot;: &quot;,icd[a$mcd]))]
+m=a[,xtabs(dead-base~lab+paste0(year,&quot;Q&quot;,q))]
+
+maxcolor=max(abs(m),na.rm=T);exp=.8
+pal=hsv(rep(c(21,0)/36,5:4),c(1,.8,.6,.3,0,.3,.6,.8,1),c(.3,.65,1,1,1,1,1,.65,.3))
+
+pheatmap::pheatmap(sign(m)*abs(m)^exp,filename=&quot;1.png&quot;,display_numbers=kimi(m),
+  gaps_col=seq(4,ncol(m),4),gaps_row=nrow(m)-1,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=18,cellheight=14,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;gray90&quot;,
+  number_color=ifelse(!is.na(m)&amp;abs(m)^exp&gt;.55*(maxcolor^exp),&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(-maxcolor^exp,maxcolor^exp,,256),
+  colorRampPalette(pal)(256))
+
+system(&quot;w=`identify -format %w 1.png`;pad=26;magick -pointsize 44 -font Arial \\( -size $[w-pad*2] caption:&#39;NVSS: Excess number of deaths for multiple cause of death N00-N28 but not MCD COVID. Sorted by 2020-2022 total. The baseline for each cause has its own intercept but all causes have the same slope. The intercept for each quarter was calculated relative to the average number of deaths in the same quarter of 2015-2019. The slope was determined based on the slope for all causes combined in 2015-2019 (where only second and third quarters were considered in order to reduce the impact of variation in mortality during winter peaks). Codes with less than 1,000 total deaths are not shown but they are included in the total. In order to avoid the suppression of deaths at CDC WONDER, the number of deaths was calculated using the fixed-width files from here: cdc.gov/nchs/data_access/vitalstatsonline.htm.&#39; -splice $[pad]x24 \\) 1.png -append 1.png&quot;)</pre>
 </div>
 <h2>
 <a href=#Excess_deaths_from_natural_causes id=Excess_deaths_from_natural_causes>Excess deaths from natural causes</a>
