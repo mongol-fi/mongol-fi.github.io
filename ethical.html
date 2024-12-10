@@ -2012,6 +2012,48 @@ ggsave(&quot;1.png&quot;,width=5.5,height=2.2,dpi=400)</pre>
 <div class="width5">
 <img src="i/ethical-malignant-13.png">
 </div>
+<p>Added in December 2024: Uncle John Returns pointed out this ONS user response to me which had both UCD and MCD deaths grouped by cause and date: <a href="https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/adhocs/2325deathsinvolvingorduetoselectedcausesbetweenseptember2003anddecember2023byweekandyearofbirthbycountriesenglandandwalesseperately">https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/adhocs/2325deathsinvolvingorduetoselectedcausesbetweenseptember2003anddecember2023byweekandyearofbirthbycountriesenglandandwalesseperately</a>. It shows that there has also been an increasing trend in the MCD to UCD ratio for malignant neoplasms in England:</p>
+<div class="width6">
+<img src="i/ethical-englandratio.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2);library(readxl)
+
+t4=setDT(read_excel(&quot;finaldata2023v2.xlsx&quot;,sheet=4,skip=5))
+t6=setDT(read_excel(&quot;finaldata2023v2.xlsx&quot;,sheet=6,skip=5))
+t4$type=&quot;ucd&quot;;t6$type=&quot;mcd&quot;
+
+p=t4[,.(mcd=sum(rowSums(.SD))),.(date=t4$Death),.SDcols=patterns(&quot;[Mm]alignant&quot;)]
+p=merge(p,t6[,.(ucd=sum(rowSums(.SD))),.(date=t6$Death),.SDcols=patterns(&quot;[Mm]alignant&quot;)])
+p[,ratio:=mcd/ucd]
+p[,x:=.I]
+p[,date:=sub(&quot;\\S+ (...).*? (....) - (...).*? (.*)&quot;,&quot;\\1 \\2 - \\3 \\4&quot;,date)]
+
+ystart=0;yend=1.4;ybreak=seq(ystart,yend,.1)
+
+ggplot(p,aes(x=x,y=ratio))+
+geom_line(linewidth=.5)+
+labs(title=&quot;ONS user response 2325: MCD to UCD ratio for malignant neoplasms&quot;,subtitle=&quot;Includes England only. Deaths are by date of registration and not occurrence. Source: ONS user response titled \&quot;Deaths involving or due to selected causes between September 2003 and December 2023 by week and year of birth, by countries England and Wales seperately\&quot;.&quot;|&gt;stringr::str_wrap(83),x=NULL,y=NULL)+
+scale_x_continuous(limits=c(.5,max(p$x)+.5),breaks=p$x,labels=p$date)+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
+  axis.text.y=element_text(margin=margin(,1.5)),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  panel.background=element_blank(),
+  panel.grid=element_blank(),
+  panel.grid.major.y=element_line(size=.3,color=&quot;gray85&quot;),
+  plot.margin=margin(4,4,4,4),
+  plot.subtitle=element_text(size=6.7,margin=margin(,,3)),
+  plot.title=element_text(size=7.2,face=2,margin=margin(1,,4)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=4.2,height=3,dpi=400*4)
+system(&quot;magick 1.png -resize 25% -colorspace gray -dither none -colors 16 1.png&quot;)</pre>
+</div>
 <h2>
 <a href=#Files_for_US_population_estimates_by_single_year_of_age_up_to_ages_100 id=Files_for_US_population_estimates_by_single_year_of_age_up_to_ages_100>Files for US population estimates by single year of age up to ages 100+</a>
 </h2>

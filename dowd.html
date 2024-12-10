@@ -66,6 +66,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Paper_about_cancer_deaths_in_ages_75_to_84_at_CDC_WONDER>Paper about cancer deaths in ages 75 to 84 at CDC WONDER</a></li>
 <li><a href=#Paper_about_cancer_deaths_in_ages_15_to_44_at_CDC_WONDER>Paper about cancer deaths in ages 15 to 44 at CDC WONDER</a></li>
 <li><a href=#Paper_about_cancer_deaths_in_ages_15_to_44_in_England_and_Wales>Paper about cancer deaths in ages 15 to 44 in England and Wales</a></li>
+<li><a href=#Why_did_Ireland_have_over_50_excess_deaths_in_ages_5_14_in_2023>Why did Ireland have over 50% excess deaths in ages 5-14 in 2023?</a></li>
 </ul>
 
 <h2>
@@ -457,7 +458,7 @@ pheatmap::pheatmap(m,filename=&quot;1.png&quot;,display_numbers=disp,
 
 system(&quot;pad=22;w=`identify -format %w 1.png`;magick \\( -size $[w-pad*2]x -font Arial-Bold -pointsize 42 caption:&#39;Mid-year US resident population estimate in millions by age and year&#39; -splice $[pad]x16 \\) \\( -size $[w-pad*2] -font Arial -pointsize 38 caption:&#39;Vintage 2020 estimates based on the 2010 census were used for 2010 to 2019, and vintage 2023 estimates based on the 2020 census were used for 2021 to 2023. Source: www2.census.gov/programs-surveys/popest/datasets/{2010-2020/national/asrh/nc- est2020,2020-2023/national/asrh/nc-est2023}-agesex-res.csv.&#39; -splice $[pad]x10 \\) 1.png -append 1.png&quot;)</pre>
 </div>
-<p>This also shows how the wave of baby boomers reached the 75-84 age group in 2021-2022:</p>
+<p>In this animation also shows how the wave of baby boomers reached the 75-84 age group in 2021-2022:</p>
 <div class="width5">
 <img src="i/dowd-spout.gif">
 </div>
@@ -749,6 +750,58 @@ Age
 <a href=#Paper_about_cancer_deaths_in_ages_15_to_44_in_England_and_Wales id=Paper_about_cancer_deaths_in_ages_15_to_44_in_England_and_Wales>Paper about cancer deaths in ages 15 to 44 in England and Wales</a>
 </h2>
 <p>(To be added. See these tweets by Uncle John Returns in the meanwhile: <a href="https://x.com/UncleJo46902375/status/1783797036749402598">https://x.com/UncleJo46902375/status/1783797036749402598</a>, <a href="https://x.com/UncleJo46902375/status/1859196341911536020">https://x.com/UncleJo46902375/status/1859196341911536020</a>.)</p>
+<h2>
+<a href=#Why_did_Ireland_have_over_50_excess_deaths_in_ages_5_14_in_2023 id=Why_did_Ireland_have_over_50_excess_deaths_in_ages_5_14_in_2023>Why did Ireland have over 50% excess deaths in ages 5-14 in 2023?</a>
+</h2>
+<p>Ed Dowd posted this tweet: [<a href="https://x.com/DowdEdward/status/1864830982521507946">https://x.com/DowdEdward/status/1864830982521507946</a>]</p>
+<blockquote>
+<p>Hey Ireland 🇮🇪 you got a horrific age 5-14 excess death problem. North of 50% in 2023. Are the doctors baffled drinking Guinness at the pub trying to figure it out? <a href="https://phinancetechnologies.com/HumanityProjects/yearly%20Excess%20Death%20Rate%20Analysis%20-%20IE.htm">https://phinancetechnologies.com/HumanityProjects/yearly%20Excess%20Death%20Rate%20Analysis%20-%20IE.htm</a></p>
+<p><img src=i/dowd-ireland-1.jpg class=width4></p>
+</blockquote>
+<p>However the same model gave them about -31% excess mortality in 2016:</p>
+<div class="width5">
+<img src="i/dowd-ireland-2.png">
+</div>
+<p>In 2019 which fell near the baseline, there were 45 deaths in an estimated population of 693,700. [<a href="https://data.gov.ie/dataset/vsaq2-deaths-registered-provisional">https://data.gov.ie/dataset/vsaq2-deaths-registered-provisional</a>, <a href="https://www.cso.ie/en/releasesandpublications/er/pme/populationandmigrationestimatesapril2019/">https://www.cso.ie/en/releasesandpublications/er/pme/populationandmigrationestimatesapril2019/</a>] So based on the Wilson score interval, the upper bound of the 95% CI is almost twice as high as the lower bound:</p>
+<pre>&gt; prop.test(45,693700)$conf
+[1] 4.786801e-05 8.761632e-05</pre>
+<p>In the next plot the number of deaths was almost twice as far below the spline in 2016 as above the spline in 2023. I used the same source for deaths, but I plotted raw deaths instead of CMR and I used a different baseline than Dowd's group:</p>
+<div class="width7">
+<img src="i/dowd-ireland-3.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>download.file(&quot;https://ws.cso.ie/public/api.restful/PxStat.Data.Cube_API.ReadDataset/VSAQ2/XLSX/2007/en&quot;,&quot;ireland.xlsx&quot;)
+
+i=setDT(read_excel(&quot;ireland.xlsx&quot;,sheet=2))
+
+p=i[`Age at Death`==&quot;5 to 14 Years&quot;,.(y=sum(VALUE)),.(x=as.integer(substr(Quarter,1,4)))]
+p=p[x%in%1990:2023]
+p$smooth=predict(smooth.spline(p))$y
+pct=p[,.(x,y,pct=(y/smooth-1)*100)][abs(pct)&gt;10]
+
+ybreak=pretty(c(0,p$y,p$smooth));ylim=range(ybreak)
+xstart=min(p$x);xend=max(p$x)
+xbreak=xstart:xend
+
+tit=&quot;Yearly deaths by registration date in ages 5-14 in Ireland&quot;
+sub=&quot;Source: data.gov.ie/dataset/vsaq2-deaths-registered-provisional&quot;
+leg=c(&quot;Deaths&quot;,&quot;Smoothed spline&quot;)
+col=c(&quot;black&quot;,&quot;#8888ff&quot;)
+
+png(&quot;1.png&quot;,1800,900,res=300)
+par(mar=c(3.6,2.5,1.8,.7),mgp=c(0,.5,0),adj=0,lend=&quot;square&quot;)
+plot(p$x,p$y,type=&quot;n&quot;,main=tit,xlab=NA,ylab=NA,xaxs=&quot;i&quot;,yaxs=&quot;i&quot;,yaxt=&quot;n&quot;,xaxt=&quot;n&quot;,ylim=ylim,xlim=c(xstart-.5,xend+.5),cex.main=1)
+axis(2,at=ybreak,las=1,tck=-.035)
+mtext(xbreak,side=1,line=.2,at=xbreak,las=2)
+lines(p$x,p$y,lwd=1.5)
+points(p$x,p$y,pch=20,cex=.6)
+lines(p$x,p$smooth,col=col[2],type=&quot;l&quot;,lty=2,lwd=1.5)
+legend(&quot;topright&quot;,legend=leg,col=col,lty=c(1,2),lwd=1.5)
+mtext(text=sub,side=1,line=2.3,adj=1,col=&quot;gray50&quot;)
+dev.off()</pre>
+</div>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
