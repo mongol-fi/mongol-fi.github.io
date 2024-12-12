@@ -4,7 +4,7 @@
 body{background:#292929;color:white;margin:6px 6px 6px max(6px, min(50vw - 270px, 100vw - 1100px))}
 body,td,th{font:14.5px/1.3 Arial,Helvetica,'Liberation Sans',sans-serif}
 p{max-width:540px}
-h1,h2,h2 a,h3 a,h2 a:visited,h3 a:visited{font-weight:normal;color:white}
+h1,h2,h3,h2 a,h3 a,h2 a:visited,h3 a:visited{font-weight:normal;color:white}
 h1{font-size:2.1em;margin-top:.9em}
 h2{font-size:1.7em}
 h3{font-size:1.3em}
@@ -18,8 +18,10 @@ table{border-collapse:collapse}
 td,th{border:1px solid #555;padding:2px 4px}
 th{background:#444;text-align:left;font-weight:bold}
 img{max-width:100%}
-blockquote{margin-left:0px;padding-left:40px;margin-right:0}
+blockquote{margin:0;padding-left:40px;margin-right:0;overflow-x:hidden}
 blockquote p{max-width:480px}
+blockquote p:first-child{margin-top:0}
+blockquote p:last-child{margin-bottom:0}
 blockquote blockquote p{max-width:440px}
 blockquote blockquote blockquote p{max-width:400px}
 blockquote,.quote,blockquote h1,blockquote h2,blockquote h3{color:hsl(50,100%,85%)}
@@ -1762,6 +1764,35 @@ minimap2 -a --sam-hit-only -x map-ont sars2.fa &lt;(seqkit seq --rna2dna Downloa
 <div class="width7">
 <img src="i/hamburgmath-usmortality-5.jpg">
 </div>
+<p>Added later: USMortality later edited the Substack post to fix his screenshots. But he now said it was somehow problematic how a large proportion of the reads had clipped bases at either end. But I pointed out that chimeric reads are a well-known phenomenon, and if they would somehow be an insurmountable problem then people could use other sequencing methods or other library preparation methods that don't result in chimeric reads. When I asked ChatGPT why direct RNA nanopore sequencing would result in chimeric reads, it answered:</p>
+<blockquote>
+<p>1. <strong>Template Switching During Reverse Transcription (if applicable):</strong> In some workflows, RNA molecules are reverse transcribed before sequencing. The reverse transcriptase enzyme can occasionally switch between different RNA templates, leading to the creation of chimeric sequences.<br> 2. <strong>RNA Fragment Annealing or Ligation:</strong> During library preparation, RNA fragments from different molecules may anneal or be ligated together. If these chimeric RNA molecules are then sequenced, the resulting reads will appear as chimeras.<br> 3. <strong>Nanopore Detection Errors:</strong> Nanopore sequencing directly detects RNA molecules passing through a nanopore. If two RNA molecules simultaneously enter or transiently interact within the pore, the electrical signal may become a composite, leading to a chimeric interpretation during basecalling.<br> 4. <strong>Molecular Crowding or Sticky RNA Regions:</strong> RNA molecules with sticky sequences, such as homopolymers or repetitive regions, may transiently bind to other molecules. This interaction can result in misleading signals interpreted as a single continuous molecule.</p>
+</blockquote>
+<p>Then USMortality replied: <span class="quote">&quot;Additionally, this phenomenon should only occur in a subset of reads. If it is observed consistently across all reads, it is more likely to reflect an actual biological feature rather than an artifact, such as chimeric reads.&quot;</span> [<a href="https://x.com/USMortality/status/1866792958478995927">https://x.com/USMortality/status/1866792958478995927</a>]</p>
+<p>But I told him that the phenomenon of chimeric reads does occur in only a subset of reads. I got 8,773 reads that didn't have any clipped bases at the start or end:</p>
+<pre>$ minimap2 -aY --sam-hit-only -t4 sars2.fa VeroInf24h.all.fq|samtools sort -@3 -&gt;VeroInf24h.all.bam
+$ samtools view VeroInf24h.all.bam|awk &#39;$6!~/S/&#39;|wc -l
+8773</pre>
+<p>The longest one of the reads that didn't have any clipped bases at the ends was 29,453 bases long. It had more deletions than insertions relative to Wuhan-Hu-1, so it was only missing the first 11 and last 23 bases of Wuhan-Hu-1:</p>
+<pre>$ samtools view VeroInf24h.all.bam|awk &#39;$6!~/S/&#39;|samtools fasta|seqkit sort -lr|seqkit head -n1|cat - sars2.fa|mafft --thread 4 --clustalout -
+6bde649c-c7a2-4 -----------atacc-tcccaggtaacaaaccaaccatattttcgattcttgtagatct
+MN908947.3      attaaaggtttataccttcccaggtaacaaaccaaccaactttcgatctcttgtagatct
+                           ***** *********************  ***. . .************
+
+[...]
+
+6bde649c-c7a2-4 caaattaatttagtg-tatccccatgtgattttaatagctt-ttaggagaatgacaaaaa
+MN908947.3      ttaattttagtagtgctatccccatgtgattttaatagcttcttaggagaatgacaaaaa
+                . ****    ***** ************************* ******************
+
+6bde649c-c7a2-4 aaaaa-----------------------
+MN908947.3      aaaaaaaaaaaaaaaaaaaaaaaaaaaa</pre>
+<p>In all of the longest reads without clipped bases, there were at least 11 bases missing at the 5' end. The paper about the sequencing study said: <span class="quote">&quot;The SARS-CoV-2 genome was almost fully covered, missing only 12 nt from the 5′ end due to the known inability of DRS to sequence the terminal ∼12 nt (Figure 2B). The longest tags (111 reads) correspond to the full-length gRNA (Figure 2B). The coverage of the 3′ side of the viral genome is substantially higher than that of the 5′ side, which reflects the nested sgRNAs. This is also partly due to the 3′ bias of the directional DRS technique. The common presence of the leader sequence (72 nt) in viral RNAs results in a prominent coverage peak at the 5′ end, as expected. We could also clearly detect vertical drops in the coverage, whose positions correspond to the leader-body junction in sgRNAs.&quot;</span> [<a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC7179501/">https://pmc.ncbi.nlm.nih.gov/articles/PMC7179501/</a>]</p>
+<p>ChatGPT said:</p>
+<blockquote>
+<p>The <strong>inability of direct RNA sequencing (DRS) to sequence the terminal ~12 nucleotides</strong> of RNA molecules, such as the SARS-CoV-2 genome, stems from technical and physical limitations in the nanopore sequencing process:</p>
+<p>1. <strong>Nanopore Structure and Motor Protein Limitations:</strong> During DRS, a motor protein unwinds and feeds the RNA strand through the nanopore for sequencing. The motor protein must remain bound to the RNA to control its movement. As the RNA approaches its 5' end, the motor protein cannot maintain its grip on the molecule, leaving the terminal nucleotides unsequenced.<br> 2. <strong>RNA Length Relative to Adapter:</strong> The RNA molecule is attached to an adapter that facilitates the interaction with the sequencing pore. The adapter prevents complete threading of the RNA, leaving the last few nucleotides unreachable by the nanopore for signal detection.<br> 3. <strong>Signal Resolution and Decay:</strong> The electrical signal produced by the nanopore becomes less reliable as the RNA molecule shortens, leading to poor resolution or complete loss of signal for the terminal nucleotides.</p>
+</blockquote>
 <h3>
 <a href=#Getting_rid_of_two_extra_G_bases_at_the_start_of_MEGAHIT_contigs id=Getting_rid_of_two_extra_G_bases_at_the_start_of_MEGAHIT_contigs>Getting rid of two extra G bases at the start of MEGAHIT contigs</a>
 </h3>

@@ -59,8 +59,8 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
   .spoiler{display:none}
 }
 </style>
-<title>Preprints about cancer mortality by Ed Dowd's group Phinance Technologies</title>
-<h1>Preprints about cancer mortality by Ed Dowd's group Phinance Technologies - <a href=index.html>sars2.net</a></h1>
+<title>Analysis by Ed Dowd's group Phinance Technologies</title>
+<h1>Analysis by Ed Dowd's group Phinance Technologies - <a href=index.html>sars2.net</a></h1>
 <h2 id=Contents><a href=#Contents>Contents</a></h2>
 <ul>
 <li><a href=#Paper_about_cancer_deaths_in_ages_75_to_84_at_CDC_WONDER>Paper about cancer deaths in ages 75 to 84 at CDC WONDER</a></li>
@@ -755,18 +755,18 @@ Age
 </h2>
 <p>Ed Dowd posted this tweet: [<a href="https://x.com/DowdEdward/status/1864830982521507946">https://x.com/DowdEdward/status/1864830982521507946</a>]</p>
 <blockquote>
-<p>Hey Ireland 🇮🇪 you got a horrific age 5-14 excess death problem. North of 50% in 2023. Are the doctors baffled drinking Guinness at the pub trying to figure it out? <a href="https://phinancetechnologies.com/HumanityProjects/yearly%20Excess%20Death%20Rate%20Analysis%20-%20IE.htm">https://phinancetechnologies.com/HumanityProjects/yearly%20Excess%20Death%20Rate%20Analysis%20-%20IE.htm</a></p>
+<p>Hey Ireland 🇮🇪 you got a horrific age 5-14 excess death problem. North of 50% in 2023. Are the doctors baffled drinking Guinness at the pub trying to figure it out? <a href="https://phinancetechnologies.com/HumanityProjects/yearly+Excess+Death+Rate+Analysis+-+IE.htm">https://phinancetechnologies.com/HumanityProjects/yearly+Excess+Death+Rate+Analysis+-+IE.htm</a></p>
 <p><img src=i/dowd-ireland-1.jpg class=width4></p>
 </blockquote>
-<p>However the same model gave them about -31% excess mortality in 2016:</p>
+<p>However ages 5-14 have so few deaths that the confidence intervals are huge in a small country like Ireland. The same baseline gave Dowd's group about -31% excess mortality for ages 5-14 in 2016:</p>
 <div class="width5">
 <img src="i/dowd-ireland-2.png">
 </div>
 <p>In 2019 which fell near the baseline, there were 45 deaths in an estimated population of 693,700. [<a href="https://data.gov.ie/dataset/vsaq2-deaths-registered-provisional">https://data.gov.ie/dataset/vsaq2-deaths-registered-provisional</a>, <a href="https://www.cso.ie/en/releasesandpublications/er/pme/populationandmigrationestimatesapril2019/">https://www.cso.ie/en/releasesandpublications/er/pme/populationandmigrationestimatesapril2019/</a>] So based on the Wilson score interval, the upper bound of the 95% CI is almost twice as high as the lower bound:</p>
 <pre>&gt; prop.test(45,693700)$conf
 [1] 4.786801e-05 8.761632e-05</pre>
-<p>In the next plot the number of deaths was almost twice as far below the spline in 2016 as above the spline in 2023. I used the same source for deaths, but I plotted raw deaths instead of CMR and I used a different baseline than Dowd's group:</p>
-<div class="width7">
+<p>In the next plot the number of deaths was further below the baseline in 2016 than above the baseline in 2023. I used the same data for deaths as Dowd's group, but I plotted raw deaths instead of CMR and I used a spline baseline instead of a linear baseline:</p>
+<div class="width6">
 <img src="i/dowd-ireland-3.png">
 </div>
 <div class="spoiler">
@@ -778,7 +778,7 @@ i=setDT(read_excel(&quot;ireland.xlsx&quot;,sheet=2))
 
 p=i[`Age at Death`==&quot;5 to 14 Years&quot;,.(y=sum(VALUE)),.(x=as.integer(substr(Quarter,1,4)))]
 p=p[x%in%1990:2023]
-p$smooth=predict(smooth.spline(p))$y
+p$smooth=predict(smooth.spline(p[x&lt;2020]),p$x)$y
 pct=p[,.(x,y,pct=(y/smooth-1)*100)][abs(pct)&gt;10]
 
 ybreak=pretty(c(0,p$y,p$smooth));ylim=range(ybreak)
@@ -787,7 +787,7 @@ xbreak=xstart:xend
 
 tit=&quot;Yearly deaths by registration date in ages 5-14 in Ireland&quot;
 sub=&quot;Source: data.gov.ie/dataset/vsaq2-deaths-registered-provisional&quot;
-leg=c(&quot;Deaths&quot;,&quot;Smoothed spline&quot;)
+leg=c(&quot;Deaths&quot;,&quot;Smoothed spline&quot;,&quot;Spline projection&quot;)
 col=c(&quot;black&quot;,&quot;#8888ff&quot;)
 
 png(&quot;1.png&quot;,1800,900,res=300)
@@ -797,9 +797,10 @@ axis(2,at=ybreak,las=1,tck=-.035)
 mtext(xbreak,side=1,line=.2,at=xbreak,las=2)
 lines(p$x,p$y,lwd=1.5)
 points(p$x,p$y,pch=20,cex=.6)
-lines(p$x,p$smooth,col=col[2],type=&quot;l&quot;,lty=2,lwd=1.5)
-legend(&quot;topright&quot;,legend=leg,col=col,lty=c(1,2),lwd=1.5)
-mtext(text=sub,side=1,line=2.3,adj=1,col=&quot;gray50&quot;)
+lines(head(p$x,-4),head(p$smooth,-4),col=col[2],type=&quot;l&quot;,lty=1,lwd=1.5)
+lines(tail(p$x,5),tail(p$smooth,5),col=col[2],type=&quot;l&quot;,lty=3,lwd=1.5)
+legend(&quot;topright&quot;,legend=leg,col=col[c(1,2,2)],lty=c(1,1,3),lwd=1.5)
+mtext(text=sub,side=1,line=2.2,adj=1,col=&quot;gray50&quot;)
 dev.off()</pre>
 </div>
 <script>
