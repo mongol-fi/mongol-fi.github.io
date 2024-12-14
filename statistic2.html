@@ -76,6 +76,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 </ul></li>
 <li><a href=#John_Beaudoin_Increase_in_deaths_with_MCD_other_specified_disorders_of_skin_and_subcutaneous_tissue>John Beaudoin: Increase in deaths with MCD other specified disorders of skin and subcutaneous tissue</a></li>
 <li><a href=#John_Beaudoin_Deaths_with_MCD_other_venous_embolism_and_thrombosis>John Beaudoin: Deaths with MCD other venous embolism and thrombosis</a></li>
+<li><a href=#John_Beaudoin_Deaths_with_disorders_involving_the_immune_mechanism>John Beaudoin: Deaths with disorders involving the immune mechanism</a></li>
 </ul>
 
 <h2>
@@ -1066,7 +1067,7 @@ system(&quot;magick 1.png -trim -bordercolor white -border 20 1.png;w=`identify 
 <a href=#John_Beaudoin_Deaths_with_MCD_other_venous_embolism_and_thrombosis id=John_Beaudoin_Deaths_with_MCD_other_venous_embolism_and_thrombosis>John Beaudoin: Deaths with MCD other venous embolism and thrombosis</a>
 </h2>
 <p>John Beaudoin posted this tweet: [<a href="https://x.com/JohnBeaudoinSr/status/1866720003485204511">https://x.com/JohnBeaudoinSr/status/1866720003485204511</a>]</p>
-<div class="width6">
+<div class="width5">
 <img src="i/statistic-beaudoin-embolism.png">
 </div>
 <p>However I pointed out that ICD codes are like fashion that comes and goes. There's so many codes that it's easy to find codes that have gone up since 2021. Deaths with MCD I12 (hypertensive renal disease) almost quadrupled between 2012 and 2013. MCD I63 (cerebral infarction) almost tripled beween 2013 and 2018. And MCD I81 (portal vein thrombosis) doubled between 2015 and 2019:</p>
@@ -1098,6 +1099,118 @@ pheatmap::pheatmap(m^exp,filename=&quot;1.png&quot;,
   colorRampPalette(pal)(256))
 
 system(&quot;w=`identify -format %w 1.png`;pad=20;magick -pointsize 44 -font Arial-Bold -size $[w-pad*2] \\( caption:&#39;CDC WONDER: Yearly deaths by multiple cause of death&#39; -splice $[pad]x24 \\) \\( -font Arial -pointsize 40 caption:&#39;Codes starting with I with at least 10,000 total deaths shown. Deaths were aggregated based on 4-letter codes so deaths under 4-letter codes with less than 10 yearly deaths were not included.&#39; -splice $[pad]x2 \\) 1.png -append 1.png&quot;)</pre>
+</div>
+<h2>
+<a href=#John_Beaudoin_Deaths_with_disorders_involving_the_immune_mechanism id=John_Beaudoin_Deaths_with_disorders_involving_the_immune_mechanism>John Beaudoin: Deaths with disorders involving the immune mechanism</a>
+</h2>
+<p>John Beaudoin posted these tweets:</p>
+<div class="maxwidth">
+<img src=i/statistic-beaudoin-immune-1.png class=width5><img src=i/statistic-beaudoin-immune-2.png class=width5>
+</div>
+<p>However his method of dividing the deaths by the total number of deaths isn't a good method to adjust for the impact of COVID, because some MCDs have a higher proportion of COVID deaths than other MCDs. His method assumes that the proportion of COVID deaths for deaths with MCD D80-D89 would be the same as the overall proportion of COVID deaths out of all deaths at CDC WONDER the same year.</p>
+<p>But in the next plot when I instead plotted deaths that had MCD D80-D89 but not MCD COVID, I got negative excess deaths in 2020 and 2021. I still got clearly positive MCD deaths in 2023 and 2024, even though it might partially be if my linear baseline was inaccurate because the long-term trend going back to 1999 seems to be curved upwards. And the UCD deaths remained close to the baseline even in 2023 and 2024, so I don't know what explains the difference between MCD and UCD in 2023 and 2024:</p>
+<div class="width7">
+<img src="i/statistic-beaudoin-immune-3.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2)
+
+t=fread(&quot;http://sars2.net/f/wonderd80d89.csv&quot;)
+t=t[,.(x=as.Date(paste(year,month,1,sep=&quot;-&quot;)),y=dead,z=factor(cause,unique(cause)),type)]
+t[,y:=y/lubridate::days_in_month(x)]
+
+p=t[type==&quot;ucd&quot;,.(x,y,z,type=3)]
+p=rbind(p,t[type==&quot;mcd&quot;][,type:=1],dcast(t,z+x~type,value.var=&quot;y&quot;)[,.(z,x,type=2,y=mcd-nafill(and,,0))])
+
+base=p[type%in%c(1,3)&amp;year(x)%in%2014:2019,.(x=unique(p$x),y=predict(lm(y~x),.(x=unique(p$x)))),.(type,z)]
+p=rbind(p[,linetype:=1],base[,linetype:=2])
+p=p[!(type==2&amp;x&lt;&quot;2020-3-1&quot;)]
+p[,type:=factor(type,,c(&quot;MCD with MCD COVID not subtracted&quot;,&quot;MCD with MCD COVID subtracted&quot;,&quot;UCD&quot;))]
+p[,linetype:=factor(linetype,,c(&quot;Deaths divided by number of days in month&quot;,&quot;2014-2019 linear trend&quot;))]
+
+xstart=as.Date(&quot;1999-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
+xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=ifelse(month(xbreak)==7,year(xbreak),&quot;&quot;)
+ybreak=pretty(p$y,6);ystart=0;yend=max(p$y)
+
+cap=&quot;Includes:
+D80 (Immunodeficiency with predominantly antibody defects)
+D81 (Combined immunodeficiencies)
+D82 (Immunodeficiency associated with other major defects)
+D83 (Common variable immunodeficiency)
+D84 (Other immunodeficiencies)
+D86 (Sarcoidosis)
+D89 (Other disorders involving the immune mechanism, not elsewhere classified)&quot;
+
+ggplot(p,aes(x+15,y))+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray90&quot;,linewidth=.25)+
+geom_hline(yintercept=c(ystart,0,yend),linewidth=.25,lineend=&quot;square&quot;)+
+geom_vline(xintercept=c(xstart,xend),linewidth=.25,lineend=&quot;square&quot;)+
+geom_line(aes(y=ifelse(y&lt;0,NA,y),color=type,linetype=linetype),linewidth=.3)+
+labs(title=&quot;CDC WONDER, D80-D89: Monthly deaths divided by number of days in month&quot;,x=NULL,y=NULL,caption=cap)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
+scale_color_manual(values=c(&quot;#6666ff&quot;,&quot;#bbbbff&quot;,&quot;black&quot;))+
+scale_linetype_manual(values=c(&quot;solid&quot;,&quot;42&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(color=guide_legend(order=1),linetype=guide_legend(order=2),alpha=guide_legend(order=2))+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
+  axis.text.y=element_text(margin=margin(,1)),
+  axis.ticks=element_line(linewidth=.25,color=&quot;black&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(3,&quot;pt&quot;),
+  legend.background=element_rect(fill=alpha(&quot;white&quot;,1),color=&quot;black&quot;,linewidth=.25),
+  legend.box=&quot;vertical&quot;,
+  legend.box.just=&quot;left&quot;,
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.justification=c(0,1),
+  legend.key=element_blank(),
+  legend.margin=margin(2,3,2,2),
+  legend.key.height=unit(7,&quot;pt&quot;),
+  legend.key.width=unit(17,&quot;pt&quot;),
+  legend.position=c(0,1),
+  legend.spacing.x=unit(0,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=7,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  plot.caption=element_text(size=6,hjust=0,margin=margin(4)),
+  plot.margin=margin(4,4,4,4),
+  plot.title=element_text(size=7,face=2,margin=margin(,,3)))
+ggsave(&quot;1.png&quot;,width=4.2,height=2.8,dpi=380*4)
+system(&quot;magick 1.png -resize 25% PNG8:1.png&quot;)</pre>
+</div>
+<p>The next plot shows that the increase in MCD deaths seems to be primarily due to D89.9 (Other disorders involving the immune mechanism, unspecified) and secondarily due to D86.9 (Sarcoidosis, unspecified). However the number of deaths under D89.9 also had a sudden ten-fold increase between 2005 and 2006, so I guess Beaudoin would've also blamed it on the COVID vaccines if the vaccines would've been rolled out in 2006:</p>
+<div class="width14">
+<img src="i/statistic-beaudoin-immune-4.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table)
+
+kimi=\(x){na=is.na(x);x[na]=0;e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;x[]=ifelse(abs(x)&lt;1e3,round(x),paste0(sprintf(paste0(&quot;%.&quot;,ifelse(e%%3==0,1,0),&quot;f&quot;),x/1e3^(e2-1)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2]));x[na]=&quot;NA&quot;;x}
+
+t=fread(&quot;http://sars2.net/f/wonderbyicd.csv.gz&quot;)[type==&quot;MCD&quot;&amp;year!=2024&amp;code%like%&quot;D8&quot;]
+t=t[code%in%t[,sum(dead),code][V1&gt;=100,code]]
+t=t[order(code)]
+t=t[,label:=paste0(code,&quot;: &quot;,sub(&quot; \\[.*&quot;,&quot;&quot;,cause))][,label:=factor(label,unique(label))]
+
+m=t[,tapply(dead,.(label,year),c)]
+maxcolor=max(m,na.rm=T);exp=.6
+pal=hsv(c(21,21,12,6,3,0,0)/36,c(0,.5,.5,.5,.5,.5,0),rep(1:0,c(6,1)))
+
+pheatmap::pheatmap(m^exp,filename=&quot;1.png&quot;,
+  display_numbers=ifelse(m&lt;10,m,kimi(m)),
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=15,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;gray90&quot;,
+  number_color=ifelse(abs(m^exp)&gt;maxcolor^exp*.8,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(0,maxcolor^exp,,256),
+  colorRampPalette(pal)(256))
+
+system(&quot;w=`identify -format %w 1.png`;pad=20;magick -pointsize 44 -font Arial-Bold \\( -size $[w-pad] caption:&#39;CDC WONDER: Yearly deaths by multiple cause of death (ICD codes starting with D8 with at least 100 total nonsuppressed deaths)&#39; -splice $[pad]x24 \\) 1.png -append 1.png&quot;)</pre>
 </div>
 <script>
 let q=document.querySelectorAll('a,code,pre')

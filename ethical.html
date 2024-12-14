@@ -2258,9 +2258,98 @@ r[year&gt;=2020&amp;age%in%80:84,xtabs(pop~year+vintage)]
 t2=fread(&quot;http://sars2.net/f/wondercanceryearlysingle.csv&quot;)
 t2[age%in%80:84&amp;year==2021,sum(pop)]
 # 6301306 (CDC WONDER still uses vintage 2021 estimates for 2021)</pre>
-<p>Here you can see how the 2000-2010 intercensal estimates have been adjusted to get rid of the jump between the population estimates based on the 2000 census and the population estimates based on the 2010 census:</p>
+<p>The next plot shows how the 2000-2010 intercensal estimates have been adjusted to get rid of the jump between the population estimates based on the 2000 census and the population estimates based on the 2010 census. The 2010-2020 intercensal estimates are only scheduled to be publishde in 2025, but they will probably look similar to my gray line below where I used the same method as in the code above to adjust the population estimates:</p>
 <div class="width7">
 <img src="i/ethical-popest.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2)
+
+agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
+
+kim=\(x)ifelse(x&gt;=1e3,ifelse(x&gt;=1e6,paste0(x/1e6,&quot;M&quot;),paste0(x/1e3,&quot;k&quot;)),x)
+
+new=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/nc-est2023-agesex-res.csv&quot;)
+old=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/national/asrh/nc-est2020-agesex-res.csv&quot;)
+
+old=old[SEX==0&amp;AGE!=999,.(age=AGE,pop=unlist(.SD[,-(1:4)]),year=rep(2010:2020,each=.N))]
+new=new[SEX==0&amp;AGE!=999,.(age=AGE,pop=unlist(.SD[,-(1:3)]),year=rep(2020:2023,each=.N))]
+
+older=fread(&quot;https://www2.census.gov/programs-surveys/popest/tables/2000-2010/intercensal/national/us-est00int-01.csv&quot;)
+older=older[6:26,c(1,3:12,14)][,.(age=as.numeric(sub(&quot;\\D*(\\d+).*&quot;,&quot;\\1&quot;,sub(&quot;Under 5&quot;,0,V1))),pop=as.numeric(gsub(&quot;,&quot;,&quot;&quot;,unlist(.SD[,-1]))),year=rep(2000:2010,each=.N))]
+
+oldest=fread(&quot;https://www2.census.gov/programs-surveys/popest/tables/2000-2009/national/asrh/nc-est2009-01.csv&quot;)
+oldest=oldest[6:26,c(1,2:11)][,.(age=as.numeric(sub(&quot;\\D*(\\d+).*&quot;,&quot;\\1&quot;,sub(&quot;Under 5&quot;,0,V1))),pop=as.numeric(gsub(&quot;,&quot;,&quot;&quot;,unlist(.SD[,-1]))),year=rep(2009:2000,each=.N))]
+
+mult=merge(old[year==2020],new[year==2020,.(age,new=pop)])[,.(ratio=new/pop,age)]
+mult=merge(old,mult)[,mult:=(year-2010)/10]
+mult=mult[,.(age,year,pop=((1-mult)*1+mult*ratio)*pop)]
+
+won=fread(&quot;http://sars2.net/f/wondercanceryearlysingle.csv&quot;)[age&lt;85,.(year,pop,age)]
+won=rbind(won,fread(&quot;http://sars2.net/f/wondercanceryearlyten.csv&quot;)[cause==cause[1]&amp;age==85,.(year,pop,age)])
+
+p=cbind(oldest,z=&quot;2000-2009&quot;)
+p=rbind(p,cbind(older,z=&quot;2000-2010 intercensal&quot;))
+p=rbind(p,cbind(old,z=&quot;2010-2020&quot;))
+p=rbind(p,cbind(mult,z=&quot;2010-2020 multiplied by linear slope&quot;))
+p=rbind(p,cbind(new,z=&quot;2020-2023&quot;))
+p=rbind(p,cbind(won,z=&quot;CDC WONDER&quot;))
+
+p[,z:=factor(z,unique(z))]
+
+ages=0:4*20
+ages=c(0,25,45,65,75,85)
+
+p=p[,.(pop=sum(pop)),.(z,year,age=agecut(age,ages))]
+
+xstart=2000;xend=2023
+p=p[year%in%xstart:xend]
+
+ggplot(p,aes(x=year,y=pop))+
+coord_cartesian(clip=&quot;off&quot;)+
+facet_wrap(~age,ncol=2,dir=&quot;v&quot;,scales=&quot;free_y&quot;)+
+geom_vline(xintercept=c(2009.5,2019.5),color=&quot;gray80&quot;,linewidth=.23)+
+geom_line(aes(color=z,alpha=z),linewidth=.3)+
+geom_point(aes(color=z,shape=z,size=z),stroke=.3)+
+geom_text(fontface=2,data=p[,max(pop),age],aes(label=paste0(&quot;\n   &quot;,age,&quot;   \n&quot;),y=V1),x=xstart-.5,lineheight=.4,hjust=0,vjust=1,size=grid::convertUnit(unit(7,&quot;pt&quot;),&quot;mm&quot;))+
+labs(title=&quot;Mid-year US resident population estimates by age group&quot;,subtitle=&quot;Source: www2.census.gov/programs-surveys/popest/datasets and CDC WONDER.&quot;,x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=seq(xstart-.5,xend+.5,.5),labels=c(rbind(&quot;&quot;,ifelse(xstart:xend%%2==0,xstart:xend,&quot;&quot;)),&quot;&quot;),expand=expansion(0))+
+scale_y_continuous(labels=kim,breaks=\(x)Filter(\(y)y&gt;min(x)+(max(x)-min(x))*.05,pretty(x,4)),expand=expansion(.04))+
+scale_color_manual(values=c(&quot;#0055ff&quot;,&quot;#8844ff&quot;,&quot;#ff55ff&quot;,&quot;gray50&quot;,&quot;#ff5555&quot;,&quot;black&quot;))+
+scale_shape_manual(values=c(16,16,16,16,16,4))+
+scale_alpha_manual(values=c(1,1,1,1,1,0))+
+scale_size_manual(values=c(.7,.7,.7,.7,.7,1))+
+guides(color=guide_legend(ncol=2,byrow=F))+
+theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
+  axis.ticks=element_line(linewidth=.2,color=&quot;black&quot;),
+  axis.ticks.length=unit(3,&quot;pt&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.justification=&quot;left&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(8,&quot;pt&quot;),
+  legend.key.width=unit(17,&quot;pt&quot;),
+  legend.margin=margin(-2,,4),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(1,&quot;pt&quot;),
+  legend.text=element_text(size=7,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.23),
+  panel.spacing.x=unit(3,&quot;pt&quot;),
+  panel.spacing.y=unit(3,&quot;pt&quot;),
+  plot.margin=margin(5,5,5,5),
+  plot.subtitle=element_text(size=6.9,margin=margin(,,4)),
+  plot.title=element_text(size=7.4,face=2,margin=margin(1,,3)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=4,height=3,dpi=350*4)
+system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 </div>
 <p>So if you need to combine my files with older population estimates for 2000-2009, you can just use the intercensal estimates. This file has population estimates by single year of age up to ages 85+: <a href="https://www2.census.gov/programs-surveys/popest/datasets/2000-2010/intercensal/national/us-est00int-alldata.csv">https://www2.census.gov/programs-surveys/popest/datasets/2000-2010/intercensal/national/us-est00int-alldata.csv</a>. This file has population estimates by 5-year age groups up to ages 100+: <a href="https://www2.census.gov/programs-surveys/popest/tables/2000-2010/intercensal/national/us-est00int-01.csv">https://www2.census.gov/programs-surveys/popest/tables/2000-2010/intercensal/national/us-est00int-01.csv</a>. Both files are identical to the population sizes used by CDC WONDER:</p>
 <pre>inter1=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2000-2010/intercensal/national/us-est00int-alldata.csv&quot;)
