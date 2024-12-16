@@ -69,7 +69,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#PFE_arrival_function_determined_from_monthly_deaths_by_age>PFE arrival function determined from monthly deaths by age</a></li>
 <li><a href=#Deaths_with_secondary_thrombocytopenia>Deaths with secondary thrombocytopenia</a></li>
 <li><a href=#Deaths_from_natural_causes_in_ages_2_17>Deaths from natural causes in ages 2-17</a></li>
-<li><a href=#Cancer_mortality_in_ages_0_64_in_most_vaccinated_and_least_vaccinated_states>Cancer mortality in ages 0-64 in most-vaccinated and least vaccinated states</a></li>
+<li><a href=#Cancer_mortality_in_ages_0_64_in_most_vaccinated_and_least_vaccinated_states>Cancer mortality in ages 0-64 in most-vaccinated and least-vaccinated states</a></li>
 <li><a href=#Would_using_ASMR_instead_of_raw_deaths_produce_an_invalid_decline_in_mortality>Would using ASMR instead of raw deaths produce an invalid decline in mortality?</a></li>
 <li><a href=#Deaths_from_lung_cancer>Deaths from lung cancer</a></li>
 <li><a href=#Hugh_Akstons_corroboration_of_Ethical_Skeptics_plot_for_cancer_mortality>Hugh Akston's corroboration of Ethical Skeptic's plot for cancer mortality</a></li>
@@ -825,7 +825,7 @@ pheatmap::pheatmap(sign(m)*abs(m)^exp,filename=&quot;1.png&quot;,display_numbers
 system(&quot;convert 1.png -extent 2000x 1.png;w=`identify -format %w 1.png`;pad=26;magick -pointsize 44 -font Arial \\( -size $[w-pad] caption:&#39;NVSS, ages 2 to 17: Excess number of deaths by underlying cause of death relative to 2015-2019 linear trend, top 40 causes shown sorted by 2020-2022 total&#39; -splice $[pad]x24 \\) 1.png -append 1.png&quot;)</pre>
 </div>
 <h2>
-<a href=#Cancer_mortality_in_ages_0_64_in_most_vaccinated_and_least_vaccinated_states id=Cancer_mortality_in_ages_0_64_in_most_vaccinated_and_least_vaccinated_states>Cancer mortality in ages 0-64 in most-vaccinated and least vaccinated states</a>
+<a href=#Cancer_mortality_in_ages_0_64_in_most_vaccinated_and_least_vaccinated_states id=Cancer_mortality_in_ages_0_64_in_most_vaccinated_and_least_vaccinated_states>Cancer mortality in ages 0-64 in most-vaccinated and least-vaccinated states</a>
 </h2>
 <p>Ethical Skeptic posted this tweet: [<a href="https://x.com/EthicalSkeptic/status/1864758742954442778">https://x.com/EthicalSkeptic/status/1864758742954442778</a>]</p>
 <blockquote>
@@ -1042,7 +1042,7 @@ a=merge(fread(&quot;http://sars2.net/f/uspopdeadmonthly.csv&quot;),a)
 a[,x:=year*12+month]
 a=merge(a[year%in%2011:2019,.(x=unique(a$x),base=predict(lm(y/persondays~x),.(x=unique(a$x)))),.(age,type)],a)
 
-t=fread(&quot;d/cd/wonderlungcancerallage&quot;)[!(year==2024&amp;month&gt;=11)]
+t=fread(&quot;http://sars2.net/f/wonderlungcancerallage.csv&quot;)[!(year==2024&amp;month&gt;=11)]
 p=dcast(t,year+month~type,value.var=&quot;dead&quot;)
 p=p[,.(x=year*12+month,year,month,y=c(mcd,mcd-nafill(and,,0),ucd),type=rep(1:3,each=.N),group=1)]
 p=p[!(x&lt;t[type==&quot;and&quot;,min(year*12+month)]&amp;type==2)]
@@ -1280,85 +1280,70 @@ system(&quot;magick 1.png -resize 25% PNG8:1.png&quot;)</pre>
 Show code
 </button><pre>library(data.table);library(ggplot2)
 
-ua=\(x,y,...){u=unique(x);y(u,...)[match(x,u)]}
+xstart=1999;xend=2080
 
-t=fread(&quot;http://sars2.net/f/wondernatural.csv&quot;)[cause==&quot;A-Q&quot;&amp;date&lt;=&quot;2024-08&quot;]
-p=na.omit(t[,.(dead=sum(dead)),.(x=as.Date(paste0(date,&quot;-1&quot;)))])
-p[,dead:=dead/days_in_month(x)*30]
+t=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)
+p=t[,.(y=sum(dead),z=&quot;Actual deaths&quot;),.(x=year)]
+cmr=t[year==2010,dead/pop]
+pop=t[year==2010,pop]
+births=pop[1]
+sim=data.table(x=NA,y=NA)
+for(year in 2010:xend){
+  died=pop*cmr;pop=pop-died
+  pop=c(births,pop[1:99],sum(pop[100:101]))
+  sim=rbind(sim,list(year,sum(died)))
+}
 
-ages=t[,.(x=as.Date(paste0(date,&quot;-1&quot;)),age,dead)]
+p=rbind(p,p[,.(x=xstart:xend,y=p[x&lt;2020,predict(lm(y~x),.(x=xstart:xend))],z=&quot;1999-2019 linear trend&quot;)])
+p=rbind(p,sim[,z:=&quot;Modeled deaths&quot;])
+p[,z:=factor(z,unique(z))]
 
-p$linear=p[year(x)&lt;2020,predict(lm(dead~x),p)]
-p[,excess:=cumsum(dead-linear)]
-
-p2=copy(p)[,x:=as.integer(x)]
-fit=nls(excess~A*sin(B*x+C)+D,p2[year(p$x)&lt;2020],
-  list(A=(max(p2$excess)-min(p2$excess))/2,B=2*pi/(max(p2$x)-min(p2$x)),C=0,D=mean(p2$excess)),
+excess=merge(p[z==levels(z)[1]],p[z==levels(z)[2],.(x,y2=y)])[x&lt;2020,.(x,y=cumsum(y-y2))]
+fit=nls(y~A*sin(B*x+C)+D,excess,
+  list(A=excess[,max(y)-min(y)]/2,B=2*pi/excess[,max(x)-min(x)],C=0,D=mean(excess$y)),
   nls.control(maxiter=100,tol=1e-6))
-p$sine=predict(fit,p2)
 
-a=t[,.(x=as.Date(paste0(date,&quot;-1&quot;)),age,dead)]
-pop=fread(&quot;http://sars2.net/f/uspopdeadmonthly.csv&quot;)
-a=merge(a,pop[,.(pop=sum(persondays)),.(x=as.Date(paste0(date,&quot;-1&quot;)),age=cul(age,unique(a$age)))])
-a=merge(a,a[,.(x=unique(a$x),base=predict(lm(dead/pop~x),a[rowid(x)==1])),age])
+pred=diff(predict(fit,.(x=1998:2080)))[-1]
+p=rbind(p,p[z==levels(z)[2]][,y:=y+pred][,z:=&quot;1999-2019 plus sine&quot;])
 
-p$sinecum=p[,excess-sine]
-
-# sars2.net/stat.html#Download_fixed_width_and_CSV_files_for_the_NVSS_data_used_at_CDC_WONDER
-v=fread(&quot;vital.csv.gz&quot;)
-v=v[year%in%2011:2019&amp;ua(cause,like,&quot;[A-Q]&quot;)][,.(dead=sum(ucd)),.(year,month,age=pmin(age,100))]
-pop[,date:=as.Date(paste0(date,&quot;-1&quot;))]
-v=merge(pop[,.(age,year,month,date,persondays)],v)
-v=merge(pop,v[,.(date=unique(p$x),base=predict(lm(dead/persondays~date),.(date=unique(p$x)))),age])
-p$vital=v[,sum(base*persondays/days_in_month(date)*30),date]$V1
-p[year(x)==2010,vital:=NA]
-p$vitalexcess=p[,ifelse(is.na(vital),NA,cumsum(nafill(dead-vital,,0)))]
-
-p=melt(p,id=1,,&quot;z&quot;,&quot;y&quot;)
-p[,z:=factor(z,unique(z),c(&quot;Deaths&quot;,&quot;1999-2019 linear trend in deaths&quot;,&quot;Cumulative excess over 1999-2019 linear trend&quot;,&quot;Sine wave fitted to 1999-2019 cumulative excess&quot;,&quot;Difference between cumulative excess and sine wave&quot;,&quot;2011-2019 trend in CMR by age&quot;,&quot;Cumulative excess over 2011-2019 trend in CMR by age&quot;))]
-
-xstart=as.Date(&quot;1999-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
-p=p[x&gt;=xstart&amp;x&lt;=xend]
-xbreak=seq(xstart+182,xend,&quot;year&quot;);xlab=year(xbreak)
+xbreak=seq(2000,xend,5)
 ybreak=pretty(p$y,7);ystart=ybreak[1];yend=max(ybreak)
 
-note=p[,.(z=levels(z)[c(5,7)],x=xend-c(460,350),y=c(55e4,7e4),label=c(&quot;Excess over\nAkston&#39;s\ninaccurate\nbaseline&quot;,&quot;Excess\nover my\naccurate\nbaseline&quot;))]
+note=stringr::str_wrap(&quot;The model started in 2010 so that the population size of each age was set to the vintage 2020 mid-2010 resident population estimates. Each year the same fraction of people for each age killed as the 2010 CMR value for the age, the age of the remaining people was incremented by one, and the same number of people aged zero were added as in the mid-2010 resident population estimates.&quot;,40)
 
-ggplot(p,aes(x=x+14,y))+
-geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray83&quot;,linewidth=.4)+
+ggplot(p,aes(x=x,y))+
 geom_hline(yintercept=0,linewidth=.4)+
-geom_line(aes(color=z,linetype=z),linewidth=.5)+
-geom_text(data=note,aes(color=z,label=label),size=3,hjust=1,lineheight=.9,show.legend=F)+
-labs(x=NULL,y=NULL,title=&quot;CDC WONDER: Monthly deaths with underlying cause A-Q&quot;,subtitle=&quot;Divided by number of days in month and multiplied by 30. Excludes UCD external causes, COVID, and R and X codes.&quot;|&gt;stringr::str_wrap(74))+
-scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
-scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,labels=\(x)ifelse(x==0,0,paste0(x/1e3,&quot;k&quot;)))+
-scale_color_manual(values=c(&quot;black&quot;,&quot;black&quot;,&quot;#881111&quot;,&quot;#881111&quot;,&quot;#cc2222&quot;,&quot;#007700&quot;,&quot;#22aa22&quot;))+
-scale_linetype_manual(values=c(&quot;solid&quot;,&quot;42&quot;,&quot;solid&quot;,&quot;42&quot;,&quot;solid&quot;,&quot;42&quot;,&quot;solid&quot;))+
+geom_line(aes(color=z),linewidth=.5)+
+labs(x=NULL,y=NULL,title=&quot;Model for yearly deaths in United States&quot;)+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=xbreak)+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,labels=\(x)paste0(x/1e6,&quot;M&quot;))+
+scale_color_manual(values=c(&quot;black&quot;,&quot;#6666ff&quot;,&quot;#ff3333&quot;,&quot;#ff55ff&quot;))+
+annotate(geom=&quot;label&quot;,x=2039,y=32e5,vjust=1,label=note,label.r=unit(2,&quot;pt&quot;),label.padding=unit(3,&quot;pt&quot;),label.size=.2,size=3.6,lineheight=.82,hjust=0)+
+annotate(geom=&quot;text&quot;,x=2017,y=2.4e6,label=&quot;The magenta line is\nsimilar to Akston&#39;s\nbaseline with\nlong-term correction&quot;,hjust=0,size=3.6,lineheight=.93,color=&quot;#ff55ff&quot;)+
 coord_cartesian(clip=&quot;off&quot;,expand=F)+
 theme(axis.text=element_text(size=11,color=&quot;black&quot;),
   axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
   axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
-  axis.ticks.length.x=unit(0,&quot;pt&quot;),
-  axis.ticks.length.y=unit(5,&quot;pt&quot;),
+  axis.ticks.length=unit(5,&quot;pt&quot;),
   legend.background=element_blank(),
   legend.box.background=element_rect(color=&quot;black&quot;,linewidth=.4),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
   legend.direction=&quot;vertical&quot;,
   legend.justification=c(0,1),
   legend.key=element_blank(),
-  legend.key.height=unit(11,&quot;pt&quot;),
-  legend.key.width=unit(29,&quot;pt&quot;),
-  legend.margin=margin(4,4,4,4),
+  legend.key.height=unit(14,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
   legend.position=c(0,1),
-  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.x=unit(3,&quot;pt&quot;),
   legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.margin=margin(5,5,5,5),
   legend.text=element_text(size=11,vjust=.5),
   legend.title=element_blank(),
   panel.background=element_blank(),
-  panel.border=element_rect(fill=NA,linewidth=.4),
-  plot.margin=margin(5,5,5,4),
-  plot.subtitle=element_text(size=11,margin=margin(,,5)),
-  plot.title=element_text(size=11.5,face=2,margin=margin(2,,4)))
-ggsave(&quot;1.png&quot;,width=6.3,height=4.1,dpi=300*4)
+  panel.border=element_rect(fill=NA,linewidth=.3),
+  plot.margin=margin(6,8,5,5),
+  plot.title=element_text(size=11.5,face=2,margin=margin(1,,5)))
+ggsave(&quot;1.png&quot;,width=6.3,height=4,dpi=300*4)
 system(&quot;magick 1.png -resize 25% PNG8:1.png&quot;)</pre>
 </div>
 <p>In the plot above if you compare the red line for my model against the black line for the real number of deaths in 2011-2019, my model has a slightly higher number of deaths, but it's because in real life elderly age groups had a decreasing trend in age-specific mortality rates in the 2010s but in my model I used 2010 CMR values for each age indefinitely.</p>
