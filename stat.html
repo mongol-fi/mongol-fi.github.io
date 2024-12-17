@@ -105,6 +105,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Eurostat>Eurostat</a>
 <ul>
 <li><a href=#Compile_a_CSV_file_for_deaths_and_population_estimates_by_single_year_of_age_in_various_countries>Compile a CSV file for deaths and population estimates by single year of age in various countries</a></li>
+<li><a href=#Compare_excess_ASMR_to_excess_raw_deaths>Compare excess ASMR to excess raw deaths</a></li>
 </ul></li>
 <li><a href=#United_Nations>United Nations</a>
 <ul>
@@ -1258,7 +1259,8 @@ for i in {1999..2022};do sed &#39;1s/\beduc\b/educ2003/&#39; mort$i.csv|csvtk cu
 <p>This makes a file grouped by cause, year, month, and age for the count of UCD deaths, count of MCD deaths, and count of MCD deaths that also have MCD COVID:</p>
 <pre>r=do.call(rbind,lapply(1999:2022,\(i){
   t=fread(paste0(i,&quot;.csv.gz&quot;))[restatus!=4]
-  t[,age:=ifelse(age%/%1000%in%c(1,9),age%%1000,0)]
+  t[year&gt;=2003,age:=ifelse(age%/%1000%in%c(1,9),age%%1000,0)] # unknown age is usually 9999 but sometimes 1999
+  t[year&lt;2003,age:=ifelse(age&gt;=200&amp;age!=999,0,age)] # age field is 3 characters long for years before 2003
   t=t[,.(.I,year,month=monthdth,age,ucd=ucod,mcd=unlist(.SD,,F)),.SDcols=patterns(&quot;enicon_&quot;)][mcd!=&quot;&quot;]
   t1=t[rowid(I)==1,.(ucd=.N),.(cause=ucd,year,month,age)]
   t2=t[,.(mcd=.N),.(cause=mcd,year,month,age)]
@@ -1270,7 +1272,7 @@ fwrite(r,&quot;vital.csv.gz&quot;,na=&quot;&quot;)</pre>
 <pre>library(readr);library(data.table)
 t=do.call(rbind,lapply(Sys.glob(paste0(&quot;VS&quot;,20:22,&quot;MORT.*&quot;)),\(i)setDT(read_fwf(i,fwf_cols(restatus=c(20,20),age=c(70,73),ucod=c(146,149),enicon_1=c(167,170),enicon_2=c(174,177),enicon_3=c(181,184),enicon_4=c(188,191),enicon_5=c(195,198),enicon_6=c(202,205),enicon_7=c(209,212),enicon_8=c(216,219),enicon_9=c(223,226),enicon_10=c(230,233),enicon_11=c(237,240),enicon_12=c(244,247),enicon_13=c(251,254),enicon_14=c(258,261),enicon_15=c(265,268),enicon_16=c(272,275),enicon_17=c(279,282),enicon_18=c(286,289),enicon_19=c(293,296),enicon_20=c(300,303))))))
 
-sub=t[age!=9999][,age:=ifelse(age&gt;1000,age%%1000,0)][restatus!=4&amp;age&lt;18&amp;ucod==&quot;U071&quot;]
+sub=t[age!=9999][,age:=ifelse(age&lt;2000,age-1000,0)][restatus!=4&amp;age&lt;18&amp;ucod==&quot;U071&quot;]
 
 icd=setkey(fread(&quot;http://sars2.net/f/wonderbyicd.csv.gz&quot;)[rowid(code)==1][,code:=sub(&quot;.&quot;,&quot;&quot;,code,fixed=T)],&quot;code&quot;)
 
@@ -2336,6 +2338,69 @@ location,name,year,age,dead,pop
 RU,Russia,2006,0,15079,1444214
 RU,Russia,2006,1,1568,1484516
 RU,Russia,2006,2,940,1457682</pre>
+<h3>
+<a href=#Compare_excess_ASMR_to_excess_raw_deaths id=Compare_excess_ASMR_to_excess_raw_deaths>Compare excess ASMR to excess raw deaths</a>
+</h3>
+<pre>library(data.table);library(ggplot2)
+
+t=fread(&quot;http://sars2.net/f/eurostatpopdead.csv.gz&quot;)[year%in%2013:2022]
+t=merge(t,t[location==&quot;EU27_2020&quot;&amp;year==2020,.(age,std=pop/sum(pop))])
+t=t[location%in%na.omit(t)[,.N,location][N==max(N),location]]
+t=t[!location%in%c(&quot;DE_TOT&quot;)]
+
+a=t[,.(dead=sum(dead),asmr=sum(dead/pop*std)*1e5),.(location,name,year)]
+a$base=a[year&lt;2020,predict(lm(asmr~year),.(year=2013:2022)),location]$V1
+a$base2=a[year%in%2015:2019,predict(lm(dead~year),.(year=2013:2022)),location]$V1
+p=a[year==2022,.(x=(asmr/base-1)*100,y=(dead/base2-1)*100),name]
+
+q=\(...)as.character(substitute(...()))
+east=q(Bulgaria,Croatia,Cyprus,Czechia,Estonia,Greece,Hungary,Latvia,Poland,Romania,Serbia,Slovenia,Slovakia)
+lab=q(Western,Eastern)
+p$z=factor(ifelse(p$name%in%east,lab[2],lab[1]),lab)
+
+breaks=p[,pretty(c(x,y),9)];lims=p[,extendrange(range(c(x,y)),,.04)]
+
+ggplot(p,aes(x,y))+
+coord_fixed(clip=&quot;off&quot;,expand=F)+
+geom_vline(xintercept=0,linewidth=.4,color=&quot;gray60&quot;)+
+geom_hline(yintercept=0,linewidth=.4,color=&quot;gray60&quot;)+
+geom_abline(linetype=&quot;dashed&quot;,color=&quot;gray60&quot;,size=.4)+
+geom_point(aes(color=z),size=.6)+
+ggrepel::geom_text_repel(aes(label=name,color=z),size=3,max.overlaps=Inf,segment.size=.1,min.segment.length=.2,box.padding=.07,show.legend=F)+
+labs(title=&quot;Eurostat: Excess ASMR in 2022 vs excess raw deaths in 2022&quot;,x=&quot;Excess ASMR in 2022 relative to 2013-2019 linear trend&quot;,y=&quot;Excess raw deaths in 2022 relative to 2015-2019 linear trend&quot;)+
+scale_x_continuous(limits=lims,breaks=breaks,labels=\(x)paste0(x,&quot;%&quot;))+
+scale_y_continuous(limits=lims,breaks=breaks,labels=\(x)paste0(x,&quot;%&quot;))+
+scale_color_manual(values=c(&quot;#5555ff&quot;,&quot;#ff4444&quot;))+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.text.x=element_text(margin=margin(3)),
+  axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
+  axis.ticks.length=unit(-4,&quot;pt&quot;),
+  axis.title=element_text(size=11),
+  axis.title.x=element_text(margin=margin(3)),
+  axis.title.y=element_text(margin=margin(,2)),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.position=&quot;top&quot;,
+  legend.justification=&quot;left&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.margin=margin(,,6),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.4),
+  panel.grid.major=element_blank(),
+  plot.subtitle=element_text(size=11),
+  plot.title=element_text(size=11.5,face=2,margin=margin(1,,5)))
+ggsave(&quot;1.png&quot;,width=6,height=6,dpi=300*4)
+
+sub=&quot;ASMR was calculated by single year of age up to ages 100+ so that the 2020 EU population estimates were used as the standard population. Deaths and population estimates by single year of age were compiled with this script: sars2.net/stat.html#Compile_a_CSV_file_for_deaths_and_population_estimates_by_single_year_of_age_in_various_countries. Countries that had deaths or population estimates missing for any combination of age or year in 2013-2022 were omitted.&quot;
+system(paste0(&quot;mogrify -trim 1.png;w=`identify -format %w 1.png`;magick 1.png \\( -size $[w]x -font Arial -interline-spacing -3 -pointsize $[44*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -splice x100 \\) -append -resize 25% -bordercolor white -border 30 -colors 256 1.png&quot;))</pre>
+<div class="width6">
+<img src="i/stat-eurostat-vs-owid.png">
+</div>
 <h2>
 <a href=#United_Nations id=United_Nations>United Nations</a>
 </h2>
