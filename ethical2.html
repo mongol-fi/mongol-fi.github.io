@@ -74,6 +74,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Deaths_from_lung_cancer>Deaths from lung cancer</a></li>
 <li><a href=#Hugh_Akstons_corroboration_of_Ethical_Skeptics_plot_for_cancer_mortality>Hugh Akston's corroboration of Ethical Skeptic's plot for cancer mortality</a></li>
 <li><a href=#Estimated_yearly_new_cancer_cases_by_American_Cancer_Society>Estimated yearly new cancer cases by American Cancer Society</a></li>
+<li><a href=#Plot_for_trough_regression_in_2014_2019>Plot for trough regression in 2014-2019</a></li>
 </ul>
 
 <h2>
@@ -1436,6 +1437,80 @@ theme(axis.text=element_text(size=11,color=&quot;black&quot;),
   strip.text=element_blank())
 ggsave(&quot;1.png&quot;,width=7,height=6,dpi=300*4)
 system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
+</div>
+<h2>
+<a href=#Plot_for_trough_regression_in_2014_2019 id=Plot_for_trough_regression_in_2014_2019>Plot for trough regression in 2014-2019</a>
+</h2>
+<p>ES posted this tweet: [<a href="https://x.com/EthicalSkeptic/status/1869746508276392017">https://x.com/EthicalSkeptic/status/1869746508276392017</a>)]</p>
+<blockquote>
+<p>How troll-analysts fabricate their disinfo <span class="quote">'graphs'</span>:</p>
+<p>Paltering the Baseline - fails to detect variation asymmetry in baseline years - Gaussian-blends this bias into their linear regression (creates an unseen future deficit - but looks wonderful now).</p>
+<p>Don't possess the real world experience to know to index growth by stable (trough) periods alone.</p>
+<p>Fails to employ professional Pull-Forward Effect praxis.</p>
+<p>Fail to follow up on their work later, to see if their model was valid (we do this in spades👍).</p>
+<p>I can easily replicate their graphs, but could not respect myself or sleep at night if I published them as <span class="quote">'truth'</span>. They do not have the skills to replicate my charts.</p>
+<p><img src=i/ethical-trough-1.jpg class=width11></p>
+</blockquote>
+<p>However the slope of his so-called trough regression doesn't even seem to match the actual summer troughs in his plot. Here I added four different baselines fitted against the troughts, but all of them were much steeper than the line for his trough regression:</p>
+<div class="width11">
+<img src="i/ethical-trough-2.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2)
+
+download.file(&quot;https://data.cdc.gov/api/views/3yf8-kanr/rows.csv?accessType=DOWNLOAD&quot;,&quot;Weekly_Counts_of_Deaths_by_State_and_Select_Causes__2014-2019.csv&quot;)
+
+t=fread(&quot;Weekly_Counts_of_Deaths_by_State_and_Select_Causes__2014-2019.csv&quot;)
+
+t=t[t[[1]]==&quot;United States&quot;,.(year=`MMWR Year`,week=`MMWR Week`,dead=`All  Cause`,date=as.IDate(`Week Ending Date`,&quot;%m/%d/%Y&quot;))]
+
+t=rbind(t,fread(&quot;http://sars2.net/f/wonderdeadweekly.csv&quot;)[year&gt;2019&amp;!(year==2024&amp;week&gt;=25)&amp;week!=99])
+
+t$trough=t[year&lt;2020&amp;week%in%21:31,predict(lm(dead~date),t)]
+base=merge(t,t[year&lt;2020&amp;week%in%21:31,.(week=26,base=mean(dead)),year])
+t$trough2=predict(lm(base~date,base),t)
+
+t$trough3=t[year&lt;2020&amp;week%in%16:36,predict(lm(dead~date),t)]
+base2=merge(t,t[year&lt;2020&amp;week%in%16:36,.(week=26,base=mean(dead)),year])
+t$trough4=predict(lm(base~date,base2),t)
+
+lab=c(&quot;Actual deaths&quot;,&quot;Linear regression of weeks 21-31 of 2014-2019 (each week included in regression)&quot;,&quot;Linear regression of weeks 21-31 of 2014-2019 (regression of yearly averages plotted on week 26)&quot;,&quot;Linear regression of weeks 16-36 of 2014-2019 (each week included in regression)&quot;,&quot;Linear regression of weeks 16-36 of 2014-2019 (regression of yearly averages plotted on week 26)&quot;)
+p=t[,.(x=date,y=c(dead,trough,trough2,trough3,trough4),z=factor(rep(lab,each=.N),lab))]
+
+xstart=yea(2014);xend=yea(2025)
+xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=ifelse(month(xbreak)==7,year(xbreak),&quot;&quot;)
+ybreak=pretty(p$y,7);ystart=ybreak[1];yend=max(ybreak)
+
+ggplot(p,aes(x,y))+
+geom_vline(xintercept=c(xstart),color=&quot;magenta&quot;,linewidth=.2,lineend=&quot;square&quot;)+
+geom_hline(yintercept=c(ystart),color=&quot;magenta&quot;,linewidth=.2,lineend=&quot;square&quot;)+
+geom_line(aes(color=z,linetype=z),linewidth=.3)+
+labs(x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart-.2,xend+.5),breaks=xbreak,labels=xlab)+
+scale_y_continuous(breaks=ybreak,labels=\(x)paste0(x/1e3,&quot;k&quot;))+
+scale_color_manual(values=hsv(c(30,12,12,22,22)/36,.6,1))+
+scale_linetype_manual(values=c(&quot;solid&quot;,&quot;42&quot;,&quot;11&quot;,&quot;42&quot;,&quot;11&quot;))+
+coord_cartesian(ylim=c(ystart,yend),clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=6,color=&quot;magenta&quot;),
+  axis.ticks=element_line(linewidth=.2,color=&quot;magenta&quot;),
+  axis.ticks.x=element_line(color=alpha(&quot;magenta&quot;,c(1,0))),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.key=element_blank(),
+  legend.key.height=unit(7,&quot;pt&quot;),
+  legend.key.width=unit(18,&quot;pt&quot;),
+  legend.position=c(.01,.46),
+  legend.justification=c(0,0),
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.margin=margin(,,6),
+  legend.text=element_text(color=&quot;white&quot;,size=5.4,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.grid=element_blank(),
+  plot.background=element_rect(fill=&quot;transparent&quot;,color=NA))
+ggsave(&quot;1.png&quot;,width=7,height=2,dpi=400)</pre>
 </div>
 <script>
 let q=document.querySelectorAll('a,code,pre')

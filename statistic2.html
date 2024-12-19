@@ -77,6 +77,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#John_Beaudoin_Increase_in_deaths_with_MCD_other_specified_disorders_of_skin_and_subcutaneous_tissue>John Beaudoin: Increase in deaths with MCD other specified disorders of skin and subcutaneous tissue</a></li>
 <li><a href=#John_Beaudoin_Deaths_with_MCD_other_venous_embolism_and_thrombosis>John Beaudoin: Deaths with MCD other venous embolism and thrombosis</a></li>
 <li><a href=#John_Beaudoin_Deaths_with_disorders_involving_the_immune_mechanism>John Beaudoin: Deaths with disorders involving the immune mechanism</a></li>
+<li><a href=#Excess_mortality_in_European_countries_compared_to_percentage_of_vaccinated_people>Excess mortality in European countries compared to percentage of vaccinated people</a></li>
 </ul>
 
 <h2>
@@ -1103,11 +1104,11 @@ system(&quot;w=`identify -format %w 1.png`;pad=20;magick -pointsize 44 -font Ari
 <h2>
 <a href=#John_Beaudoin_Deaths_with_disorders_involving_the_immune_mechanism id=John_Beaudoin_Deaths_with_disorders_involving_the_immune_mechanism>John Beaudoin: Deaths with disorders involving the immune mechanism</a>
 </h2>
-<p>John Beaudoin posted these tweets:</p>
+<p>John Beaudoin posted these tweets: [<a href="https://x.com/JohnBeaudoinSr/status/1866915597331595599">https://x.com/JohnBeaudoinSr/status/1866915597331595599</a>]</p>
 <div class="maxwidth">
 <img src=i/statistic-beaudoin-immune-1.png class=width5><img src=i/statistic-beaudoin-immune-2.png class=width5>
 </div>
-<p>However his method of dividing the deaths by the total number of deaths isn't a good method to adjust for the impact of COVID, because some MCDs have a higher proportion of COVID deaths than other MCDs. His method assumes that the proportion of COVID deaths for deaths with MCD D80-D89 would be the same as the overall proportion of COVID deaths out of all deaths at CDC WONDER the same year.</p>
+<p>In the second method he attempted to account for COVID deaths by dividing the number of deaths under his ICD codes by the total number of deaths from all causes. But it's nto a good method to adjust for the impact of COVID, because some MCDs have a higher proportion of COVID deaths than other MCDs, even though his method assumes that the proportion of COVID deaths for deaths with MCD D80-D89 would be the same as the overall proportion of COVID deaths out of all deaths at CDC WONDER the same year.</p>
 <p>But in the next plot when I instead plotted deaths that had MCD D80-D89 but not MCD COVID, I got negative excess deaths in 2020 and 2021. I still got clearly positive MCD deaths in 2023 and 2024, even though it might partially be if my linear baseline was inaccurate because the long-term trend going back to 1999 seems to be curved upwards. And the UCD deaths remained close to the baseline even in 2023 and 2024, so I don't know what explains the difference between MCD and UCD in 2023 and 2024:</p>
 <div class="width7">
 <img src="i/statistic-beaudoin-immune-3.png">
@@ -1211,6 +1212,342 @@ pheatmap::pheatmap(m^exp,filename=&quot;1.png&quot;,
   colorRampPalette(pal)(256))
 
 system(&quot;w=`identify -format %w 1.png`;pad=20;magick -pointsize 44 -font Arial-Bold \\( -size $[w-pad] caption:&#39;CDC WONDER: Yearly deaths by multiple cause of death (ICD codes starting with D8 with at least 100 total nonsuppressed deaths)&#39; -splice $[pad]x24 \\) 1.png -append 1.png&quot;)</pre>
+</div>
+<h2>
+<a href=#Excess_mortality_in_European_countries_compared_to_percentage_of_vaccinated_people id=Excess_mortality_in_European_countries_compared_to_percentage_of_vaccinated_people>Excess mortality in European countries compared to percentage of vaccinated people</a>
+</h2>
+<p>Peter Hegarty, Raphael Lataster, Igor Chudov, and Guyla Nagy have all published a similar analysis where they compared excess mortality across European countries against the percentage of vaccinated people, and they found that the percentage of vaccinated people had a positive correlation with excess mortality in 2023. [<a href="https://x.com/PeterHegarty17/status/1700894195362197780">https://x.com/PeterHegarty17/status/1700894195362197780</a>, <a href="https://okaythennews.substack.com/p/study-shows-european-excess-mortality">https://okaythennews.substack.com/p/study-shows-european-excess-mortality</a>, <a href="https://www.igor-chudov.com/p/2023-excess-mortality-positively">https://www.igor-chudov.com/p/2023-excess-mortality-positively</a>, <a href="https://forum.index.hu/Article/jumpTree?a=166090420&t=9243202">https://forum.index.hu/Article/jumpTree?a=166090420&amp;t=9243202</a>] Chudov took excess mortality data from OECD which used a 2015-2019 average baseline, but the others took excess mortality data from Eurostat which uses a 2016-2019 average baseline.</p>
+<p>However a prepandemic average baseline for raw deaths overestimates excess mortality in Western European countries relative to Eastern European countries. And Eastern European countries have a lower percentage of vaccinated people which explains the positive correlation in 2023.</p>
+<p>In the years before COVID Western European countries had on average a steeper increase in the number of deaths per year than Eastern European countries. And in Eastern European countries the population size was reduced more by excess deaths in 2020 and 2021, so in the plot below where I calculated the green line for the expected number of deaths by multiplying the pre-COVID trend in deaths for each age by the population estimates for each age, Eastern European countries have a bigger drop in the baseline by 2022:</p>
+<div class="width7">
+<img src="i/statistic-euro-2.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2)
+
+q=\(...)as.character(substitute(...()))
+
+# sars2.net/stat.html#Eurostat
+t=fread(&quot;http://sars2.net/f/eurostatpopdead.csv.gz&quot;)[year%in%2010:2022]
+t=t[location%in%na.omit(t)[,.N,location][N==max(N),location]]
+t=t[!location%in%q(DE_TOT,EFTA)]
+
+base=t[year%in%2010:2019,.(year=2010:2022,base=predict(lm(dead/pop~year),.(year=2010:2022))),.(age,location)]
+
+p=merge(t,base)[,.(dead=sum(dead),base=sum(base*pop)),.(year,name)]
+p=merge(p,p[year%in%2016:2019,.(ave=mean(dead)),name])
+lab=c(&quot;Actual deaths&quot;,&quot;2016-2019 average&quot;,&quot;2010-2019 trend in CMR by age × population&quot;)
+p=p[,.(x=year,y=c(dead,ave,base),z=factor(rep(lab,each=.N),lab),group=name)]
+
+west=q(Iceland,Norway,Finland,Sweden,Denmark,Ireland,Netherlands,Belgium,Luxembourg,Germany,Liechtenstein,Switzerland,Austria,France,Portugal,Spain,Italy,Malta,Greece,Cyprus)
+east=q(Estonia,Latvia,Poland,Czechia,Slovakia,Hungary,Slovenia,Croatia,Serbia,Romania,Bulgaria)
+tot=c(&quot;West average&quot;,&quot;East average&quot;)
+
+p=merge(p,p[z==z[1]&amp;x%in%2016:2019,.(base=mean(y)),group])[,y:=y/base*100]
+p=rbind(p,p[,.(y=mean(y),base=mean(base)),.(z,x,group=ifelse(group%in%west,tot[1],tot[2]))])
+p[,group:=factor(group,c(west,east,tot))]
+
+xstart=2010;xend=2022;p=p[x%in%xstart:xend]
+
+ggplot(p,aes(x,y))+
+facet_wrap(~group,ncol=5,dir=&quot;v&quot;)+
+geom_hline(yintercept=0,color=&quot;gray60&quot;,linewidth=.4)+
+geom_line(aes(color=z,linewidth=z,linetype=z))+
+geom_point(aes(alpha=z,color=z),stroke=.5,size=1.5,shape=1)+
+geom_text(data=p[rowid(group)==1],aes(label=group),color=ifelse(p[rowid(group)==1,group]%in%c(west,tot[1]),&quot;#4444ff&quot;,&quot;#ff4444&quot;),y=max(p$y),x=xstart,hjust=0,size=3.2,vjust=1.1)+
+labs(title=&quot;Eurostat: Yearly deaths as percentage of 2016-2019 average&quot;,x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=seq(xstart+1,xend,2))+
+scale_y_continuous(limits=extendrange(p$y,,.03),breaks=pretty,labels=\(x)paste0(x,&quot;%&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+scale_color_manual(values=c(&quot;black&quot;,&quot;black&quot;,&quot;#00aa00&quot;))+
+scale_linewidth_manual(values=c(0,.5,.6))+
+scale_linetype_manual(values=c(&quot;solid&quot;,&quot;31&quot;,&quot;solid&quot;))+
+scale_alpha_manual(values=c(1,0,0))+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.text.x=element_text(angle=90,vjust=.5,hjust=),
+  axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
+  axis.ticks.length=unit(3,&quot;pt&quot;),
+  axis.title=element_text(size=8),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.justification=&quot;right&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(25,&quot;pt&quot;),
+  legend.margin=margin(,,6),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.4),
+  panel.spacing.x=unit(0,&quot;pt&quot;),
+  panel.spacing.y=unit(0,&quot;pt&quot;),
+  plot.margin=margin(7,7,7,7),
+  plot.title=element_text(size=11.5,face=2,margin=margin(1,,4)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=7,height=9,dpi=300*4)
+system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
+</div>
+<p>In the plot above I used Eurostat's population estimates on January 1st for each year, so for example in Spain the green line drops between 2020 and 2021 because the excess deaths in 2020 didn't affect the population estimates I used until 2021. If I would've used mid-year population estimates or the average population throughout the year, the green line in Spain would've already dropped in 2020.</p>
+<p>I treated Finland, Greece, and Cyprus as Western European even though they are geographically part of Eastern Europe. But they had a higher percentage of vaccinated people than any eastern bloc country in my analysis, and before COVID their yearly number of deaths was also increasing at a steeper slope than in most eastern bloc countries.</p>
+<p>Here my correlation between the percentage of vaccinated people and excess mortality in 2022 dropped from about 0.34 to about -0.16 when I switched from the 2016-2019 average baseline to a 2013-2019 linear regression for ASMR:</p>
+<div class="width6">
+<img src="i/statistic-euro-1.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>download.file(&quot;https://covid.ourworldindata.org/data/owid-covid-data.csv&quot;,&quot;owid-covid-data.csv&quot;)
+
+library(data.table);library(ggplot2)
+
+o=fread(&quot;owid-covid-data.csv&quot;)
+
+# sars2.net/stat.html#Eurostat
+t=fread(&quot;http://sars2.net/f/eurostatpopdead.csv.gz&quot;)[year%in%2013:2022]
+t=merge(t,t[location==&quot;EU27_2020&quot;&amp;year==2020,.(age,std=pop/sum(pop))])
+t=t[location%in%na.omit(t)[,.N,location][N==max(N),location]]
+t=t[!location%in%c(&quot;DE_TOT&quot;)]
+
+a=t[,.(dead=sum(dead),asmr=sum(dead/pop*std)*1e5),.(location,name,year)]
+a$base=a[year&lt;2020,predict(lm(asmr~year),.(year=2013:2022)),location]$V1
+a$base2=a[year%in%2015:2019,predict(lm(dead~year),.(year=2013:2022)),location]$V1
+a=merge(a,a[year%in%2016:2019,.(base3=mean(dead)),location])
+p=a[year==2022,.(x=(asmr/base-1)*100,y=(dead/base3-1)*100),name]
+
+p=merge(p,o[year(date)==2022,.(vaxpct=mean(people_vaccinated_per_hundred,na.rm=T)),.(name=location)])
+p=na.omit(p)
+
+lab=c(&quot;2016-2019 average for raw deaths&quot;,&quot;2013-2019 linear regression for ASMR&quot;)
+p=p[,.(name,x=vaxpct,y=c(y,x),facet=factor(rep(lab,each=.N),lab))]
+
+q=\(...)as.character(substitute(...()))
+east=q(Bulgaria,Croatia,Cyprus,Czechia,Estonia,Greece,Hungary,Latvia,Poland,Romania,Serbia,Slovenia,Slovakia)
+lab=q(Eastern,Western)
+p$z=factor(ifelse(p$name%in%east,lab[1],lab[2]),lab)
+
+levels(p$facet)=p[,cor(x,y),facet][,sprintf(&quot;Baseline is %s (r ≈ %.2f)&quot;,facet,V1)]
+
+xbreak=pretty(p$x,7);ybreak=pretty(p$y,7);ylim=extendrange(p$y,,.02)
+
+ggplot(p,aes(x,y))+
+facet_wrap(~facet,dir=&quot;v&quot;,scales=&quot;free_x&quot;)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+geom_vline(xintercept=0,linewidth=.4,color=&quot;gray60&quot;)+
+geom_hline(yintercept=0,linewidth=.4,color=&quot;gray60&quot;)+
+geom_smooth(method=&quot;lm&quot;,formula=y~x,linewidth=.5,se=F,color=&quot;black&quot;,linetype=&quot;42&quot;)+
+geom_label(data=p[rowid(facet)==1],aes(label=stringr::str_wrap(facet,40)),x=xbreak[1],y=ylim[2],lineheight=.9,hjust=0,vjust=1,size=3.7,label.r=unit(0,&quot;pt&quot;),label.padding=unit(6,&quot;pt&quot;),label.size=.4)+
+geom_point(aes(color=z),size=.7)+
+ggrepel::geom_text_repel(aes(label=name,color=z),size=3,max.overlaps=Inf,segment.size=.3,min.segment.length=.2,box.padding=.07,show.legend=F)+
+labs(title=&quot;Correlation between percentage of vaccinated people in 2022 and\nexcess mortality percent in 2022&quot;,x=&quot;Average percentage of vaccinated people throughout 2022 at OWID&quot;,y=&quot;Excess percentage of deaths in 2022 at Eurostat&quot;)+
+scale_x_continuous(breaks=xbreak,limits=range(xbreak),labels=\(x)paste0(x,&quot;%&quot;))+
+scale_y_continuous(breaks=ybreak,limits=ylim,labels=\(x)paste0(x,&quot;%&quot;))+
+scale_color_manual(values=c(&quot;#ff4444&quot;,&quot;#5555ff&quot;))+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.text.x=element_text(margin=margin(3)),
+  axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
+  axis.ticks.length=unit(4,&quot;pt&quot;),
+  axis.title=element_text(size=11),
+  axis.title.x=element_text(margin=margin(3)),
+  axis.title.y=element_text(margin=margin(,2)),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(16,&quot;pt&quot;),
+  legend.position=&quot;top&quot;,
+  legend.justification=&quot;right&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.margin=margin(,,6),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.4),
+  panel.grid.major=element_blank(),
+  panel.spacing=unit(4,&quot;pt&quot;),
+  plot.margin=margin(6,22,5,5),
+  plot.subtitle=element_text(size=11),
+  plot.title=element_text(size=11.5,face=2,margin=margin(1,,5)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=6,height=6,dpi=300*4)
+
+sub=&quot;Source: covid.ourworldindata.org/data/owid-covid-data.csv and Eurostat datasets demo_magec and demo_pjan. ASMR was calculated by single year of age up to ages 100+ so that the 2020 EU population estimates were used as the standard population. Countries that had deaths or population estimates missing for any combination of age or year in 2013-2022 were omitted. Romania was omitted because it was missing vaccination data at OWID.&quot;
+system(paste0(&quot;mogrify -trim 1.png;w=`identify -format %w 1.png`;magick 1.png \\( -size $[w]x -font Arial -interline-spacing -3 -pointsize $[44*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -splice x100 \\) -append -resize 25% -bordercolor white -border 30 -colors 256 1.png&quot;))</pre>
+</div>
+<p>Here Eastern European countries are also more likely to be below the diagonal, which means that the 2016-2019 average baseline likely overestimates their excess mortality in 2022 compared to ASMR:</p>
+<div class="width6">
+<img src="i/statistic-euro-4.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2)
+
+eu=fread(&quot;http://sars2.net/f/eurostatpopdead.csv.gz&quot;)[year%in%2013:2022] # sars2.net/stat.html#Eurostat
+eu=merge(eu,eu[location==&quot;EU27_2020&quot;&amp;year==2020,.(age,std=pop/sum(pop))])
+eu=eu[!location%in%c(&quot;DE_TOT&quot;,&quot;EFTA&quot;)]
+eu=eu[location%in%na.omit(eu)[,.N,location][N==max(N),location]]
+
+a=eu[,.(dead=sum(dead),asmr=sum(dead/pop*std*1e5)),.(name,year)]
+a$base=a[year&lt;2020,predict(lm(asmr~year),.(year=2013:2022)),name]$V1
+a=merge(a,a[year%in%2016:2019,.(base2=mean(dead)),name])
+
+p=a[year==2022,.(x=(asmr/base-1)*100,y=(dead/base2-1)*100,name)]
+
+east=c(&quot;Bulgaria&quot;,&quot;Croatia&quot;,&quot;Czechia&quot;,&quot;Estonia&quot;,&quot;Hungary&quot;,&quot;Latvia&quot;,&quot;Poland&quot;,&quot;Romania&quot;,&quot;Serbia&quot;,&quot;Slovenia&quot;,&quot;Slovakia&quot;)
+lab=c(&quot;Western Europe&quot;,&quot;Eastern Europe&quot;)
+p[,z:=factor(ifelse(name%in%east,lab[2],lab[1]),lab)]
+
+breaks=p[,pretty(c(x,y),9)];lims=p[,extendrange(range(c(x,y)),,.04)]
+
+ggplot(p,aes(x,y))+
+coord_fixed(clip=&quot;off&quot;,expand=F)+
+geom_vline(xintercept=0,linewidth=.4,color=&quot;gray60&quot;)+
+geom_hline(yintercept=0,linewidth=.4,color=&quot;gray60&quot;)+
+geom_abline(linetype=&quot;dashed&quot;,color=&quot;gray60&quot;,size=.4)+
+geom_point(aes(color=z),size=.6)+
+ggrepel::geom_text_repel(aes(label=name,color=z),size=3,max.overlaps=Inf,segment.size=.1,min.segment.length=.2,box.padding=.07,show.legend=F)+
+labs(title=&quot;Eurostat: Excess ASMR in 2022 vs excess raw deaths in 2022&quot;,x=&quot;Excess ASMR in 2022 relative to 2013-2019 linear trend&quot;,y=&quot;Excess raw deaths in 2022 relative to 2015-2019 linear trend&quot;)+
+scale_x_continuous(limits=lims,breaks=breaks,labels=\(x)paste0(x,&quot;%&quot;))+
+scale_y_continuous(limits=lims,breaks=breaks,labels=\(x)paste0(x,&quot;%&quot;))+
+scale_color_manual(values=c(&quot;#5555ff&quot;,&quot;#ff4444&quot;))+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.text.x=element_text(margin=margin(3)),
+  axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
+  axis.ticks.length=unit(-4,&quot;pt&quot;),
+  axis.title=element_text(size=11),
+  axis.title.x=element_text(margin=margin(3)),
+  axis.title.y=element_text(margin=margin(,2)),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.position=&quot;top&quot;,
+  legend.justification=&quot;left&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.margin=margin(,,6),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.4),
+  panel.grid.major=element_blank(),
+  plot.subtitle=element_text(size=11),
+  plot.title=element_text(size=11.5,face=2,margin=margin(1,,5)))
+ggsave(&quot;1.png&quot;,width=6,height=6,dpi=300*4)
+
+sub=&quot;ASMR was calculated by single year of age up to ages 100+ so that the 2020 EU population estimates were used as the standard population. Deaths and population estimates by single year of age were compiled with this script: sars2.net/stat.html#Compile_a_CSV_file_for_deaths_and_population_estimates_by_single_year_of_age_in_various_countries. Countries that had deaths or population estimates missing for any combination of age or year in 2013-2022 were omitted.&quot;
+system(paste0(&quot;mogrify -trim 1.png;w=`identify -format %w 1.png`;magick 1.png \\( -size $[w]x -font Arial -interline-spacing -3 -pointsize $[44*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -splice x100 \\) -append -resize 25% -bordercolor white -border 30 -colors 256 1.png&quot;))</pre>
+</div>
+<p>In the previous plots I used the Eurostat dataset demo_magec which has yearly deaths by single year of age: <a href="https://ec.europa.eu/eurostat/databrowser/product/page/demo_magec">https://ec.europa.eu/eurostat/databrowser/product/page/demo_magec</a>. However it was still missing deaths for 2023 as of December 2024, so in the next plot I looked at the Eurotat dataset for weekly deaths by five-year age groups instead which also has data for 2023 and 2024: <a href="https://ec.europa.eu/eurostat/databrowser/product/page/demo_r_mwk_05">https://ec.europa.eu/eurostat/databrowser/product/page/demo_r_mwk_05</a>. In the top panel of the plot below if you look at the black line for both Western Europe and Eastern Europe, the total correlation in 2023 is close to zero:</p>
+<div class="width6">
+<img src="i/statistic-euro-3.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>download.file(&quot;https://covid.ourworldindata.org/data/owid-covid-data.csv&quot;,&quot;owid-covid-data.csv&quot;)
+download.file(&quot;https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/demo_r_mwk_05?format=TSV&quot;,&quot;demo_r_mwk_05.tsv&quot;)
+
+library(data.table);library(ggplot2)
+
+isoweek=\(year,week,weekday=7){d=as.Date(paste0(year,&quot;-1-4&quot;));d-(as.integer(format(d,&quot;%w&quot;))+6)%%7-1+7*(week-1)+weekday}
+q=\(...)as.character(substitute(...()))
+ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
+
+o=fread(&quot;owid-covid-data.csv&quot;)
+
+euro=fread(&quot;demo_r_mwk_05.tsv&quot;)
+meta=fread(text=euro[[1]],header=F)
+pick=meta[,V2%like%&quot;^Y&quot;&amp;V3==&quot;T&quot;];meta=meta[pick];euro=euro[pick]
+meta[,age:=as.integer(sub(&quot;\\D+(\\d+).*&quot;,&quot;\\1&quot;,sub(&quot;Y_LT5&quot;,0,V2)))]
+eu=meta[,.(loc=V5,age,date=rep(names(euro)[-1],each=.N),dead=as.integer(sub(&quot;\\D+&quot;,&quot;&quot;,unlist(euro[,-1],,F))))]
+eu[,year:=as.integer(substr(date,1,4))][,week:=as.integer(substr(date,7,8))]
+eu[,date:=isoweek(year,week,4)]
+eu=eu[loc%in%eu[year%in%2013:2023,.N,loc][N==max(N),loc]]
+eu=eu[year&gt;=2013]
+
+pop=fread(&quot;http://sars2.net/f/eurostatpopdead.csv.gz&quot;)[year%in%2013:2023] # sars2.net/stat.html#Eurostat
+a=pop[,.(pop=sum(pop)),.(location,name,date=as.Date(paste0(year,&quot;-1-1&quot;)),age=pmin(age,90)%/%5*5)]
+a=a[location%in%na.omit(a)[,.N,location][N==max(N),location]]
+a=a[,spline(date,pop,xout=unique(eu$date),method=&quot;natural&quot;),.(location,age,name)]
+
+a=merge(eu,a[,.(date=`class&lt;-`(x,&quot;Date&quot;),pop=y,loc=location,name,age)])
+a=merge(pop[location==&quot;EU27_2020&quot;&amp;year==2020,.(pop=sum(pop)),.(age=pmin(age,90)%/%5*5)][,.(age,std=pop/sum(pop))],a)
+a=a[loc%in%na.omit(a)[year%in%2013:2023,.N,loc][N==max(N),loc]]
+
+a=a[,.(dead=sum(dead),asmr=sum(dead/pop*std/7*365e5)),,.(name,date,year,week)]
+slope=a[year%in%2013:2019&amp;week%in%15:35,mean(asmr),.(year,name)]
+slope=slope[,{x=.(year=2013:2024,slope=predict(lm(V1~year),.(year=2013:2024)));x$slope=x$slope/x$slope[x$year==2016];x},name]
+weekly=a[year%in%2013:2019,.(weekly=mean(asmr)),.(week,name)]
+a=merge(slope,merge(weekly,a))
+a=merge(a[year%in%2016:2019,.(deadbase=mean(dead)),.(name,week)],a)
+p=a[,.(pct=(asmr/(slope*weekly)-1)*100,pct2=(dead/deadbase-1)*100),,.(name,date)]
+
+east=q(Estonia,Latvia,Poland,Czechia,Slovakia,Hungary,Montenegro,Slovenia,Croatia,Serbia,Romania,Bulgaria)
+
+p=merge(p,o[,.(date,vax=nafill(nafill(zoo::na.approx(people_vaccinated_per_hundred,na.rm=F),&quot;locf&quot;),,0)),.(name=location)])
+p[,z:=ifelse(name%in%east,&quot;Eastern Europe&quot;,&quot;Western Europe&quot;)]
+p=rbind(p,copy(p)[,z:=&quot;Total&quot;])
+p[,z:=factor(z,unique(z))]
+
+lab=c(&quot;Baseline is seasonality-adjusted linear trend for ASMR in 2013-2019&quot;,&quot;Baseline is average raw deaths on corresponding week number in 2016-2019&quot;)
+p=na.omit(p)[,.(y=c(cor(pct,vax),cor(pct2,vax)),group=lab),.(x=date,z)]
+p[,group:=factor(group,lab)]
+
+p[,y:=ma(y,2),.(z,group)]
+
+xstart=as.Date(&quot;2020-12-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
+xbreak=seq(as.Date(&quot;2021-1-1&quot;),xend,&quot;6 month&quot;);xlab=ifelse(month(xbreak)==7,year(xbreak),&quot;&quot;)
+
+sub=&quot;\u00a0    Weekly excess deaths by 5-year age groups are from the Eurostat dataset demo_r_mwk_05. Weekly population estimates were spline interpolated from population estimates on January 1st from the Eurostat dataset demo_pjan. ASMR was calculated by 5-year age groups up to ages 90+ so that the 2020 EU population was used as the standard population.
+     The slope of the baseline for ASMR was determined by doing a linear regression for mean ASMR on weeks 15-35 of each year, where winter weeks were excluded due to higher variability in mortality during winters. In order to adjust the baseline for seasonality, each week number has its own intercept.
+     The variable people_vaccinated_per_hundred at OWID was used for the percentage of vaccinated people. Missing values were interpolated linearly and the percentage was treated as zero before the earliest reported value. The percentage of vaccinated people on each Thursday was used as the percentage for the week.
+     Andorra, Albania, Germany, Lithuania, and UK were omitted because data for deaths or population estimates was missing.
+     Western Europe includes Finland, Greece, and Cyprus.&quot;
+
+ggplot(p,aes(x,y))+
+facet_wrap(~group,ncol=1,dir=&quot;v&quot;,scales=&quot;free_x&quot;)+
+geom_hline(yintercept=0,color=&quot;gray60&quot;,linewidth=.4)+
+geom_vline(xintercept=seq(as.Date(&quot;2021-1-1&quot;),xend,&quot;year&quot;),color=&quot;gray60&quot;,linewidth=.4)+
+geom_line(aes(color=z),linewidth=.6)+
+labs(title=paste0(&quot;Correlation between excess deaths at Eurostat and vaccinated percent at\nOWID for &quot;,a[,length(unique(name))],&quot; European countries (±2-week moving average)&quot;),x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
+scale_y_continuous(limits=c(-1,1),breaks=seq(-1,1,.5))+
+scale_color_manual(values=c(&quot;#5555ff&quot;,&quot;#ff5555&quot;,&quot;black&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.text.x=element_text(margin=margin(3)),
+  axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
+  axis.ticks.x=element_line(color=alpha(&quot;black&quot;,c(1,0))),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(4,&quot;pt&quot;),
+  axis.title=element_text(size=8),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.justification=&quot;right&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(25,&quot;pt&quot;),
+  legend.margin=margin(),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.4),
+  panel.spacing=unit(0,&quot;pt&quot;),
+  plot.margin=margin(7,7,7,7),
+  plot.title=element_text(size=11.5,face=2,margin=margin(1,,5)),
+  strip.background=element_blank(),
+  strip.text=element_text(size=11,face=2))
+ggsave(&quot;1.png&quot;,width=6.2,height=4.6,dpi=300*4)
+system(paste0(&quot;mogrify -trim 1.png;w=`identify -format %w 1.png`;magick 1.png \\( -size $[w]x -font Arial -interline-spacing -3 -pointsize $[46*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -splice x100 \\) -append -resize 25% -bordercolor white -border 30 -colors 256 1.png&quot;))</pre>
 </div>
 <script>
 let q=document.querySelectorAll('a,code,pre')
