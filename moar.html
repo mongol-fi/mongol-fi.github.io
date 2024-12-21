@@ -187,7 +187,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Deaths_in_Chris_Johnstons_OIA_response_as_percentage_of_average_deaths_in_2023>Deaths in Chris Johnston's OIA response as percentage of average deaths in 2023</a></li>
 <li><a href=#Article_about_excess_deaths_in_New_Zealand_linked_by_Robert_Malone>Article about excess deaths in New Zealand linked by Robert Malone</a></li>
 <li><a href=#Barrys_claim_that_The_Whatu_Oras_data_for_COVID_deaths_by_vaccination_status_cannot_be_found_on_the_Wayback_Machine>Barry's claim that The Whatu Ora's data for COVID deaths by vaccination status cannot be found on the Wayback Machine</a></li>
-<li><a href=#Deaths_in_ages_81_in_Chris_Johnstons_FOIA_response>Deaths in ages 81+ in Chris Johnston's FOIA response</a></li>
+<li><a href=#Deaths_in_ages_81_in_Chris_Johnstons_OIA_response>Deaths in ages 81+ in Chris Johnston's OIA response</a></li>
 </ul></li>
 </ul>
 
@@ -8376,7 +8376,7 @@ system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 <div class="spoiler">
 <button>
 Show code
-</button><pre>library(data.table);library(ggplot2)
+</button><pre>library(data.table);library(ggplot2);library(lubridate)
 
 t=fread(&quot;http://sars2.net/f/nz_monthly_vax_status_deaths_foia.csv&quot;,na=&quot;&lt;5&quot;)
 
@@ -8538,7 +8538,7 @@ system(&quot;mogrify -resize 25% PNG8:1.png&quot;)</pre>
 <p>Older versions of the data are available under the domain name health.gov.nz instead of tewhatuora.govt.nz. [<a href="http://web.archive.org/web/20230106045004/https://www.health.govt.nz/covid-19-novel-coronavirus/covid-19-data-and-statistics/covid-19-case-demographics">http://web.archive.org/web/20230106045004/https://www.health.govt.nz/covid-19-novel-coronavirus/covid-19-data-and-statistics/covid-19-case-demographics</a>]</p>
 <p>Bronwyn Meikle compiled different snapshots of the data at the Wayback Machine into a time series plot. [<a href="https://x.com/Bronwyn_Meikle/status/1756517505861087426">https://x.com/Bronwyn_Meikle/status/1756517505861087426</a>, <a href="https://x.com/Bronwyn_Meikle/status/1756762669896667392">https://x.com/Bronwyn_Meikle/status/1756762669896667392</a>] However her population sizes were probably not accurate or she made some error, because she got several times higher age-specific COVID mortality rates for boosted people than people who were not fully vaccinated.</p>
 <h3>
-<a href=#Deaths_in_ages_81_in_Chris_Johnstons_FOIA_response id=Deaths_in_ages_81_in_Chris_Johnstons_FOIA_response>Deaths in ages 81+ in Chris Johnston's FOIA response</a>
+<a href=#Deaths_in_ages_81_in_Chris_Johnstons_OIA_response id=Deaths_in_ages_81_in_Chris_Johnstons_OIA_response>Deaths in ages 81+ in Chris Johnston's OIA response</a>
 </h3>
 <p>Canceledmouse posted this plot and asked <span class="quote">&quot;where is the vaccine efficacy in the elderly in New Zealand&quot;</span>: [<a href="https://x.com/canceledmouse/status/1870290828104548418">https://x.com/canceledmouse/status/1870290828104548418</a>]</p>
 <div class="width8">
@@ -8656,7 +8656,7 @@ system(paste0(&quot;mogrify -trim 1.png;w=`identify -format %w 1.png`;magick 1.p
 <div class="spoiler">
 <button>
 Show code
-</button><pre>library(data.table);library(ggplot2)
+</button><pre>library(data.table);library(ggplot2);library(lubridate)
 
 t=fread(&quot;http://sars2.net/f/nz_monthly_vax_status_deaths_foia.csv&quot;,na=&quot;&lt;5&quot;)
 t=t[age_at_death==&quot;81_to_100&quot;]
@@ -8722,6 +8722,17 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
 ggsave(&quot;1.png&quot;,width=4,height=2.2,dpi=380*4)
 system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
 </div>
+<p>In the OIA response the number of deaths was suppressed on rows with 1-4 deaths, but I replaced each suppressed number of deaths with 2 deaths like previously. For example in March 2022 in ages 81-100, the number of rows where the deaths were suppressed was 6 for vaccinated people and zero for unvaccinated people, so vaccinated people can have anywhere between 6 and 24 suppressed deaths but I replaced them with 12 suppressed deaths:</p>
+<pre>&gt; t=fread(&quot;http://sars2.net/f/nz_monthly_vax_status_deaths_foia.csv&quot;,na=&quot;&lt;5&quot;)
+&gt; t[month_of_death==&quot;2022-03&quot;&amp;age_at_death==&quot;81_to_100&quot;,.(na_rows=sum(is.na(count))),.(vaxxed=last_dose_number&gt;0)]
+   vaxxed na_rows
+1:  FALSE       0
+2:   TRUE       6</pre>
+<p>However in March 2022 there was a total of 1520 non-suppressed deaths among vaccinated people in ages 81-100, so the number of suppressed deaths is fairly small in comparison:</p>
+<pre>t[month_of_death==&quot;2022-03&quot;&amp;age_at_death==&quot;81_to_100&quot;,.(deaths=sum(count,na.rm=T)),.(vaxxed=last_dose_number&gt;0)]
+   vaxxed deaths
+1:  FALSE    111
+2:   TRUE   1520</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
