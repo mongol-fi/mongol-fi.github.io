@@ -8733,6 +8733,55 @@ system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
    vaxxed deaths
 1:  FALSE    111
 2:   TRUE   1520</pre>
+<p>If you don't divide the number of deaths each month by the number of days per month, then the increase between February and March 2022 is even bigger because February has only 28 days. So I think it's better to adjust for the calculation for the duration of months, but in case you don't trust my plot above because it doesn't show the actual monthly number of deaths anywhere, this shows a similar calculation done with the unadjusted number of deaths:</p>
+<pre>t=fread(&quot;http://sars2.net/f/nz_monthly_vax_status_deaths_foia.csv&quot;,na=&quot;&lt;5&quot;)
+a=t[age_at_death==&quot;81_to_100&quot;]
+a[,vax:=ifelse(last_dose_number==0,&quot;unvax&quot;,&quot;vax&quot;)]
+a=a[,.(dead=sum(nafill(count,,2),na.rm=T)),.(vax,month=month_of_death)]
+a=dcast(a,month~vax,value.var=&quot;dead&quot;)
+
+pct=(a[-1,-1]/head(a[,-1],-1)-1)*100
+names(pct)=paste0(names(pct),&quot;_dif&quot;)
+cbind(a,rbind(list(NA,NA),round(pct)))[month&gt;=2021]|&gt;print(r=F)</pre>
+<!-- -->
+<pre>   month unvax  vax unvax_dif vax_dif
+ 2021-01  1351   NA        -3      NA
+ 2021-02  1181   NA       -13      NA
+ 2021-03  1335   NA        13      NA
+ 2021-04  1333   12         0      NA
+ 2021-05  1209  225        -9    1775
+ 2021-06   901  561       -25     149
+ 2021-07   742  899       -18      60
+ 2021-08   602 1070       -19      19
+ 2021-09   358 1077       -41       1
+ 2021-10   238 1167       -34       8
+ 2021-11   156 1180       -34       1
+ 2021-12   118 1217       -24       3
+ 2022-01    79 1261       -33       4
+ 2022-02    64 1190       -19      -6
+ 2022-03   111 1532        73      29 # &lt;- This was not adjusted for the number of days per month,
+ 2022-04    98 1442       -12      -6 #    so unvaccinated people have a 73% instead of 57% increase
+ 2022-05    79 1595       -19      11 #    in deaths between February and March 2022.
+ 2022-06    94 1652        19       4
+ 2022-07   103 1982        10      20
+ 2022-08    77 1688       -25     -15
+ 2022-09    83 1465         8     -13
+ 2022-10    68 1492       -18       2
+ 2022-11    55 1349       -19     -10
+ 2022-12    68 1443        24       7
+ 2023-01    68 1399         0      -3
+ 2023-02    39 1217       -43     -13
+ 2023-03    61 1344        56      10
+ 2023-04    42 1444       -31       7
+ 2023-05    58 1528        38       6
+ 2023-06    60 1501         3      -2
+ 2023-07    51 1622       -15       8
+ 2023-08    60 1653        18       2
+ 2023-09    59 1617        -2      -2
+ 2023-10    64 1513         8      -6
+ 2023-11    51 1476       -20      -2
+ 2023-12     2   44       -96     -97
+   month unvax  vax unvax_dif vax_dif</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
