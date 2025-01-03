@@ -793,6 +793,87 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
 ggsave(&quot;1.png&quot;,width=3.9,height=2.4,dpi=400*4)
 system(&quot;magick 1.png -resize 25% PNG8:1.png&quot;)</pre>
 </div>
+<p>Ethical Skeptic's plot says <span class="quote">&quot;5,478 Vaccine Deaths Ages 2-17&quot;</span>, but I don't know if it's supposed to mean total excess deaths from all natural causes since 2021. However in my plot above I got only about 1,806 excess deaths in 2021-2024. I also got a long period with massive negative excess deaths in December 2020 to March 2021 which seems to be missing from Ethical Skeptic's plot. So did he manually remove it because it didn't jibe with his vaccine inflection?</p>
+<p>Ethical Skeptic's plot has an average of about 40 excess deaths per week in 2023. But here my weekly average in 2023 was only about 18, 22, and 35 with the different baselines (but my red baseline is too steep because there were high deaths in early 2018 and low deaths in late 2019, and Ethical Skeptic is supposed to fit his baseline using the <span class="quote">&quot;summer troughs&quot;</span> only):</p>
+<div class="width6">
+<img src="i/ethical-217-4.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2)
+
+ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
+
+t=fread(&quot;http://sars2.net/f/wonder217naturalweekly.csv&quot;)[date&lt;=&quot;2024-11-1&quot;]
+t[,dead:=ma(dead,3,2)]
+
+t=merge(t,t[year&lt;2020,.(base=mean(dead),base2=mean(dead)),week])
+slope=t[year&lt;2020,mean(dead),year][,predict(lm(V1~year),.(year=2018:2024))]
+slope2=t[year&lt;2020&amp;week%in%15:35,mean(dead),year][,predict(lm(V1~year),.(year=2018:2024))]
+t[,base:=base*(slope/mean(slope[1:2]))[factor(t$year)]]
+t[,base2:=base2*(slope2/mean(slope2[1:2]))[factor(t$year)]]
+
+t$base3=t[year&lt;2020,predict(lm(dead~date),t)]
+t$base3=t$base3+t[year&lt;2020,mean(dead-base3),week]$V1[t$week]
+
+lab=c(&quot;Actual deaths&quot;,&quot;Baseline with slope determined by total on all weeks&quot;,&quot;Baseline with slope determined by total on weeks 15 to 35&quot;,&quot;Linear regression of weekly data with week number residuals added&quot;)
+p=t[,.(x=date,y=c(dead,base,base2,base3),z=factor(rep(lab,each=.N),lab))]
+
+p$facet=&quot;Deaths&quot;
+p=rbind(p,merge(p[z!=z[1]],p[z==z[1],.(x,actual=y)])[,.(x,y=actual-y,z,facet=&quot;Excess deaths&quot;)])
+p[,facet:=factor(facet,unique(facet))]
+
+xstart=as.Date(&quot;2018-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
+xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=ifelse(month(xbreak)==7,year(xbreak),&quot;&quot;)
+
+ggplot(p,aes(x=x,y))+
+facet_wrap(~facet,dir=&quot;v&quot;,scales=&quot;free&quot;)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray83&quot;,linewidth=.4)+
+geom_segment(data=tail(p,1),x=xstart,xend=xend,y=0,yend=0,linewidth=.4)+
+geom_line(aes(color=z),linewidth=.5)+
+geom_text(data=p[,.(y=max(y)),facet],x=pmean(xstart,xend),aes(label=facet),size=3.8,fontface=2,vjust=1.4)+
+labs(x=NULL,y=NULL,title=&quot;CDC WONDER: Weekly deaths in ages 2-17 with UCD A-Q (natural causes\nwithout R codes, U codes, or COVID)&quot;,subtitle=&quot;The data was retrieved on January 3rd 2025 UTC, so many deaths in 2024 are
+still missing because of a registration delay.&quot;)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab,expand=expansion(0,0))+
+scale_y_continuous(breaks=\(x)pretty(x,7),expand=expansion(.03,0))+
+scale_color_manual(values=c(&quot;black&quot;,&quot;blue&quot;,&quot;#8888ff&quot;,&quot;#ff6666&quot;,&quot;#ff66ff&quot;))+
+coord_cartesian(clip=&quot;off&quot;)+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(5,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.justification=&quot;left&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(11,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.margin=margin(,,6,-2),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(3,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.4),
+  panel.spacing=unit(2,&quot;pt&quot;),
+  plot.margin=margin(6,6,1,5),
+  plot.title=element_text(size=11.5,face=2,margin=margin(2,,4)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=6.3,height=4.8,dpi=300*4)
+
+sub=&quot;\u00a0    The deaths are plotted as a moving average where the window extends 3 weeks backwards and 2 weeks forwards. The baselines were also calculated based on the moving average of deaths.
+     In the bright blue baseline the average of weekly deaths was calculated in 2018 and 2019, a linear regression of the averages was projected to 2018-2024, and multipliers for each year were calculated by dividing the value of the projection during the year with the average value of the projection in the years 2018 and 2019. And then the baseline for each week 1 was calculated by multiplying the average deaths on weeks 1 of 2018 and 2019 with the yearly multiplier, and similarly for other week numbers. The light blue baseline was calculated in the same way except the yearly averages were calculated based on weeks 15 to 35 only.
+     The red line was calculated by first doing a linear regression of weekly data in 2018-2019, and then the average difference between the actual deaths and the linear regression on weeks 1 of 2018 and 2019 was added to the baseline for each week 1, and similarly for other week numbers..&quot;
+
+system(paste0(&quot;f=1.png;mar=100;w=`identify -format %w $f`;magick \\( $f \\) \\( -size $[w-mar*2]x -font Arial -interline-spacing -3 -pointsize $[42*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -gravity southwest -splice $[mar]x80 \\) -append -resize 25% -colors 256 1.png&quot;))</pre>
+</div>
+<p>I wonder if Ethical Skeptic somehow manually lifts up his excess deaths in these plots that show weekly excess deaths. When I compared two different versions of his plot for weekly excess cancer deaths in ages 0-54, I found that in the newer version he seems to have manually lifted up the excess deaths from around week 9 of 2020 onwards. [<a href=ethical.html#Deaths_from_malignant_neoplasms_in_ages_0_to_54>ethical.html#Deaths_from_malignant_neoplasms_in_ages_0_to_54</a>] His average weekly number of excess deaths in 2023 was about 175 in the newer version and 150 in the older version, but when I tried to reproduce his plot, I only got an average of about 69, 85, or 105 weekly excess deaths in 2023 depending on the baseline. So his excess deaths were about twice as high as my excess deaths like what again happened here.</p>
+<p>I believe Ethical Skeptic has never published the exact methodology he uses to calculate his baseline in these plots for weekly excess deaths, so if other people cannot reproduce his plots then he has plausible deniability because he can just say that other people didn't calculate the baseline correctly. But it also leaves him wiggle room to manually alter his excess deaths.</p>
 <p>The next plot shows the causes of death which account for the highest number of excess deaths in 2020-2022 relative to the 2015-2019 linear trend. Many of the top causes seem to have already had a large increase between 2019 and 2020, even though it might be partially on artifact of how I sorted the causes based on the 2020-2022 total so it was biased towards selecting causes which were already elevated in 2020 and not just in 2021-2022. But the top 5 causes also include cancers of brain stem and asthma which didn't have a large increase above the baseline until 2022:</p>
 <div class="width7">
 <img src="i/ethical-217-3.png">
@@ -1685,7 +1766,7 @@ system(&quot;mogrify 1.png -trim -resize 25% -bordercolor white -border 30 -colo
 </div>
 <p>In Ethical Skeptic's plot the cumulative excess deaths ranged from about -4,500 to 18,000, but in my plot above the cumulative excess deaths per million ranged between about -1,100 and 1,300. I got a similar magnitude of variation when I tried plotting other ranges of 12 months that started in 2022 and ended in 2023. So I don't know if Ethical Skeptic plotted some other variable instead of the <code>cum_excess_per_million_proj_all_ages</code> variable, or if he multiplied the value of the variable by 10 or something.</p>
 <p>But in any case both the 2015-2019 linear trend and the 2015-2019 average baseline exaggerate excess deaths in Western European countries relative to Eastern European countries.</p>
-<p>In the next plot I calculated excess deaths relative to a 2013-2019 linear trend in ASMR instead. I took data for weekly deaths by 5-year age groups from the Eurostat dataset demo_r_mwk_05. I determined the slope of the baseline for ASMR based on only weeks 15-35 of each year, but I used a different intercept for each ISO week number. I took yearly population estimates on January 1st from the Eurostat dataset demo_pjan and interpolated them into weekly population estimates. Then I divided the total weekly ASMR in 2023 with the total baseline for ASMR in 2023. I used weekly data because Eurostat's dataset for yearly deaths by age was still missing data for 2023. But anyway, now the correlation between excess mortality and percentage of vaccinated people dropped to about 0.01:</p>
+<p>In the next plot I calculated excess deaths relative to a 2013-2019 linear trend in ASMR instead. I took data for weekly deaths by 5-year age groups from the Eurostat dataset demo_r_mwk_05: <a href="https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/demo_r_mwk05?format=TSV">https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/demo_r_mwk05?format=TSV</a>. I determined the slope of the baseline based on only weeks 15-35 of each year, but I used a different intercept for each ISO week number. I took yearly population estimates on January 1st from the Eurostat dataset demo_pjan and interpolated them into weekly population estimates. Then I divided the total weekly ASMR in 2023 with the total baseline for ASMR in 2023, where I treated weeks whose middle day was in 2023 as part of 2023. I used weekly data because Eurostat's dataset for yearly deaths by age was still missing data for 2023. But anyway, now the correlation between excess mortality and the percentage of vaccinated people dropped to about 0.01:</p>
 <div class="width7">
 <img src="i/ethical-owid-4.png">
 </div>
@@ -1859,10 +1940,6 @@ sub=&quot;Source: covid.ourworldindata.org/data/owid-covid-data.csv and Eurostat
 system(paste0(&quot;mogrify -trim 1.png;w=`identify -format %w 1.png`;magick 1.png \\( -size $[w]x -font Arial -interline-spacing -3 -pointsize $[44*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -splice x100 \\) -append -resize 25% -bordercolor white -border 30 -colors 256 1.png&quot;))</pre>
 </div>
 <p>I wrote about the bias introduced by Eurostat's 2016-2019 average baseline in more detail here: <a href=statistic2.html#Excess_mortality_in_European_countries_compared_to_percentage_of_vaccinated_people>statistic2.html#Excess_mortality_in_European_countries_compared_to_percentage_of_vaccinated_people</a>.</p>
-<p>Peter Hegarty did an analysis of global correlation between excess mortality and vaccination rates at OWID, where he got a positive correlation when he used a 2015-2019 average baseline but a negative correlation when he used a 2015-2019 linear trend (so the 2015-2019 linear trend is probably more accurate, but it would've been even better to use ASMR): [<a href="https://www.researchgate.net/publication/379815723_EXCESS_MORTALITY_AND_THE_EFFECT_OF_THE_COVID-19_VACCINES_PART_2_GLOBAL_DATA">https://www.researchgate.net/publication/379815723_EXCESS_MORTALITY_AND_THE_EFFECT_OF_THE_COVID-19_VACCINES_PART_2_GLOBAL_DATA</a>]</p>
-<div class="width12">
-<img src="i/ethical-owid-5.png">
-</div>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
