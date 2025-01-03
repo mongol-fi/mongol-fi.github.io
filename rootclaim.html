@@ -85,6 +85,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#40_increase_in_deaths_in_working_age_people_in_the_second_half_of_2021_4h>40% increase in deaths in working-age people in the second half of 2021 (4h)</a></li>
 <li><a href=#Pull_forward_effect_at_Mortality_Watch_4j>Pull-forward effect at Mortality Watch (4j)</a></li>
 <li><a href=#Record_high_excess_deaths_in_Australia_in_2022_5a>Record-high excess deaths in Australia in 2022 (5a)</a></li>
+<li><a href=#Fenton_and_Neils_correlation_between_excess_deaths_and_vaccination_rates_5b>Fenton and Neil's correlation between excess deaths and vaccination rates (5b)</a></li>
 <li><a href=#Ed_Dowds_book_Cause_Unknown_5m>Ed Dowd's book Cause Unknown (5m)</a></li>
 </ul></li>
 <li><a href=#Comments_to_Kirschs_rebuttal>Comments to Kirsch's rebuttal</a>
@@ -444,6 +445,65 @@ system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
 <div class="width7">
 <img src="i/rootclaim-cfr-2.png">
 </div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>t=fread(&quot;Rates_of_COVID-19_Cases_or_Deaths_by_Age_Group_and_Updated__Bivalent__Booster_Status_20241231.csv&quot;)
+
+p=t[outcome==&quot;death&quot;&amp;age_group!=&quot;all_ages&quot;&amp;vaccination_status==&quot;vaccinated&quot;]
+p[,x:=isoweek(mmwr_week%/%100,mmwr_week%%100,4)]
+p[,vaxpct:=vaccinated_population/(vaccinated_population+unvaccinated_population)*100]
+lab=c(&quot;Unvaccinated&quot;,&quot;Fully vaccinated&quot;,&quot;Vaccinated percent (panel top is 100%)&quot;)
+p=p[,.(x,y=c(c(crude_unvax_ir,crude_vax_ir)/7*365,vaxpct),z=factor(rep(lab,each=.N),lab),group=age_group)]
+age=unique(p$group);p[,group:=factor(group,age[order(as.integer(sub(&quot;[-+].*&quot;,&quot;&quot;,age)))])]
+
+p=merge(p,p[z!=levels(z)[3],.(maxy=max(y)),group])
+
+p[z==levels(z)[3],y:=y/100*maxy]
+
+xstart=as.Date(&quot;2021-7-1&quot;);xend=as.Date(&quot;2023-7-1&quot;)
+xbreak=as.Date(c(&quot;2021-10-1&quot;,&quot;2022-7-1&quot;,&quot;2023-4-1&quot;));xlab=year(xbreak)
+
+ggplot(p,aes(x,y))+
+facet_wrap(~group,ncol=2,dir=&quot;v&quot;,scales=&quot;free_y&quot;)+
+geom_vline(xintercept=seq(as.Date(&quot;2022-1-1&quot;),xend,&quot;year&quot;),color=&quot;gray80&quot;,linewidth=.5)+
+geom_line(aes(color=z,linetype=z),linewidth=.6)+
+geom_text(data=p[,max(y),group],aes(y=V1,label=group,x=xstart+20),fontface=2,size=3.6,vjust=1.9,hjust=0)+
+labs(title=&quot;CDC: COVID deaths per 100,000 person-years by vaccination status and age&quot;,subtitle=paste0(&quot;Source: CDC dataset \&quot;Rates of COVID-19 Cases or Deaths by Age Group and Updated (Bivalent) Booster Status\&quot;. The fully vaccinated group consists of people who have completed the primary series doses at least 14 days ago. Partially vaccinated people are excluded.&quot;)|&gt;stringr::str_wrap(76),x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=xbreak,labels=xlab)+
+scale_y_continuous(limits=c(0,NA),breaks=\(x){y=pretty(x,4);y[y&lt;max(x)*.9]},labels=\(x)ifelse(x&gt;=1e3,paste0(x/1e3,&quot;k&quot;),x))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+scale_color_manual(values=c(&quot;black&quot;,&quot;#ff5555&quot;,&quot;#ff66ff&quot;))+
+scale_linetype_manual(values=c(&quot;solid&quot;,&quot;solid&quot;,&quot;42&quot;))+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.text.x=element_text(margin=margin(5)),
+  axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(4,&quot;pt&quot;),
+  axis.title=element_text(size=8),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.position=&quot;top&quot;,
+  legend.justification=&quot;right&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.margin=margin(,,6),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.4),
+  panel.spacing.x=unit(4,&quot;pt&quot;),
+  panel.spacing.y=unit(3,&quot;pt&quot;),
+  plot.margin=margin(7,7,7,7),
+  plot.subtitle=element_text(size=11,margin=margin(,,4)),
+  plot.title=element_text(size=11.5,face=2,margin=margin(2,,6)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=6.4,height=5.5,dpi=300*4)
+system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
+</div>
 <p>However the difference between unvaccinated and vaccinated people isn't as big for cases as for deaths, so the difference in CFR is also not as big as the difference in deaths. Unvaccinated people still have clearly higher CFR within age groups, even though the ratio between unvaccinated and vaccinated CFR also gets lower over time, which might be if unvaccinated people acquire natural immunity over time or the effect of vaccination wears out:</p>
 <div class="width7">
 <img src="i/rootclaim-cfr-4.png">
@@ -680,7 +740,7 @@ a[x&gt;=&quot;2020-12-14&quot;&amp;x&lt;=&quot;2022-10-31&quot;,weighted.mean(va
 <div class="width5">
 <img src="i/rootclaim-turbo-12.png">
 </div>
-<p>After USMortality showed how cancer ASMR had been going down in the United States since 2024, he got a similar treatment as Crawford did when he busted disinformation about the DMED data: [<a href="https://x.com/EduEngineer/status/1859385389246550191">https://x.com/EduEngineer/status/1859385389246550191</a>]</p>
+<p>After USMortality showed how cancer ASMR had been going down in the United States since 2024, he got a similar treatment from his fellow truth seekers as Crawford did when he busted disinformation about the DMED data: [<a href="https://x.com/EduEngineer/status/1859385389246550191">https://x.com/EduEngineer/status/1859385389246550191</a>]</p>
 <div class="width6">
 <img src="i/rootclaim-turbo-1.png">
 </div>
@@ -696,7 +756,7 @@ a[x&gt;=&quot;2020-12-14&quot;&amp;x&lt;=&quot;2022-10-31&quot;,weighted.mean(va
 <div class="width8">
 <img src="i/statistic-dowd-improved.png">
 </div>
-<p>Later I asked Jessica Rose again a few times if she could now cite another source to back up her claim that there was a <span class="quote">&quot;shit-ton of cancers since 2021&quot;</span>, and I asked her if she saw my critique of Dowd's paper and if she still thought Dowd's paper showed there was an increase in cancer mortality. But she didn't reply to me, until she just blocked me and said I was trying to waste her time. [<a href="https://x.com/JesslovesMJK/status/1874775113188655526">https://x.com/JesslovesMJK/status/1874775113188655526</a>] But if there was an actual epidemic of turbo cancer then couldn't she have cited a single paper which showed there was an increase in cancer? Either incidence or mortality would've done. In order to save time she could've even just sent me the URL with no comment needed.</p>
+<p>Later I asked Jessica Rose again a few times if she could now cite another source to back up her claim that there was a <span class="quote">&quot;shit-ton of cancers since 2021&quot;</span>, and I asked her if she saw my critique of Dowd's paper and if she still thought Dowd's paper showed there was an increase in cancer mortality. But she didn't reply to me, until she just blocked me and said <span class="quote">&quot;you're trying to waste my time. and i bid you good day. 👀&quot;</span>. [<a href="https://x.com/JesslovesMJK/status/1874775113188655526">https://x.com/JesslovesMJK/status/1874775113188655526</a>] But if there was an actual epidemic of turbo cancer then couldn't she have cited a single paper which showed there was an increase in cancer? Either incidence or mortality would have done. In order to save time she could've even just sent me the URL with no comment needed.</p>
 <p>I have also asked Dowd to either issue a correction to his paper or to retract his paper, but he has never responded to me.</p>
 <p>Dowd's group also published a paper about cancer mortality in England and Wales in ages 15-44. They found a massive increase in cancer deaths in 2022, but it was because they used an incorrect method to add in deaths they thought were missing because of a registration delay, because they assumed that cancer deaths had the same proportion of missing deaths as the overal proportion for deaths from all causes, even though in reality cancer deaths have a much shorter registration delay on average than deaths from external causes: [<a href="https://x.com/UncleJo46902375/status/1783797036749402598">https://x.com/UncleJo46902375/status/1783797036749402598</a>]</p>
 <div class="width6">
@@ -916,6 +976,113 @@ a[x&gt;=&quot;2020-12-14&quot;&amp;x&lt;=&quot;2022-10-31&quot;,weighted.mean(va
 <img src="i/rootclaim-australia-regions.png">
 </div>
 <p>Kirsch also wrote: <span class="quote">&quot;An excess deaths inquiry was held to investigate Australia's excess of nearly 30,000 deaths throughout 2021-2023.&quot;</span> However in my screenshot from Mortality Watch above where I used a 2010-2019 linear baseline, the number of excess deaths in Australia is 2,223 in 2021, 19,135 in 2022, and 7,846 in 2023, so almost none of the excess deaths were in 2021. And the total excess mortality in 2021-2023 was only about 5.7%.</p>
+<h3>
+<a href=#Fenton_and_Neils_correlation_between_excess_deaths_and_vaccination_rates_5b id=Fenton_and_Neils_correlation_between_excess_deaths_and_vaccination_rates_5b>Fenton and Neil's correlation between excess deaths and vaccination rates (5b)</a>
+</h3>
+<p>Kirsch wrote: <span class="quote">&quot;<a href=https://web.archive.org/web/20221214175425/https%3a//wherearethenumbers.substack.com/p/the-devils-advocate-an-exploratory>Neil and Fenton (2022)</a> showed that the <strong>ONLY viable explanation for these mortality increases was the COVID vaccine</strong>. <strong>No one has been able to show a mistake in their analysis.</strong>&quot;</span></p>
+<p>This plot from their Substack post showed that there was a positive correlation between vaccination rate and excess deaths in 2022:</p>
+<div class="width6">
+<img src="i/rootclaim-advocate-1.png">
+</div>
+<p>In the Substack post Fenton and Neil got data for various variables from OWID, but they didn't mention if they also got data for excess deaths from OWID or from some other source. At first I thought the excess deaths in their plot were based on the average value of the <code>excess_mortality</code> column in the file <code>owid-covid-data.csv</code>, but it did not match their plot. However then I noticed that at the start of the post Fenton and Neil wrote that their impetus for writing the post was to reproduce analysis done by Igor Chudov. And Chudov took data for excess deaths from STMF, and he calculated excess deaths relative to the average number of deaths during the same week number in 2017-2019. [<a href="https://www.igor-chudov.com/p/proven-relationship-covid-boosters">https://www.igor-chudov.com/p/proven-relationship-covid-boosters</a>]</p>
+<p>So I believe Fenton and Neil used a method like this to calculate the percentage of excess deaths for each country in 2022:</p>
+<pre>&gt; s=fread(&quot;https://mortality.org/File/GetDocument/Public/STMF/Outputs/stmf.csv&quot;)[Sex==&quot;b&quot;]
+&gt; s=merge(s,s[Year%in%2017:2019,.(base=mean(DTotal)),.(Week,CountryCode)])
+&gt; s[Year==2022&amp;Week&lt;=44&amp;Sex==&quot;b&quot;,.(excesspct=(sum(DTotal)/sum(base)-1)*100),CountryCode][1:3]
+   CountryCode excesspct
+1:         AUS      17.2
+2:         AUT       9.9
+3:         BEL       4.8</pre>
+<p>However most countries included in Fenton's plot were European, but a prepandemic average baseline exaggerates excess deaths in Western European countries relative to Eastern European countries, because before COVID Western European countries had a more steep increase in the yearly number of deaths on average, and in 2020-2021 the population size was reduced more by excess deaths in Eastern European countries on average.</p>
+<p>In the next plot the green baseline addresses both shortcomings of a prepandemic average baseline. From the last two panels, you can see how in 2022 the prepandemic average baseline is too low compared to the green baseline in Western European countries but too high in Eastern European countries: [<a href=statistic2.html#Excess_mortality_in_European_countries_compared_to_percentage_of_vaccinated_people>statistic2.html#Excess_mortality_in_European_countries_compared_to_percentage_of_vaccinated_people</a>]</p>
+<div class="width7">
+<img src="i/statistic-euro-2.png">
+</div>
+<p>In the middle panel of the next plot I calculated excess deaths relative to a 2015-2019 linear baseline for raw deaths, which accounts for the different slopes in deaths between countries before COVID, but it does not account for the reduction in population size due to excess deaths since 2020. But in the bottom panel I looked at excess ASMR which also accounts for the reduction in population size. In the top panel where I used a method similar to Fenton and Chudov to calculate excess deaths, I got a correlation of about 0.45, but the correlation dropped to about 0.11 in the middle panel which is likely more accurate and to about 0.32 in the bottom panel which is likely the most accurate:</p>
+<div class="width7">
+<img src="i/rootclaim-advocate-2.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2)
+
+download.file(&quot;https://covid.ourworldindata.org/data/owid-covid-data.csv&quot;,&quot;owid-covid-data.csv&quot;)
+download.file(&quot;https://s3.mortality.watch/data/mortality/world_yearly.csv&quot;,&quot;world_yearly.csv&quot;)
+download.file(&quot;https://mortality.org/File/GetDocument/Public/STMF/Outputs/stmf.csv&quot;,&quot;stmf.csv&quot;)
+
+owid=fread(&quot;owid-covid-data.csv&quot;)
+mort=fread(&quot;world_yearly.csv&quot;)
+stmf=fread(&quot;stmf.csv&quot;)[Sex==&quot;b&quot;]
+
+ave=merge(stmf,stmf[Year%in%2017:2019,.(base=mean(DTotal)),.(Week,CountryCode)])
+ave=ave[Year==2022,.(ave=(sum(DTotal)/sum(base)-1)*100),.(iso=CountryCode)]
+
+d=owid[!is.na(people_fully_vaccinated_per_hundred)&amp;year(date)==2022,.(vax=max(people_fully_vaccinated_per_hundred),owid=mean(excess_mortality,na.rm=T)),.(continent,location,iso=iso_code)]
+d=merge(d,na.omit(mort[date==2022,.(iso=iso3c,asmr=(asmr_esp/asmr_esp_baseline-1)*100)]),all=T)
+d=merge(d,ave,all=T)
+
+lab=c(&quot;Excess raw deaths at STMF with 2017-2019 average baseline (like Fenton)&quot;,&quot;Excess raw deaths at OWID with 2015-2019 linear baseline&quot;,&quot;Excess ASMR at Mortality Watch&quot;)
+p=na.omit(d[,.(x=vax,y=c(ave,owid,asmr),iso,continent,z=factor(rep(lab,each=.N),lab))])
+p=p[!(iso==&quot;BOL&quot;&amp;z%like%&quot;OWID&quot;)] # Bolivia had 115.7% average monthly excess deaths at OWID because only one month was available
+
+p=p[iso%in%p[,.N,iso][N==3,iso]]
+
+levels(p$z)=p[,cor(x,y),z][,sprintf(&quot;%s (r ≈ %.02f)&quot;,z,V1)]
+
+xbreak=p[,pretty(x)];ybreak=p[,pretty(y)];ylim=extendrange(p$y);xstart=xbreak[1];xend=max(p$x)*1.01
+
+conti=owid[,.(name=setdiff(sort(unique(continent)),&quot;&quot;))]
+conti$color=c(&quot;#444444&quot;,&quot;#ff5555&quot;,&quot;#4444ff&quot;,&quot;#00bb00&quot;,&quot;#bb22bb&quot;,&quot;#bbbb22&quot;)
+conti=conti[name%in%p$continent]
+
+ggplot(p,aes(x,y))+
+facet_wrap(~z,dir=&quot;v&quot;,scales=&quot;free_x&quot;)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+geom_smooth(method=&quot;lm&quot;,formula=y~x,linewidth=.5,se=F,color=&quot;black&quot;,linetype=&quot;42&quot;)+
+geom_point(aes(color=continent),size=.6)+
+ggrepel::geom_text_repel(aes(label=iso,color=continent),size=3,max.overlaps=Inf,segment.size=.3,min.segment.length=.2,box.padding=.07,show.legend=F)+
+labs(title=sprintf(&quot;Excess deaths in 2022 vs percentage of vaccinated people&quot;,p[,cor(x,y)]
+),x=&quot;People fully vaccinated (last available value in 2022)&quot;,y=&quot;Excess deaths in 2022&quot;)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=\(x)paste0(x,&quot;%&quot;))+
+scale_y_continuous(limits=ylim,breaks=ybreak,labels=\(x)paste0(x,&quot;%&quot;))+
+scale_color_manual(labels=conti$name,values=conti$color)+
+guides(color=guide_legend(nrow=1,byrow=F))+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.text.x=element_text(margin=margin(3)),
+  axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
+  axis.ticks.length=unit(4,&quot;pt&quot;),
+  axis.title=element_text(size=11,face=2),
+  axis.title.x=element_text(margin=margin(3)),
+  axis.title.y=element_text(margin=margin(,2)),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.justification=&quot;right&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(13,&quot;pt&quot;),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.margin=margin(,,4),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.4),
+  panel.grid.major=element_blank(),
+  panel.spacing=unit(4,&quot;pt&quot;),
+  plot.margin=margin(5,18,5,5),
+  plot.subtitle=element_text(size=11),
+  plot.title=element_text(size=12,face=2,margin=margin(1,,4),hjust=0),
+  strip.background=element_blank(),
+  strip.text=element_text(hjust=0,size=11,margin=margin(,,3)))
+ggsave(&quot;1.png&quot;,width=7,height=,dpi=300*4)
+system(&quot;mogrify 1.png -trim -resize 25% -bordercolor white -border 30 -colors 256 1.png&quot;)</pre>
+</div>
+<p>In the previous plot I took the excess ASMR percentages from this file: <a href="https://s3.mortality.watch/data/mortality/world_yearly.csv">https://s3.mortality.watch/data/mortality/world_yearly.csv</a>. The baseline for ASMR in the file is a linear regression in the range of 2010-2019 to 2015-2019 where the duration of the fitting period is selected so that the error between the baseline and actual ASMR is minimized. [<a href="https://www.mortality.watch/about">https://www.mortality.watch/about</a>] In the middle panel I took the average value of the <code>excess_mortality</code> column for each country at OWID during months in 2022 or weeks that ended in 2022.</p>
+<p>In the previous plot I only included countries that had excess mortality data available using all three methods in my plot. But when I included all available countries for each panel instead, the correlation dropped to 0.09 in the middle panel and -0.06 in the bottom panel:</p>
+<div class="width7">
+<img src="i/rootclaim-advocate-3.png">
+</div>
 <h3>
 <a href=#Ed_Dowds_book_Cause_Unknown_5m id=Ed_Dowds_book_Cause_Unknown_5m>Ed Dowd's book Cause Unknown (5m)</a>
 </h3>
