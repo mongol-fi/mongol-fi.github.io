@@ -1560,6 +1560,59 @@ theme(axis.text=element_text(size=11,color=&quot;black&quot;),
 ggsave(&quot;1.png&quot;,width=6.2,height=4.6,dpi=300*4)
 system(paste0(&quot;mogrify -trim 1.png;w=`identify -format %w 1.png`;magick 1.png \\( -size $[w]x -font Arial -interline-spacing -3 -pointsize $[46*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -splice x100 \\) -append -resize 25% -bordercolor white -border 30 -colors 256 1.png&quot;))</pre>
 </div>
+<p>In the following code I made a model for each country, where at the start of the model each age had the same population size as Eurostat's population estimate for January 1st 2019. Each year I killed the same proportion of people each age that died in 2017-2019, I incremented the age of surviving people by one, and I added the same number of people aged zero as in Eurostat's population estimate for 2019. Then I used the number of deaths produced by the model in 2022 as the expected deaths for each country:</p>
+<pre>t=fread(&quot;http://sars2.net/f/eurostatpopdead.csv.gz&quot;)
+t=t[year%in%2016:2022]
+t=t[location!=&quot;DE_TOT&quot;&amp;name!=&quot;&quot;]
+t=t[location%in%na.omit(t)[,.N,location][N==max(N),location]]
+
+model=\(x){pop=x[year==2019,pop];births=pop[1]
+  cmr=x[year%in%2017:2019,sum(dead)/sum(pop)]
+  for(year in 2019:2022){
+    died=pop*cmr;pop=pop-died
+    pop=c(births,pop[1:99],sum(pop[100:101]))
+  }
+  sum(died)}
+
+a=t[year==2019,.(modeled=model(.SD)),name]
+ave=t[year%in%2016:2019,sum(dead),.(year,name)]
+a=merge(a,ave[,.(ave=mean(V1)),name])
+a[,.(name,ratio=modeled/ave,modeled,ave)][order(-ratio)]</pre>
+<p>The output shows that when I took the number of deaths produced by the model in 2022 and divided it with the average number of deaths in 2016-2019, the ratio was much higher on average in Western European countries than Eastern European countries, which again shows how Eurostat's 2016-2019 average baseline exaggerates excess deaths in Western European countries relative to Eastern European countries:</p>
+<pre>             name ratio modeled    ave
+ 1:        Cyprus 1.074    6304   5868
+ 2:         Malta 1.037    3705   3572
+ 3:    Luxembourg 1.028    4326   4208
+ 4:       Ireland 1.024   31520  30771
+ 5:   Switzerland 1.023   68214  66701
+ 6:       Iceland 1.019    2312   2269
+ 7:        France 1.017  616090 605888
+ 8:        Greece 1.013  123673 122138
+ 9:        Poland 1.013  408750 403692
+10:      Slovenia 1.012   20558  20318
+11:       Czechia 1.012  112409 111119
+12:   Netherlands 1.008  152318 151115
+13:       Austria 1.007   83408  82825
+14:       Denmark 1.007   54173  53819
+15:        Norway 1.006   41018  40756
+16: Liechtenstein 1.004     265    264
+17:       Germany 1.000  934299 934392
+18:      Slovakia 0.999   53385  53448
+19:       Belgium 0.998  109051 109310
+20:      Portugal 0.997  110995 111294
+21:       Finland 0.995   53766  54030
+22:         Spain 0.993  414872 417881
+23:         Italy 0.992  628013 632968
+24:       Estonia 0.990   15366  15522
+25:       Romania 0.986  257545 261131
+26:       Hungary 0.986  128181 130028
+27:        Sweden 0.984   89490  90976
+28:        Serbia 0.980   99830 101917
+29:       Croatia 0.978   51202  52380
+30:      Bulgaria 0.974  105706 108495
+31:        Latvia 0.961   27352  28469
+32:     Lithuania 0.951   37818  39776
+             name ratio modeled    ave</pre>
 <p>Peter Hegarty also did an analysis of global correlation between excess mortality and vaccination rates at OWID, where he got a positive correlation when he used a 2015-2019 average baseline but a negative correlation when he used a 2015-2019 linear trend (where the 2015-2019 linear trend was probably more accurate, but it would've been even better to use ASMR): [<a href="https://www.researchgate.net/publication/379815723_EXCESS_MORTALITY_AND_THE_EFFECT_OF_THE_COVID-19_VACCINES_PART_2_GLOBAL_DATA">https://www.researchgate.net/publication/379815723_EXCESS_MORTALITY_AND_THE_EFFECT_OF_THE_COVID-19_VACCINES_PART_2_GLOBAL_DATA</a>]</p>
 <div class="width12">
 <img src="i/ethical-owid-5.png">
