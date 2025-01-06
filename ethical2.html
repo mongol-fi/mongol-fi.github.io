@@ -76,6 +76,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Estimated_yearly_new_cancer_cases_by_American_Cancer_Society>Estimated yearly new cancer cases by American Cancer Society</a></li>
 <li><a href=#Summer_trough_regression_in_2014_2019>Summer trough regression in 2014-2019</a></li>
 <li><a href=#Excess_deaths_compared_to_percentage_of_vaccinated_people_in_European_countries>Excess deaths compared to percentage of vaccinated people in European countries</a></li>
+<li><a href=#Pull_forward_effect_in_Romania>Pull-forward effect in Romania</a></li>
 </ul>
 
 <h2>
@@ -1940,6 +1941,106 @@ sub=&quot;Source: covid.ourworldindata.org/data/owid-covid-data.csv and Eurostat
 system(paste0(&quot;mogrify -trim 1.png;w=`identify -format %w 1.png`;magick 1.png \\( -size $[w]x -font Arial -interline-spacing -3 -pointsize $[44*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -splice x100 \\) -append -resize 25% -bordercolor white -border 30 -colors 256 1.png&quot;))</pre>
 </div>
 <p>I wrote about the bias introduced by Eurostat's 2016-2019 average baseline in more detail here: <a href=statistic2.html#Excess_mortality_in_European_countries_compared_to_percentage_of_vaccinated_people>statistic2.html#Excess_mortality_in_European_countries_compared_to_percentage_of_vaccinated_people</a>.</p>
+<h2>
+<a href=#Pull_forward_effect_in_Romania id=Pull_forward_effect_in_Romania>Pull-forward effect in Romania</a>
+</h2>
+<p>Ethical Skeptic quoted this plot of deaths in Romania: [<a href="https://x.com/EthicalSkeptic/status/1875661812336881970">https://x.com/EthicalSkeptic/status/1875661812336881970</a>, <a href="https://x.com/felicittina/status/1875501071579410535">https://x.com/felicittina/status/1875501071579410535</a>]</p>
+<div class="width6">
+<img src="i/ethical-romania-1.png">
+</div>
+<p>The plot was based on the Eurostat dataset demo_r_mwk_ts, which seems to be missing a part of deaths in Romania in the summer of 2024, because there's only about half the normal number of deaths in July 2024:</p>
+<div class="width6">
+<img src="i/ethical-romania-2.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>download.file(&quot;https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/demo_r_mwk_ts?format=TSV&quot;,&quot;demo_r_mwk_ts.tsv&quot;)
+
+library(data.table);library(ggplot2)
+
+isoweek=\(year,week,weekday=7){d=as.Date(paste0(year,&quot;-1-4&quot;));d-(as.integer(format(d,&quot;%w&quot;))+6)%%7-1+7*(week-1)+weekday}
+
+euro=fread(&quot;demo_r_mwk_ts.tsv&quot;)
+euro=euro[euro[[1]]%like%&quot;^W,T&quot;]
+euro[[1]]=sub(&quot;.*,&quot;,&quot;&quot;,euro[[1]])
+eu=melt(euro,id=1)
+names(eu)=c(&quot;iso&quot;,&quot;date&quot;,&quot;dead&quot;)
+eu[,dead:=as.integer(sub(&quot;\\D+&quot;,&quot;&quot;,dead))]
+eu[,year:=as.integer(substr(date,1,4))]
+eu[,week:=as.integer(substr(date,7,8))]
+
+d=na.omit(eu[iso==&quot;RO&quot;][,x:=isoweek(year,week,4)])
+
+yearly=d[,.(year=2015:2024)]
+yearly$mult=d[year%in%2015:2019&amp;week%in%10:40,sum(dead),year][,predict(lm(V1~year),yearly)]
+yearly[,mult:=mult/mult[year==2017]]
+d=merge(d,d[year%in%2015:2019,.(weekly=mean(dead)),week])
+d=merge(yearly,d)
+
+p=rbind(d[,.(x,y=dead,z=&quot;Actual deaths&quot;)],d[,.(x,y=weekly*mult,z=&quot;2015-2019 linear baseline&quot;)])
+p[,z:=factor(z,unique(z))]
+
+xstart=as.Date(&quot;2015-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
+p=p[x%in%xstart:xend]
+ylim=c(0,max(p$y)*1.02);ybreak=pretty(ylim,7)
+xbreak=seq(xstart+182,xend,&quot;year&quot;);xlab=year(xbreak)
+
+pct=d[,.(pct=(sum(dead)/sum(weekly*mult)-1)*100),.(x=as.Date(paste0(year,&quot;-7-1&quot;)))]
+
+ggplot(p,aes(x=x,y))+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray84&quot;,linewidth=.4)+
+geom_hline(yintercept=0,linewidth=.4)+
+geom_line(aes(color=z),linewidth=.6)+
+geom_text(data=pct,aes(x,y=0,label=paste0(ifelse(pct&gt;0,&quot;+&quot;,&quot;&quot;),sprintf(&quot;%.1f&quot;,pct),&quot;%&quot;)),vjust=-.7,size=3.5,color=&quot;gray40&quot;)+
+labs(x=NULL,y=NULL,title=&quot;Weekly deaths in Romania&quot;)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
+scale_y_continuous(limits=ylim,breaks=ybreak)+
+scale_color_manual(values=c(&quot;black&quot;,&quot;#6666ff&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.text.x=element_text(margin=margin(4)),
+  axis.text.y=element_text(margin=margin(,3)),
+  axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(4,&quot;pt&quot;),
+  legend.background=element_rect(fill=&quot;white&quot;,color=&quot;black&quot;,linewidth=.4),
+  legend.box.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.justification=c(0,1),
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.margin=margin(5,6,5,5),
+  legend.position=c(0,1),
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.4),
+  panel.spacing=unit(2,&quot;pt&quot;),
+  plot.margin=margin(5,5,2,5),
+  plot.subtitle=element_text(margin=margin(,,5)),
+  plot.title=element_text(size=12,face=2,margin=margin(2,,5)))
+ggsave(&quot;1.png&quot;,width=5.8,height=3.2,dpi=300*4)
+
+sub=&quot;\u00a0    Source: Eurostat dataset demo_r_mwk_ts. The percentage above the year shows the yearly total excess deaths, where the year 2024 only consists of weeks 1-43.
+     The baseline was each week was calculated by multiplying average deaths for the same week number in 2015-2019 with a yearly multiplier. The yearly multiplier was calculated by doing a linear regression for total deaths on weeks 10-40 of 2015-2019, and then the ratio between the projected regression was divided by the value of the regression in 2017.&quot;
+system(paste0(&quot;f=1.png;mar=100;w=`identify -format %w $f`;magick \\( $f \\) \\( -size $[w-mar*2]x -font Arial -interline-spacing -3 -pointsize $[45*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -gravity southwest -splice $[mar]x80 \\) -append -resize 25% -colors 256 1.png&quot;))</pre>
+</div>
+<p>The author of the plot posted this correction using data from a Romanian statistics agency which was not missing deaths like Eurostat: [<a href="https://x.com/felicittina/status/1875837395406557285">https://x.com/felicittina/status/1875837395406557285</a>]</p>
+<blockquote>
+<p>Correction: Following an alert from <span class="citation">@henjin256</span> regarding strange values ​​for 2024, I went back to the Eurostat source which is supposed to be <span class="citation">@ro_statistics</span>. I found the following values, quite dissimilar from 2020.</p>
+<p><img src=i/ethical-romania-3.jpg class=width6></p>
+<p>But in the end, excess mortality would have been less severe than announced and the situation would have stabilized in 2022 before starting to compensate for about half of the cumulative excess mortality in 2023 &amp; 2024 (55k of 107k). Sources:</p>
+<p>* annual values ​​until 2023 [POP206A]: <a href="http://statistici.insse.ro:8077/tempo-online/#/pages/tables/insse-table">http://statistici.insse.ro:8077/tempo-online/#/pages/tables/insse-table</a> (I left out values ​​&lt;2012 because of the change of method excluding non-residents from 2012).<br> * monthly values ​​2024: <a href="https://insse.ro/cms/sites/default/files/com_presa/com_pdf/pop10r24.pdf">https://insse.ro/cms/sites/default/files/com_presa/com_pdf/pop10r24.pdf</a></p>
+<p>After a more in-depth comparison, it appears that the differences are minimal (&lt;1%) between the 2 databases until 2023. On the other hand, the 2024 data are incomplete on Eurostat, with a gap of 25k deaths especially between May and July. Probably an update oversight.</p>
+<p>The 2024 mortality in the Romanian database is currently slightly higher than that of 2023 but remains well below the 2012-2019 trend.</p>
+<p>Apart from this underestimation for 2024, the differences between the 2 graphs are mainly due to a different time window (52 mobiles weeks for the 1st, full years for the 2d) and the replacement of the 2015-2019 trend by 2012-2019 (more realistic)</p>
+</blockquote>
+<p>I don't know how the number of deaths in 2024 was interpolated. But I took monthly deaths from the spreadsheet she linked as her source: <a href="https://insse.ro/cms/files/statistici/comunicate/populatie/a24/pop10r24.zip">https://insse.ro/cms/files/statistici/comunicate/populatie/a24/pop10r24.zip</a>. When I multiplied the number of deaths in January to October 2024 with the average ratio of deaths in the whole year to deaths in January to October in 2014-2019, the result was 247,190 which was similar to the plot by felicittina.</p>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
