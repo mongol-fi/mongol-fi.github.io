@@ -29,7 +29,7 @@ blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(45,55%,65%)}
 blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote .quote,.quote .quote .quote{color:hsl(40,40%,50%)}
 .spoiler button{width:90px;border:0;font-family:inherit;font-size:inherit;color:inherit;margin:0;background:#4a4a4a;padding:4px 0px;outline:none;cursor:pointer}
 .spoiler pre{display:none;margin-top:0}
-.red,.red .quote{color:hsl(0,100%,75%)!important}
+.red,.red .quote{color:hsl(0,100%,77%)!important}
 .width1{max-width:100px}
 .width2{max-width:200px}
 .width3{max-width:300px}
@@ -86,6 +86,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Clare_Craig_ASMR_within_3_weeks_from_vaccination_for_first_and_second_doses>Clare Craig: ASMR within 3 weeks from vaccination for first and second doses</a></li>
 <li><a href=#Clare_Craig_Searches_for_vaccine_compensation_at_Google_Trends>Clare Craig: Searches for vaccine compensation at Google Trends</a></li>
 <li><a href=#Alex_Berenson_Plot_for_percentage_of_COVID_deaths_out_of_all_deaths_in_the_first_version_of_the_ONS_dataset>Alex Berenson: Plot for percentage of COVID deaths out of all deaths in the first version of the ONS dataset</a></li>
+<li><a href=#Problems_with_Fenton_and_Neils_n_1_dose_misclassification_hypothesis>Problems with Fenton and Neil's n-1 dose misclassification hypothesis</a></li>
 </ul>
 
 <h2>
@@ -1908,6 +1909,75 @@ round(m,1)
 # 2023-03          7.1        5.4   1.3
 # 2023-04          6.4        4.2   1.5
 # 2023-05          3.9        2.7   1.5 # ratio is much lower in 2023 than 2021</pre>
+<h2>
+<a href=#Problems_with_Fenton_and_Neils_n_1_dose_misclassification_hypothesis id=Problems_with_Fenton_and_Neils_n_1_dose_misclassification_hypothesis>Problems with Fenton and Neil's n-1 dose misclassification hypothesis</a>
+</h2>
+<p>In the ONS dataset for deaths by vaccination status, the ASMR of people with n-1 doses shoots up when the nth dose is rolled out. Fenton and Neil hypothesized it was because people who died soon after receiving the nth dose were misclassified under dose n-1.</p>
+<p>The next plot demonstrates three major problems with their hypothesis:</p>
+<ol style="list-style-type: decimal">
+<li>People with one but not more doses continue to have a high mortality rate even in 2023, even though there's few new people who are getting a second dose in 2023 so that they could be misclassified under the first dose if they die soon after getting the second dose.</li>
+<li>If a lot of extra people died soon after they got the third dose, then why is there no big increase to the mortality rate of people with two or more doses when the third dose is rolled out? There is only an increase in the mortality rate of people with two but not more doses, but the group of people with two or more doses should also include people who are misclassified under the second dose if they die soon after getting the third dose.</li>
+<li>In November 2021 when the third dose was rolled out, people with three doses had about 68% lower mortality rate than the general population of England. If there is no evidence of the healthy vaccinee effect in the ONS data like Fenton has suggested, then what explains the low mortality rate? (Fenton might argue it's because within the first two or three weeks from the third dose, person-years are counted under under the third dose but deaths are counted under the second dose. But when I first read the papers by Fenton et al., I didn't realize they suggested that the misclassification delay was only applied to the numerator for deaths but not to the denominator for population size. And if I had realized that Fenton's hypothesis required the misclassification delay to only be applied to the numerator but not to the denominator, I would have considered the hypothesis to be much less plausible.)</li>
+</ol>
+<div class="width10">
+<img src="i/uk-fentonproblem.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>download.file(&quot;https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/adhocs/1343dailydeathsbydateofoccurrence1stjune2014to31stmay2023bysingleyearofageengland/dailydeaths2014to2023england.xlsx&quot;,&quot;dailydeaths2014to2023england.xlsx&quot;)
+
+library(data.table)
+
+sum0=\(...)sum(...,na.rm=T)
+kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;p=!is.na(x);x[p]=paste0(sprintf(paste0(&quot;%.&quot;,ifelse(e[p]%%3==0,1,0),&quot;f&quot;),x[p]/1e3^(e2[p]-1)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2[p]]);x}
+
+ons=fread(&quot;http://sars2.net/f/ons.csv&quot;)[cause==&quot;All causes&quot;&amp;age==&quot;80-89&quot;]
+ons=rbind(ons[ed==9],ons[ed==7&amp;month&lt;=&quot;2021-03&quot;])
+
+p=ons[,.(dead=sum0(dead),pop=sum0(pop)),.(status=sub(&quot;( or booster|,).*&quot;,&quot;&quot;,status),month)]
+p=rbind(p,ons[status!=&quot;Unvaccinated&quot;,.(dead=sum0(dead),pop=sum0(pop),status=&quot;Ever vaccinated&quot;),month])
+p=rbind(p,ons[status%like%&quot;Second|Third|Fourth&quot;,.(dead=sum0(dead),pop=sum0(pop),status=&quot;Dose 2+&quot;),month])
+p=rbind(p,ons[status%like%&quot;Third|Fourth&quot;,.(dead=sum0(dead),pop=sum0(pop),status=&quot;Dose 3+&quot;),month])
+
+p[,status:=factor(status,c(&quot;Unvaccinated&quot;,&quot;First dose&quot;,&quot;Second dose&quot;,&quot;Third dose&quot;,&quot;Fourth dose&quot;,&quot;Ever vaccinated&quot;,&quot;Dose 2+&quot;,&quot;Dose 3+&quot;))]
+
+dead=setDT(readxl::read_excel(&quot;dailydeaths2014to2023england.xlsx&quot;,sheet=4,range=&quot;A6:CP3293&quot;))
+dead=dead[,.(date=as.Date(paste0(Year,&quot;-&quot;,Month,&quot;-&quot;,Day)),age=rep(0:90,each=.N),dead=unlist(.SD[,-(1:3)],,F))]
+pop=fread(&quot;http://sars2.net/f/englandpop.csv&quot;)[,date:=as.Date(paste0(year,&quot;-7-1&quot;))]
+pop=pop[,with(spline(date,pop,xout=unique(dead$date)),.(date=`class&lt;-`(x,&quot;Date&quot;),pop=y)),age]
+p=merge(p,merge(dead,pop)[age%in%80:89,.(basedead=sum(dead),basepop=sum(pop)/365),.(month=substr(date,1,7))])
+
+p=rbind(p,p[,.(dead=sum(dead),pop=sum(pop),basedead=sum(basedead),basepop=sum(basepop),month=&quot;Total&quot;),status])
+p[,cmr:=dead/pop][,base:=basedead/basepop]
+
+m=p[,tapply((cmr-base)/ifelse(cmr&gt;base,base,cmr),.(status,month),c)]
+disp=p[,tapply((cmr/base-1)*100,.(status,month),round)]
+m2=p[,xtabs(pop~status+month)]
+
+max1=9;max2=max(m2[,-ncol(m2)]);exp1=.6;exp2=.85;exp2=.7
+m[m==-Inf]=-max1
+
+pal1=hsv(rep(c(21/36,0),4:5),c(1,.8,.6,.3,0,.3,.6,.8,1),c(.3,.65,1,1,1,1,1,.65,.3))
+pal2=sapply(seq(1,0,,256),\(i)rgb(i,i,i))
+
+pheatmap::pheatmap(sign(m)*abs(m)^exp1,filename=paste0(&quot;i1.png&quot;),display_numbers=disp,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;gray90&quot;,number_color=ifelse(abs(m)^exp1&gt;max1^exp1*.53,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(-max1^exp1,max1^exp1,,256),colorRampPalette(pal1)(256))
+
+pheatmap::pheatmap(m2^exp2,filename=paste0(&quot;i2.png&quot;),display_numbers=ifelse(m2&lt;10,m2,kimi(m2)),
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=19,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;gray90&quot;,number_color=ifelse(m2^exp2&gt;max2^exp2*.42,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(0,max2^exp2,,256),pal2)
+
+sub=&quot;\u00a0     The ONS dataset for mortality by vaccination status was released in August 2023, and the dataset for deaths in the general English population was released in July 2023, so both datasets are missing some deaths because of a registration delay in 2023 (but the dataset for deaths in the general population is missing a larger percentage of deaths in May 2023, which explains why ever vaccinated people get positive excess mortality here in May 2023).
+      Data for the first three months of 2021 is taken from the July 2022 edition of the ONS dataset which was linked against the 2011 census, and data for other months is taken from the August 2023 edition which was linked against the 2021 census.
+      Source: ONS datasets \&quot;Deaths by vaccination status, England\&quot;, \&quot;Daily deaths by date of occurrence, 1st June 2014 to 31st May 2023 by single year of age, England\&quot;, and \&quot;Estimates of the population for the UK, England, Wales, Scotland, and Northern Ireland\&quot;.&quot;
+
+system(paste0(&quot;mogrify -trim i[12].png;w=`identify -format %w i1.png`;magick -size $w \\( -pointsize 50 -font Arial-Bold caption:&#39;ONS dataset for mortality by vaccination status, ages 80-89&#39; -splice x10 \\) -pointsize 45 -font Arial \\( caption:&#39;Excess CMR percent relative to CMR the same month among the general population of England&#39; i1.png -splice x24 \\) \\( caption:&#39;Population size in person-years&#39; i2.png -splice x24 \\) \\( -pointsize 41 -font Arial caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -splice x20 \\) -append -trim -bordercolor white -border 32 1.png&quot;))</pre>
+</div>
+<p>(The plot above shows CMR instead of ASMR values because it's not possible to add together ASMR values for multiple dose categories, but it is possible to calculate a CMR value for multiple dose categories combined if you just add together total deaths across multiple categories and divide them with the total person-years. I plotted CMR only for a single age group because total CMR for all ages would've been heavily confounded by age. I arbitrarily picked the age group 80-89, but the results for other age groups are similar.)</p>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
