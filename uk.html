@@ -89,6 +89,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Clare_Craig_Searches_for_vaccine_compensation_at_Google_Trends>Clare Craig: Searches for vaccine compensation at Google Trends</a></li>
 <li><a href=#Alex_Berenson_Plot_for_percentage_of_COVID_deaths_out_of_all_deaths_in_the_first_version_of_the_ONS_dataset>Alex Berenson: Plot for percentage of COVID deaths out of all deaths in the first version of the ONS dataset</a></li>
 <li><a href=#Problems_with_Fenton_and_Neils_n_1_dose_misclassification_hypothesis>Problems with Fenton and Neil's n-1 dose misclassification hypothesis</a></li>
+<li><a href=#Mahadva_Setty_Mortality_rate_for_two_doses_relative_to_time_since_vaccination_in_ONS_data>Mahadva Setty: Mortality rate for two doses relative to time since vaccination in ONS data</a></li>
 </ul>
 
 <h2>
@@ -1980,6 +1981,220 @@ sub=&quot;\u00a0     The ONS dataset for mortality by vaccination status was rel
 system(paste0(&quot;mogrify -trim i[12].png;w=`identify -format %w i1.png`;magick -size $w \\( -pointsize 50 -font Arial-Bold caption:&#39;ONS dataset for mortality by vaccination status, ages 80-89&#39; -splice x10 \\) -pointsize 45 -font Arial \\( caption:&#39;Excess CMR percent relative to CMR the same month among the general population of England&#39; i1.png -splice x24 \\) \\( caption:&#39;Population size in person-years&#39; i2.png -splice x24 \\) \\( -pointsize 41 -font Arial caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -splice x20 \\) -append -trim -bordercolor white -border 32 1.png&quot;))</pre>
 </div>
 <p>(The plot above shows CMR instead of ASMR values because it's not possible to add together ASMR values for multiple dose categories, but it is possible to calculate a CMR value for multiple dose categories combined if you just add together total deaths across multiple categories and divide them with the total person-years. I plotted CMR only for a single age group because total CMR for all ages would've been heavily confounded by age. I arbitrarily picked the age group 80-89, but the results for other age groups are similar.)</p>
+<p>This plot also demonstrates that in mid-2021 when the ASMR of people with one but not more doses shoots up, the ASMR of people with one or more doses remains flat:</p>
+<div class="width6">
+<img src="i/uk-fentonproblem-2.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2)
+
+t=fread(&quot;http://sars2.net/f/ons.csv&quot;)
+t=rbind(t[ed==7&amp;month&lt;=&quot;2021-03&quot;],t[ed==9])
+t=t[cause==&quot;All causes&quot;&amp;age==&quot;70-79&quot;]
+
+p=t[status==&quot;Unvaccinated&quot;,.(y=dead/pop,month,z=status)]
+p=rbind(p,t[status!=&quot;Unvaccinated&quot;,.(y=sum(dead)/sum(pop),z=&quot;One or more doses&quot;),month])
+p=rbind(p,t[status%like%&quot;First dose&quot;,.(y=sum(dead)/sum(pop),z=&quot;One but not more doses&quot;),month])
+
+p[,y:=y*1e5]
+p[,z:=factor(z,unique(z))]
+p[,month:=as.Date(paste0(month,&quot;-1&quot;))]
+
+xstart=as.Date(&quot;2021-1-1&quot;);xend=as.Date(&quot;2023-6-1&quot;)
+xbreak=seq(as.Date(&quot;2021-1-1&quot;),xend,&quot;year&quot;);xlab=year(xbreak)
+ybreak=pretty(p$y,7);ystart=0;yend=max(p$y,na.rm=T)
+
+ggplot(p,aes(x=month+15,y))+
+geom_vline(xintercept=seq(as.Date(&quot;2021-1-1&quot;),as.Date(&quot;2023-1-1&quot;),&quot;year&quot;),color=&quot;gray75&quot;,linewidth=.5)+
+geom_vline(xintercept=c(xstart,xend),linewidth=.5,lineend=&quot;square&quot;)+
+geom_hline(yintercept=c(ystart,yend),linewidth=.5,lineend=&quot;square&quot;)+
+geom_line(aes(color=z,linetype=z),linewidth=.7)+
+geom_point(aes(color=z,alpha=z),stroke=0,size=1.3)+
+labs(x=NULL,y=NULL,title=&quot;English ONS data, ages 70-79: All-cause CMR per 100,000 person-years&quot;)+
+scale_x_date(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
+scale_color_manual(values=c(hsv(c(21,0)/36,1,.8),&quot;#ff8888&quot;))+
+scale_linetype_manual(values=c(&quot;solid&quot;,&quot;solid&quot;,&quot;solid&quot;,&quot;42&quot;))+
+scale_alpha_manual(values=c(1,1,1,0))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.text.x=element_text(hjust=0,margin=margin(4)),
+  axis.ticks=element_line(linewidth=.5),
+  axis.ticks.length=unit(5,&quot;pt&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  legend.background=element_rect(fill=&quot;white&quot;,color=&quot;black&quot;,linewidth=.5),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.justification=c(1,1),
+  legend.key=element_blank(),
+  legend.key.height=unit(12,&quot;pt&quot;),
+  legend.key.width=unit(30,&quot;pt&quot;),
+  legend.margin=margin(5,7,5,5),
+  legend.position=c(1,1),
+  legend.spacing.x=unit(3,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.grid=element_blank(),
+  plot.margin=margin(7,7,5,7),
+  plot.title=element_text(size=11.2,face=&quot;bold&quot;,margin=margin(,,5)))
+ggsave(&quot;1.png&quot;,width=6,height=3,dpi=300*4)
+
+sub=&quot;Source: ONS dataset \&quot;Deaths involving COVID-19 by vaccination status, England\&quot;. Data for the first three months is taken from the July 2022 release which was linked against the 2011 census, and data for the other months is taken from the August 2023 release which was linked against the 2021 census.&quot;
+system(paste0(&quot;mogrify -trim 1.png;w=`identify -format %w 1.png`;magick 1.png \\( -size $[w]x -font Arial -interline-spacing -3 -pointsize $[43*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -splice x100 \\) -append -resize 25% -bordercolor white -border 26 -colors 256 1.png&quot;))</pre>
+</div>
+<p>And this plot shows that if people are classified as unvaccinated until three weeks from the first dose, it reduces the ASMR of unvaccinated people and increases the ASMR of vaccinated people:</p>
+<div class="width6">
+<img src="i/uk-fentonproblem-3.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2)
+
+t=fread(&quot;http://sars2.net/f/ons.csv&quot;)
+t=rbind(t[ed==7&amp;month&lt;=&quot;2021-03&quot;],t[ed==9])
+t=t[cause==&quot;All causes&quot;&amp;age==&quot;70-79&quot;]
+
+p=t[status==&quot;Unvaccinated&quot;,.(y=dead/pop,month,z=status)]
+p=rbind(p,t[status!=&quot;Unvaccinated&quot;,.(y=sum(dead)/sum(pop),z=&quot;Vaccinated&quot;),month])
+p=rbind(p,t[status%like%&quot;Unvaccinated|First dose, less&quot;,.(y=sum(dead)/sum(pop),z=&quot;Unvaccinated or first dose less than 21 days ago&quot;),month])
+p=rbind(p,t[status%like%&quot;First dose, at|Second|Third|Fourth&quot;,.(y=sum(dead)/sum(pop),z=&quot;First dose at least 21 days ago&quot;),month])
+
+p[,y:=y*1e5]
+p[,z:=factor(z,unique(z))]
+p[,month:=as.Date(paste0(month,&quot;-1&quot;))]
+
+xstart=as.Date(&quot;2021-1-1&quot;);xend=as.Date(&quot;2023-6-1&quot;)
+xbreak=seq(as.Date(&quot;2021-1-1&quot;),xend,&quot;year&quot;);xlab=year(xbreak)
+ybreak=pretty(p$y,7);ystart=0;yend=max(p$y,na.rm=T)
+
+ggplot(p,aes(x=month+15,y))+
+geom_vline(xintercept=seq(as.Date(&quot;2021-1-1&quot;),as.Date(&quot;2023-1-1&quot;),&quot;year&quot;),color=&quot;gray75&quot;,linewidth=.5)+
+geom_vline(xintercept=c(xstart,xend),linewidth=.5,lineend=&quot;square&quot;)+
+geom_hline(yintercept=c(ystart,yend),linewidth=.5,lineend=&quot;square&quot;)+
+geom_line(aes(color=z,linetype=z),linewidth=.7)+
+geom_point(aes(color=z,alpha=z),stroke=0,size=1.3)+
+labs(x=NULL,y=NULL,title=&quot;English ONS data, ages 70-79: All-cause CMR per 100,000 person-years&quot;)+
+scale_x_date(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
+scale_color_manual(values=hsv(c(21,0,21,0)/36,1,.8))+
+scale_linetype_manual(values=c(&quot;solid&quot;,&quot;solid&quot;,&quot;42&quot;,&quot;42&quot;))+
+scale_alpha_manual(values=c(1,1,0,0))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.text.x=element_text(hjust=0,margin=margin(4)),
+  axis.ticks=element_line(linewidth=.5),
+  axis.ticks.length=unit(5,&quot;pt&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  legend.background=element_rect(fill=&quot;white&quot;,color=&quot;black&quot;,linewidth=.5),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.justification=c(1,1),
+  legend.key=element_blank(),
+  legend.key.height=unit(12,&quot;pt&quot;),
+  legend.key.width=unit(30,&quot;pt&quot;),
+  legend.margin=margin(5,7,5,5),
+  legend.position=c(1,1),
+  legend.spacing.x=unit(3,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.grid=element_blank(),
+  plot.margin=margin(7,7,5,7),
+  plot.title=element_text(size=11.2,face=&quot;bold&quot;,margin=margin(,,5)))
+ggsave(&quot;1.png&quot;,width=6,height=3,dpi=300*4)
+
+sub=&quot;In the lines labeled \&quot;Vaccinated\&quot; and \&quot;Unvaccinated\&quot; people are classified as vaccinated on the day of the first dose. Source: ONS dataset \&quot;Deaths involving COVID-19 by vaccination status, England\&quot;. Data for the first three months is taken from the July 2022 release which was linked against the 2011 census, and data for the other months is taken from the August 2023 release which was linked against the 2021 census.&quot;
+system(paste0(&quot;mogrify -trim 1.png;w=`identify -format %w 1.png`;magick 1.png \\( -size $[w]x -font Arial -interline-spacing -3 -pointsize $[43*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -splice x100 \\) -append -resize 25% -bordercolor white -border 26 -colors 256 1.png&quot;))</pre>
+</div>
+<h2>
+<a href=#Mahadva_Setty_Mortality_rate_for_two_doses_relative_to_time_since_vaccination_in_ONS_data id=Mahadva_Setty_Mortality_rate_for_two_doses_relative_to_time_since_vaccination_in_ONS_data>Mahadva Setty: Mortality rate for two doses relative to time since vaccination in ONS data</a>
+</h2>
+<p>Mahadva Setty included this plot in his Substack post: [<a href="https://madhavasetty.substack.com/p/covid-shots-have-saved-millions-of">https://madhavasetty.substack.com/p/covid-shots-have-saved-millions-of</a>]</p>
+<div class="width7">
+<img src="i/uk-setty-1.png">
+</div>
+<p>However I pointed out that in the Czech record-level data in ages 70-79, people with two but not more doses also have about 5.7 times higher mortality rate on weeks 35-39 after vaccination than weeks 0-4 after vaccination: [<a href=czech.html#Excess_mortality_by_weeks_after_vaccination_and_age_group>czech.html#Excess_mortality_by_weeks_after_vaccination_and_age_group</a>]</p>
+<div class="width7">
+<img src="i/uk-setty-2.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table)
+
+weekbin=5;agebin=10;maxage=90
+
+t=fread(&quot;http://sars2.net/f/czbuckets.csv.gz&quot;)[dose==2][,.(dead=sum(dead),alive=sum(alive)),.(month,age,type,week,dose)]
+
+# # use mortality rate the same month as baseline
+# t=merge(t[dose&gt;0],t[,.(rate=sum(dead)/sum(alive)),by=.(month,age)])
+
+# use projection as baseline
+proj=fread(&quot;http://sars2.net/f/czdeadproj.csv&quot;)[,.(dead=sum(dead),pop=sum(pop)),.(month=substr(date,1,7),age)]
+t=merge(t[type!=&quot;&quot;][,age:=pmin(90,age%/%5*5)],proj[,.(month,age,rate=dead/pop)])
+
+t=t[,.(dead=sum(dead),alive=sum(alive),base=sum(rate*alive)),.(week%/%weekbin*weekbin,age=pmin(90,age%/%agebin*agebin))][order(week)]
+
+t$age=`levels&lt;-`(factor(t$age),paste0(seq(0,maxage,agebin),c(paste0(&quot;-&quot;,seq(agebin-1,maxage,agebin)),&quot;+&quot;)))
+t$week=`levels&lt;-`(factor(t$week),sapply(sort(unique(t$week)),\(i)paste0(i,&quot;-&quot;,i+weekbin-1)))
+t=rbind(t,t[,.(dead=sum(dead),alive=sum(alive),base=sum(base),week=&quot;Total&quot;),by=age])
+
+m=tapply(with(t,(dead-base)/ifelse(dead&gt;base,base,dead)*100),t[,2:1],c)
+disp=round(tapply((t$dead/t$base-1)*100,t[,2:1],c))
+disp[is.nan(disp)]=-100
+mpop=xtabs(alive~age+week,t)
+
+exp=.8;m=abs(m)^exp*sign(m)
+maxcolor=400^exp;m[is.infinite(m)]=-maxcolor;m[is.nan(m)]=-maxcolor
+
+pal=hsv(rep(c(7/12,0),5:4),c(.9,.75,.6,.3,0,.3,.6,.75,.9),c(.4,.65,1,1,1,1,1,.65,.4))
+
+pheatmap::pheatmap(m,filename=&quot;i1.png&quot;,display_numbers=disp,
+  gaps_col=ncol(m)-1,
+  cluster_rows=F,cluster_cols=F,legend=F,
+  cellwidth=18,cellheight=18,fontsize=9,fontsize_number=8,border_color=NA,na_col=&quot;white&quot;,
+  number_color=ifelse(!is.na(m)&amp;abs(m)&gt;.5*maxcolor,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(-maxcolor,maxcolor,,256),colorRampPalette(pal)(256))
+
+m2=t[,xtabs(alive/365~age+week)]
+max2=max(m2[,-ncol(m2)])
+
+pheatmap::pheatmap(m2,filename=&quot;i2.png&quot;,display_numbers=kimi(m2),
+  gaps_col=ncol(m2)-1,
+  cluster_rows=F,cluster_cols=F,legend=F,
+  cellwidth=18,cellheight=18,fontsize=9,fontsize_number=8,border_color=NA,na_col=&quot;white&quot;,
+  number_color=ifelse(m2&gt;.5*max2,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(0,max2,,256),sapply(255:0/255,\(i)rgb(i,i,i)))
+
+sub=&#39;The x-axis shows weeks since vaccination, where week zero consists of the day of vaccination and the next 6 days. People are removed under the second dose after getting a third dose. The baseline was calculated based on the historical trend in crude mortality rate within 5-year age groups, so that a seasonality-adjusted linear trend in 2010-2019 was projected to 2020-2022.&#39;
+system(paste0(&quot;mogrify -trim i[12].png;w=`identify -format %w i1.png`;magick -size $w \\( -pointsize 48 -font Arial-Bold caption:&#39;Czech record-level data: Excess mortality by weeks after second dose&#39; -splice x10 \\) -pointsize 44 -font Arial \\( caption:&#39;Excess CMR percent relative to projected CMR among general Czech population&#39; i1.png -splice x18 \\) \\( caption:&#39;Population size in person-years&#39; i2.png -splice x18 \\) \\( -pointsize 43 -font Arial caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -splice x10 \\) -append -trim -bordercolor white -border 24 1.png&quot;))</pre>
+</div>
+<p>But if you look at people in ages 70-79 with two or more doses instead of two but not more doses, the mortality rate remains lower than the projected Czech mortality rate even on weeks 35-39 after vaccination:</p>
+<div class="width7">
+<img src="i/uk-setty-3.png">
+</div>
+<p>My plots show excess CMR relative to a seasonality-adjusted projection of CMR in 2015-2019. But this code shows that for people with two but not more doses in ages 70-79, the raw CMR was also about 5.7 higher on weeks 35-39 than weeks 0-4:</p>
+<pre>t=fread(&quot;http://sars2.net/f/czbuckets.csv.gz&quot;)
+t[,bin:={x=week%/%5*5;paste0(x,&quot;-&quot;,x+4)}]
+o=t[age%in%70:79&amp;dose==2,.(cmr=sum(dead)/sum(alive)*365e5),bin]
+print(o[1:10],r=F)
+#   bin  cmr
+#   0-4 1489
+#   5-9 2081
+# 10-14 2341
+# 15-19 2530
+# 20-24 2922
+# 25-29 4120
+# 30-34 7462
+# 35-39 8506 # 8506/1489 is about 5.7
+# 40-44 7536
+# 45-49 5830</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
