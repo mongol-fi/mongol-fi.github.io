@@ -4,7 +4,9 @@
 body{background:#292929;color:white;margin:6px 6px 6px max(6px, min(50vw - 270px, 100vw - 1100px))}
 body,td,th{font:14.5px/1.3 Arial,Helvetica,'Liberation Sans',sans-serif}
 p{max-width:540px}
-h1,h2,h2 a,h3 a,h2 a:visited,h3 a:visited{font-weight:normal;color:white}
+ul,ol{max-width:500px}
+.toc{max-width:none}
+h1,h2,h3,h2 a,h3 a,h2 a:visited,h3 a:visited{font-weight:normal;color:white}
 h1{font-size:2.1em;margin-top:.9em}
 h2{font-size:1.7em}
 h3{font-size:1.3em}
@@ -18,8 +20,10 @@ table{border-collapse:collapse}
 td,th{border:1px solid #555;padding:2px 4px}
 th{background:#444;text-align:left;font-weight:bold}
 img{max-width:100%}
-blockquote{margin-left:0px;padding-left:40px;margin-right:0}
+blockquote{margin:0;padding-left:40px;margin-right:0;overflow-x:hidden}
 blockquote p{max-width:480px}
+blockquote p:first-child{margin-top:0}
+blockquote p:last-child{margin-bottom:0}
 blockquote blockquote p{max-width:440px}
 blockquote blockquote blockquote p{max-width:400px}
 blockquote,.quote,blockquote h1,blockquote h2,blockquote h3{color:hsl(50,100%,85%)}
@@ -27,7 +31,7 @@ blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(45,55%,65%)}
 blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote .quote,.quote .quote .quote{color:hsl(40,40%,50%)}
 .spoiler button{width:90px;border:0;font-family:inherit;font-size:inherit;color:inherit;margin:0;background:#4a4a4a;padding:4px 0px;outline:none;cursor:pointer}
 .spoiler pre{display:none;margin-top:0}
-.red,.red .quote{color:hsl(0,100%,75%)!important}
+.red,.red .quote{color:hsl(0,100%,77%)!important}
 .width1{max-width:100px}
 .width2{max-width:200px}
 .width3{max-width:300px}
@@ -61,7 +65,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <h1>Czech record-level mortality data by vaccination status (part 4) - <a href=index.html>sars2.net</a></h1>
 <p>Links to earlier parts: <a href=czech.html>czech.html</a>, <a href=czech2.html>czech2.html</a>, <a href=czech3.html>czech3.html</a>.</p>
 <h2 id=Contents><a href=#Contents>Contents</a></h2>
-<ul>
+<ul class=toc>
 <li><a href=#Moderna_Pfizer_ratio_by_vaccination_quarter_and_age_group>Moderna-Pfizer ratio by vaccination quarter and age group</a></li>
 <li><a href=#Triangle_plots_of_Moderna_Pfizer_ratio_for_third_and_fourth_doses>Triangle plots of Moderna-Pfizer ratio for third and fourth doses</a></li>
 <li><a href=#Types_of_vaccination_sites>Types of vaccination sites</a></li>
@@ -77,6 +81,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#New_record_level_dataset_with_columns_for_infections_hospitalizations_and_comorbidity_index>New record-level dataset with columns for infections, hospitalizations, and comorbidity index</a></li>
 <li><a href=#Age_normalized_comorbidity_and_hospitalization_rates_in_new_UZIS_data>Age-normalized comorbidity and hospitalization rates in new UZIS data</a></li>
 <li><a href=#Age_standardized_hospitalization_rate_by_vaccine_type_in_new_UZIS_data>Age-standardized hospitalization rate by vaccine type in new UZIS data</a></li>
+<li><a href=#Age_standardized_hospitalization_rate_by_age_group_in_new_UZIS_data>Age-standardized hospitalization rate by age group in new UZIS data</a></li>
 </ul>
 
 <h2>
@@ -839,42 +844,47 @@ p[,month:=as.Date(paste0(month,&quot;-1&quot;))]
 xstart=as.Date(&quot;2020-12-1&quot;);xend=as.Date(&quot;2023-1-1&quot;)
 p=p[month&gt;=xstart&amp;month&lt;=xend]
 
-xbreak=seq(as.Date(&quot;2021-1-1&quot;),xend,&quot;6 month&quot;);xlab=c(rbind(&quot;&quot;,2021:2022),&quot;&quot;)
+xbreak=seq(as.Date(&quot;2021-7-1&quot;),xend,&quot;year&quot;);xlab=year(xbreak)
 ystep=500;ystart=0;yend=max(p$asmr,na.rm=T);ybreak=seq(ystart,yend,ystep)
 
-color=c(hcl(c(210,0)+15,130,60),hcl(c(210,0)+15,80,40))
-
-label=data.frame(x=xstart+.975*(xend-xstart),y=seq(.92*yend,,yend/-12,nlevels(p$dose)),label=levels(p$dose))
-
-sub=&quot;The resident population estimates from the 2021 census by 5-year age groups were used as the standard population.&quot;|&gt;stringr::str_wrap(78)
-
 ggplot(p,aes(x=month+15,y=asmr))+
-geom_vline(xintercept=seq(as.Date(&quot;2021-1-1&quot;),as.Date(&quot;2023-1-1&quot;),&quot;year&quot;),linewidth=.3)+
-geom_vline(xintercept=c(xstart,xend),linewidth=.3,lineend=&quot;square&quot;)+
-geom_hline(yintercept=c(ystart,yend),linewidth=.3,lineend=&quot;square&quot;)+
-geom_line(aes(color=dose,linetype=dose),linewidth=.4)+
-geom_point(aes(color=dose),size=.6)+
-geom_label(data=label,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.85),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.04,&quot;lines&quot;),label.size=0,size=2.75,hjust=1,color=color)+
-labs(x=NULL,y=NULL,title=&quot;Czech record-level data: All-cause ASMR per 100,000 person-years&quot;,subtitle=sub)+
+geom_vline(xintercept=seq(as.Date(&quot;2021-1-1&quot;),as.Date(&quot;2023-1-1&quot;),&quot;year&quot;),linewidth=.5)+
+geom_vline(xintercept=c(xstart,xend),linewidth=.5,lineend=&quot;square&quot;)+
+geom_hline(yintercept=c(ystart,yend),linewidth=.5,lineend=&quot;square&quot;)+
+geom_line(aes(color=dose,linetype=dose),linewidth=.7)+
+geom_point(aes(color=dose,alpha=dose),stroke=0,size=1.1)+
+labs(x=NULL,y=NULL,title=&quot;Czech record-level data: All-cause ASMR per 100,000 person-years&quot;,subtitle=&quot;The resident population estimates from the 2021 census by 5-year age groups were used as the standard population.&quot;|&gt;stringr::str_wrap(78))+
 scale_x_date(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
-scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,labels=\(x)formatC(x,digits=0,format=&#39;f&#39;,big.mark=&#39;,&#39;))+
-scale_color_manual(values=color)+
-scale_linetype_manual(values=c(1,1,2,2))+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
+scale_color_manual(values=hsv(c(21,0,21,0)/36,1,.8))+
+scale_linetype_manual(values=c(&quot;solid&quot;,&quot;solid&quot;,&quot;42&quot;,&quot;42&quot;))+
+scale_alpha_manual(values=c(1,1,0,0))+
 coord_cartesian(clip=&quot;off&quot;,expand=F)+
-theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+guides(color=guide_legend(ncol=2,byrow=F))+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
   axis.text.x=element_text(margin=margin(3)),
-  axis.ticks=element_line(linewidth=.3),
-  axis.ticks.length=unit(3,&quot;pt&quot;),
+  axis.ticks=element_line(linewidth=.5),
+  axis.ticks.length=unit(5,&quot;pt&quot;),
   axis.ticks.length.x=unit(0,&quot;pt&quot;),
-  axis.title=element_text(size=8),
-  legend.position=&quot;none&quot;,
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.justification=c(0,0),
+  legend.key=element_blank(),
+  legend.key.height=unit(12,&quot;pt&quot;),
+  legend.key.width=unit(30,&quot;pt&quot;),
+  legend.margin=margin(,,6),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(3,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11),
+  legend.title=element_blank(),
   panel.background=element_blank(),
   panel.grid=element_blank(),
-  plot.subtitle=element_text(size=7,margin=margin(,,4)),
-  plot.title=element_text(size=7.5,face=&quot;bold&quot;,margin=margin(1,,4)),
-  plot.margin=margin(4,5,4,4))
-ggsave(&quot;1.png&quot;,width=3.9,height=2.4,dpi=350*4)
-system(&quot;mogrify -resize 25% 1.png&quot;)</pre>
+  plot.margin=margin(7,7,5,7),
+  plot.subtitle=element_text(size=11,margin=margin(,,4)),
+  plot.title=element_text(size=11.5,face=&quot;bold&quot;,margin=margin(,,5)))
+ggsave(&quot;1.png&quot;,width=6,height=3.8,dpi=300*4)
+system(&quot;mogrify -resize 25% -colors 256 1.png&quot;)</pre>
 </div>
 <p>And in the English ONS data when I classified people as unvaccinated until 3 weeks from the first dose, it similarly gave a big advantage to unvaccinated people, because it reduced unvaccinated CMR in early 2021 when the first dose was rolled out (<a href=stat.html#Plot_CMR_by_age_group_when_people_are_classified_as_unvaccinated_until_3_weeks_from_vaccination>R code</a>):</p>
 <div class="width5">
@@ -1502,7 +1512,8 @@ Deyo-Charlson Comorbidity Index
 </td></tr>
 </table>
 <p>The <code>Infekce</code> column indicates whether the entry is for a person with no infection listed, or for the first, second, or third infection of the person. So part of the reason why there are more rows than people is probably because there's multiple rows for people with 2 or 3 infections. But I don't know why the maximum infection number is only 3 though:</p>
-<pre>&gt; t[,.N,Infekce]
+<pre>&gt; t=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv&quot;)
+&gt; t[,.N,Infekce]
    Infekce       N
 1:      NA 7800263
 2:       1 4325706
@@ -1514,8 +1525,7 @@ Deyo-Charlson Comorbidity Index
 1:                              1630991 # about 1.6 million rows for unvaccinated people
 2:                         CO01       1 # one row for Pfizer</pre>
 <p>On most rows with missing year of birth, all other fields including the date of death are also missing, but there's 63695 rows where the year of birth is missing but the date of death is not missing (which are mostly in 2020 like the blog post by SMIS said):</p>
-<pre>&gt; t=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv&quot;)
-&gt; t[RokNarozeni==&quot;-&quot;&amp;DatumUmrtiLPZ!=&quot;&quot;,.N,.(year=substr(DatumUmrtiLPZ,1,4))][order(year)]
+<pre>&gt; t[RokNarozeni==&quot;-&quot;&amp;DatumUmrtiLPZ!=&quot;&quot;,.N,.(year=substr(DatumUmrtiLPZ,1,4))][order(year)]
    year     N
 1: 2020 37471
 2: 2021  9658
@@ -1731,6 +1741,108 @@ system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 <p>Here's my old plot for ASMR by vaccine type for comparison, where you can see that the spike in ASMR in the last two months of 2021 is more pronounced for Janssen and AstraZeneca which are viral vector vaccines but the spike is more flat for Moderna and Pfizer which are mRNA vaccines (even though the difference might not necessarily be due to efficacy, but it might also be if people with a higher COVID mortality risk were more likely to get certain types of vaccines): [<a href=czech2.html#ASMR_by_month_and_vaccine_type>czech2.html#ASMR_by_month_and_vaccine_type</a>]</p>
 <div class="width7">
 <img src="i/czech-asmrtype.png">
+</div>
+<h2>
+<a href=#Age_standardized_hospitalization_rate_by_age_group_in_new_UZIS_data id=Age_standardized_hospitalization_rate_by_age_group_in_new_UZIS_data>Age-standardized hospitalization rate by age group in new UZIS data</a>
+</h2>
+<p>Earlier I have pointed out that in the winter of 2020 to 2021 when the Czech Republic had a pattern with three distinct humps in all-cause mortality, the third hump was lower than the first hump in ages 80+ but ages 40-59 and 60-79 followed the opposite pattern where the third hump was higher than the first hump. I thought it might have been because in ages 80+ about half of people had been vaccinated by the time of the third hump, but in ages 40-59 and 60-79 only a few people had been vaccinated by the time of the third hump.</p>
+<p>When I looked at all-cause ASMR by vaccination status, the third hump was close to nonexistent in vaccinated people in ages 80+. But it wasn't necessarily because vaccines prevented COVID deaths, because it might have also been because there was a reduced number of deaths in recently vaccinated people due to the temporal HVE: [<a href=czech.html#Daily_deaths_and_vaccine_doses_by_age_group>czech.html#Daily_deaths_and_vaccine_doses_by_age_group</a>]</p>
+<div class="width6">
+<img src="i/czech-facet-asmr.png">
+</div>
+<p>So therefore I wanted to check if COVID hospitalizations followed a similar pattern as all-cause deaths, because COVID hospitalizations are probably less affected by temporal HVE than all-cause mortality. But data for 2020 was missing from the datasets published by the Czech MoH for COVID hospitalizations by vaccination status.</p>
+<p>However now based on the new UZIS dataset it's possible to calculate a hospitalization rate by age and vaccination status so that 2020 is included. It shows that among unvaccinated people in ages 80+, the third hump was higher than the first hump. But in ages 80+ if you look at both unvaccinated and vaccinated people combined, the reason why the third hump is so low appears to be that a high percentage of people had been vaccinated by the time of the third hump:</p>
+<div class="width6">
+<img src="i/czech-uzishospage.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2)
+
+ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
+
+isoweek=\(year,week,weekday=7){d=as.Date(paste0(year,&quot;-1-4&quot;));d-(as.integer(format(d,&quot;%w&quot;))+6)%%7-1+7*(week-1)+weekday}
+getweek=\(x)isoweek(as.integer(substr(x,1,4)),as.integer(substr(x,6,7)))
+
+agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
+ages=c(0,40,60,80)
+
+t=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv&quot;)
+t[,dose:=ifelse(Datum_Prvni_davka!=&quot;&quot;&amp;Datum_Prvni_davka&lt;=min_Hospitalizace,1,0)]
+t[RokNarozeni!=&quot;-&quot;,age:=pmin(100,(2020-as.integer(substr(RokNarozeni,1,4))))]
+
+a=t[,.(hosp=.N),.(age,dose,week=min_Hospitalizace)]
+b=fread(&quot;http://sars2.net/f/czbucketsdaily.csv.gz&quot;)
+b=b[,.(pop=sum(alive)),.(week=format(date,&quot;%Y-%V&quot;),dose=pmin(dose,1),age=pmin(90,age)%/%5*5)]
+b=rbind(b,b[week==&quot;2022-51&quot;,.(week=setdiff(a[week!=&quot;&quot;&amp;!week%like%2020,week],week),pop),.(dose,age)])
+b=b[rowid(week,dose,age)==1]
+a=merge(a,b)
+a=a[!week%like%2024]
+a=a[age!=0]
+
+a=rbind(a,a[,.(hosp=sum(hosp),pop=sum(pop),dose=2),.(week,age)])
+
+a=merge(fread(&quot;http://sars2.net/f/czcensus2021pop.csv&quot;)[,.(std=sum(pop)),.(age=age%/%5*5)][,std:=std/sum(std)],a)
+
+p=a[,.(y=sum(hosp/pop*std/7*365e5)),.(age=agecut(age,ages),x=week,z=factor(dose,,c(&quot;Unvaccinated&quot;,&quot;Vaccinated&quot;,&quot;Unvaccinated and vaccinated&quot;)))]
+
+ymax=p[,.(ymax=max(y)),age]
+p=merge(p,ymax)[,.(x,y=y/ymax*100,age,z)]
+
+pct=b[,.(pop=sum(pop)),.(week,age=agecut(age,ages),dose)]
+pct=dcast(pct,week+age~dose,value.var=&quot;pop&quot;)[,`1`:=nafill(`1`,,0)]
+pct=pct[week&gt;=b[dose==1,min(week)]]
+p=rbind(p,pct[,.(x=week,age,z=&quot;Vaccinated percent&quot;,y=`1`/(`0`+`1`)*100)])
+
+xval=unique(format(seq(as.Date(&quot;2020-1-1&quot;),as.Date(&quot;2023-12-31&quot;),1),&quot;%Y-%V&quot;))
+p[,x:=as.integer(factor(x,xval))]
+xstart=1;xend=max(which(!weeks%like%2024))
+
+ggplot(p,aes(x))+
+facet_wrap(~age,ncol=1,strip.position=&quot;top&quot;,dir=&quot;v&quot;,scales=&quot;free_y&quot;)+
+geom_vline(xintercept=grep(&quot;-01&quot;,xval),linewidth=.4,color=&quot;gray66&quot;,lineend=&quot;square&quot;)+
+geom_vline(xintercept=c(xstart,xend),linewidth=.4,lineend=&quot;square&quot;)+
+geom_hline(yintercept=c(0,100),linewidth=.4,lineend=&quot;square&quot;)+
+geom_line(aes(y=y,color=z,linetype=z),linewidth=.6)+
+geom_label(data=ymax,aes(label=sprintf(&quot;\n  Age %s (max %.0f)  \n&quot;,age,ymax),y=100),x=xend,lineheight=.5,hjust=1,vjust=1,size=3.6,fill=alpha(&quot;white&quot;,1),label.r=unit(0,&quot;pt&quot;),label.padding=unit(0,&quot;pt&quot;),label.size=.4)+
+labs(x=NULL,y=NULL,title=&quot;Czech Republic: Weekly age-standardized COVID hospitalization\nrate per 100,000 person-years&quot;,subtitle=&quot;Displayed as percentage of maximum value shown in parentheses&quot;)+
+scale_x_continuous(limits=c(xstart,xend),breaks=grep(&quot;-26&quot;,xval),labels=2020:2023)+
+scale_y_continuous(breaks=1:4*20,limits=c(0,100),labels=\(x)paste0(x,&quot;%&quot;))+
+scale_color_manual(values=c(hsv(c(7,0)/12,1,.8),&quot;black&quot;,hsv(30/36,.5,1)))+
+scale_linetype_manual(values=c(&quot;solid&quot;,&quot;solid&quot;,&quot;solid&quot;,&quot;42&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(color=guide_legend(nrow=2,byrow=F))+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.ticks=element_line(color=&quot;black&quot;,linewidth=.4),
+  axis.text.x=element_text(margin=margin(4)),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(4,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;horizontal&quot;,
+  legend.justification=&quot;center&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.margin=margin(,,4),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.grid=element_blank(),
+  panel.spacing=unit(3,&quot;pt&quot;),
+  plot.margin=margin(5,5,5,5),
+  plot.subtitle=element_text(size=11,margin=margin(,,2)),
+  plot.title=element_text(size=11,face=&quot;bold&quot;,margin=margin(1,,4)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=5.3,height=5.3,dpi=300*4)
+
+sub=&quot;The 2021 census population by 5-year age groups was used as the standard population. In the hospitalization data people were given a year of birth as a range of 5 years like 1950-1954, so here each person was assigned to a 5-year age group by subtracting the year of birth from 2020 so that aging over time was not accounted for. Ages 0-4 were excluded due to a small vaccinated population size which inflated the hospitalization rate on days with nonzero hospitalizations. Sources: nzip.cz/data/2135-covid-19-prehled-populace (hospitalizations) and github.com/PalackyUniversity/uzis-data-analysis (number of vaccinated and unvaccinated people by age).&quot;
+system(paste0(&quot;mar=$[24*4];w=`identify -format %w 1.png`;magick \\( 1.png -gravity southwest -chop 0x70 \\) \\( -size $[w-mar*2]x -font Arial -interline-spacing -3 -pointsize $[44*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -gravity southwest -splice $[mar]x$[20*4] \\) -append -resize 25% -colors 256 1.png&quot;))</pre>
 </div>
 <script>
 let q=document.querySelectorAll('a,code,pre')
