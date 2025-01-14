@@ -107,6 +107,10 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Effect_of_classifying_people_as_vaccinated_only_2_weeks_after_completing_the_primary_course_doses>Effect of classifying people as vaccinated only 2 weeks after completing the primary course doses</a></li>
 <li><a href=#Excess_mortality_in_New_Zealand>Excess mortality in New Zealand</a></li>
 </ul></li>
+<li><a href=#Responses_to_the_debate_by_other_people>Responses to the debate by other people</a>
+<ul class=toc>
+<li><a href=#Post_by_Spiro_Pantazatos_for_mortality_by_state_during_the_Delta_wave>Post by Spiro Pantazatos for mortality by state during the Delta wave</a></li>
+</ul></li>
 </ul>
 
 <h2>
@@ -1820,6 +1824,109 @@ print(mutate_if(merge(nz,barry),is.double,round),r=F)</pre>
 <div class="maxwidth">
 <img src=i/rootclaim-usmortality-nz-1.png style=height:400px><img src=i/rootclaim-usmortality-nz-2.png style=height:400px>
 </div>
+<h2>
+<a href=#Responses_to_the_debate_by_other_people id=Responses_to_the_debate_by_other_people>Responses to the debate by other people</a>
+</h2>
+<h3>
+<a href=#Post_by_Spiro_Pantazatos_for_mortality_by_state_during_the_Delta_wave id=Post_by_Spiro_Pantazatos_for_mortality_by_state_during_the_Delta_wave>Post by Spiro Pantazatos for mortality by state during the Delta wave</a>
+</h3>
+<p>Spiro Pantazatos offered to help Kirsch in the debate, and he tried to debunk a plot which showed that during the Delta wave the proportion of unvaccinated people had a positive correlation with COVID deaths across US states: <a href="https://telemimesis.substack.com/p/heres-to-you-dr-robinson">https://telemimesis.substack.com/p/heres-to-you-dr-robinson</a>. But he pointed out that the correlation reversed after he adjusted the calculation for the number of COVID deaths in 2020.</p>
+<p>Kirsch had a source inside HHS who has given him a couple of different sets of data from Medicare. Kirsch published the first set of data in February 2023: <a href="https://kirschsubstack.com/p/game-over-medicare-data-shows-the?open=false#%C2%A7the-medicare-data-that-i-received">https://kirschsubstack.com/p/game-over-medicare-data-shows-the?open=false#%C2%A7the-medicare-data-that-i-received</a>. And he published the second set of data in December 2023 at the same time as Barry Young's New Zealand data: <a href="https://kirschsubstack.com/p/data-from-us-medicare-and-the-new">https://kirschsubstack.com/p/data-from-us-medicare-and-the-new</a>. I wrote about both sets of data here: <a href=moar.html#Connecticut_Medicare_data_published_by_Kirsch>moar.html#Connecticut_Medicare_data_published_by_Kirsch</a>.</p>
+<p>The first set of data included data for both unvaccinated and vaccinated people only for Connecticut, but it's not very useful to determine the impact of vaccination during the Delta wave because Connecticut had a very low number of deaths during the Delta wave. However it includes another sheet for deaths in only vaccinated people called <span class="quote">&quot;Medicare all states subset&quot;</span>, which includes entries for a total of 114,157 deaths that occcurred between December 2020 and January 2023. I don't know how the subset of people was selected, and Kirsch doesn't seem to know it either because he included this comment in his spreadsheet for the data: <span class="quote">&quot;Whatever query produced these records did NOT get all the records for people who died since their vaccine. It seems like it is a random subset of this data.&quot;</span></p>
+<p>But anyway, the subset of people who were included in his Medicare spreadsheet had almost no increase in deaths during the Delta wave:</p>
+<div class="width7">
+<img src="i/rootclaim-delta-1.png">
+</div>
+<p>In the second set of Medicare data that Kirsch published in December 2023, there was another spreadsheet which had one sheet for deaths by date in unvaccinated people and and another sheet for deaths by date in all people: <a href=f/COVID_vax_jan_feb_mar_2021_plus_ALL_deaths_in_medicare_per_day.xlsx>f/COVID_vax_jan_feb_mar_2021_plus_ALL_deaths_in_medicare_per_day.xlsx</a>. It was missing deaths by date in vaccinated people but I believe it's possible to calculate it by simply subtracting unvaccinated people from all people. The spreadsheet also had sheets for deaths by days since vaccination among people vaccinated in January 2021, February 2021, and March 2021, but I converted them to deaths by estimated date of death by assuming that all people got vaccinated on the 15th day of the month, which means that my estimated date of death is off by at most 16 days from the actual date of death. However by both methods of calculating deaths in vaccinated people, the bump in deaths during the Delta wave was almost flat:</p>
+<div class="width6">
+<img src="i/rootclaim-delta-3.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2)
+
+ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
+
+f=&quot;http://sars2.net/f/COVID_vax_jan_feb_mar_2021_plus_ALL_deaths_in_medicare_per_day.xlsx&quot;
+
+s8=setDT(readxl::read_excel(f,sheet=8))
+p=s8[,.(x=as.Date(BENE_DEATH_DT),y=num_benes,z=&quot;Unvaccinated&quot;)]
+
+s5=setDT(readxl::read_excel(f,sheet=5))
+p=rbind(s5[,.(x=as.Date(BENE_DEATH_DT),y=NUM_BENES,z=&quot;All people&quot;)],p)
+
+minus=dcast(p,x~z,value.var=&quot;y&quot;)
+p=rbind(p,minus[,.(x,y=`All people`-`Unvaccinated`,z=&quot;All people minus unvaccinated&quot;)])
+
+d=do.call(rbind,lapply(1:3,\(i)setDT(readxl::read_excel(f,sheet=i))[,.(days=died_days_after,dead=`# deaths`)][,date:=i]))
+d[,date:=as.Date(paste(2021,date,15,sep=&quot;-&quot;))]
+p=rbind(p,d[,.(y=sum(dead),z=&quot;Vaccinated January to March 2021&quot;),.(x=date+days)])
+
+p[,z:=factor(z,unique(z))]
+
+x1=as.Date(&quot;2022-7-1&quot;);x2=as.Date(&quot;2023-9-30&quot;)
+p=merge(p,p[x%in%x1:x2,mean(y),z])[,.(x,y=y/V1*100,z)]
+
+p[,y:=ma(y,3),z]
+
+xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
+xbreak=seq(xstart+182,xend,&quot;year&quot;)
+p=p[x%in%xstart:xend]
+ybreak=pretty(p$y,7)
+
+ggplot(p,aes(x,y,z))+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),linewidth=.4,color=&quot;gray60&quot;)+
+annotate(&quot;rect&quot;,xmin=x1,xmax=x2,ymin=0,ymax=max(ybreak),fill=&quot;gray80&quot;,alpha=.5)+
+geom_vline(xintercept=c(x1,x2),linetype=&quot;42&quot;,linewidth=.4)+
+annotate(&quot;segment&quot;,x=as.Date(&quot;2021-4-15&quot;),xend=as.Date(&quot;2021-4-15&quot;),y=70,yend=100,color=&quot;#bb0000&quot;,linewidth=.4,linetype=&quot;42&quot;)+
+annotate(&quot;text&quot;,x=as.Date(&quot;2020-12-5&quot;),hjust=1,vjust=1,y=90,label=&quot;No new people\nadded after\ndashed line&quot;,color=&quot;#bb0000&quot;,size=3.6,lineheight=.9)+
+annotate(&quot;segment&quot;,x=as.Date(&quot;2020-12-15&quot;),xend=as.Date(&quot;2021-4-5&quot;),y=85,yend=90,arrow=arrow(type=&quot;closed&quot;,length=unit(4,&quot;pt&quot;)),lineend=&quot;butt&quot;,color=&quot;#bb0000&quot;,size=.5)+
+geom_hline(yintercept=100,linetype=&quot;42&quot;,linewidth=.4)+
+geom_line(aes(color=z),linewidth=.6)+
+labs(x=NULL,y=NULL,title=&quot;Medicare data published by Steve Kirsch: Deaths as percentage of\naverage daily deaths in July 2022 to September 2023&quot;)+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=xbreak,labels=year(xbreak))+
+scale_y_continuous(limits=range(ybreak),breaks=ybreak,labels=paste0(ybreak,&quot;%&quot;))+
+scale_color_manual(values=c(&quot;black&quot;,&quot;#6666ff&quot;,&quot;#ff6666&quot;,&quot;#bb0000&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(color=guide_legend(ncol=2,byrow=F))+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.text.x=element_text(margin=margin(4)),
+  axis.text.y=element_text(margin=margin(,3)),
+  axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(4,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;horizontal&quot;,
+  legend.justification=&quot;center&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.margin=margin(,,4),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.4),
+  panel.spacing=unit(2,&quot;pt&quot;),
+  plot.margin=margin(5,5,2,5),
+  plot.subtitle=element_text(margin=margin(,,5)),
+  plot.title=element_text(size=11,face=2,margin=margin(2,,3)))
+ggsave(&quot;1.png&quot;,width=5.7,height=3.7,dpi=300*4)
+
+sub=&quot;Source: kirschsubstack.com/p/data-from-us-medicare-and-the-new, spreadsheet \&quot;data-transparency/USA/Medicare/COVID vax jan feb mar 2021 plus ALL deaths in medicare per day.xlsx\&quot;. All lines are moving averages where the window extends 3 days backwards and 3 days forwards. People vaccinated in January to March 2021 only had data for month of vaccination and days between vaccination and death, so an approximate date of death was calculated by assuming that people got vaccinated on the 15th day of the month, which is off by at most 16 days from the actual date of death. However the exact date of death was available for unvaccinated people and for a set of all people which includes both unvaccinated and vaccinated people.&quot;
+system(paste0(&quot;mogrify -trim 1.png;magick 1.png \\( -size `identify -format %w 1.png`x -font Arial -interline-spacing -3 -pointsize $[44*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -splice x80 \\) -append -resize 25% -bordercolor white -border 24 -colors 256 1.png&quot;))</pre>
+</div>
+<p>In the plot above the dashed dark red line shows that after April 15th 2021 there's no more new people added, so after that the dark red line increases less steeply than the light red line, because more vaccinated people get added to the light red line.</p>
+<p>In the Medicare datasets Kirsch has published, there's many people who are actually vaccinated but who are listed as unvaccinated because they had no vaccine dose known to Medicare. There's also many people who were listed as unvaccinated until they got a booster dose:</p>
+<div class="width10">
+<img src="i/ct-uncle-2.jpg">
+</div>
+<p>In my previous plot the number of deaths in unvaccinated people goes down a lot between late 2021 and mid-2022, but it's partially because many people were listed as unvaccinated until they got a booster dose.</p>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
