@@ -1563,7 +1563,8 @@ Deyo-Charlson Comorbidity Index
 <a href=#Age_normalized_comorbidity_and_hospitalization_rates_in_new_UZIS_data id=Age_normalized_comorbidity_and_hospitalization_rates_in_new_UZIS_data>Age-normalized comorbidity and hospitalization rates in new UZIS data</a>
 </h2>
 <p>The column for the Deyo-Charlson Comorbidity Index shows a comorbidity level expressed as an integer between 0 and 5, where the value is 0 for about 87% of rows:</p>
-<pre>&gt; t[,.N,DCCI]|&gt;print(r=F)
+<pre>&gt; t=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv&quot;)
+&gt; t[,.N,DCCI]|&gt;print(r=F)
  DCCI        N
     0 10961996
     1   876443
@@ -1647,6 +1648,53 @@ Deyo-Charlson Comorbidity Index
 5: CO04   COVID-19 Vaccine Janssen      21.9  429960
 6: CO07                  Nuvaxovid     222.9    5898 # Novavax
 7: CO20 Comirnaty Omicron XBB.1.5.     145.8    2068</pre>
+<p>Even though my excess age-normalized comorbidity index was similar for Pfizer and Moderna, if you look at the highest DCCI values which are 5 and 4, within most age groups their percentage is higher for Moderna than Pfizer:</p>
+<div class="width7">
+<img src="i/czech-dcci-modpfi.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table)
+
+t=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv&quot;)
+
+a=t[,.N,.(dcci=DCCI,born=RokNarozeni,code=OckovaciLatkaKod_Prvni_davka)]
+a=merge(a,a[,.(pop=sum(N)),.(born,code)])
+
+a=a[code%in%c(&quot;CO01&quot;,&quot;CO02&quot;)]
+a[,name:=factor(code,,c(&quot;Pfizer&quot;,&quot;Moderna&quot;))]
+
+m0=a[,tapply(N/pop*100,.(name,paste(&quot;DCCI&quot;,dcci),born),c)]
+maxcolor=max(m0,na.rm=T)
+
+pal=hsv(c(21,21,21,16,11,6,3,0,0)/36,c(0,.25,rep(.5,6),0),c(rep(1,8),.0))
+pal=sapply(255:0/255,\(i)rgb(i,i,i))
+exp=.7
+
+for(i in 1:dim(m0)[1]){
+  m=disp=m0[i,,];disp=ifelse(m&gt;=10,round(m),sprintf(&quot;%.1f&quot;,m))
+  pheatmap::pheatmap(m^exp,filename=paste0(&quot;i&quot;,i,&quot;.png&quot;),display_numbers=disp,main=dimnames(m0)[[1]][i],
+    cluster_rows=F,cluster_cols=F,legend=F,cellwidth=18,cellheight=14,fontsize=9,fontsize_number=8,
+    border_color=NA,na_col=&quot;white&quot;,
+    number_color=ifelse(m^exp&gt;maxcolor^exp*.4,&quot;white&quot;,&quot;black&quot;),
+    breaks=seq(0,maxcolor^exp,,256),colorRampPalette(pal)(256))}
+
+ar=a[,tapply(N/pop,.(code,paste(&quot;DCCI&quot;,dcci),born),c)]
+m1=ar[1,,];m2=ar[2,,];m=(m2-m1)/ifelse(m2&gt;m1,m1,m2)
+disp=m2/m1;disp[]=sprintf(&quot;%.2f&quot;,disp)
+pal=hsv(rep(c(21,0)/36,5:4),c(1,.8,.6,.3,0,.3,.6,.8,1),c(.3,.65,1,1,1,1,1,.65,.3))
+maxcolor=4;exp=.7
+
+pheatmap::pheatmap(sign(m)*abs(m)^exp,filename=paste0(&quot;i3.png&quot;),display_numbers=disp,
+  main=&quot;Moderna-Pfizer ratio&quot;,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=18,cellheight=14,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;white&quot;,
+  number_color=ifelse(abs(m)&gt;maxcolor^exp*.5,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(-maxcolor^exp,maxcolor^exp,,256),colorRampPalette(pal)(256))
+
+system(&quot;w=`identify -format %w i1.png`;pad=24;convert -gravity northwest -pointsize 44 -interline-spacing -2 -font Arial-Bold \\( -size $[w-pad*2]x caption:&#39;Czech UZIS data: Percentage of people with each value of Charlson-Deyo Comorbidity index by year of birth&#39; -splice $[pad]x20 \\) \\( -size $[w-pad*2]x -font Arial -pointsize 40 caption:&#39;People with multiple entries for a COVID case are counted multiple times, because the underlying UZIS dataset doesn&#39;\\&#39;&#39;t make it possible to distinguish which cases belong to the same person. However people with no entry for a COVID case are only counted once. Pfizer includes only type CO01 and not booster or Omicron vaccines, and Moderna includes only type CO02. Source: nzip.cz/data/2135-covid-19-prehled-populace.&#39; -splice $[pad]x10 \\) \\( i1.png -splice 0x10 \\) i[23].png -append -dither none -colors 256 1.png&quot;);qp()</pre>
+</div>
 <h2>
 <a href=#Age_standardized_hospitalization_rate_by_vaccine_type_in_new_UZIS_data id=Age_standardized_hospitalization_rate_by_vaccine_type_in_new_UZIS_data>Age-standardized hospitalization rate by vaccine type in new UZIS data</a>
 </h2>
