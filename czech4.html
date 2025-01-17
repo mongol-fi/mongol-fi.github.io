@@ -83,6 +83,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Age_standardized_hospitalization_rate_by_vaccine_type_in_new_UZIS_data>Age-standardized hospitalization rate by vaccine type in new UZIS data</a></li>
 <li><a href=#Age_standardized_hospitalization_rate_by_age_group_in_new_UZIS_data>Age-standardized hospitalization rate by age group in new UZIS data</a></li>
 <li><a href=#Moderna_Pfizer_mortality_ratio_by_year_of_birth_and_comorbidity_index_in_new_UZIS_data>Moderna-Pfizer mortality ratio by year of birth and comorbidity index in new UZIS data</a></li>
+<li><a href=#Mortality_rate_within_year_from_vaccination_normalized_by_comorbidity_index_in_new_UZIS_data>Mortality rate within year from vaccination normalized by comorbidity index in new UZIS data</a></li>
 </ul>
 
 <h2>
@@ -1918,7 +1919,7 @@ system(paste0(&quot;mar=$[24*4];w=`identify -format %w 1.png`;magick \\( 1.png -
 Show code
 </button><pre>t=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv&quot;)
 
-weeks=u(format(seq(as.Date(&quot;2020-1-1&quot;),as.Date(&quot;2024-12-31&quot;),1),&quot;%Y-%V&quot;))
+weeks=unique(format(seq(as.Date(&quot;2020-1-1&quot;),as.Date(&quot;2024-12-31&quot;),1),&quot;%Y-%V&quot;))
 
 a=t[Infekce==1&amp;RokNarozeni!=&quot;-&quot;,.(case=match(DatumPozitivity,weeks),first=match(Datum_Prvni_davka,weeks),dead=match(Umrti,weeks),dcci=DCCI,code=OckovaciLatkaKod_Prvni_davka,born=RokNarozeni)]
 a=a[!born%like%&quot;19(05|10)&quot;]
@@ -1956,10 +1957,56 @@ pheatmap::pheatmap(sign(m)*abs(m)^exp,filename=paste0(&quot;i3.png&quot;),displa
 sub=&quot;The comorbidity index was calculated at the time of the first COVID case. People with no COVID case are excluded because the DCCI value was only listed for COVID cases. People whose COVID first case was before they were vaccinated are not excluded. Pfizer includes only type CO01 but not Pfizer&#39;s Omicron or pediatric vaccine types. Source: nzip.cz/data/2135-covid-19-prehled-populace.&quot;
 system(paste0(&quot;w=`identify -format %w i1.png`;pad=14;convert -gravity northwest -pointsize 46 -interline-spacing -2 -font Arial-Bold -size $[w-pad*3]x \\( caption:&#39;Czech UZIS data: Deaths per 100,000 people within 52 weeks from first dose (grouped by Deyo-Charlson comorbidity index, year of birth, and type of first vaccine dose)&#39; -splice $[pad]x20 \\) \\( -size $[w-pad*3]x -font Arial -pointsize 42 caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&#39;&quot;,sub),&quot;&#39; -splice $[pad]x10 \\) -pointsize 44 -font Arial-Bold -gravity north \\( caption:Pfizer -splice x12 \\( i1.png -chop x10 \\) caption:Moderna \\( i2.png -chop x10 \\) caption:&#39;Moderna-Pfizer ratio&#39; \\( i3.png -chop x10 \\) \\) -append 1.png&quot;))</pre>
 </div>
-<p>When I excluded people whose first COVID case was before vaccination, the Moderna-Pfizer ratios got a lot higher for most combinations of DCCI and age group with largest sample size of deaths:</p>
+<p>When I excluded people whose first COVID case was before vaccination, the Moderna-Pfizer ratios got a higher for most combinations of DCCI and age group with the largest sample size of deaths:</p>
 <div class="width7">
 <img src="i/czech-dcci-modpfi-3.png">
 </div>
+<h2>
+<a href=#Mortality_rate_within_year_from_vaccination_normalized_by_comorbidity_index_in_new_UZIS_data id=Mortality_rate_within_year_from_vaccination_normalized_by_comorbidity_index_in_new_UZIS_data>Mortality rate within year from vaccination normalized by comorbidity index in new UZIS data</a>
+</h2>
+<p>In the following code I calculated an excess mortality percent within first the 52 weeks from vaccination that was normalized by age group and DCCI but not by time of vaccination. It gave me a higher excess mortality percent for Pfizer than Moderna:</p>
+<pre>t=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv&quot;)
+
+codes=rep(&quot;Other&quot;,25)
+codes[c(1,8,9,16,20,21,23)]=&quot;Pfizer&quot;
+codes[c(2,15)]=&quot;Moderna&quot;
+codes[3]=&quot;AstraZeneca&quot;
+codes[4]=&quot;Janssen&quot;
+codes[c(7,22)]=&quot;Novavax&quot;
+names(codes)=sprintf(&quot;CO%02d&quot;,1:25)
+
+weeks=unique(format(seq(as.Date(&quot;2020-1-1&quot;),as.Date(&quot;2024-12-31&quot;),1),&quot;%Y-%V&quot;))
+
+d=t[Infekce==1&amp;RokNarozeni!=&quot;-&quot;,.(case=match(DatumPozitivity,weeks),first=match(Datum_Prvni_davka,weeks),dead=match(Umrti,weeks),dcci=DCCI,code=OckovaciLatkaKod_Prvni_davka,born=RokNarozeni)]
+d=d[code!=&quot;&quot;]
+d=d[!born%like%&quot;19(05|10)&quot;]
+# d=d[case&gt;=first] # exclude people vaccinated after first case
+
+a=d[,.(dead=sum((dead-first)%in%0:51),pop=.N),.(name=codes[code],born,dcci)]
+a=merge(a,a[,.(base=sum(dead)/sum(pop)),.(dcci,born)])
+o=a[,.(dead=sum(dead),pop=sum(pop),excesspct=(sum(dead)/sum(base*pop)-1)*100),name]
+print(o[order(-pop)],r=F)</pre>
+<!-- -->
+<pre>        name dead     pop excesspct
+      Pfizer 3330 2184868       -13
+     Moderna  490  182299       -20
+     Janssen  324  152824        56
+ AstraZeneca 1341  123531        56
+     Novavax    1    3103       -35
+       Other    0     131      -100</pre>
+<p>When I additionally normalized the excess mortality percent relative to vaccination week grouped by 4-week blocks, the excess mortality percentages for Pfizer and Moderna remained similar:</p>
+<pre>a=d[,.(dead=sum((dead-first)%in%0:51),pop=.N),.(week=first%/%4,name=codes[code],born,dcci)]
+a=merge(a,a[,.(base=sum(dead)/sum(pop)),.(dcci,born,week)])
+o=a[,.(dead=sum(dead),pop=sum(pop),excesspct=(sum(dead)/sum(base*pop)-1)*100),name]
+print(o[order(-pop)],r=F)</pre>
+<!-- -->
+<pre>        name dead     pop excesspct
+      Pfizer 3330 2184868       -11
+     Moderna  490  182299       -21
+     Janssen  324  152824        62
+ AstraZeneca 1341  123531        48
+     Novavax    1    3103       350
+       Other    0     131       NaN</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
