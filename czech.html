@@ -4,6 +4,8 @@
 body{background:#292929;color:white;margin:6px 6px 6px max(6px, min(50vw - 270px, 100vw - 1100px))}
 body,td,th{font:14.5px/1.3 Arial,Helvetica,'Liberation Sans',sans-serif}
 p{max-width:540px}
+ul,ol{max-width:500px}
+.toc{max-width:none}
 h1,h2,h3,h2 a,h3 a,h2 a:visited,h3 a:visited{font-weight:normal;color:white}
 h1{font-size:2.1em;margin-top:.9em}
 h2{font-size:1.7em}
@@ -29,7 +31,7 @@ blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(45,55%,65%)}
 blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote .quote,.quote .quote .quote{color:hsl(40,40%,50%)}
 .spoiler button{width:90px;border:0;font-family:inherit;font-size:inherit;color:inherit;margin:0;background:#4a4a4a;padding:4px 0px;outline:none;cursor:pointer}
 .spoiler pre{display:none;margin-top:0}
-.red,.red .quote{color:hsl(0,100%,75%)!important}
+.red,.red .quote{color:hsl(0,100%,77%)!important}
 .width1{max-width:100px}
 .width2{max-width:200px}
 .width3{max-width:300px}
@@ -63,7 +65,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <h1>Czech record-level mortality data by vaccination status (part 1) - <a href=index.html>sars2.net</a></h1>
 <p>Links to other parts: <a href=czech2.html>czech2.html</a>, <a href=czech3.html>czech3.html</a>, <a href=czech4.html>czech4.html</a>.</p>
 <h2 id=Contents><a href=#Contents>Contents</a></h2>
-<ul>
+<ul class=toc>
 <li><a href=#Background>Background</a></li>
 <li><a href=#Files_used_in_my_analysis>Files used in my analysis</a></li>
 <li><a href=#Were_Pfizer_and_Moderna_vaccines_allocated_randomly>Were Pfizer and Moderna vaccines allocated randomly?</a></li>
@@ -1368,7 +1370,10 @@ system(paste0(&quot;w=`identify -format %w i1.png`;pad=44;convert -gravity north
 <div class="width6">
 <img src="i/czech-facet-hosp.png">
 </div>
-<pre>download.file(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/nakazeni-hospitalizace-testy.csv&quot;,&quot;nakazeni-hospitalizace-testy.csv&quot;)
+<div class="spoiler">
+<button>
+Show code
+</button><pre>download.file(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/nakazeni-hospitalizace-testy.csv&quot;,&quot;nakazeni-hospitalizace-testy.csv&quot;)
 download.file(&quot;http://sars2.net/f/czbucketsdaily.csv.gz&quot;,&quot;czbucketsdaily.csv.gz&quot;)
 download.file(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/umrti.csv&quot;,&quot;umrti.csv&quot;)
 
@@ -1378,109 +1383,114 @@ ma=\(x,b=1,f=b)setNames(rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T),
 ua=\(x,y,...){u=unique(x);y(u,...)[match(x,u)]}
 age=\(x,y){x=as.numeric(x);y=as.numeric(y);(y-x-(y-789)%/%1461+(x-789)%/%1461)%/%365}
 
-agecut=\(x,y)cut(pmax(x,0),c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
-# ages=c(0,12,18,30,40,60,85)
-ages=0:4*20
+agecut=\(x,ages=seq(0,90,10))cut(pmax(x,0),c(ages,Inf),paste0(ages,c(paste0(&quot;-&quot;,ages[-1]-1),&quot;+&quot;)),T,F)
+ages=c(0,40,60,80)
 agelev=agecut(0:120,ages)
 
 xstart=as.Date(&quot;2020-01-01&quot;);xend=as.Date(&quot;2023-1-1&quot;)
 
 rec=fread(&quot;Czech/data/CR_records.csv&quot;,showProgress=F)
 set.seed(0);rec$birth=ua(paste0(rec$Rok_narozeni,&quot;-1-1&quot;),as.Date)+sample(0:364,nrow(rec),T)
-dead=rec[!is.na(DatumUmrti),.(dead=.N),.(date=DatumUmrti,age=agelev[pmax(0,age(birth,DatumUmrti))+1])]
-k=grep(&quot;Datum_&quot;,names(rec));dt=data.table(date=as.IDate(unlist(rec[,..k],,F)),birth=rec$birth)
-p=merge(dead,dt[!is.na(date)][,.(vax=.N),.(date,age=agelev[pmax(0,age(birth,date))+1])],all=T)
+p=rec[!is.na(DatumUmrti),.(y=.N,z=&quot;dead&quot;),.(x=DatumUmrti,age=agelev[pmax(0,age(birth,DatumUmrti))+1])]
+dt=rec[,.(x=as.IDate(unlist(.SD,,F)),birth),.SDcols=patterns(&quot;Datum_&quot;)][!is.na(x)]
+p=rbind(p,dt[,.(y=.N,z=&quot;vax&quot;),.(x,age=agelev[pmax(0,age(birth,x))+1])])
 
-std=fread(&quot;http://sars2.net/f/czcensus2021pop.csv&quot;)$pop
-buck=fread(&quot;czbucketsdaily.csv.gz&quot;)
-buck=rbind(buck,cbind(expand.grid(date=as.IDate(xstart:xend),age=0:100,dose=unique(buck$dose)),alive=0,dead=0))|&gt;unique(by=1:3)
-unvax=buck[dose==0&amp;alive&gt;=1e3,.(dead=sum(dead),alive=sum(alive)),.(date,age2=age)]
-vax=buck[dose&gt;0&amp;alive&gt;=1e3,.(dead=sum(dead),alive=sum(alive)),.(date,age2=age)]
-unvax=unvax[,.(asmr1=sum(dead/alive*std[pmin(age2,100)+1]/sum(std)*365e5)),.(age=agelev[age2+1],date)]
-vax=vax[,.(asmr2=sum(dead/alive*std[pmin(age2,100)+1]/sum(std)*365e5)),.(age=agelev[age2+1],date)]
-p=merge(p,merge(unvax,vax,all=T),all=T)
+agegroups=c(0,1,20,30,seq(40,95,5))
+b=fread(&quot;http://sars2.net/f/czbucketsdaily.csv.gz&quot;)
+b=b[,.(dead=sum(dead),alive=sum(alive)),.(age=agecut(age,agegroups),age2=agecut(age,ages),date,dose=pmin(dose,1)+1)]
+b=rbind(b,cbind(expand.grid(lapply(b[,1:4],unique)),alive=0,dead=0))|&gt;unique(by=1:4)
+b=rbind(b,b[,.(dead=sum(dead),alive=sum(alive),dose=0),.(age,age2,date)])
+b=merge(fread(&quot;http://sars2.net/f/czcensus2021pop.csv&quot;)[,.(std=sum(pop)),.(age=agecut(age,agegroups))][,std:=std/sum(std)],b)
+b=b[,.(pop=sum(alive),y=sum(dead/alive*std*365e5,na.rm=T)),.(x=date,z=paste0(&quot;asmr&quot;,dose),age=age2)]
+p=rbind(p,b[,pop:=NULL])
+
+b=fread(&quot;http://sars2.net/f/czbucketsdaily.csv.gz&quot;)
+b=b[,.(pop=sum(as.double(alive))),.(age=agecut(age,ages),dose=pmin(dose,1),date)]
+p=rbind(p,merge(b[dose==1],b[,.(total=sum(pop)),.(age,date)])[,.(y=pop/total,age,x=date,z=&quot;vaxpct&quot;)])
 
 testy=fread(&quot;nakazeni-hospitalizace-testy.csv&quot;,na.strings=&quot;-&quot;)
 testy=testy[,.(tests=sum(provedene_testy,na.rm=T),cases=sum(potvrzene_pripady,na.rm=T),hosp=sum(nove_hospitalizace,na.rm=T)),.(date=datum,age=agelev[as.numeric(sub(&quot;[-+].*&quot;,&quot;&quot;,vekova_kategorie))+1])][!is.na(age)]
-p=merge(p,testy[tests&gt;0,.(date,age,pcr=cases/tests*100,hosp)],all=T)
+p=rbind(p,testy[,.(x=date,age,y=hosp,z=&quot;hosp&quot;)])
 
-p=merge(p,fread(&quot;umrti.csv&quot;)[,.(coviddead=.N),.(date=datum,age=agelev[vek+1])],all=T)
+p=rbind(p,fread(&quot;umrti.csv&quot;)[,.(y=.N,z=&quot;coviddead&quot;),.(x=datum,age=agecut(vek,ages))])
 
-p=p[date%in%xstart:xend]
-
-p$dead[is.na(p$dead)]=0
-p$coviddead[is.na(p$coviddead)&amp;p$date&gt;p$date[!is.na(p$coviddead)][1]]=0
-p$vax[is.na(p$vax)&amp;p$date&gt;p$date[!is.na(p$vax)][1]]=0
-p$hosp[is.na(p$hosp)&amp;p$date&gt;p$date[!is.na(p$hosp)][1]]=0
+p=p[x%in%xstart:(xend-1)]
+p=p[!is.na(age)]
 
 xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=c(rbind(&quot;&quot;,2020:2022),&quot;&quot;)
 
-var=read.csv(row.names=1,text=&quot;name,group
-dead,All-cause deaths,1
-vax,Vaccines,2
-asmr1,Unvaccinated ASMR,3
-asmr2,Vaccinated ASMR,3
-hosp,Hospitalizations,4
-pcr,PCR positivity,5
-coviddead,COVID deaths,6&quot;)
-var$color=c(&quot;black&quot;,&quot;#cc00cc&quot;,hsv(7/12,1,.8),hsv(0,1,.8),hsv(0,.4,1),hsv(1/3,1,.7),&quot;gray50&quot;)
+var=read.csv(row.names=1,text=&quot;name,group,linetype
+dead,All-cause deaths,1,solid
+vax,Vaccines,2,solid
+asmr0,Total ASMR,3,solid
+asmr1,Unvaccinated ASMR,3,solid
+asmr2,Vaccinated ASMR,3,solid
+hosp,Hospitalizations,4,solid
+pcr,PCR positivity,5,solid
+coviddead,COVID deaths,6,solid
+vaxpct,Vaccinated percent,7,42&quot;)
+var$color=c(&quot;black&quot;,&quot;#cc00cc&quot;,&quot;black&quot;,hsv(7/12,1,.8),hsv(0,1,.8),hsv(0,.8,.8),hsv(1/3,1,.7),&quot;gray50&quot;,hsv(10/12,.8,.8))
 
-# keep=c(&quot;dead&quot;,&quot;vax&quot;)
-# keep=c(&quot;vax&quot;,&quot;asmr1&quot;,&quot;asmr2&quot;)
-keep=c(&quot;dead&quot;,&quot;coviddead&quot;,&quot;vax&quot;,&quot;hosp&quot;)
-long=cbind(p[,1:2],y=unlist(p[,..keep],,F),z=factor(rep(keep,each=nrow(p)),keep))
+p=unique(rbind(p,cbind(expand.grid(lapply(p[,-3],unique)),y=0)),by=c(&quot;x&quot;,&quot;age&quot;,&quot;z&quot;))[order(z,age,x)]
+
+keep=c(&quot;dead&quot;,&quot;coviddead&quot;,&quot;hosp&quot;,&quot;vaxpct&quot;)
+
+p=p[z%in%keep][,z:=factor(z,keep)]
 color=var[keep,]$color
-long[,mav:=ma(y,10),.(age,z)]
-long[,group:=var[levels(z)[z],]$group]
-long=merge(long,long[,.(max=max(mav,na.rm=T)),.(group,age)])
-levels(long$z)=var[levels(long$z),]$name
+linetype=var[keep,]$linetype
+p=p[order(x)]
+p[,mav:=ztrim(ma(y,10)),.(age,z)]
+p[,group:=var[levels(z)[z],]$group]
+p=merge(p,p[,.(max=max(mav,na.rm=T)),.(group,age)])
+p[z==&quot;vaxpct&quot;,max:=1]
+levels(p$z)=var[levels(p$z),]$name
 
-ggplot(long,aes(x=date))+
+ggplot(p,aes(x))+
 facet_wrap(~age,ncol=1,strip.position=&quot;top&quot;)+
-geom_vline(xintercept=seq(xstart,xend,&quot;month&quot;),linewidth=.2,color=&quot;gray90&quot;)+
-geom_vline(xintercept=seq(xstart,xend,&quot;3 month&quot;),linewidth=.25,color=&quot;gray70&quot;)+
+geom_vline(xintercept=seq(xstart,xend,&quot;3 month&quot;),linewidth=.25,color=&quot;gray85&quot;)+
 geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),linewidth=.25,lineend=&quot;square&quot;)+
 geom_hline(yintercept=0:1,linewidth=.25,lineend=&quot;square&quot;)+
-geom_line(aes(y=mav/max,color=z),linewidth=.35)+
+geom_line(aes(y=mav/max,color=z,linetype=z),linewidth=.35)+
 geom_label(data=data.frame(age=levels(p$age)),aes(label=paste0(&quot;\n   &quot;,age,&quot;   \n&quot;)),x=xstart,y=1,lineheight=.5,hjust=0,vjust=1,size=2.3,fill=alpha(&quot;white&quot;,1),label.r=unit(0,&quot;lines&quot;),label.padding=unit(0,&quot;lines&quot;),label.size=.25)+
-labs(x=NULL,y=NULL,title=&quot;Czech record-level data: Daily deaths and vaccine doses&quot;,subtitle=&quot;Displayed as percentage of maximum value, ±10-day moving averages.&quot;|&gt;stringr::str_wrap(70))+
+labs(x=NULL,y=NULL,title=&quot;Czech Republic: Daily moving averages by age group&quot;,subtitle=&quot;Displayed as percentage of maximum value, ±10-day moving averages&quot;|&gt;stringr::str_wrap(70))+
 scale_x_date(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
-scale_y_continuous(limits=0:1)+
+scale_y_continuous(limits=0:1,breaks=seq(.2,.8,.2),labels=\(x)paste0(x*100,&quot;%&quot;),position=&quot;right&quot;)+
 scale_color_manual(values=color)+
+scale_linetype_manual(values=linetype)+
 coord_cartesian(clip=&quot;off&quot;,expand=F)+
 guides(color=guide_legend(nrow=1,byrow=F))+
 theme(axis.text=element_text(size=7,color=&quot;black&quot;),
-  axis.text.y=element_blank(),
-  axis.ticks=element_blank(),
-  axis.ticks.x=element_line(color=alpha(&quot;black&quot;,c(1,0)),linewidth=.25),
-  axis.ticks.length=unit(0,&quot;lines&quot;),
-  axis.ticks.length.x=unit(.15,&quot;lines&quot;),
+  axis.ticks=element_line(color=&quot;black&quot;,linewidth=.25),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(3,&quot;pt&quot;),
   legend.background=element_blank(),
   legend.box.spacing=unit(0,&quot;pt&quot;),
   legend.direction=&quot;horizontal&quot;,
-  legend.justification=c(1,.5),
-  legend.key.height=unit(.7,&quot;lines&quot;),
-  legend.key.width=unit(1.1,&quot;lines&quot;),
-  legend.key=element_rect(fill=alpha(&quot;white&quot;,0)),
-  legend.margin=margin(.15,0,0,0,&quot;lines&quot;),
+  legend.justification=c(.5,.5),
+  legend.key.height=unit(8,&quot;pt&quot;),
+  legend.key.width=unit(15,&quot;pt&quot;),
+  legend.key=element_blank(),
+  legend.margin=margin(2),
   legend.position=&quot;bottom&quot;,
-  legend.spacing.x=unit(.1,&quot;lines&quot;),
+  legend.spacing.x=unit(1,&quot;pt&quot;),
   legend.text=element_text(size=7,vjust=.5),
   legend.title=element_blank(),
-  panel.spacing=unit(0,&quot;lines&quot;),
-  panel.background=element_rect(fill=&quot;white&quot;),
+  panel.background=element_blank(),
   panel.grid=element_blank(),
-  plot.margin=margin(.3,.3,.3,.3,&quot;lines&quot;),
-  plot.subtitle=element_text(size=7,margin=margin(0,0,.6,0,&quot;lines&quot;)),
-  plot.title=element_text(size=7.5,face=&quot;bold&quot;,margin=margin(.1,0,.5,0,&quot;lines&quot;)),
+  panel.spacing=unit(0,&quot;pt&quot;),
+  plot.margin=margin(4,4,4,4),
+  plot.subtitle=element_text(size=7,margin=margin(,,3)),
+  plot.title=element_text(size=7.5,face=&quot;bold&quot;,margin=margin(1,,3)),
   strip.background=element_blank(),
   strip.text=element_blank())
-ggsave(&quot;1.png&quot;,width=3.5,height=4,dpi=450)</pre>
-<p>In Sweden people who lived in care homes had a very low number of COVID deaths around March 2021 which coincides with the third hump in the Czech Republic: [<a href="https://x.com/dobssi/status/1863790895662878745">https://x.com/dobssi/status/1863790895662878745</a>]</p>
+ggsave(&quot;1.png&quot;,width=3.2,height=3.6,dpi=380*4)
+system(&quot;magick 1.png -resize 25% PNG8:1.png&quot;)</pre>
+</div>
+<p>In Sweden people who lived in care homes had a very low number of COVID deaths around March 2021 which corresponds to the third hump in the Czech Republic: [<a href="https://x.com/dobssi/status/1863790895662878745">https://x.com/dobssi/status/1863790895662878745</a>]</p>
 <div class="width6">
 <img src="i/czech-swedencarehome.png">
 </div>
-<p>This plot also shows that care homes had a low number of cases around week 14 of 2021 when there was a peak in cases among the whole Swedish population: [<a href="https://x.com/dobssi/status/1863866821163508132/photo/1">https://x.com/dobssi/status/1863866821163508132/photo/1</a>]</p>
+<p>This plot also shows that care homes had a low number of cases around week 14 of 2021 when there was a peak in cases among the whole Swedish population: [<a href="https://x.com/dobssi/status/1863866821163508132">https://x.com/dobssi/status/1863866821163508132</a>]</p>
 <div class="width8">
 <img src="i/czech-swedencarehome-2.png">
 </div>

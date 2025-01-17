@@ -1519,6 +1519,28 @@ Deyo-Charlson Comorbidity Index
 2:       1 4325706
 3:       2  450511
 4:       3   21188</pre>
+<p>The column for a Deyo-Charlson Comorbidity Index is comorbidity index at the time of a COVID case, so it is listed as zero for all people with no COVID case listed:</p>
+<pre>&gt; t[,.N,,.(DCCI,Infekce)]|&gt;print(r=F)
+ DCCI Infekce       N
+    0      NA 7800263
+    0       1 2865288
+    0       2  284733
+    0       3   11712
+    1       1  777793
+    1       2   93645
+    1       3    5005
+    2       1  310110
+    2       2   35398
+    2       3    2148
+    3       1  152020
+    3       2   15990
+    3       3    1009
+    4       1   83520
+    4       2    8110
+    4       3     524
+    5       1  136975
+    5       2   12635
+    5       3     790</pre>
 <p>There's about 1.6 million rows where the year of birth is missing. All except one of them are for people with no vaccine doses listed:</p>
 <pre>&gt; t[RokNarozeni==&quot;-&quot;,.N,OckovaciLatkaKod_Prvni_davka][N&gt;0][order(-N)]
    OckovaciLatkaKod_Prvni_davka       N
@@ -1562,93 +1584,93 @@ Deyo-Charlson Comorbidity Index
 <h2>
 <a href=#Age_normalized_comorbidity_and_hospitalization_rates_in_new_UZIS_data id=Age_normalized_comorbidity_and_hospitalization_rates_in_new_UZIS_data>Age-normalized comorbidity and hospitalization rates in new UZIS data</a>
 </h2>
-<p>The column for the Deyo-Charlson Comorbidity Index shows a comorbidity level expressed as an integer between 0 and 5, where the value is 0 for about 87% of rows:</p>
+<p>The DCCI column shows a value of the Deyo-Charlson Comorbidity Index at the time of a COVID case. The value is zero for all people with no COVID case listed, but at the time of the first case the value was zero for about 66% of all people:</p>
 <pre>&gt; t=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv&quot;)
-&gt; t[,.N,DCCI]|&gt;print(r=F)
- DCCI        N
-    0 10961996
-    1   876443
-    2   347656
-    3   169019
-    4    92154
-    5   150400</pre>
-<p>The average comorbidity index was about 0.31 for people with first dose type Comirnaty but about 0.38 for people with first dose type SPIKEVAX:</p>
+&gt; t[Infekce==1,.N,DCCI]|&gt;print(r=F)
+ DCCI       N
+    0 2865288
+    1  777793
+    2  310110
+    3  152020
+    4   83520
+    5  136975</pre>
+<p>A Czech study which employed the DCCI index said: <span class="quote">&quot;0 points indicate no disease, 1–2 points suggest a low level of severity, 3–4 points represent a moderate level of severity and a score of 5 or higher can be considered as the occurrence of multiple significant comorbidities&quot;</span>. [<a href="https://www.sciencedirect.com/science/article/pii/S0965206X23000591">https://www.sciencedirect.com/science/article/pii/S0965206X23000591</a>] However in the UZIS data values of 5 and above seem to be listed as 5.</p>
+<p>The average comorbidity index was about 0.73 for people with the first dose type Comirnaty (<code>CO01</code>) but about 1.03 for people with first dose type SPIKEVAX (<code>CO02</code>):</p>
 <pre>&gt; rec=fread(&quot;Czech/data/CR_records.csv&quot;)
 &gt; k=grep(&quot;OckovaciLatka_&quot;,names(rec));k2=k-1
 &gt; codes=rec[,.(type=unlist(rec[,..k],,F),code=unlist(rec[,..k2],,F))][!duplicated(code)]
-&gt; a=t[,.(DCCI=mean(DCCI),.N),.(code=OckovaciLatkaKod_Prvni_davka)]
+&gt; a=t[Infekce==1,.(DCCI=mean(DCCI),.N),.(code=OckovaciLatkaKod_Prvni_davka)]
 &gt; merge(codes,a)[order(-N)][N&gt;=1e3]
-   code                       type      DCCI       N
-1: CO01                  Comirnaty 0.3055174 5820268 # Pfizer
-2:                                 0.1620386 5330971 # unvaccinated
-3: CO02                   SPIKEVAX 0.3800446  546257 # Moderna
-4: CO03                  VAXZEVRIA 0.5026497  460052 # AstraZeneca
-5: CO04   COVID-19 Vaccine Janssen 0.2669109  429960
-6: CO07                  Nuvaxovid 0.3323160    5898 # Novavax
-7: CO20 Comirnaty Omicron XBB.1.5. 0.5976789    2068</pre>
-<p>The comorbidity index peaks in people who were born in 1925-1929, so this new dataset might reflect the actual level of comorbidities better than the earlier file <code>ockovani-profese.csv</code> (where the proportion of people who were indicated to have a chronic illness peaked in ages 65-69 but it was very low in the oldest age groups, which might be if information about chronic illness was not listed for people who qualified to be vaccinated based on their age):</p>
-<pre>&gt; t[,.(DCCI=mean(DCCI),.N),RokNarozeni][order(RokNarozeni)]|&gt;print(r=F)
- RokNarozeni         DCCI       N
-           - 0.0002066227 1630992
-   1860-1864 0.0000000000       1
-   1865-1869 0.0000000000       2
-   1870-1874 0.0000000000       1
-   1875-1879 0.0000000000       2
-   1880-1884 0.0000000000       2
-   1890-1894 0.0000000000       1
-   1895-1899 0.0000000000       1
-   1900-1904 0.0000000000      69
-   1905-1909 0.0000000000      45
-   1910-1914 0.0579710145      69
-   1915-1919 0.7040000000     375
-   1920-1924 0.9064161207    8089
-   1925-1929 0.9732974675   45726 # highest comorbidity index
-   1930-1934 0.9454279068  132412
-   1935-1939 0.8325555678  226075
-   1940-1944 0.7322019785  401112
-   1945-1949 0.6178468076  596779
-   1950-1954 0.5035088189  672876
-   1955-1959 0.4384776532  648236
-   1960-1964 0.4118506011  665654
-   1965-1969 0.3435418951  706825
-   1970-1974 0.2727757004  869150
-   1975-1979 0.2238727484  956530
-   1980-1984 0.1820616173  781988
-   1985-1989 0.1483075026  739558
-   1990-1994 0.1286849167  693842
-   1995-1999 0.1152187225  525826
-   2000-2004 0.1038220172  511510
-   2005-2009 0.0908365436  587704
-   2010-2014 0.0850617850  560087
-   2015-2019 0.0456251469  472393
-   2020-2024 0.0141874725  163736
- RokNarozeni         DCCI       N</pre>
-<p>Next I calculated an age-normalized excess comorbidity percentage for each vaccine type. I excluded people with a year of birth missing but I didn't exclude rows for second and third infections. I derived the expected total DCCI for each vaccine type by multiplying the number of people in each age group with the average DCCI index for the age group among all rows where the year of birth was not missing, and then I divided the actual total DCCI with the expected total DCCI, subtracted 1, and multiplied the result by 100. The excess comorbidity percentage was now about -4.4% for Pfizer but -2.9% for Moderna, so the difference is not big enough to explain why Moderna would have about 30% higher mortality rate than Pfizer:</p>
-<pre>&gt; dcci=t[RokNarozeni!=&quot;-&quot;,.(dcci=sum(as.numeric(DCCI)),.N),.(code=OckovaciLatkaKod_Prvni_davka,born=RokNarozeni)]
+   code                     type      DCCI       N
+1: CO01                Comirnaty 0.7299204 2183923 # Pfizer
+2:                               0.4616843 1678946 # unvaccinated
+3: CO02                 SPIKEVAX 1.0274723  182293 # Moderna
+4: CO04 COVID-19 Vaccine Janssen 0.6712624  152824
+5: CO03                VAXZEVRIA 1.7055395  123531 # Astrazeneca
+6: CO07                Nuvaxovid 0.5196774    3100 # Novavax</pre>
+<p>The comorbidity index peaks in people who were born in 1930-1934, so this new dataset might reflect the actual level of comorbidities better than the earlier file <code>ockovani-profese.csv</code> (where the proportion of people who were indicated to have a chronic illness peaked in ages 65-69 but it was very low in the oldest age groups, which might be if information about chronic illness was not listed for people who qualified to be vaccinated based on their age):</p>
+<pre>&gt; t[Infekce==1,.(DCCI=mean(DCCI),.N),RokNarozeni][order(RokNarozeni)]|&gt;print(r=F)
+ RokNarozeni       DCCI      N
+           - 0.03012425  11187
+   1860-1864 0.00000000      1
+   1865-1869 0.00000000      2
+   1870-1874 0.00000000      1
+   1875-1879 0.00000000      2
+   1880-1884 0.00000000      2
+   1890-1894 0.00000000      1
+   1895-1899 0.00000000      1
+   1900-1904 0.00000000     69
+   1905-1909 0.00000000     45
+   1910-1914 0.07142857     56
+   1915-1919 2.15384615    117
+   1920-1924 2.81595830   2494
+   1925-1929 3.08236062  13793
+   1930-1934 3.11992329  38066
+   1935-1939 2.92733054  60383
+   1940-1944 2.62483070 104105
+   1945-1949 2.24024614 151786
+   1950-1954 1.75856013 176516
+   1955-1959 1.31641930 194789
+   1960-1964 0.93541726 257143
+   1965-1969 0.72503103 289229
+   1970-1974 0.54189543 375757
+   1975-1979 0.42561725 431108
+   1980-1984 0.34186083 358409
+   1985-1989 0.28738798 332540
+   1990-1994 0.24863189 314119
+   1995-1999 0.22801030 232643
+   2000-2004 0.20644919 226230
+   2005-2009 0.16525787 291738
+   2010-2014 0.15856826 273346
+   2015-2019 0.13150042 153490
+   2020-2024 0.06051234  36538
+ RokNarozeni       DCCI      N</pre>
+<p>Next I calculated an age-normalized excess comorbidity percentage for each vaccine type. I excluded people with a year of birth missing.</p>
+<p>I derived the expected total DCCI for each vaccine type by multiplying the number of people in each age group with the average DCCI index for the age group among all rows where the infection number was 1, and then I divided the actual total DCCI with the expected total DCCI, subtracted 1, and multiplied the result by 100. The excess comorbidity percentage was about -0.6% for Pfizer but 6.7% for Moderna, which supports my earlier hypothesis that a higher level of comorbidities explained why Moderna vaccinees had higher ASMR than Pfizer vaccinees:</p>
+<pre>&gt; dcci=t[Infekce==1&amp;RokNarozeni!=&quot;-&quot;,.(dcci=sum(as.numeric(DCCI)),.N),.(code=OckovaciLatkaKod_Prvni_davka,born=RokNarozeni)]
 &gt; dcci=merge(dcci[,.(base=sum(dcci)/sum(N)),born],dcci)[,base:=base*N]
 &gt; dcci=dcci[,.(excesspct=round((sum(dcci)/sum(base)-1)*100,1),N=sum(N)),code]
 &gt; merge(codes,dcci)[N&gt;=1e3][order(-N)]|&gt;print(r=F)
- code                       type excesspct       N
- CO01                  Comirnaty      -4.4 5820267 # Pfizer
-                                      16.0 3699980 # unvaccinated
- CO02                   SPIKEVAX      -2.9  546257 # Moderna
- CO03                  VAXZEVRIA      -8.7  460052 # AstraZeneca
- CO04   COVID-19 Vaccine Janssen      -7.4  429960
- CO07                  Nuvaxovid      42.3    5898 # Novavax
- CO20 Comirnaty Omicron XBB.1.5.      35.9    2068</pre>
-<p>When I used a similar method to calculate an age-normalized excess hospitalization percentage by the type of the first vaccine dose, Moderna was about 6 percentage points higher than Pfizer (but my calculation was not adjusted for exposure time or varying hospitalization rates over time):</p>
+ code                     type excesspct       N
+ CO01                Comirnaty      -0.6 2183923 # Pfizer
+                                    -1.4 1667759 # unvaccinated
+ CO02                 SPIKEVAX       6.7  182293 # Moderna
+ CO04 COVID-19 Vaccine Janssen      -3.5  152824
+ CO03                VAXZEVRIA       5.8  123531 # AstraZeneca
+ CO07                Nuvaxovid       0.3    3100 # Novavax</pre>
+<p>When I used a similar method to calculate an age-normalized excess hospitalization percentage by the type of the first vaccine dose, it was about -27% for Pfizer but about -22% for Moderna (but my calculation was not adjusted for exposure time or for varying hospitalization rates over time):</p>
 <pre>&gt; ho=t[RokNarozeni!=&quot;-&quot;,.(hosp=sum(bin_Hospitalizace,na.rm=T),.N),.(code=OckovaciLatkaKod_Prvni_davka,born=RokNarozeni)]
 &gt; ho=merge(ho[,.(base=sum(hosp)/sum(N)),born],ho)[,base:=base*N]
-&gt; merge(codes,ho[,.(excesspct=round((sum(hosp)/sum(base)-1)*100,1),N=sum(N)),code])[order(-N)][N&gt;=1e3]
-   code                       type excesspct       N
-1: CO01                  Comirnaty     -27.4 5820268 # Pfizer
-2:                                      91.6 3699980 # unvaccinated
-3: CO02                   SPIKEVAX     -21.7  546257 # Moderna
-4: CO03                  VAXZEVRIA     -28.0  460052 # AstraZeneca
-5: CO04   COVID-19 Vaccine Janssen      21.9  429960
-6: CO07                  Nuvaxovid     222.9    5898 # Novavax
-7: CO20 Comirnaty Omicron XBB.1.5.     145.8    2068</pre>
-<p>Even though my excess age-normalized comorbidity index was similar for Pfizer and Moderna, if you look at the highest DCCI values which are 5 and 4, within most age groups their percentage is higher for Moderna than Pfizer:</p>
+&gt; merge(codes,ho[,.(excesspct=round((sum(hosp)/sum(base)-1)*100,1),N=sum(N)),code])[order(-N)][N&gt;=1e3]|&gt;print(r=F)
+ code                       type excesspct       N
+ CO01                  Comirnaty     -27.4 5820268 # Pfizer
+                                      91.6 3699980 # unvaccinated
+ CO02                   SPIKEVAX     -21.7  546257 # Moderna
+ CO03                  VAXZEVRIA     -28.0  460052 # AstraZeneca
+ CO04   COVID-19 Vaccine Janssen      21.9  429960
+ CO07                  Nuvaxovid     222.9    5898 # Novavax
+ CO20 Comirnaty Omicron XBB.1.5.     145.8    2068</pre>
+<p>In almost all age groups the percentage of the highest DCCI value 5 was higher for Moderna than Pfizer:</p>
 <div class="width7">
 <img src="i/czech-dcci-modpfi.png">
 </div>
@@ -1659,7 +1681,8 @@ Show code
 
 t=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv&quot;)
 
-a=t[,.N,.(dcci=DCCI,born=RokNarozeni,code=OckovaciLatkaKod_Prvni_davka)]
+a=t[Infekce==1,.N,.(dcci=DCCI,born=RokNarozeni,code=OckovaciLatkaKod_Prvni_davka)]
+a=a[!born%like%&quot;19(05|10)&quot;]
 a=merge(a,a[,.(pop=sum(N)),.(born,code)])
 
 a=a[code%in%c(&quot;CO01&quot;,&quot;CO02&quot;)]
@@ -1670,11 +1693,11 @@ maxcolor=max(m0,na.rm=T)
 
 pal=hsv(c(21,21,21,16,11,6,3,0,0)/36,c(0,.25,rep(.5,6),0),c(rep(1,8),.0))
 pal=sapply(255:0/255,\(i)rgb(i,i,i))
-exp=.7
+exp=.5
 
 for(i in 1:dim(m0)[1]){
   m=disp=m0[i,,];disp=ifelse(m&gt;=10,round(m),sprintf(&quot;%.1f&quot;,m))
-  pheatmap::pheatmap(m^exp,filename=paste0(&quot;i&quot;,i,&quot;.png&quot;),display_numbers=disp,main=dimnames(m0)[[1]][i],
+  pheatmap::pheatmap(m^exp,filename=paste0(&quot;i&quot;,i,&quot;.png&quot;),display_numbers=disp,
     cluster_rows=F,cluster_cols=F,legend=F,cellwidth=18,cellheight=14,fontsize=9,fontsize_number=8,
     border_color=NA,na_col=&quot;white&quot;,
     number_color=ifelse(m^exp&gt;maxcolor^exp*.4,&quot;white&quot;,&quot;black&quot;),
@@ -1684,16 +1707,16 @@ ar=a[,tapply(N/pop,.(code,paste(&quot;DCCI&quot;,dcci),born),c)]
 m1=ar[1,,];m2=ar[2,,];m=(m2-m1)/ifelse(m2&gt;m1,m1,m2)
 disp=m2/m1;disp[]=sprintf(&quot;%.2f&quot;,disp)
 pal=hsv(rep(c(21,0)/36,5:4),c(1,.8,.6,.3,0,.3,.6,.8,1),c(.3,.65,1,1,1,1,1,.65,.3))
-maxcolor=4;exp=.7
+maxcolor=3;exp=.7
 
 pheatmap::pheatmap(sign(m)*abs(m)^exp,filename=paste0(&quot;i3.png&quot;),display_numbers=disp,
-  main=&quot;Moderna-Pfizer ratio&quot;,
   cluster_rows=F,cluster_cols=F,legend=F,cellwidth=18,cellheight=14,fontsize=9,fontsize_number=8,
   border_color=NA,na_col=&quot;white&quot;,
   number_color=ifelse(abs(m)&gt;maxcolor^exp*.5,&quot;white&quot;,&quot;black&quot;),
   breaks=seq(-maxcolor^exp,maxcolor^exp,,256),colorRampPalette(pal)(256))
 
-system(&quot;w=`identify -format %w i1.png`;pad=24;convert -gravity northwest -pointsize 44 -interline-spacing -2 -font Arial-Bold \\( -size $[w-pad*2]x caption:&#39;Czech UZIS data: Percentage of people with each value of Charlson-Deyo Comorbidity index by year of birth&#39; -splice $[pad]x20 \\) \\( -size $[w-pad*2]x -font Arial -pointsize 40 caption:&#39;People with multiple entries for a COVID case are counted multiple times, because the underlying UZIS dataset doesn&#39;\\&#39;&#39;t make it possible to distinguish which cases belong to the same person. However people with no entry for a COVID case are only counted once. Pfizer includes only type CO01 and not booster or Omicron vaccines, and Moderna includes only type CO02. Source: nzip.cz/data/2135-covid-19-prehled-populace.&#39; -splice $[pad]x10 \\) \\( i1.png -splice 0x10 \\) i[23].png -append -dither none -colors 256 1.png&quot;);qp()</pre>
+sub=&quot;The comorbidity index is the index at the time of the first COVID case listed. People with no entry for a COVID case are excluded because the DCCI value was only listed for COVID cases. People whose COVID case was before they were vaccinated are not excluded. Pfizer includes only type CO01 but not Pfizer&#39;s Omicron or pediatric vaccine types, and Moderna includes only type CO02. Source: nzip.cz/data/2135-covid-19-prehled-populace.&#39;&quot;
+system(paste0(&quot;w=`identify -format %w i1.png`;pad=20;convert -gravity northwest -pointsize 44 -interline-spacing -2 -font Arial-Bold -size $[w-pad]x \\( caption:&#39;Czech UZIS data: Percentage of people with each value of Deyo-Charlson Comorbidity index by year of birth and type of first vaccine dose&#39; -splice $[pad]x20 \\) \\( -size $[w-pad*2]x -font Arial -pointsize 40 caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\&#39;&quot;,sub),&quot;&#39; -splice $[pad]x10 \\) -pointsize 44 -font Arial-Bold -gravity north \\( caption:Pfizer \\( i1.png -chop x10 \\) caption:Moderna \\( i2.png -chop x10 \\) caption:&#39;Moderna-Pfizer ratio&#39; \\( i3.png -chop x10 \\) \\) -append 1.png&quot;))</pre>
 </div>
 <h2>
 <a href=#Age_standardized_hospitalization_rate_by_vaccine_type_in_new_UZIS_data id=Age_standardized_hospitalization_rate_by_vaccine_type_in_new_UZIS_data>Age-standardized hospitalization rate by vaccine type in new UZIS data</a>
