@@ -78,10 +78,11 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Kirschs_calculation_for_mortality_rate_by_batch>Kirsch's calculation for mortality rate by batch</a></li>
 <li><a href=#Confidence_intervals_for_age_normalized_Moderna_Pfizer_ratio_by_month_of_vaccination>Confidence intervals for age-normalized Moderna-Pfizer ratio by month of vaccination</a></li>
 <li><a href=#The_record_level_data_includes_vaccination_entries_for_people_older_than_the_oldest_known_Czech_citizens>The record-level data includes vaccination entries for people older than the oldest known Czech citizens</a></li>
-<li><a href=#New_record_level_dataset_with_columns_for_infections_hospitalizations_and_comorbidity_index>New record-level dataset with columns for infections, hospitalizations, and comorbidity index</a></li>
-<li><a href=#Age_normalized_comorbidity_and_hospitalization_rates_in_new_UZIS_data>Age-normalized comorbidity and hospitalization rates in new UZIS data</a></li>
+<li><a href=#New_record_level_dataset_with_columns_for_cases_hospitalizations_and_comorbidity_index>New record-level dataset with columns for cases, hospitalizations, and comorbidity index</a></li>
+<li><a href=#Comorbidity_index_by_age_group_and_vaccine_type_in_new_UZIS_data>Comorbidity index by age group and vaccine type in new UZIS data</a></li>
 <li><a href=#Age_standardized_hospitalization_rate_by_vaccine_type_in_new_UZIS_data>Age-standardized hospitalization rate by vaccine type in new UZIS data</a></li>
 <li><a href=#Age_standardized_hospitalization_rate_by_age_group_in_new_UZIS_data>Age-standardized hospitalization rate by age group in new UZIS data</a></li>
+<li><a href=#Moderna_Pfizer_mortality_ratio_by_year_of_birth_and_comorbidity_index>Moderna-Pfizer mortality ratio by year of birth and comorbidity index</a></li>
 </ul>
 
 <h2>
@@ -1226,7 +1227,7 @@ mutate_if(o,is.double,round,2)|&gt;print(r=F)</pre>
 12:          F         1912       &lt;NA&gt;       &lt;NA&gt;</pre>
 <p>However according to the Czech-language Wikipedia, there have not been male Czech citizens older than 107 years since at least 2010. [<a href="https://cs.wikipedia.org/wiki/Seznam_nejstar%C5%A1%C3%ADch_obyvatel_%C4%8Ceska">https://cs.wikipedia.org/wiki/Seznam_nejstar%C5%A1%C3%ADch_obyvatel_%C4%8Ceska</a>]</p>
 <h2>
-<a href=#New_record_level_dataset_with_columns_for_infections_hospitalizations_and_comorbidity_index id=New_record_level_dataset_with_columns_for_infections_hospitalizations_and_comorbidity_index>New record-level dataset with columns for infections, hospitalizations, and comorbidity index</a>
+<a href=#New_record_level_dataset_with_columns_for_cases_hospitalizations_and_comorbidity_index id=New_record_level_dataset_with_columns_for_cases_hospitalizations_and_comorbidity_index>New record-level dataset with columns for cases, hospitalizations, and comorbidity index</a>
 </h2>
 <p>In November 2024 ÚZIS (the Czech institute of health information and statistics) published a new dataset which contains columns for infections and hospitalizations. However the year of birth is only given in 5-year ranges and dates of vaccination and death are given on a weekly and not daily precision. SMIS published the following blog post about the data (translated from Czech): [<a href="https://smis-lab.cz/2024/11/07/dalsi-velka-datova-sada-uzis-zverejnena/">https://smis-lab.cz/2024/11/07/dalsi-velka-datova-sada-uzis-zverejnena/</a>]</p>
 <blockquote>
@@ -1519,7 +1520,7 @@ Deyo-Charlson Comorbidity Index
 2:       1 4325706
 3:       2  450511
 4:       3   21188</pre>
-<p>The column for a Deyo-Charlson Comorbidity Index is comorbidity index at the time of a COVID case, so it is listed as zero for all people with no COVID case listed:</p>
+<p>The DCCI column shows a Deyo-Charlson Comorbidity Index at the time of a COVID case, so its value is zero for all people with no COVID case included:</p>
 <pre>&gt; t[,.N,,.(DCCI,Infekce)]|&gt;print(r=F)
  DCCI Infekce       N
     0      NA 7800263
@@ -1546,15 +1547,15 @@ Deyo-Charlson Comorbidity Index
    OckovaciLatkaKod_Prvni_davka       N
 1:                              1630991 # about 1.6 million rows for unvaccinated people
 2:                         CO01       1 # one row for Pfizer</pre>
-<p>On most rows with missing year of birth, all other fields including the date of death are also missing, but there's 63695 rows where the year of birth is missing but the date of death is not missing (which are mostly in 2020 like the blog post by SMIS said):</p>
+<p>On most rows with a missing year of birth, all other fields including the date of death are also missing, but there's 63,695 rows where the year of birth is missing but the date of death is not missing (which are mostly for deaths in 2020):</p>
 <pre>&gt; t[RokNarozeni==&quot;-&quot;&amp;DatumUmrtiLPZ!=&quot;&quot;,.N,.(year=substr(DatumUmrtiLPZ,1,4))][order(year)]
    year     N
-1: 2020 37471
+1: 2020 37471 # most records with year of birth missing and date of death not missing are for deaths in 2020
 2: 2021  9658
 3: 2022  5522
 4: 2023  6981
 5: 2024  4063</pre>
-<p>If rows with a missing date of birth are excluded and rows for second and third infections are excluded, then the new dataset has only about 10.5 million rows, which is about half a million less than the record-level dataset:</p>
+<p>If rows with a missing date of birth are excluded and rows for second and third infections are excluded, then the new UZIS dataset has only about 10.5 million rows, which is about half a million less than in the old record-level dataset:</p>
 <pre>&gt; t[RokNarozeni!=&quot;-&quot;&amp;!(!is.na(Infekce)&amp;Infekce&gt;1),.N]
 [1] 10494977</pre>
 <p>The new UZIS dataset is missing about 15% of all deaths in 2020 even if you don't exclude the rows with a date of birth missing: [<a href="https://ec.europa.eu/eurostat/data/database">https://ec.europa.eu/eurostat/data/database</a>, <a href=czech2.html#Deaths_by_ICD_code_region_age_group_and_year>czech2.html#Deaths_by_ICD_code_region_age_group_and_year</a>]</p>
@@ -1582,7 +1583,7 @@ Deyo-Charlson Comorbidity Index
 5:       2020-13     2290
 6:       2020-14     2322</pre>
 <h2>
-<a href=#Age_normalized_comorbidity_and_hospitalization_rates_in_new_UZIS_data id=Age_normalized_comorbidity_and_hospitalization_rates_in_new_UZIS_data>Age-normalized comorbidity and hospitalization rates in new UZIS data</a>
+<a href=#Comorbidity_index_by_age_group_and_vaccine_type_in_new_UZIS_data id=Comorbidity_index_by_age_group_and_vaccine_type_in_new_UZIS_data>Comorbidity index by age group and vaccine type in new UZIS data</a>
 </h2>
 <p>The DCCI column shows a value of the Deyo-Charlson Comorbidity Index at the time of a COVID case. The value is zero for all people with no COVID case listed, but at the time of the first case the value was zero for about 66% of all people:</p>
 <pre>&gt; t=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv&quot;)
@@ -1658,18 +1659,6 @@ Deyo-Charlson Comorbidity Index
  CO04 COVID-19 Vaccine Janssen      -3.5  152824
  CO03                VAXZEVRIA       5.8  123531 # AstraZeneca
  CO07                Nuvaxovid       0.3    3100 # Novavax</pre>
-<p>When I used a similar method to calculate an age-normalized excess hospitalization percentage by the type of the first vaccine dose, it was about -27% for Pfizer but about -22% for Moderna (but my calculation was not adjusted for exposure time or for varying hospitalization rates over time):</p>
-<pre>&gt; ho=t[RokNarozeni!=&quot;-&quot;,.(hosp=sum(bin_Hospitalizace,na.rm=T),.N),.(code=OckovaciLatkaKod_Prvni_davka,born=RokNarozeni)]
-&gt; ho=merge(ho[,.(base=sum(hosp)/sum(N)),born],ho)[,base:=base*N]
-&gt; merge(codes,ho[,.(excesspct=round((sum(hosp)/sum(base)-1)*100,1),N=sum(N)),code])[order(-N)][N&gt;=1e3]|&gt;print(r=F)
- code                       type excesspct       N
- CO01                  Comirnaty     -27.4 5820268 # Pfizer
-                                      91.6 3699980 # unvaccinated
- CO02                   SPIKEVAX     -21.7  546257 # Moderna
- CO03                  VAXZEVRIA     -28.0  460052 # AstraZeneca
- CO04   COVID-19 Vaccine Janssen      21.9  429960
- CO07                  Nuvaxovid     222.9    5898 # Novavax
- CO20 Comirnaty Omicron XBB.1.5.     145.8    2068</pre>
 <p>In almost all age groups the percentage of the highest DCCI value 5 was higher for Moderna than Pfizer:</p>
 <div class="width7">
 <img src="i/czech-dcci-modpfi.png">
@@ -1818,7 +1807,7 @@ system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 </h2>
 <p>Earlier I have pointed out that in the winter of 2020 to 2021 when the Czech Republic had a pattern with three distinct humps in all-cause mortality, the third hump was lower than the first hump in ages 80+ but ages 40-59 and 60-79 followed the opposite pattern where the third hump was higher than the first hump. I thought it might have been because in ages 80+ about half of people had been vaccinated by the time of the third hump, but in ages 40-59 and 60-79 only a few people had been vaccinated by the time of the third hump.</p>
 <p>When I looked at all-cause ASMR by vaccination status, the third hump was close to nonexistent in vaccinated people in ages 80+. But it wasn't necessarily because vaccines prevented COVID deaths, because it might have also been because there was a reduced number of deaths in recently vaccinated people due to the temporal HVE: [<a href=czech.html#Daily_deaths_and_vaccine_doses_by_age_group>czech.html#Daily_deaths_and_vaccine_doses_by_age_group</a>]</p>
-<div class="width6">
+<div class="width5">
 <img src="i/czech-facet-asmr.png">
 </div>
 <p>So therefore I wanted to check if COVID hospitalizations followed a similar pattern as all-cause deaths, because COVID hospitalizations are probably less affected by temporal HVE than all-cause mortality. But data for 2020 was missing from the datasets published by the Czech MoH for COVID hospitalizations by vaccination status.</p>
@@ -1915,6 +1904,54 @@ ggsave(&quot;1.png&quot;,width=5.3,height=5.3,dpi=300*4)
 
 sub=&quot;The 2021 census population by 5-year age groups was used as the standard population. In the hospitalization data people were given a year of birth as a range of 5 years like 1950-1954, so here each person was assigned to a 5-year age group by subtracting the year of birth from 2020 so that aging over time was not accounted for. Ages 0-4 were excluded due to a small vaccinated population size which inflated the hospitalization rate on days with nonzero hospitalizations. Sources: nzip.cz/data/2135-covid-19-prehled-populace (hospitalizations) and github.com/PalackyUniversity/uzis-data-analysis (number of vaccinated and unvaccinated people by age).&quot;
 system(paste0(&quot;mar=$[24*4];w=`identify -format %w 1.png`;magick \\( 1.png -gravity southwest -chop 0x70 \\) \\( -size $[w-mar*2]x -font Arial -interline-spacing -3 -pointsize $[44*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -gravity southwest -splice $[mar]x$[20*4] \\) -append -resize 25% -colors 256 1.png&quot;))</pre>
+</div>
+<h2>
+<a href=#Moderna_Pfizer_mortality_ratio_by_year_of_birth_and_comorbidity_index id=Moderna_Pfizer_mortality_ratio_by_year_of_birth_and_comorbidity_index>Moderna-Pfizer mortality ratio by year of birth and comorbidity index</a>
+</h2>
+<p>In the next plot I calculated the number of deaths within the first 52 weeks of the first vaccine dose grouped by the vaccine type, DCCI, and year of birth. For people who were born in the 1950s or earlier, the Moderna-Pfizer ratio was below 1 for most combinations of age group and DCCI, but in people who were born in the 1960s it was the other way around (even though the sample sizes are so small that it might have been due to chance):</p>
+<div class="width7">
+<img src="i/czech-dcci-modpfi-2.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>t=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv&quot;)
+
+weeks=u(format(seq(as.Date(&quot;2020-1-1&quot;),as.Date(&quot;2024-12-31&quot;),1),&quot;%Y-%V&quot;))
+
+a=t[Infekce==1&amp;RokNarozeni!=&quot;-&quot;,.(first=match(Datum_Prvni_davka,weeks),dead=match(Umrti,weeks),dcci=DCCI,code=OckovaciLatkaKod_Prvni_davka,born=RokNarozeni)]
+a=a[code%in%paste0(&quot;CO0&quot;,1:2),.(cmr=mean((dead-first)%in%0:51,na.rm=T)*1e5),.(code,born,dcci)]
+
+a[,name:=factor(code,,c(&quot;Pfizer&quot;,&quot;Moderna&quot;))]
+
+m0=a[,tapply(cmr,.(name,paste(&quot;DCCI&quot;,dcci),born),c)]
+maxcolor=max(m0,na.rm=T)
+
+pal=sapply(255:0/255,\(i)rgb(i,i,i))
+exp=.5
+
+for(i in 1:dim(m0)[1]){
+  m=disp=m0[i,,]
+  pheatmap::pheatmap(m^exp,filename=paste0(&quot;i&quot;,i,&quot;.png&quot;),display_numbers=kimi(m),
+    cluster_rows=F,cluster_cols=F,legend=F,cellwidth=18,cellheight=14,fontsize=9,fontsize_number=8,
+    border_color=NA,na_col=&quot;white&quot;,
+    number_color=ifelse(m^exp&gt;maxcolor^exp*.4,&quot;white&quot;,&quot;black&quot;),
+    breaks=seq(0,maxcolor^exp,,256),colorRampPalette(pal)(256))}
+
+ar=a[,tapply(cmr,.(code,paste(&quot;DCCI&quot;,dcci),born),c)]
+m1=ar[1,,];m2=ar[2,,];m=(m2-m1)/ifelse(m2&gt;m1,m1,m2)
+disp=m2/m1;disp[]=sprintf(&quot;%.2f&quot;,disp)
+pal=hsv(rep(c(21,0)/36,5:4),c(1,.8,.6,.3,0,.3,.6,.8,1),c(.4,.65,1,1,1,1,1,.65,.4))
+maxcolor=8;exp=.7
+
+pheatmap::pheatmap(sign(m)*abs(m)^exp,filename=paste0(&quot;i3.png&quot;),display_numbers=disp,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=18,cellheight=14,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;white&quot;,
+  number_color=ifelse(abs(m)&gt;maxcolor^exp*.5,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(-maxcolor^exp,maxcolor^exp,,256),colorRampPalette(pal)(256))
+
+sub=&quot;The comorbidity index was calculated at the time of the first COVID case. People with no COVID case are excluded because the DCCI value was only listed for COVID cases. People whose COVID first case was before they were vaccinated are not excluded. Pfizer includes only type CO01 but not Pfizer&#39;s Omicron or pediatric vaccine types. Source: nzip.cz/data/2135-covid-19-prehled-populace.&quot;
+system(paste0(&quot;w=`identify -format %w i1.png`;pad=14;convert -gravity northwest -pointsize 46 -interline-spacing -2 -font Arial-Bold -size $[w-pad*3]x \\( caption:&#39;Czech UZIS data: Deaths per 100,000 people within 52 weeks from first dose (grouped by Deyo-Charlson comorbidity index, year of birth, and type of first vaccine dose)&#39; -splice $[pad]x20 \\) \\( -size $[w-pad*3]x -font Arial -pointsize 42 caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&#39;&quot;,sub),&quot;&#39; -splice $[pad]x10 \\) -pointsize 44 -font Arial-Bold -gravity north \\( caption:Pfizer -splice x12 \\( i1.png -chop x10 \\) caption:Moderna \\( i2.png -chop x10 \\) caption:&#39;Moderna-Pfizer ratio&#39; \\( i3.png -chop x10 \\) \\) -append 1.png&quot;));qp()</pre>
 </div>
 <script>
 let q=document.querySelectorAll('a,code,pre')
