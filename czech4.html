@@ -82,7 +82,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Comorbidity_index_by_age_group_and_vaccine_type_in_new_UZIS_data>Comorbidity index by age group and vaccine type in new UZIS data</a></li>
 <li><a href=#Age_standardized_hospitalization_rate_by_vaccine_type_in_new_UZIS_data>Age-standardized hospitalization rate by vaccine type in new UZIS data</a></li>
 <li><a href=#Age_standardized_hospitalization_rate_by_age_group_in_new_UZIS_data>Age-standardized hospitalization rate by age group in new UZIS data</a></li>
-<li><a href=#Moderna_Pfizer_mortality_ratio_by_year_of_birth_and_comorbidity_index>Moderna-Pfizer mortality ratio by year of birth and comorbidity index</a></li>
+<li><a href=#Moderna_Pfizer_mortality_ratio_by_year_of_birth_and_comorbidity_index_in_new_UZIS_data>Moderna-Pfizer mortality ratio by year of birth and comorbidity index in new UZIS data</a></li>
 </ul>
 
 <h2>
@@ -1906,9 +1906,10 @@ sub=&quot;The 2021 census population by 5-year age groups was used as the standa
 system(paste0(&quot;mar=$[24*4];w=`identify -format %w 1.png`;magick \\( 1.png -gravity southwest -chop 0x70 \\) \\( -size $[w-mar*2]x -font Arial -interline-spacing -3 -pointsize $[44*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -gravity southwest -splice $[mar]x$[20*4] \\) -append -resize 25% -colors 256 1.png&quot;))</pre>
 </div>
 <h2>
-<a href=#Moderna_Pfizer_mortality_ratio_by_year_of_birth_and_comorbidity_index id=Moderna_Pfizer_mortality_ratio_by_year_of_birth_and_comorbidity_index>Moderna-Pfizer mortality ratio by year of birth and comorbidity index</a>
+<a href=#Moderna_Pfizer_mortality_ratio_by_year_of_birth_and_comorbidity_index_in_new_UZIS_data id=Moderna_Pfizer_mortality_ratio_by_year_of_birth_and_comorbidity_index_in_new_UZIS_data>Moderna-Pfizer mortality ratio by year of birth and comorbidity index in new UZIS data</a>
 </h2>
-<p>In the next plot I calculated the number of deaths within the first 52 weeks of the first vaccine dose grouped by the vaccine type, DCCI, and year of birth. For people who were born in the 1950s or earlier, the Moderna-Pfizer ratio was below 1 for most combinations of age group and DCCI, but in people who were born in the 1960s it was the other way around (even though the sample sizes are so small that it might have been due to chance):</p>
+<p>In the next plot I calculated the number of deaths within the first 52 weeks of the first vaccine dose grouped by the vaccine type, DCCI, and year of birth. For people who were born in the 1950s or earlier, the Moderna-Pfizer ratio was below 1 for most combinations of age group and DCCI, but in people who were born in the 1960s it was the other way around (even though the sample sizes are so small that it might have been due to chance).</p>
+<p>But anyway, for the combinations of age group and DCCI which have the highest sample size of deaths, Pfizer generally gets a higher mortality ratio than Moderna, which seems to conflict with Kirsch's hypothesis that Moderna had higher mortality rate during the first year from vaccination because Moderna vaccines were killing more people:</p>
 <div class="width7">
 <img src="i/czech-dcci-modpfi-2.png">
 </div>
@@ -1919,7 +1920,9 @@ Show code
 
 weeks=u(format(seq(as.Date(&quot;2020-1-1&quot;),as.Date(&quot;2024-12-31&quot;),1),&quot;%Y-%V&quot;))
 
-a=t[Infekce==1&amp;RokNarozeni!=&quot;-&quot;,.(first=match(Datum_Prvni_davka,weeks),dead=match(Umrti,weeks),dcci=DCCI,code=OckovaciLatkaKod_Prvni_davka,born=RokNarozeni)]
+a=t[Infekce==1&amp;RokNarozeni!=&quot;-&quot;,.(case=match(DatumPozitivity,weeks),first=match(Datum_Prvni_davka,weeks),dead=match(Umrti,weeks),dcci=DCCI,code=OckovaciLatkaKod_Prvni_davka,born=RokNarozeni)]
+a=a[!born%like%&quot;19(05|10)&quot;]
+# a=a[case&gt;=first]
 a=a[code%in%paste0(&quot;CO0&quot;,1:2),.(cmr=mean((dead-first)%in%0:51,na.rm=T)*1e5),.(code,born,dcci)]
 
 a[,name:=factor(code,,c(&quot;Pfizer&quot;,&quot;Moderna&quot;))]
@@ -1940,7 +1943,7 @@ for(i in 1:dim(m0)[1]){
 
 ar=a[,tapply(cmr,.(code,paste(&quot;DCCI&quot;,dcci),born),c)]
 m1=ar[1,,];m2=ar[2,,];m=(m2-m1)/ifelse(m2&gt;m1,m1,m2)
-disp=m2/m1;disp[]=sprintf(&quot;%.2f&quot;,disp)
+disp=m2/m1;disp[]=ifelse(disp&gt;=10,sprintf(&quot;%.1f&quot;,disp),sprintf(&quot;%.2f&quot;,disp))
 pal=hsv(rep(c(21,0)/36,5:4),c(1,.8,.6,.3,0,.3,.6,.8,1),c(.4,.65,1,1,1,1,1,.65,.4))
 maxcolor=8;exp=.7
 
@@ -1951,7 +1954,11 @@ pheatmap::pheatmap(sign(m)*abs(m)^exp,filename=paste0(&quot;i3.png&quot;),displa
   breaks=seq(-maxcolor^exp,maxcolor^exp,,256),colorRampPalette(pal)(256))
 
 sub=&quot;The comorbidity index was calculated at the time of the first COVID case. People with no COVID case are excluded because the DCCI value was only listed for COVID cases. People whose COVID first case was before they were vaccinated are not excluded. Pfizer includes only type CO01 but not Pfizer&#39;s Omicron or pediatric vaccine types. Source: nzip.cz/data/2135-covid-19-prehled-populace.&quot;
-system(paste0(&quot;w=`identify -format %w i1.png`;pad=14;convert -gravity northwest -pointsize 46 -interline-spacing -2 -font Arial-Bold -size $[w-pad*3]x \\( caption:&#39;Czech UZIS data: Deaths per 100,000 people within 52 weeks from first dose (grouped by Deyo-Charlson comorbidity index, year of birth, and type of first vaccine dose)&#39; -splice $[pad]x20 \\) \\( -size $[w-pad*3]x -font Arial -pointsize 42 caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&#39;&quot;,sub),&quot;&#39; -splice $[pad]x10 \\) -pointsize 44 -font Arial-Bold -gravity north \\( caption:Pfizer -splice x12 \\( i1.png -chop x10 \\) caption:Moderna \\( i2.png -chop x10 \\) caption:&#39;Moderna-Pfizer ratio&#39; \\( i3.png -chop x10 \\) \\) -append 1.png&quot;));qp()</pre>
+system(paste0(&quot;w=`identify -format %w i1.png`;pad=14;convert -gravity northwest -pointsize 46 -interline-spacing -2 -font Arial-Bold -size $[w-pad*3]x \\( caption:&#39;Czech UZIS data: Deaths per 100,000 people within 52 weeks from first dose (grouped by Deyo-Charlson comorbidity index, year of birth, and type of first vaccine dose)&#39; -splice $[pad]x20 \\) \\( -size $[w-pad*3]x -font Arial -pointsize 42 caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&#39;&quot;,sub),&quot;&#39; -splice $[pad]x10 \\) -pointsize 44 -font Arial-Bold -gravity north \\( caption:Pfizer -splice x12 \\( i1.png -chop x10 \\) caption:Moderna \\( i2.png -chop x10 \\) caption:&#39;Moderna-Pfizer ratio&#39; \\( i3.png -chop x10 \\) \\) -append 1.png&quot;))</pre>
+</div>
+<p>When I excluded people whose first COVID case was before vaccination, the Moderna-Pfizer ratios got a lot higher for most combinations of DCCI and age group with largest sample size of deaths:</p>
+<div class="width7">
+<img src="i/czech-dcci-modpfi-3.png">
 </div>
 <script>
 let q=document.querySelectorAll('a,code,pre')
