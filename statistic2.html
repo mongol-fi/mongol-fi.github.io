@@ -82,7 +82,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#John_Beaudoin_Deaths_with_disorders_involving_the_immune_mechanism>John Beaudoin: Deaths with disorders involving the immune mechanism</a></li>
 <li><a href=#Excess_mortality_in_European_countries_compared_to_percentage_of_vaccinated_people>Excess mortality in European countries compared to percentage of vaccinated people</a></li>
 <li><a href=#Steve_Kirsch_Claim_that_Singapore_had_the_highest_excess_mortality_in_2023>Steve Kirsch: Claim that Singapore had the highest excess mortality in 2023</a></li>
-<li><a href=#Clare_Craig_Maternal_deaths_by_race>Clare Craig: Maternal deaths by race</a></li>
+<li><a href=#John_Beaudoin_Higher_excess_thrombocytopenia_deaths_in_2021_than_2020_in_working_age_people>John Beaudoin: Higher excess thrombocytopenia deaths in 2021 than 2020 in working-age people</a></li>
 </ul>
 
 <h2>
@@ -1654,62 +1654,68 @@ na.omit(a)[order(-pct)][1:16]
 <img src="i/statistic-kirsch-singapore-2.png">
 </div>
 <h2>
-<a href=#Clare_Craig_Maternal_deaths_by_race id=Clare_Craig_Maternal_deaths_by_race>Clare Craig: Maternal deaths by race</a>
+<a href=#John_Beaudoin_Higher_excess_thrombocytopenia_deaths_in_2021_than_2020_in_working_age_people id=John_Beaudoin_Higher_excess_thrombocytopenia_deaths_in_2021_than_2020_in_working_age_people>John Beaudoin: Higher excess thrombocytopenia deaths in 2021 than 2020 in working-age people</a>
 </h2>
-<p>Clare Craig posted this tweet: [<a href="https://x.com/ClareCraigPath/status/1878842445896843711">https://x.com/ClareCraigPath/status/1878842445896843711</a>]</p>
+<p>Beaudoin posted this tweet: [<a href="https://x.com/JohnBeaudoinSr/status/1881176052749181303">https://x.com/JohnBeaudoinSr/status/1881176052749181303</a>]</p>
+<blockquote>
+<p>To those saying there was no new pathogen and that COVID was flu or 100% iatrogenic</p>
+<p>Doctors lived this in early 2020<br> There was a prothrombotic pathogen<br> There is no way around data. Not even fraud</p>
+<p>COVID waned in virulence of thrombotic effects when the vx stepped into the thrombosis signal and amplified it &gt;10X</p>
+<p>D69 Thrombocytopenia et al &gt; 1,200 EXCESS deaths, ages 25-54, USA, 2021-2023</p>
+<p><img src=i/statistic-purpura-1.jpg class=width7></p>
+</blockquote>
+<p>However ages 25-54 had about 2.3 times more MCD COVID deaths in 2021 than 2020:</p>
+<pre>&gt; v=fread(&quot;http://sars2.net/f/vital.csv.gz&quot;)
+&gt; v[age%in%25:54&amp;cause==&quot;U071&quot;,sum(mcd),year][,V1[year==2021]/V1[year==2020]]
+[1] 2.3172</pre>
+<p>So it might explain why ages 25-54 also had much more excess MCD D69 deaths in 2021 than 2020. And I believe Beaudoin used a 2015-2019 linear baseline in his plot, which might explain why Beaudoin was still getting fairly high excess deaths in 2024, because the 2015-2019 baseline might be too low by 2024 in the same way that it's too low here in 2010 and earlier:</p>
 <div class="width6">
-<img src="i/statistic-maternal-1.png">
-</div>
-<p>If the US if you look at the increase in pregnancy-related deaths between 2020 and 2021, it's low Asians who had a high percentage of vaccinated people. But it's high in Native Americans, Hispanics, and blacks, who had a lower percentage of vaccinated people:</p>
-<div class="width6">
-<img src="i/statistic-maternal-2.png">
+<img src="i/statistic-purpura-2.png">
 </div>
 <div class="spoiler">
 <button>
 Show code
 </button><pre>library(data.table);library(ggplot2)
 
-t=fread(&quot;http://sars2.net/f/wonderpregnancyrace.csv&quot;)[cause%like%&quot;Pregnancy&quot;]
-t[race==&quot;Asian&quot;,race:=&quot;Asian or Pacific Islander&quot;]
+t=fread(&quot;http://sars2.net/f/wonderpurpura.csv&quot;)
+t=t[,.(x=as.Date(paste(year,month,1,sep=&quot;-&quot;)),y=dead,z=age,type)]
+t[,y:=y/lubridate::days_in_month(x)]
+t[,z:=factor(z,c(&quot;all&quot;,&quot;25-54&quot;),c(&quot;All ages&quot;,&quot;Ages 25-54&quot;))]
 
-t[,race:=factor(race,strsplit(&quot;White
-Black or African American
-Asian or Pacific Islander
-American Indian or Alaska Native
-Hispanic of any race
-More than one race&quot;,&quot;\\n&quot;)[[1]])]
+p=rbind(t[type==&quot;mcd&quot;][,type:=1],dcast(t,z+x~type,value.var=&quot;y&quot;)[,.(z,x,type=2,y=mcd-nafill(and,,0))])
 
-p=t[hispanic==&quot;Not Hispanic or Latino&quot;,.(x=year,z=race,y=dead/pop*1e6)]
-p=rbind(p,t[hispanic==&quot;Hispanic or Latino&quot;,.(y=sum(dead)/sum(pop)*1e6,z=&quot;Hispanic of any race&quot;),.(x=year)])
+base=p[type%in%c(1,3)&amp;year(x)%in%2015:2019,.(x=unique(p$x),y=predict(lm(y~x),.(x=unique(p$x)))),.(type,z)]
+p=rbind(p,base[,type:=3])
+p=p[!(type==2&amp;x&lt;&quot;2020-3-1&quot;)]
+p[,type:=factor(type,,c(&quot;Deaths&quot;,&quot;Deaths with MCD COVID subtracted&quot;,&quot;2015-2019 trend&quot;))]
 
-xstart=1999;xend=2024;xbreak=xstart:xend
-p=p[x%in%xstart:xend]
-ylim=c(0,max(p$y)*1.02);ybreak=pretty(ylim,7)
+p=p[year(x)&gt;=2005]
 
-ggplot(p,aes(x,y,z))+
-geom_line(aes(color=z),linewidth=.6)+
-geom_point(aes(color=z),size=1.1)+
-labs(x=NULL,y=NULL,title=&quot;CDC WONDER: Yearly deaths per million women aged 15-49 with underlying cause O00-O99 (Pregnancy, childbirth and the puerperium)&quot;|&gt;stringr::str_wrap(68))+
-scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=xbreak)+
-scale_y_continuous(limits=ylim,breaks=ybreak)+
-scale_color_manual(values=c(&quot;black&quot;,hsv(3/36,.5,.5),hsv(1/6,.8,.7),hsv(0,.5,1),hsv(12/36,.9,.7),&quot;gray60&quot;))+
+xstart=as.Date(&quot;2005-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
+xbreak=seq(xstart+182,xend,&quot;year&quot;);xlab=year(xbreak)
+
+ggplot(p,aes(x+15,y))+
+facet_wrap(~z,ncol=1,scales=&quot;free&quot;)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray90&quot;,linewidth=.4)+
+geom_line(aes(color=type,linetype=type),linewidth=.6)+
+geom_line(data=p[type==type[1]],aes(color=type,linetype=type),linewidth=.6)+
+labs(title=&quot;CDC WONDER, multiple cause of death D69 (purpura and other hemorrhagic\nconditions): Monthly deaths divided by number of days in month&quot;,x=NULL,y=NULL)+
+geom_text(data=p[,.(y=max(y)),z],x=pmean(xstart,xend),hjust=0,vjust=1.7,aes(label=z),size=3.8,fontface=2)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=substr(xbreak,3,4))+
+scale_y_continuous(limits=c(0,NA),breaks=\(x)pretty(c(0,x),7))+
+scale_color_manual(values=c(&quot;#6666ff&quot;,&quot;#bbbbff&quot;,&quot;#6666ff&quot;))+
+scale_linetype_manual(values=c(&quot;solid&quot;,&quot;solid&quot;,&quot;42&quot;))+
 coord_cartesian(clip=&quot;off&quot;,expand=F)+
-guides(color=guide_legend(ncol=2,byrow=F))+
 theme(axis.text=element_text(size=11,color=&quot;black&quot;),
-  axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
-  axis.text.y=element_text(margin=margin(,3)),
   axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
   axis.ticks.length.x=unit(0,&quot;pt&quot;),
   axis.ticks.length.y=unit(4,&quot;pt&quot;),
   legend.background=element_blank(),
-  legend.box.background=element_blank(),
   legend.box.spacing=unit(0,&quot;pt&quot;),
-  legend.direction=&quot;vertical&quot;,
-  legend.justification=&quot;center&quot;,
   legend.key=element_blank(),
-  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.margin=margin(,,3),
+  legend.key.height=unit(17,&quot;pt&quot;),
   legend.key.width=unit(26,&quot;pt&quot;),
-  legend.margin=margin(,,4),
   legend.position=&quot;top&quot;,
   legend.spacing.x=unit(2,&quot;pt&quot;),
   legend.spacing.y=unit(0,&quot;pt&quot;),
@@ -1718,92 +1724,180 @@ theme(axis.text=element_text(size=11,color=&quot;black&quot;),
   panel.background=element_blank(),
   panel.border=element_rect(fill=NA,linewidth=.4),
   panel.spacing=unit(2,&quot;pt&quot;),
-  plot.margin=margin(5,5,2,5),
-  plot.subtitle=element_text(margin=margin(,,5)),
-  plot.title=element_text(size=11.3,face=2,margin=margin(2,,5)))
-ggsave(&quot;1.png&quot;,width=5.7,height=3.7,dpi=300*4)
-
-sub=&quot;Not adjusted for number of pregnancies or number of live births. The mortality rates were calculated using the population estimates returned by CDC WONDER, which uses population estimates based on the 2010 census for 2020 but population estimates based on the 2020 census for 2021. The data was retrieved on January 13th 2025 UTC so a part of deaths in 2024 are still missing.&quot;
-system(paste0(&quot;mogrify -trim 1.png;magick 1.png \\( -size `identify -format %w 1.png`x -font Arial -interline-spacing -3 -pointsize $[44*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -splice x80 \\) -append -resize 25% -bordercolor white -border 24 -colors 256 1.png&quot;))</pre>
+  plot.caption=element_text(size=11,hjust=0,margin=margin(4)),
+  plot.margin=margin(5,5,5,5),
+  plot.title=element_text(size=11,face=2,margin=margin(,,2)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=6,height=5.2,dpi=300*4)
+system(&quot;magick 1.png -resize 25% PNG8:1.png&quot;)</pre>
 </div>
-<p>However the percentage increase in deaths from drug overdoses between 2020 and 2021 was also low for Asians. Some of the pregnancy-related deaths might be due to drug use (even though drug deaths had a bigger increase between 2019 and 2020 than between 2020 and 2021, but it was the other way around for pregnancy-related deaths):</p>
-<div class="width8">
-<img src="i/statistic-maternal-3.png">
+<p>Beaudoin said that the increase in MCD D69 deaths was mainly caused by the vaccines and not COVID. But then why don't elderly age groups also have much more MCD D69 deaths in 2021 than 2020? Why is it only working-age people, who also happened to have much more COVID deaths in 2021 than 2020?</p>
+<p>This also shows how the ratio of COVID deaths in 2021 relative to 2020 is much higher in working-age people than in elderly people:</p>
+<div class="width4">
+<img src="i/statistic-purpura-3.png">
 </div>
 <div class="spoiler">
 <button>
 Show code
-</button><pre>library(data.table);library(ggplot2)
+</button><pre>agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
 
-t=fread(&quot;http://sars2.net/f/wonderpregnancyrace.csv&quot;)
+# sars2.net/stat.html#Download_fixed_width_and_CSV_files_for_the_NVSS_data_used_at_CDC_WONDER
+t=do.call(rbind,lapply(2020:2022,\(i)fread(paste0(i,&quot;.csv.gz&quot;))[restatus!=4,.(age,ucod,monthdth,year)]))
+t=t[age!=9999]
+t[,age:=ifelse(age&gt;1000,age-1000,0)]
+t[,q:=paste0(year,&quot;Q&quot;,(monthdth-1)%/%3+1)]
+t[,agegroup:=agecut(age,0:10*10)]
 
-as=t[,race%in%c(&quot;Asian or Pacific Islander&quot;,&quot;Asian&quot;,&quot;Native Hawaiian or Other Pacific Islander&quot;)&amp;hispanic!=&quot;Hispanic or Latino&quot;]
+a=merge(t[,.N,.(q,agegroup)],t[ucod==&quot;U071&quot;,.(covid=.N),.(q,agegroup)])
 
-t1=t[as==T,.(dead=sum(dead),pop=sum(pop),race=&quot;Asian or Pacific Islander&quot;,hispanic=&quot;Not Hispanic or Latino&quot;),.(cause,year)]
-t=rbind(t1,t[as==F])
+pal=hsv(c(21,21,21,16,11,6,3,0,0)/36,c(0,.25,rep(.5,6),0),c(rep(1,8),.0))
+pal=sapply(255:0,\(i)rgb(i,i,i,maxColorValue=255))
 
-t[race==&quot;Asian&quot;,race:=&quot;Asian or Pacific Islander&quot;]
-t[cause==&quot;O00-O99 (Pregnancy, childbirth and the puerperium)&quot;,cause:=&quot;O00-O99 (pregnancy and childbirth)&quot;]
-t[,cause:=factor(cause,unique(cause))]
+m=a[,tapply(covid/N*100,.(agegroup,q),c)]
+m[is.na(m)]=0
+maxcolor=max(m)
 
-t[,race:=factor(race,strsplit(&quot;White
-Black or African American
-Asian or Pacific Islander
-American Indian or Alaska Native
-Hispanic of any race
-More than one race&quot;,&quot;\\n&quot;)[[1]])]
+pheatmap::pheatmap(m,filename=&quot;1.png&quot;,display_numbers=round(m),
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=14,cellheight=14,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;gray90&quot;,
+  number_color=ifelse(m&gt;maxcolor*.4&amp;!is.na(m),&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(0,maxcolor,,256),colorRampPalette(pal)(256))
 
-p=t[hispanic!=&quot;Hispanic or Latino&quot;,.(y=sum(dead,na.rm=T)/sum(pop,na.rm=T)*1e6),.(x=year,cause,z=race)]
-p=rbind(p,t[hispanic==&quot;Hispanic or Latino&quot;,.(y=sum(dead)/sum(pop)*1e6,z=&quot;Hispanic of any race&quot;),.(x=year,cause)])
+system(&quot;magick 1.png -gravity center -extent 120%x100% 1.png;w=`identify -format %w 1.png`;pad=24;convert -gravity northwest -pointsize 41 -interline-spacing -2 -font Arial-Bold \\( -size $[w-pad*2]x caption:&#39;NVSS: Percentage of COVID deaths out of all deaths by age group and quarter&#39; -splice $[pad]x14 \\) \\( -size $[w-pad*2]x -font Arial -pointsize 37 caption:&#39;COVID deaths are deaths with underlying cause U07.1. To avoid suppression of deaths on rows with less than 10 deaths, the data was not retrieved from CDC WONDER but from the fixed-width files here: cdc.gov/nchs/nvss/mortality_public_use_data.htm.&#39; -splice $[pad]x10 \\) \\( 1.png -shave 0x6 \\) -append -colorspace gray 1.png&quot;)</pre>
+</div>
+<p>Beaudoin posted this explanation for the spike in deaths during the Delta wave: [<a href="https://x.com/JohnBeaudoinSr/status/1881185647118909808">https://x.com/JohnBeaudoinSr/status/1881185647118909808</a>]</p>
+<blockquote>
+<p>Yes, that giant spike was coincident with the age group getting the boosters or the first and second round depending on age.</p>
+<p>In order to coach kids in the fall sports or to attned certain post summer events, people opted to get vx'd after delaying it for the first half of the year. But some who'd gotten their March 2 doses also got their boosters in September.</p>
+<p>August - October 2021 was a huge uptake of the cvid vx.</p>
+</blockquote>
+<p>However this plot shows that in August to October 2021 there was no longer a big increase in vaccine uptake among ages 25-49 but only among younger age groups:</p>
+<div class="width6">
+<img src="i/statistic-purpura-4.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>t=fread(&quot;Archive__COVID-19_Vaccination_and_Case_Trends_by_Age_Group__United_States_20250121.csv&quot;)
 
-xstart=2010;xend=2024;xbreak=xstart:xend
-p=p[x%in%xstart:xend]
-ylim=c(0,max(p$y)*1.02);ybreak=pretty(ylim,7)
+p=t[,.(x=as.Date(`Date Administered`,&quot;%m/%d/%Y&quot;),y=Administered_Dose1_pct_agegroup*100,z=AgeGroupVacc)]
+p[,z:=sub(&quot; - &quot;,&quot;-&quot;,sub(&quot; Years&quot;,&quot;&quot;,sub(&quot;&lt;2 Years&quot;,&quot;0-1&quot;,z)))]
+ages=unique(p$z)
+p[,z:=factor(z,ages[order(as.integer(sub(&quot;[-+].*&quot;,&quot;&quot;,ages)))])]
 
-ggplot(p,aes(x,y,z))+
-facet_wrap(~cause,ncol=2,strip.position=&quot;top&quot;,dir=&quot;v&quot;,scales=&quot;free&quot;)+
+xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2023-1-1&quot;)
+xbreak=seq(xstart+182,xend,&quot;year&quot;);xlab=year(xbreak)
+
+ggplot(p,aes(x,y))+
+geom_vline(xintercept=seq(xstart,xend,&quot;month&quot;),color=&quot;gray92&quot;,linewidth=.4)+
+geom_vline(xintercept=seq(xstart,xend,&quot;3 month&quot;),color=&quot;gray80&quot;,linewidth=.4)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray40&quot;,linewidth=.5)+
 geom_line(aes(color=z),linewidth=.6)+
-geom_point(aes(color=z),size=1.1)+
-geom_text(data=p[,max(y),cause],aes(label=stringr::str_wrap(cause,26),y=V1*.97),x=xstart,fontface=2,lineheight=.9,hjust=0,vjust=1,size=3.6)+
-labs(x=NULL,y=NULL,title=&quot;CDC WONDER: Yearly deaths per million women aged 15-49 by underlying cause&quot;)+
-scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=xbreak,labels=substr(xbreak,3,4))+
-scale_y_continuous(limits=\(x)c(0,max(x)*1.02),breaks=\(x)pretty(x,7))+
-scale_color_manual(values=c(&quot;black&quot;,hsv(3/36,.5,.5),hsv(1/6,.8,.7),hsv(0,.5,1),hsv(12/36,.9,.7),&quot;gray60&quot;))+
+labs(title=&quot;Percentage of people with first vaccine dose by age group in the US&quot;,subtitle=paste0(&quot;Source: CDC dataset \&quot;COVID-19 Vaccination and Case Trends by Age Group, United States\&quot;. The percentage of vaccinated people was capped at 95% in ages 65+.&quot;)|&gt;stringr::str_wrap(73),x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=xbreak,labels=xlab)+
+scale_y_continuous(limits=c(0,100),breaks=0:10*10,labels=\(x)paste0(x,&quot;%&quot;))+
 coord_cartesian(clip=&quot;off&quot;,expand=F)+
-guides(color=guide_legend(ncol=2,byrow=F))+
+scale_color_manual(values=c(&quot;#ffbbbb&quot;,&quot;#ff7777&quot;,&quot;#ffbb55&quot;,&quot;#55cc55&quot;,&quot;#55cccc&quot;,&quot;black&quot;,hsv(30/36,.7,1),hsv(32/36,.8,.7)))+
 theme(axis.text=element_text(size=11,color=&quot;black&quot;),
-  axis.text.x=element_text(margin=margin(3)),
-  axis.text.y=element_text(margin=margin(,3)),
+  axis.text.x=element_text(margin=margin(5)),
   axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
   axis.ticks.length.x=unit(0,&quot;pt&quot;),
   axis.ticks.length.y=unit(4,&quot;pt&quot;),
-  legend.background=element_blank(),
-  legend.box.background=element_blank(),
+  axis.title=element_text(size=8),
+  legend.background=element_rect(fill=&quot;white&quot;,color=&quot;black&quot;,linewidth=.4),
   legend.box.spacing=unit(0,&quot;pt&quot;),
-  legend.direction=&quot;vertical&quot;,
-  legend.justification=&quot;center&quot;,
   legend.key=element_blank(),
   legend.key.height=unit(13,&quot;pt&quot;),
   legend.key.width=unit(26,&quot;pt&quot;),
-  legend.margin=margin(,,5),
-  legend.position=&quot;top&quot;,
-  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.position=c(0,1),
+  legend.justification=c(0,1),
+  legend.spacing.x=unit(3,&quot;pt&quot;),
   legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.margin=margin(4,6,4,5),
   legend.text=element_text(size=11,vjust=.5),
   legend.title=element_blank(),
   panel.background=element_blank(),
   panel.border=element_rect(fill=NA,linewidth=.4),
-  panel.spacing=unit(4,&quot;pt&quot;),
-  plot.margin=margin(5,5,2,5),
-  plot.subtitle=element_text(margin=margin(,,5)),
-  plot.title=element_text(size=11.5,face=2,margin=margin(2,,4)),
-  strip.background=element_blank(),
-  strip.text=element_blank())
-ggsave(&quot;1.png&quot;,width=7,height=5,dpi=300*4)
-
-sub=&quot;The mortality rate for deaths relating to pregnancy is not adjusted for number of pregnancies or number of live births. The mortality rates were calculated using the population estimates returned by CDC WONDER, which uses population estimates based on the 2010 census for 2020 but population estimates based on the 2020 census for 2021. The data was retrieved on January 13th 2025 UTC, so a part of deaths in 2024 are still missing especially in the case of drug-related deaths and deaths from external causes.&quot;
-system(paste0(&quot;mogrify -trim 1.png;magick 1.png \\( -size `identify -format %w 1.png`x -font Arial -interline-spacing -3 -pointsize $[45*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -splice x80 \\) -append -resize 25% -bordercolor white -border 24 -colors 256 1.png&quot;))</pre>
+  panel.spacing.x=unit(4,&quot;pt&quot;),
+  panel.spacing.y=unit(3,&quot;pt&quot;),
+  plot.margin=margin(7,7,7,7),
+  plot.subtitle=element_text(size=11,margin=margin(,,4)),
+  plot.title=element_text(size=11.5,face=2,margin=margin(2,,6)))
+ggsave(&quot;1.png&quot;,width=6,height=4,dpi=300*4)
+system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
 </div>
+<p>And if the vaccines caused a huge increase in deaths among working-age people during the Delta wave, then why didn't they also cause an increase in deaths earlier in 2021 when a much larger number of working-age people got vaccinated?</p>
+<p>During the Delta wave all-caused deaths peaked on the week ending September 11th 2021, but there weren't many people in ages 25-54 who had received a booster dose that early. A recommendation for all people aged 18 and above to get a booster dose was only issued on November 19th. [<a href="https://www.cdc.gov/mmwr/volumes/70/wr/mm7050e2.htm">https://www.cdc.gov/mmwr/volumes/70/wr/mm7050e2.htm</a>]</p>
+<p>I only found data for booster doses by age group that started on the week ending December 13th 2021, but even at that point ages 18-49 had only about 10% of people with a booster dose: [<a href="https://data.cdc.gov/Vaccinations/COVID-19-Vaccinations-in-the-United-States-County/8xkx-amqh">https://data.cdc.gov/Vaccinations/COVID-19-Vaccinations-in-the-United-States-County/8xkx-amqh</a>]</p>
+<div class="width6">
+<img src="i/statistic-purpura-5.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
+
+t=fread(&quot;c/COVID-19_Vaccinations_in_the_United_States_County_20240227.csv.gz&quot;)
+
+age=c(&quot;5-11&quot;,&quot;12-17&quot;,&quot;18-49&quot;,&quot;50-64&quot;,&quot;65+&quot;)
+a=t[,.(date=as.Date(Date,&quot;%m/%d/%Y&quot;)-3,vax=c(Booster_Doses_5Plus-Booster_Doses_12Plus,Booster_Doses_12Plus-Booster_Doses_18Plus,Booster_Doses_18Plus-Booster_Doses_50Plus,Booster_Doses_50Plus-Booster_Doses_65Plus,Booster_Doses_65Plus),age=factor(rep(age,each=.N),age))]
+a=a[,.(vax=sum(vax,na.rm=T)),.(date,age)]
+
+pop=fread(&quot;http://sars2.net/f/uspopdeadmonthly.csv&quot;)
+pop=pop[,.(pop=sum(pop)),.(date=as.Date(paste(year,month,15,sep=&quot;-&quot;)),age=agecut(age,c(5,12,18,50,65)))]
+pop=na.omit(pop)[,spline(date,pop,xout=unique(a$date)),age][,.(date=`class&lt;-`(x,&quot;Date&quot;),pop=y,age)]
+a=merge(a,pop)
+
+p=a[,.(x=date,y=vax/pop*100,z=age)]
+p=p[y&gt;0]
+
+xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2023-1-1&quot;)
+xbreak=seq(xstart+182,xend,&quot;year&quot;);xlab=year(xbreak)
+
+ggplot(p,aes(x,y))+
+geom_vline(xintercept=seq(xstart,xend,&quot;month&quot;),color=&quot;gray92&quot;,linewidth=.4)+
+geom_vline(xintercept=seq(xstart,xend,&quot;3 month&quot;),color=&quot;gray80&quot;,linewidth=.4)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray40&quot;,linewidth=.5)+
+geom_line(aes(color=z),linewidth=.6)+
+labs(title=&quot;Percentage of people with a booster dose by age group in the US&quot;,subtitle=paste0(&quot;Source: CDC dataset \&quot;COVID-19 Vaccinations in the United States, County\&quot;.&quot;)|&gt;stringr::str_wrap(73),x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=xbreak,labels=xlab)+
+scale_y_continuous(limits=c(0,100),breaks=0:10*10,labels=\(x)paste0(x,&quot;%&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+scale_color_manual(values=c(&quot;#ffbb55&quot;,&quot;#55cc55&quot;,&quot;black&quot;,hsv(30/36,.7,1),hsv(32/36,.8,.7)))+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.text.x=element_text(margin=margin(5)),
+  axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(4,&quot;pt&quot;),
+  axis.title=element_text(size=8),
+  legend.background=element_rect(fill=&quot;white&quot;,color=&quot;black&quot;,linewidth=.4),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.position=c(0,1),
+  legend.justification=c(0,1),
+  legend.spacing.x=unit(3,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.margin=margin(4,6,4,5),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.4),
+  panel.spacing.x=unit(4,&quot;pt&quot;),
+  panel.spacing.y=unit(3,&quot;pt&quot;),
+  plot.margin=margin(7,7,7,7),
+  plot.subtitle=element_text(size=11,margin=margin(,,4)),
+  plot.title=element_text(size=11.5,face=2,margin=margin(2,,6)))
+ggsave(&quot;1.png&quot;,width=6,height=4,dpi=300*4)
+system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
+</div>
+<p>Steve Kirsch had a source at Medicare who has given him data that showed he number of all-cause deaths by vaccination status. But it shows that the bump in deaths during the Delta wave was nearly flat in vaccinated people: [<a href=rootclaim.html#Post_by_Spiro_Pantazatos_for_mortality_by_state_during_the_Delta_wave>rootclaim.html#Post_by_Spiro_Pantazatos_for_mortality_by_state_during_the_Delta_wave</a>]</p>
+<div class="width6">
+<img src="i/rootclaim-delta-3.png">
+</div>
+<p>Only people aged 65 and above and younger people with certain disabilities and conditions are eligible for Medicare, so Kirsch's Medicare data might not be representative of working-age people. But among working-age people the spike in deaths during the Delta wave would be even higher relative to the spikes in winter 2020-2021 and spring 2020.</p>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
