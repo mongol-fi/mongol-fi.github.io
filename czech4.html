@@ -84,6 +84,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Age_standardized_hospitalization_rate_by_age_group_in_new_UZIS_data>Age-standardized hospitalization rate by age group in new UZIS data</a></li>
 <li><a href=#Moderna_Pfizer_mortality_ratio_by_year_of_birth_and_comorbidity_index_in_new_UZIS_data>Moderna-Pfizer mortality ratio by year of birth and comorbidity index in new UZIS data</a></li>
 <li><a href=#Mortality_rate_within_year_from_vaccination_normalized_by_comorbidity_index_in_new_UZIS_data>Mortality rate within year from vaccination normalized by comorbidity index in new UZIS data</a></li>
+<li><a href=#Hospitalizations_by_weeks_after_vaccination_in_new_UZIS_data>Hospitalizations by weeks after vaccination in new UZIS data</a></li>
 </ul>
 
 <h2>
@@ -2006,6 +2007,66 @@ print(mutate_if(o[order(-pop)],is.double,round,1),r=F)</pre>
  AstraZeneca  3474  123531            17.7   20.6
      Novavax     9    3103           -18.0  -40.8
        Other     1     131            -0.1   -1.3</pre>
+<h2>
+<a href=#Hospitalizations_by_weeks_after_vaccination_in_new_UZIS_data id=Hospitalizations_by_weeks_after_vaccination_in_new_UZIS_data>Hospitalizations by weeks after vaccination in new UZIS data</a>
+</h2>
+<p>The new UZIS data makes it possible to plot number of hospitalizations by time since vaccination, which is a fairly rare type of plot I haven't seen in many studies.</p>
+<p>Hospitalizations are reduced for several weeks before vaccination, which might be because people who had recently been hospitalized were recommended to not get vaccinated after hospitalization (and they would've already had natural immunity anyway).</p>
+<p>For some reason there's also a spike in hospitalizations about 1-10 weeks after vaccination. At first I thought it might have been if a lot of people got vaccinated before the COVID wave that peaked in March 2021. But when I split out the data by the quarter of vaccination, the same spike occurred during all quarters except the third quarter when there were few hospitalizations in general. So I don't know if it's because recently vaccinated people somehow have an elevated risk of hospitalization:</p>
+<div class="width7">
+<img src="i/czech-hospvaxweek.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>weeks=unlist(sapply(2020:2024,\(i)sprintf(&quot;%d-%02d&quot;,i,1:ifelse(i==2020,53,52))))
+t=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv&quot;)
+t[,date:=match(Datum_Prvni_davka,weeks)]
+t[,hosp:=match(min_Hospitalizace,weeks)]
+t=t[date%in%54:105]
+
+t[,vaxq:={x=(date-54)%/%13*13+1;ifelse(date%in%54:105,paste0(&quot;Vaccinated week &quot;,x,&quot;-&quot;,x+12,&quot; of 2021&quot;),NA)}]
+
+p=na.omit(t[,.(y=.N,z=&quot;Total&quot;),.(x=hosp-date)])
+p=rbind(p,na.omit(t[,.(y=.N),.(x=hosp-date,z=vaxq)]))
+
+xbreak=pretty(p$x,10);xstart=min(p$x);xend=max(p$x)
+ybreak=pretty(p$y,7);ystart=0;yend=max(p$y)
+
+ggplot(p,aes(x,y))+
+geom_hline(yintercept=0,linewidth=.4)+
+geom_line(aes(color=z),linewidth=.5)+
+labs(x=&quot;Week of hospitalization minus week of first dose&quot;,y=&quot;Count of hospitalizations&quot;,title=&quot;Count of COVID hospitalizations in Czech Republic by weeks since\nfirst vaccine dose&quot;,subtitle=&quot;Includes only people vaccinated on weeks where the Thursday fell in 2021. Source: nzip.cz/data/2135-covid-19-prehled-populace.&quot;|fw(70))+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=xbreak)+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+scale_color_manual(values=c(&quot;black&quot;,hsv(c(21,12,4,0)/36,.9,.7)))+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
+  axis.ticks.length=unit(5,&quot;pt&quot;),
+  axis.title=element_text(size=11,face=2),
+  legend.background=element_blank(),
+  legend.box.background=element_rect(color=&quot;black&quot;,linewidth=.4),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.justification=c(1,1),
+  legend.key=element_blank(),
+  legend.key.height=unit(14,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.position=c(1,1),
+  legend.spacing.x=unit(3,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.margin=margin(5,5,5,5),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.4),
+  plot.margin=margin(6,8,5,5),
+  plot.subtitle=element_text(size=11.5,margin=margin(,,5)),
+  plot.title=element_text(size=11.5,face=2,margin=margin(1,,5)))
+ggsave(&quot;1.png&quot;,width=6,height=3.7,dpi=300*4)
+system(&quot;magick 1.png -resize 25% PNG8:1.png&quot;)</pre>
+</div>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')

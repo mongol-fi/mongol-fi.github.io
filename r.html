@@ -87,6 +87,7 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=prompt>+</span> <span class=code>anytime::anydate(v,calcUnique=T),</span>
 <span class=prompt>+</span> <span class=code>anytime::anydate(v))</span>
 <span class=prompt>&gt;</span> <span class=code>o=sort(tapply(b$time,gsub(&quot;  +&quot;,&quot; &quot;,b$expr),median));writeLines(sprintf(&quot;%.2f %s&quot;,o/min(o),names(o)))</span>
+<span class=comment># median time of 10 runs relative to fastest option</span>
 <span class=output>1.00 fasttime::fastDate(v)</span>
 <span class=output>3.27 anytime::anydate(v, calcUnique = T)</span>
 <span class=output>5.48 { u = unique(v) as.Date(u)[match(v, u)] }</span>
@@ -1358,17 +1359,6 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=prompt>&gt;</span> <span class=code>file.info(c(&quot;output.csv.gz&quot;,&quot;output.csv&quot;))$size</span>
 <span class=output>[1]  880 1783</span>
 <span class=output>
-<span class=title># fill in zeroes for missing combinations of non-numeric columns</span></span>
-<span class=prompt>&gt;</span> <span class=code>d=data.frame(month=month.abb[c(1,1,2)],sex=c(&quot;M&quot;,&quot;F&quot;,&quot;M&quot;),dead=c(3,1,2))</span>
-<span class=prompt>&gt;</span> <span class=code>num=sapply(d,is.numeric);x=d[1,num,drop=F];x[]=0</span>
-<span class=prompt>&gt;</span> <span class=code>o=rbind(d,cbind(expand.grid(lapply(d[,!num,drop=F],unique)),`rownames&lt;-`(x,NULL)))</span>
-<span class=prompt>&gt;</span> <span class=code>o[!duplicated(o[!num]),]</span>
-<span class=output>  month sex dead</span>
-<span class=output>1   Jan   M    3</span>
-<span class=output>2   Jan   F    1</span>
-<span class=output>3   Feb   M    2</span>
-<span class=output>7   Feb   F    0</span>
-<span class=output>
 <span class=title># order dataframe based on a vector of column positions</span></span>
 <span class=prompt>&gt;</span> <span class=code>cols=c(2,8,9)</span>
 <span class=prompt>&gt;</span> <span class=code>mtcars[do.call(order,lapply(cols,\(i)mtcars[,i])),][1:2,]</span>
@@ -1431,13 +1421,21 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=output>H  1100 1088.3 11.7</span>
 <span class=output>
 <span class=title># get 95% confidence interval for ratio of two numbers</span></span>
-<span class=prompt>&gt;</span> <span class=code>prop.test(123,456)$conf</span><span class=comment> # exact binomial test using Wilson score interval</span>
+<span class=prompt>&gt;</span> <span class=code>prop.test(123,456)$conf</span><span class=comment> # Wald interval (less accurate for small numbers or when the ratio is close to 0 or 1)</span>
 <span class=output>[1] 0.2300140 0.3134099</span>
 <span class=output>attr(,&quot;conf.level&quot;)</span>
 <span class=output>[1] 0.95</span>
 <span class=prompt>&gt;</span> <span class=code>n=456;p=123/n;p+c(-1,1)*qnorm(.975)*sqrt(p*(1-p)/n)</span><span class=comment> # normal approximation to binomial distribution</span>
 <span class=comment># this is less accurate for small numbers or when the ratio is close to 0 or 1</span>
 <span class=output>[1] 0.2290011 0.3104726</span>
+<span class=prompt>&gt;</span> <span class=code>library(binom);binom.confint(123,456,methods=&quot;wilson&quot;)</span><span class=comment> # Wilson score interval (more accurate for small sample sizes)</span>
+<span class=output>  method   x   n      mean     lower     upper</span>
+<span class=output>1 wilson 123 456 0.2697368 0.2310496 0.3122712</span>
+<span class=prompt>&gt;</span> <span class=code>x=123;n=456;phat=x/n</span><span class=comment> # manual calculation of Wilson score interval</span>
+<span class=prompt>&gt;</span> <span class=code>z=qnorm(1-(1-.95)/2)</span>
+<span class=prompt>&gt;</span> <span class=code>margin=z*sqrt((phat*(1-phat)+z^2/(4*n))/n)</span>
+<span class=prompt>&gt;</span> <span class=code>(phat+z^2/(2*n)+c(-1,1)*margin)/(1+z^2/n)</span>
+<span class=output>0.2310496 0.3122712</span>
 <span class=output>
 <span class=title># generate tick breaks that cover the specified values</span></span>
 <span class=prompt>&gt;</span> <span class=code>v=c(15319,28652,38568)</span>
@@ -1509,10 +1507,6 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=output>3  2024 F         3</span>
 <span class=output>4  2024 M         0</span>
 <span class=output>
-<span class=title># add int and bool</span></span>
-<span class=prompt>&gt;</span> <span class=code>28+T</span>
-<span class=output>[1] 29</span>
-<span class=output>
 <span class=title># get the number of days in a month</span></span>
 <span class=prompt>&gt;</span> <span class=code>d=data.table(year=c(0,100,2020,2020),month=c(2,2,2,3))</span>
 <span class=prompt>&gt;</span> <span class=code>d[,ifelse(month==2,28+(year%%4==0&amp;!(year%%100==0&amp;year%%400!=0)),(31:30)[rep(1:2,,13)[-8]][month])]</span>
@@ -1522,22 +1516,26 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=output> 29  28  29  31</span>
 <span class=output>
 <span class=title># show ggplot default styles</span></span>
-<span class=prompt>&gt;</span> <span class=code>theme_gray()[1]</span><span class=comment> # first list item shown as an example</span>
-<span class=output>$line</span>
-<span class=output>List of 6</span>
-<span class=output> $ colour       : chr &quot;black&quot;</span>
-<span class=output> $ linewidth    : num 0.5</span>
-<span class=output> $ linetype     : num 1</span>
-<span class=output> $ lineend      : chr &quot;butt&quot;</span>
-<span class=output> $ arrow        : logi FALSE</span>
-<span class=output> $ inherit.blank: logi TRUE</span>
-<span class=output> - attr(*, &quot;class&quot;)= chr [1:2] &quot;element_line&quot; &quot;element&quot;</span>
+<span class=prompt>&gt;</span> <span class=code>theme_gray()</span>
+<span class=output>List of 97</span>
+<span class=output> $ line                      :List of 6</span>
+<span class=output>  ..$ colour       : chr &quot;black&quot;</span>
+<span class=output>  ..$ linewidth    : num 0.5</span>
+<span class=output>  ..$ linetype     : num 1</span>
+<span class=output>  ..$ lineend      : chr &quot;butt&quot;</span>
+<span class=output>  ..$ arrow        : logi FALSE</span>
+<span class=output>  ..$ inherit.blank: logi TRUE</span>
+<span class=output>  ..- attr(*, &quot;class&quot;)= chr [1:2] &quot;element_line&quot; &quot;element&quot;</span>
+<span class=output> $ rect                      :List of 5</span>
+<span class=output>  ..$ fill         : chr &quot;white&quot;</span>
+<span class=output>  ..$ colour       : chr &quot;black&quot;</span>
+<span class=output>[...]</span>
 <span class=output>
 <span class=title># increment date by one month</span></span>
 <span class=prompt>&gt;</span> <span class=code>d=as.Date(&quot;2024-12-1&quot;)</span>
-<span class=prompt>&gt;</span> <span class=code>seq(d,,&quot;month&quot;,2)[2]</span>
+<span class=prompt>&gt;</span> <span class=code>seq(d,,&quot;month&quot;,2)[2]</span><span class=comment> # doesn&apos;t work with a vector of multiple dates</span>
 <span class=output>[1] &quot;2025-01-01&quot;</span>
-<span class=prompt>&gt;</span> <span class=code>d2=as.POSIXlt(d);d2$mon=d2$mon+1;as.Date(d2)</span><span class=comment> # base R that also works with vector of multiple dates</span>
+<span class=prompt>&gt;</span> <span class=code>d2=as.POSIXlt(d);d2$mon=d2$mon+1;as.Date(d2)</span><span class=comment> # also works with a vector of multiple dates</span>
 <span class=output>[1] &quot;2025-01-01&quot;</span>
 <span class=prompt>&gt;</span> <span class=code>d%m+%months(1)</span><span class=comment> # lubridate</span>
 <span class=output>[1] &quot;2025-01-01&quot;</span>
