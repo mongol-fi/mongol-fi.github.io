@@ -68,6 +68,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <ul class=toc>
 <li><a href=#Third_round_of_arguments_by_Kirsch>Third round of arguments by Kirsch</a>
 <ul class=toc>
+<li><a href=#Cases_per_state_compared_to_vaccinated_percent>Cases per state compared to vaccinated percent</a></li>
 <li><a href=#9_increase_in_CFR_after_vaccine_rollout_in_California_nursing_homes>9% increase in CFR after vaccine rollout in California nursing homes</a></li>
 <li><a href=#Comorbidities_in_Czech_data>Comorbidities in Czech data</a></li>
 <li><a href=#Moderna_Pfizer_mortality_ratio>Moderna-Pfizer mortality ratio</a></li>
@@ -80,6 +81,99 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <a href=#Third_round_of_arguments_by_Kirsch id=Third_round_of_arguments_by_Kirsch>Third round of arguments by Kirsch</a>
 </h2>
 <p>This section addresses Kirsch's third round of arguments to Saar Wilf: <a href="https://kirschsubstack.com/p/the-latest-round-in-the-2m-debate">https://kirschsubstack.com/p/the-latest-round-in-the-2m-debate</a>.</p>
+<h3>
+<a href=#Cases_per_state_compared_to_vaccinated_percent id=Cases_per_state_compared_to_vaccinated_percent>Cases per state compared to vaccinated percent</a>
+</h3>
+<p>Under the heading <span class="quote">&quot;Cases were higher in both 2021-2022 for the vaccinated&quot;</span>, Kirsch wrote: <span class="quote">&quot;<a href=https://github.com/skirsch/covid/blob/main/debate/counties_cases_FINAL.xlsx>CDC state and county case data</a>: x-axis=vax rate. y-axis=relative # of cases to baseline. Regression shows &gt;1.5X higher cases in 2021, and &gt;2X higher cases in 2022. <strong>95% confidence slope increased in both years over baseline in BOTH all state and all county data.</strong> This is dispositive as there is nothing that is more fundamental than this data to resolve the question of cases. More vaccines→ more cases in both years.&quot;</span></p>
+<p>He linked to a spreadsheet with these plots (where for some reason on the left he claimed that he got high r<sup>2</sup> values even though the values were below 0.1):</p>
+<div class="width10">
+<img src="i/rootclaim-countiescases-2.png">
+</div>
+<p>At first I thought the plots on the left showed the difference in raw number of cases and not cases in capita, which would've been highly confounded by population size. However actually the plots on the left do correctly show the difference in cases per capita.</p>
+<p>However an obvious bias with Kirsch's analysis is that states with a higher percentage of vaccinated people also tend to have more tests performed per capita. But in states with a low percentage of vaccinated people, there tends to also be a lower number of tests performed per capita so it's probably less likely that COVID infections get detected as cases:</p>
+<pre>download.file(&quot;https://healthdata.gov/api/views/j8mb-icvb/rows.csv&quot;,&quot;statespcr.csv&quot;)
+download.file(&quot;https://data.cdc.gov/api/views/rh2h-3yt2/rows.csv&quot;,&quot;statesvax.csv&quot;)
+download.file(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/state/totals/NST-EST2023-ALLDATA.csv&quot;,&quot;NST-EST2023-ALLDATA.csv&quot;)
+
+test=fread(&quot;statespcr.csv&quot;)
+test[,year:=year(as.Date(date,&quot;%Y/%m/%d&quot;))]
+test=test[,.(tests=sum(new_results_reported),positive=sum(new_results_reported[overall_outcome==&quot;Positive&quot;])),.(state=state_name,code=state,year)]
+
+pop=fread(&quot;NST-EST2023-ALLDATA.csv&quot;)
+
+a=merge(test[year==2021],pop[,.(state=NAME,pop=POPESTIMATE2021)])
+vax=fread(&quot;statesvax.csv&quot;)
+a=merge(vax[Date==&quot;12/31/2021&quot;&amp;date_type==&quot;Report&quot;,.(code=Location,vax=Admin_Dose_1_Cumulative)],a)
+a[,.(state,tests,positive,pop,vaxpct=vax/pop*100,testsperpop=tests/pop,positivepct=positive/tests*100)][order(-testsperpop)]
+
+# tests is tests performed in 2021
+# positive is tests with positive result in 2021
+# pop is mid-2021 resident population estimate
+# vaxpct is people with one or more dose at end of 2021 divided by mid-2021 resident population estimate
+# testsperpop is tests performed in 2021 divided by mid-2021 resident population estimate
+# positivepct is positive/tests*100
+a[,.(state,tests,pop,vaxpct=vax/pop*100,testsperpop=tests/pop)][order(-testsperpop)]</pre>
+<!-- -->
+<pre>                   state    tests positive      pop vaxpct testsperpop positivepct
+ 1: District of Columbia  2741963   111520   669037   93.6       4.098        4.07
+ 2:         Rhode Island  4165830   148252  1097092   86.2       3.797        3.56
+ 3:              Vermont  2329264    79483   647093   86.3       3.600        3.41
+ 4:        Massachusetts 24582715   784478  6991951   89.5       3.516        3.19
+ 5:               Alaska  2340384   132788   734923   64.8       3.185        5.67
+ 6:             New York 48749226  2694052 19854526   82.5       2.455        5.53
+ 7:          Connecticut  8106398   372738  3603691   87.9       2.249        4.60
+ 8:            Minnesota 12472481   866456  5717968   70.5       2.181        6.95
+ 9:             Delaware  2002995   139678  1004881   74.4       1.993        6.97
+10:           California 76921627  3410337 39145060   83.7       1.965        4.43
+11:             Illinois 23899042  1121908 12690341   72.1       1.883        4.69
+12:             Maryland 11472288   925194  6175045   78.9       1.858        8.06
+13:           New Jersey 15221817  1187286  9269175   80.4       1.642        7.80
+14:                Maine  2247841   112855  1378787   83.9       1.630        5.02
+15:        New Hampshire  2215618   133166  1387494   96.9       1.597        6.01
+16:             Colorado  8780187   635115  5811596   74.0       1.511        7.23
+17:        West Virginia  2644412   257315  1785249   62.2       1.481        9.73
+18:              Florida 30568295  3324246 21830708   73.4       1.400       10.87
+19:               Hawaii  2021761    83129  1446745   86.4       1.397        4.11
+20:       South Carolina  7247849   629628  5193848   62.3       1.395        8.69
+21:           New Mexico  2868744   450036  2116950   80.1       1.355       15.69
+22:            Wisconsin  7932801   599067  5879978   67.7       1.349        7.55
+23:             Michigan 12379110  1249754 10038117   63.2       1.233       10.10
+24:              Wyoming   695550    50122   579548   55.9       1.200        7.21
+25:           Washington  9166186   528703  7741433   74.5       1.184        5.77
+26:       North Carolina 12266149  1090015 10567100   76.1       1.161        8.89
+27:         Pennsylvania 14379946  1282627 13013614   77.0       1.105        8.92
+28:             Kentucky  4916402   517763  4507600   62.0       1.091       10.53
+29:         North Dakota   837596    48273   777982   61.0       1.077        5.76
+30:              Arizona  7817275   848050  7272487   67.5       1.075       10.85
+31:            Louisiana  4786572   349269  4627047   57.8       1.034        7.30
+32:                 Utah  3427578   363276  3339284   64.7       1.026       10.60
+33:             Missouri  6089925   605957  6170393   62.1       0.987        9.95
+34:               Nevada  3048542   323186  3146632   68.2       0.969       10.60
+35:               Oregon  4115224   254855  4256465   73.4       0.967        6.19
+36:              Indiana  6560258   676954  6813798   57.3       0.963       10.32
+37:                 Ohio 11246047  1074386 11765227   60.2       0.956        9.55
+38:               Kansas  2718140   245414  2937946   68.8       0.925        9.03
+39:              Montana  1020546    99165  1106366   60.0       0.922        9.72
+40:             Virginia  7767854   828465  8657348   78.0       0.897       10.67
+41:                Texas 26396754  3008760 29561286   65.5       0.893       11.40
+42:                Idaho  1675952   236285  1904537   49.0       0.880       14.10
+43:                 Iowa  2679250   278373  3197944   64.1       0.838       10.39
+44:              Georgia  8365941   943862 10790385   60.4       0.775       11.28
+45:             Arkansas  2126052   174494  3028443   62.5       0.702        8.21
+46:              Alabama  3367649   443928  5050380   56.9       0.667       13.18
+47:            Tennessee  4353964   524323  6963709   57.7       0.625       12.04
+48:          Puerto Rico  1881234   156528  3262693   87.2       0.577        8.32
+49:             Nebraska  1115678   118021  1964253   65.4       0.568       10.58
+50:         South Dakota   498453    68883   896299   70.1       0.556       13.82
+51:             Oklahoma  1830585   300680  3991634   65.6       0.459       16.43
+52:          Mississippi  1222841   165735  2949582   55.8       0.415       13.55
+                   state    tests positive      pop vaxpct testsperpop positivepct</pre>
+<p>My correlation between the percentage of vaccinated people in 2021 and tests per capita in 2021 was about 0.61:</p>
+<pre>&gt; a[,cor(vax/pop*100,tests/pop)]
+[1] 0.61051</pre>
+<p>But my correlation between the percentage of vaccinated people in 2021 and the proportion of positive tests in 2021 was about -0.60:</p>
+<pre>&gt; a[,cor(positive/tests,vax/pop)]
+[1] -0.59976</pre>
 <h3>
 <a href=#9_increase_in_CFR_after_vaccine_rollout_in_California_nursing_homes id=9_increase_in_CFR_after_vaccine_rollout_in_California_nursing_homes>9% increase in CFR after vaccine rollout in California nursing homes</a>
 </h3>
@@ -313,7 +407,7 @@ print(mutate_if(o[order(-pop)],is.double,round,1),r=F)</pre>
 <div class="width6">
 <img src="i/pfizerstew-hydraclots-2.jpg">
 </div>
-<p>I believe was the first person who started to say that COVID vaccines were going to contain hydrogel was the FEMA whistleblower Celeste Solum. [<a href=pfizerstew.html#Origins_of_the_story_that_COVID_vaccines_contain_hydrogel>pfizerstew.html#Origins_of_the_story_that_COVID_vaccines_contain_hydrogel</a>] One time Stew Peters posted a clip of his video where he wrote that COVID vaccines contained gorilla feces and Neanderthal DNA: [<a href="https://gettr.com/post/p2rc1em2ae7">https://gettr.com/post/p2rc1em2ae7</a>]</p>
+<p>I believe was the first person who started to say that COVID vaccines were going to contain hydrogel was the FEMA whistleblower Celeste Solum. [<a href=pfizerstew.html#Origins_of_the_story_that_COVID_vaccines_contain_hydrogel>pfizerstew.html#Origins_of_the_story_that_COVID_vaccines_contain_hydrogel</a>] One time Stew Peters posted a clip of her video where she said that COVID vaccines contained gorilla feces and Neanderthal DNA: [<a href="https://gettr.com/post/p2rc1em2ae7">https://gettr.com/post/p2rc1em2ae7</a>]</p>
 <div class="width5">
 <img src="i/pfizerstew-gorilla.jpg">
 </div>
