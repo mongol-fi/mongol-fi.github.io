@@ -83,7 +83,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Age_standardized_hospitalization_rate_by_vaccine_type_in_new_UZIS_data>Age-standardized hospitalization rate by vaccine type in new UZIS data</a></li>
 <li><a href=#Age_standardized_hospitalization_rate_by_age_group_in_new_UZIS_data>Age-standardized hospitalization rate by age group in new UZIS data</a></li>
 <li><a href=#Moderna_Pfizer_mortality_ratio_by_year_of_birth_and_comorbidity_index_in_new_UZIS_data>Moderna-Pfizer mortality ratio by year of birth and comorbidity index in new UZIS data</a></li>
-<li><a href=#Mortality_rate_within_year_from_vaccination_normalized_by_comorbidity_index_in_new_UZIS_data>Mortality rate within year from vaccination normalized by comorbidity index in new UZIS data</a></li>
+<li><a href=#Adjusted_mortality_risk_ratio_within_year_from_vaccination_in_new_UZIS_data>Adjusted mortality risk ratio within year from vaccination in new UZIS data</a></li>
 <li><a href=#Hospitalizations_by_weeks_after_vaccination_in_new_UZIS_data>Hospitalizations by weeks after vaccination in new UZIS data</a></li>
 </ul>
 
@@ -1971,7 +1971,7 @@ sub=&quot;The comorbidity index was calculated at the time of the first COVID ca
 system(paste0(&quot;w=`identify -format %w i1.png`;pad=14;convert -gravity northwest -pointsize 46 -interline-spacing -2 -font Arial-Bold -size $[w-pad*3]x \\( caption:&#39;Czech UZIS data: Deaths per 100,000 people within 52 weeks from first dose (grouped by Deyo-Charlson comorbidity index, year of birth, and type of first vaccine dose) (people vaccinated after first COVID case are excluded)&#39; -splice $[pad]x20 \\) \\( -size $[w-pad*3]x -font Arial -pointsize 42 caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&#39;&quot;,sub),&quot;&#39; -splice $[pad]x10 \\) -pointsize 44 -font Arial-Bold -gravity north \\( caption:Pfizer -splice x12 \\( i1.png -chop x10 \\) caption:Moderna \\( i2.png -chop x10 \\) caption:&#39;Moderna-Pfizer ratio&#39; \\( i3.png -chop x10 \\) \\) -append 1.png&quot;));qp()</pre>
 </div>
 <h2>
-<a href=#Mortality_rate_within_year_from_vaccination_normalized_by_comorbidity_index_in_new_UZIS_data id=Mortality_rate_within_year_from_vaccination_normalized_by_comorbidity_index_in_new_UZIS_data>Mortality rate within year from vaccination normalized by comorbidity index in new UZIS data</a>
+<a href=#Adjusted_mortality_risk_ratio_within_year_from_vaccination_in_new_UZIS_data id=Adjusted_mortality_risk_ratio_within_year_from_vaccination_in_new_UZIS_data>Adjusted mortality risk ratio within year from vaccination in new UZIS data</a>
 </h2>
 <p>In the following code I calculated a risk ratio within first the 52 weeks from vaccination, which was adjusted for both age group and vaccination week. I included only people with a COVID case listed because the comorbidity index was missing for people with no COVID case. Moderna got about 1.19 times higher risk ratio than Pfizer when I only normalized the rates by age and vaccination week, but the difference decreased to about 1.14 when I additionally normalized the rates by the comorbidity index:</p>
 <pre>t=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv&quot;)
@@ -1994,14 +1994,20 @@ d=d[,.(case,date,dead,dcci=DCCI,type=codes[OckovaciLatkaKod_Prvni_davka],born=Ro
 d=d[born!=&quot;-&quot;&amp;!born%like%&quot;19(05|10)&quot;] # exclude a few people with erroneous birthdate
 d=d[date&lt;min(grep(&quot;2023&quot;,weeks))] # exclude doses given in 2023 and 2024
 
-a=d[,.(dead=sum((dead-date)%in%0:51),pop=.N),.(date,type,born,dcci)]
+a=d[,.(dead=sum((dead-date)%in%0:51),pop=.N),.(date,type,born,dcci)] # include only first 52 weeks
+# a=d[,.(dead=sum(dead&gt;=date,na.rm=T),pop=.N),.(date,type,born,dcci)] # include whole observation period
 a=merge(a,a[,.(base=sum(dead)/sum(pop)),.(date,born)])
 a=merge(a[,.(base2=sum(dead)/sum(pop)),.(date,born,dcci)],a)
 o=a[,.(dead=sum(dead),pop=sum(pop),by_age_and_vaxweek=sum(dead)/sum(base*pop),by_age_and_vaxweek_and_dcci=sum(dead)/sum(base2*pop)),type]
 print(o[order(-pop)],r=F)</pre>
 <!-- -->
-            
-<p>type dead pop by_age_and_vaxweek by_age_and_vaxweek_and_dcci Pfizer 14790 2183514 0.936 0.944 Moderna 2729 182240 1.115 1.073 Janssen 1395 152581 1.118 1.136 AstraZeneca 3474 123531 1.206 1.177 Novavax 9 3097 0.592 0.820 Other 0 8 0.000 0.000</p>
+<pre>        type  dead     pop by_age_and_vaxweek by_age_and_vaxweek_and_dcci
+      Pfizer 14790 2183514              0.936                       0.944
+     Moderna  2729  182240              1.115                       1.073
+     Janssen  1395  152581              1.118                       1.136
+ AstraZeneca  3474  123531              1.206                       1.177
+     Novavax     9    3097              0.592                       0.820
+       Other     0       8              0.000                       0.000</pre>
 <h2>
 <a href=#Hospitalizations_by_weeks_after_vaccination_in_new_UZIS_data id=Hospitalizations_by_weeks_after_vaccination_in_new_UZIS_data>Hospitalizations by weeks after vaccination in new UZIS data</a>
 </h2>
