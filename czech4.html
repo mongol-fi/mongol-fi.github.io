@@ -1973,40 +1973,35 @@ system(paste0(&quot;w=`identify -format %w i1.png`;pad=14;convert -gravity north
 <h2>
 <a href=#Mortality_rate_within_year_from_vaccination_normalized_by_comorbidity_index_in_new_UZIS_data id=Mortality_rate_within_year_from_vaccination_normalized_by_comorbidity_index_in_new_UZIS_data>Mortality rate within year from vaccination normalized by comorbidity index in new UZIS data</a>
 </h2>
-<p>In the following code I calculated a normalized excess mortality percent within first the 52 weeks from vaccination, which was normalized for both age group and vaccination week. Moderna got about 18 percentage points higher mortality rate than Pfizer when I only normalized the calculation by age, but the difference decreased to about 13 percentage points when I also normalized the calculation by both age and comorbidity index:</p>
+<p>In the following code I calculated a risk ratio within first the 52 weeks from vaccination, which was adjusted for both age group and vaccination week. I included only people with a COVID case listed because the comorbidity index was missing for people with no COVID case. Moderna got about 1.19 times higher risk ratio than Pfizer when I only normalized the rates by age and vaccination week, but the difference decreased to about 1.14 when I additionally normalized the rates by the comorbidity index:</p>
 <pre>t=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv&quot;)
 
-codes=rep(&quot;Other&quot;,25)
+codes=rep(&quot;Other&quot;,26)
 codes[c(1,8,9,16,20,21,23)]=&quot;Pfizer&quot;
 codes[c(2,15)]=&quot;Moderna&quot;
 codes[3]=&quot;AstraZeneca&quot;
 codes[4]=&quot;Janssen&quot;
 codes[c(7,22)]=&quot;Novavax&quot;
-names(codes)=sprintf(&quot;CO%02d&quot;,1:25)
+names(codes)=sprintf(&quot;CO%02d&quot;,1:26)
 
 weeks=unique(format(seq(as.Date(&quot;2020-1-1&quot;),as.Date(&quot;2024-12-31&quot;),1),&quot;%Y-%V&quot;))
 
-d=t[Infekce==1]
-d[,case:=match(DatumPozitivity,weeks)]
-d[,first:=match(Datum_Prvni_davka,weeks)]
+d=t[Infekce==1] # exclude people with no case and keep only entry for first case
+d[,case:=match(DatumPozitivity,weeks)] # convert combination of year and week number to integer
+d[,date:=match(Datum_Prvni_davka,weeks)] # week of first dose
 d[,dead:=match(ifelse(DatumUmrtiLPZ==&quot;&quot;,Umrti,DatumUmrtiLPZ),weeks)]
-d=d[,.(case,first,dead,dcci=DCCI,code=OckovaciLatkaKod_Prvni_davka,born=RokNarozeni)]
-d=d[born!=&quot;-&quot;&amp;!born%like%&quot;19(05|10)&quot;]
-# d=d[case&gt;=first] # exclude people vaccinated after first case
+d=d[,.(case,date,dead,dcci=DCCI,type=codes[OckovaciLatkaKod_Prvni_davka],born=RokNarozeni)]
+d=d[born!=&quot;-&quot;&amp;!born%like%&quot;19(05|10)&quot;] # exclude a few people with erroneous birthdate
+d=d[date&lt;min(grep(&quot;2023&quot;,weeks))] # exclude doses given in 2023 and 2024
 
-a=d[,.(dead=sum((dead-first)%in%0:51),pop=.N),.(first,name=codes[code],born,dcci)]
-a=merge(a,a[,.(base=sum(dead)/sum(pop)),.(first,born,dcci)])
-a=merge(a,a[,.(base2=sum(dead)/sum(pop)),.(first,born)])
-o=a[,.(dead=sum(dead),pop=sum(pop),by_age_and_vaxweek=(sum(dead)/sum(base2*pop)-1)*100,by_age_and_vaxweek_and_dcci=(sum(dead)/sum(base*pop)-1)*100),name]
+a=d[,.(dead=sum((dead-date)%in%0:51),pop=.N),.(date,type,born,dcci)]
+a=merge(a,a[,.(base=sum(dead)/sum(pop)),.(date,born)])
+a=merge(a[,.(base2=sum(dead)/sum(pop)),.(date,born,dcci)],a)
+o=a[,.(dead=sum(dead),pop=sum(pop),by_age_and_vaxweek=sum(dead)/sum(base*pop),by_age_and_vaxweek_and_dcci=sum(dead)/sum(base2*pop)),type]
 print(o[order(-pop)],r=F)</pre>
 <!-- -->
-<pre>        name  dead     pop by_age_and_vaxweek by_age_and_vaxweek_and_dcci
-      Pfizer 14857 2184868               -6.4                        -5.6
-     Moderna  2729  182299               11.5                         7.3
-     Janssen  1395  152824               11.8                        13.6
- AstraZeneca  3474  123531               20.6                        17.7
-     Novavax     9    3103              -40.8                       -18.0
-       Other     1     131               -1.3                        -0.1</pre>
+            
+<p>type dead pop by_age_and_vaxweek by_age_and_vaxweek_and_dcci Pfizer 14790 2183514 0.936 0.944 Moderna 2729 182240 1.115 1.073 Janssen 1395 152581 1.118 1.136 AstraZeneca 3474 123531 1.206 1.177 Novavax 9 3097 0.592 0.820 Other 0 8 0.000 0.000</p>
 <h2>
 <a href=#Hospitalizations_by_weeks_after_vaccination_in_new_UZIS_data id=Hospitalizations_by_weeks_after_vaccination_in_new_UZIS_data>Hospitalizations by weeks after vaccination in new UZIS data</a>
 </h2>
