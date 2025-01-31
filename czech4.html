@@ -1987,27 +1987,46 @@ names(codes)=sprintf(&quot;CO%02d&quot;,1:26)
 weeks=unique(format(seq(as.Date(&quot;2020-1-1&quot;),as.Date(&quot;2024-12-31&quot;),1),&quot;%Y-%V&quot;))
 
 d=t[Infekce==1] # exclude people with no case and keep only entry for first case
-d[,case:=match(DatumPozitivity,weeks)] # convert combination of year and week number to integer
-d[,date:=match(Datum_Prvni_davka,weeks)] # week of first dose
+d[,date:=match(Datum_Prvni_davka,weeks)] # convert combination of year and week number to integer
 d[,dead:=match(ifelse(DatumUmrtiLPZ==&quot;&quot;,Umrti,DatumUmrtiLPZ),weeks)]
-d=d[,.(case,date,dead,dcci=DCCI,type=codes[OckovaciLatkaKod_Prvni_davka],born=RokNarozeni)]
-d=d[born!=&quot;-&quot;&amp;!born%like%&quot;19(05|10)&quot;] # exclude a few people with erroneous birthdate
-d=d[date&lt;min(grep(&quot;2023&quot;,weeks))] # exclude doses given in 2023 and 2024
+d=d[,.(date,dead,dcci=DCCI,type=codes[OckovaciLatkaKod_Prvni_davka],born=RokNarozeni)]
+d=d[born!=&quot;-&quot;&amp;!born%like%&quot;19(05|10)&quot;] # exclude people with a missing or erroneous birthdate
+d=d[date&lt;min(grep(&quot;2023&quot;,weeks))] # exclude people with a first dose in 2023 and 2024
 
 a=d[,.(dead=sum((dead-date)%in%0:51),pop=.N),.(date,type,born,dcci)] # include only first 52 weeks
 # a=d[,.(dead=sum(dead&gt;=date,na.rm=T),pop=.N),.(date,type,born,dcci)] # include whole observation period
 a=merge(a,a[,.(base=sum(dead)/sum(pop)),.(date,born)])
 a=merge(a[,.(base2=sum(dead)/sum(pop)),.(date,born,dcci)],a)
-o=a[,.(dead=sum(dead),pop=sum(pop),by_age_and_vaxweek=sum(dead)/sum(base*pop),by_age_and_vaxweek_and_dcci=sum(dead)/sum(base2*pop)),type]
-print(o[order(-pop)],r=F)</pre>
+o=a[,.(dead=sum(dead),pop=sum(pop),rr_by_age_and_vaxweek=sum(dead)/sum(base*pop),rr_by_age_and_vaxweek_and_dcci=sum(dead)/sum(base2*pop)),type]
+mutate_if(o,is.double,round,f)[order(-pop)]|&gt;print(r=F)</pre>
 <!-- -->
-<pre>        type  dead     pop by_age_and_vaxweek by_age_and_vaxweek_and_dcci
-      Pfizer 14790 2183514              0.936                       0.944
-     Moderna  2729  182240              1.115                       1.073
-     Janssen  1395  152581              1.118                       1.136
- AstraZeneca  3474  123531              1.206                       1.177
-     Novavax     9    3097              0.592                       0.820
-       Other     0       8              0.000                       0.000</pre>
+<pre>        type  dead     pop rr_by_age_and_vaxweek rr_by_age_and_vaxweek_and_dcci
+      Pfizer 14790 2183514                 0.936                          0.944
+     Moderna  2729  182240                 1.115                          1.073
+     Janssen  1395  152581                 1.118                          1.136
+ AstraZeneca  3474  123531                 1.206                          1.177
+     Novavax     9    3097                 0.592                          0.820
+       Other     0       8                 0.000                          0.000</pre>
+<p>When I did a Poisson regression to calculate the risk ratios instead, the Moderna-Pfizer ratio was about 1.23 when I only included age and vaccination week as variables in the regression, but the ratio decreased to about 1.18 when I also included DCCI as a variable:</p>
+<pre>a=d[,.(dead=sum((dead-date)%in%0:51),pop=.N),.(date,type,born,dcci)]
+a=rbind(a,a[,.(dead=sum(dead),pop=sum(pop),type=&quot;Total&quot;),.(date,born,dcci)])
+a[,type:=relevel(factor(type),&quot;Total&quot;)]
+
+lm=glm(dead~type+born+date,offset=log(pop),poisson,a)
+lm2=glm(dead~type+born+date+dcci,offset=log(pop),poisson,a)
+
+o=a[type!=&quot;Total&quot;,.(dead=sum(dead),pop=sum(pop)),type]
+o$rr_by_age_and_vaxweek=o[,exp(coef(lm))[paste0(&quot;type&quot;,type)]]
+o$rr_by_age_and_vaxweek_and_dcci=o[,exp(coef(lm2))[paste0(&quot;type&quot;,type)]]
+mutate_if(o,is.double,round,3)[order(-pop)]|&gt;print(r=F)</pre>
+<!-- -->
+<pre>        type  dead     pop rr_by_age_and_vaxweek rr_by_age_and_vaxweek_and_dcci
+      Pfizer 14790 2183514                 0.934                          0.939
+     Moderna  2729  182240                 1.152                          1.108
+     Janssen  1395  152581                 1.208                          1.243
+ AstraZeneca  3474  123531                 1.153                          1.140
+     Novavax     9    3097                 0.439                          0.461
+       Other     0       8                 0.000                          0.000</pre>
 <h2>
 <a href=#Hospitalizations_by_weeks_after_vaccination_in_new_UZIS_data id=Hospitalizations_by_weeks_after_vaccination_in_new_UZIS_data>Hospitalizations by weeks after vaccination in new UZIS data</a>
 </h2>
