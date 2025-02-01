@@ -92,6 +92,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Mahadva_Setty_Mortality_rate_for_two_doses_relative_to_time_since_vaccination_in_ONS_data>Mahadva Setty: Mortality rate for two doses relative to time since vaccination in ONS data</a></li>
 <li><a href=#Clare_Craig_Difference_in_unvaccinated_population_size_for_cases_and_deaths_in_a_Scottish_report>Clare Craig: Difference in unvaccinated population size for cases and deaths in a Scottish report</a></li>
 <li><a href=#Clare_Craig_Maternal_mortality_rate_by_race_in_England>Clare Craig: Maternal mortality rate by race in England</a></li>
+<li><a href=#David_Dickson_Cumulative_excess_deaths_in_England_and_Wales_with_a_2010_2019_average_baseline>David Dickson: Cumulative excess deaths in England and Wales with a 2010-2019 average baseline</a></li>
 </ul>
 
 <h2>
@@ -443,31 +444,31 @@ system(&quot;f=0.png;w=`identify -format %w $f`;convert $f -gravity northwest \\
       ASMR was calculated using 5-year age groups so that the 2020 population of England and Wales was used as the standard population.
       On the row labeled \&quot;Population size times 2010-2019 linear trend in CMR by age\&quot;, a linear trend was calculated for crude mortality rate within each 5-year age group in 2010-2019, and then the projected trend was multiplied by the yearly population sizes of each age group, and the expected deaths for all age groups were added together to get the yearly total expected deaths.&#39; -extent $[w-44]x -gravity center \\) +swap -append -bordercolor white -border 6 +repage 1.png&quot;)</pre>
 <p>Craig wrote: <span class="quote">&quot;The ONS methodology is complex and opaque - for example, they have failed to publish any of the weightings they have used in their formula.&quot;</span> [<a href="https://www.hartgroup.org/too-many-deaths-are-to-be-expected/">https://www.hartgroup.org/too-many-deaths-are-to-be-expected/</a>] However the ONS published their R code at GitHub. [<a href="https://github.com/ONS-Health-modelling-hub/Excess_deaths/blob/main/ons_monthly_ed%2eR">https://github.com/ONS-Health-modelling-hub/Excess_deaths/blob/main/ons_monthly_ed%2eR</a>] Here's a simplified version of the code which just prints the expected number of deaths for England and Wales in December 2023:</p>
-<pre>month=202312
+<pre>target=202312
 
-d=openxlsx::read.xlsx(&quot;dataset20240220.xlsx&quot;,sheet=&quot;Table_2&quot;,startRow=5)
-colnames(d)=c(&quot;year&quot;,&quot;month&quot;,&quot;weekdays&quot;,&quot;age&quot;,&quot;agecoarse&quot;,&quot;sex&quot;,&quot;geography&quot;,&quot;deaths&quot;,&quot;population&quot;)
-d=d[d$geography==&quot;England and Wales, including non-residents&quot;,]
+d=setDT(read_excel(&quot;dataset20240220.xlsx&quot;,skip=4,sheet=6))
+names(d)=c(&quot;year&quot;,&quot;month&quot;,&quot;weekdays&quot;,&quot;age&quot;,&quot;agecoarse&quot;,&quot;sex&quot;,&quot;geography&quot;,&quot;dead&quot;,&quot;pop&quot;)
+d=d[geography==&quot;England and Wales, including non-residents&quot;]
 
-d$month=factor(d$month,month.name)
-d$age=factor(d$age,unique(d$age))
-d$agecoarse=factor(d$agecoarse,unique(d$agecoarse))
-d$sex=factor(d$sex)
-d$period=as.numeric(sprintf(&quot;%d%02d&quot;,d$year,match(d$month,month.name)))
+d[,yearmonth:=100*year+match(month,month.name)]
+d[,dateindex:=.GRP,.(year,month)]
 
-d=d[order(d$age,d$sex,d$geography,d$period),]
-d$trend=ave(d$period,d$age,d$sex,d$geography,FUN=seq_along)
+sub=d[dateindex%in%(dateindex[yearmonth==target][1]-12:71)]
+sub=sub[!yearmonth%in%c(202004,202005,202011,202012,202101,202102)]
+lm=glm(dead~age+sex+dateindex+month+weekdays+agecoarse:sex+agecoarse:dateindex+agecoarse:month+offset(log(pop)),quasipoisson,sub)
 
-fit=d[d$trend%in%(d$trend[d$period==month][1]-12:71),]
-fit=subset(fit,!period%in%c(202004,202005,202011,202012,202101,202102))
-
-reg=glm(deaths~age+sex+trend+month+weekdays+agecoarse:sex+agecoarse:trend+agecoarse:month+offset(log(population)),quasipoisson,fit)
-
-out=d[d$period==month,]
-out$expected=predict(reg,out,type=&quot;response&quot;)
-
-sum(out$expected)
+sum(predict(lm,d[yearmonth==target],type=&quot;response&quot;))
 # 49728.14 (same as cell H7649 of table 4 in the spreadsheet)</pre>
+<p>Or this version always uses 2013-2019 as the fitting period instead which is probably more accurate:</p>
+<pre>d=setDT(read_excel(&quot;dataset20240220.xlsx&quot;,skip=4,sheet=6))
+names(d)=c(&quot;year&quot;,&quot;month&quot;,&quot;weekdays&quot;,&quot;age&quot;,&quot;agecoarse&quot;,&quot;sex&quot;,&quot;geography&quot;,&quot;dead&quot;,&quot;pop&quot;)
+d=d[geography==&quot;England and Wales, including non-residents&quot;]
+
+d[,dateindex:=.GRP,.(year,month)]
+
+sub=d[year%in%2013:2019]
+lm=glm(dead~age+sex+dateindex+month+weekdays+agecoarse:sex+agecoarse:dateindex+agecoarse:month+offset(log(pop)),quasipoisson,sub)
+d$expected=predict(lm,d,type=&quot;response&quot;)</pre>
 <p>At first I thought that the regression above was based on raw number of deaths and not mortality rates, but the methodology article says that when the population size is included as an offset variable, it's analogous to doing the regression on mortality rates: <span class="quote">&quot;When using a quasi-Poisson regression model, modelling the number of deaths as the dependent variable, and including the natural logarithm of population size as an offset term is analogous to modelling the mortality rate in each age-sex-geography stratum.&quot;</span> [<a href="https://www.ons.gov.uk/peoplepopulationandcommunity/healthandsocialcare/causesofdeath/articles/estimatingexcessdeathsintheukmethodologychanges/february2024">https://www.ons.gov.uk/peoplepopulationandcommunity/healthandsocialcare/causesofdeath/articles/estimatingexcessdeathsintheukmethodologychanges/february2024</a>]</p>
 <p>ONS is not the only organization which has switched away from using a simple average baseline. OWID previously also used a 2015-2019 average to calculate excess deaths, but they later switched to a 2015-2019 linear trend which is usually more accurate. OWID's website says: <span class="quote">&quot;Previously we used a different expected deaths baseline: the average number of deaths over the years 2015–2019. We made this change because using the five-year average has an important limitation - it does not account for year-to-year trends in mortality and thus can misestimate excess mortality. The WMD projection, on the other hand, does not suffer from this limitation because it accounts for these year-to-year trends.&quot;</span> [<a href="https://ourworldindata.org/excess-mortality-covid">https://ourworldindata.org/excess-mortality-covid</a>]</p>
 <p>The Australian Bureau of Statistics previously used a 2015-2019 average to calculate excess deaths during COVID, but in 2023 they switched to a more sophisticated cyclical linear regression method which reduced the excess deaths during COVID, because Australia has an increasing trend in deaths per year similar to most OECD countries. [<a href="https://www.abs.gov.au/articles/measuring-australias-excess-mortality-during-covid-19-pandemic-until-august-2023">https://www.abs.gov.au/articles/measuring-australias-excess-mortality-during-covid-19-pandemic-until-august-2023</a>]</p>
@@ -2267,7 +2268,7 @@ ggsave(&quot;1.png&quot;,width=6,height=5,dpi=300*4)
 system(&quot;convert 1.png -resize 25% -colors 256 1.png&quot;)</pre>
 </div>
 <p>Norman Fenton and Martin Neil published a Substack post about the same English data where they downloaded the data and made their own plot that only included whites and blacks. But for some reason they didn't include the confidence intervals in their plot, and they didn't even explain that the decrease in mortality rate in blacks might have been due to the wide confidence intervals. [<a href="https://wherearethenumbers.substack.com/p/why-did-maternal-mortality-in-white">https://wherearethenumbers.substack.com/p/why-did-maternal-mortality-in-white</a>]</p>
-<p>In the comments of the post Fenton claimed that whites had a statistically significant increase in maternal mortality rate between the years 2019-2021 and 2020-2022. However I found the number of maternities and deaths by race from Table 2.10 of these PDF reports: <a href="https://www.npeu.ox.ac.uk/mbrrace-uk/reports/maternal-reports/maternal-report-2019-2021">https://www.npeu.ox.ac.uk/mbrrace-uk/reports/maternal-reports/maternal-report-2019-2021</a>, <a href="https://www.npeu.ox.ac.uk/mbrrace-uk/reports/maternal-reports/maternal-report-2020-2022">https://www.npeu.ox.ac.uk/mbrrace-uk/reports/maternal-reports/maternal-report-2020-2022</a>. Whites had 131 deaths out of 1,352,794 maternities in 2019-2021 and 152 deaths out of 1,291,758 maternities in 2020-2022. And using a chi-squared test the p-value of the ratios was about 0.11, so it's not statistically significant: <code>prop.test(c(131,152),c(1352794,1291758))</code>.</p>
+<p>In the comments of the post Fenton claimed that whites had a statistically significant increase in maternal mortality rate between the years 2019-2021 and 2020-2022. However I found the number of maternities and deaths by race from Table 2.10 of these PDF reports: <a href="https://www.npeu.ox.ac.uk/mbrrace-uk/reports/maternal-reports/maternal-report-2019-2021">https://www.npeu.ox.ac.uk/mbrrace-uk/reports/maternal-reports/maternal-report-2019-2021</a>, <a href="https://www.npeu.ox.ac.uk/mbrrace-uk/reports/maternal-reports/maternal-report-2020-2022">https://www.npeu.ox.ac.uk/mbrrace-uk/reports/maternal-reports/maternal-report-2020-2022</a>. Whites had 131 deaths out of 1,352,794 maternities in 2019-2021 and 152 deaths out of 1,291,758 maternities in 2020-2022. And using a chi-squared test the p-value of the ratios is about 0.11, so there's not a statistically significant increase: <code>prop.test(c(131,152),c(1352794,1291758))</code>.</p>
 <p>In this plot from the UK report, the green line shows that the increase in indirect deaths since the 2019-2021 year is explained by COVID:</p>
 <div class="width6">
 <img src="i/statistic-maternal-5.png">
@@ -2506,6 +2507,107 @@ pheatmap::pheatmap(m,filename=&quot;1.png&quot;,display_numbers=round(m),
 
 system(&quot;magick 1.png -gravity center -extent 120%x100% 1.png;w=`identify -format %w 1.png`;pad=24;convert -gravity northwest -pointsize 42 -interline-spacing -2 -font Arial-Bold \\( -size $[w-pad*2]x caption:&#39;NVSS, women only: Percentage of COVID deaths out of all deaths by age group and quarter&#39; -splice $[pad]x20 \\) \\( -size $[w-pad*2]x -font Arial -pointsize 36 caption:&#39;COVID deaths are deaths with underlying cause U07.1. To avoid suppression of deaths on rows with less than 10 deaths, the data was not retrieved from CDC WONDER but from the fixed-width files here: cdc.gov/nchs/nvss/mortality_public_
 use_data.htm.&#39; -splice $[pad]x10 \\) \\( 1.png -shave 0x6 \\) -append -colorspace gray 1.png&quot;)</pre>
+</div>
+<h2>
+<a href=#David_Dickson_Cumulative_excess_deaths_in_England_and_Wales_with_a_2010_2019_average_baseline id=David_Dickson_Cumulative_excess_deaths_in_England_and_Wales_with_a_2010_2019_average_baseline>David Dickson: Cumulative excess deaths in England and Wales with a 2010-2019 average baseline</a>
+</h2>
+<p>David Dickson posted this plot which shows excess deaths calculated using four different baselines: [<a href="https://x.com/dksdata/status/1885379612210766228/photo/1">https://x.com/dksdata/status/1885379612210766228/photo/1</a>]</p>
+<div class="width13">
+<img src="i/uk-dickson.jpg">
+</div>
+<p>At first I wasn't sure if blue line meant a 2010-2019 average or the average of the past 10 years, but in another similar plot he indicated that the blue baseline was a 2010-2019 average. [<a href="https://x.com/dksdata/status/1842957444562944148">https://x.com/dksdata/status/1842957444562944148</a>] And one of the boxes in the plot above also indicates that the blue baseline is a <span class="quote">&quot;pre pandemic 10 year average&quot;</span>.</p>
+<p>However the blue 2010-2019 average baseline is obviously too low due to the aging population. Here the 2010-2019 average baseline produces negative excess deaths each year between 2005 and 2014, but it produces positive excess deaths each year between 2015 and 2024. It produces high excess deaths even in 2019 which had unusually low mortality:</p>
+<div class="width6">
+<img src="i/uk-dickson-2.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>download.file(&quot;https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/datasets/weeklyprovisionalfiguresondeathsregisteredinenglandandwales/2024/weeklydeathsweek522024.xlsx&quot;,&quot;weeklydeathsweek522024.xlsx&quot;)
+download.file(&quot;https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/healthandsocialcare/causesofdeath/datasets/estimatingexcessdeathsintheukmethodologychanges/current/dataset20240220.xlsx&quot;,&quot;dataset20240220.xlsx&quot;)
+
+library(readxl);library(data.table);library(ggplot2)
+
+t=data.table(read_excel(&quot;dataset20240220.xlsx&quot;,skip=4,sheet=6))
+names(t)=c(&quot;year&quot;,&quot;month&quot;,&quot;weekdays&quot;,&quot;age&quot;,&quot;agecoarse&quot;,&quot;sex&quot;,&quot;geography&quot;,&quot;dead&quot;,&quot;pop&quot;)
+t=t[geography==&quot;England and Wales, including non-residents&quot;]
+d=copy(t)
+t[,pop:=pop*lubridate::days_in_month(paste0(year,&quot;-&quot;,match(month,month.name),&quot;-1&quot;))]
+t[,age:=as.numeric(sub(&quot; .*&quot;,&quot;&quot;,sub(&quot;Less.*&quot;,0,age)))]
+
+a=t[,.(dead=sum(dead),pop=sum(pop)),.(age,year)]
+years=unique(a$year)
+a=merge(a,a[year%in%2010:2019,.(year=years,base=predict(lm(dead/pop~year),.(year=years))),age])[,base:=base*pop]
+p=a[,.(dead=sum(dead),base=sum(base)),year][,.(x=year,y=c(dead,base),z=rep(c(&quot;dead&quot;,&quot;base&quot;),each=.N))]
+
+t2=data.table(read_excel(&quot;dataset20240220.xlsx&quot;,skip=4,sheet=8))
+t2=t2[Country==&quot;England and Wales, including non-residents&quot;&amp;Sex==&quot;Both sexes&quot;&amp;`Age group`==&quot;All ages&quot;]
+p=rbind(p,t2[,.(y=sum(`Expected deaths`),z=&quot;newons&quot;),.(x=Year)])
+
+p=rbind(p,do.call(rbind,lapply(2010:2024,\(i)tail(p[z==&quot;dead&quot;&amp;x&lt;i&amp;x!=2020],5)[,.(x=i,y=mean(y),z=&quot;oldons&quot;)])))
+
+new=setDT(read_excel(&quot;weeklydeathsweek522024.xlsx&quot;,&quot;Table_5&quot;,skip=5))
+p=rbind(p,new[Country==&quot;England, Wales and non-residents&quot;&amp;Sex==&quot;All people&quot;&amp;`Age group (years)`==&quot;All ages&quot;,.(x=2024,y=c(sum(`Number of deaths`),sum(`Expected deaths`)),z=c(&quot;dead&quot;,&quot;newons&quot;))])
+
+p=rbind(p,p[z==&quot;dead&quot;&amp;x%in%2010:2019,.(x=2005:2024,y=mean(y),z=&quot;dickson&quot;)])
+
+d[,dateindex:=.GRP,.(year,month)]
+sub=d[year%in%2010:2019]
+lm=glm(dead~age+sex+dateindex+month+weekdays+agecoarse:sex+agecoarse:dateindex+agecoarse:month+offset(log(pop)),quasipoisson,sub)
+d$expected=predict(lm,d,type=&quot;response&quot;)
+p=rbind(p,d[,.(y=sum(expected),z=&quot;onsmod&quot;),.(x=year)])
+
+lab=fread(text=&#39;var,lab,color
+dead,&quot;Actual deaths&quot;,black
+oldons,&quot;Old ONS baseline (5-year average with 2020 excluded)&quot;,gray50
+newons,&quot;New ONS baseline (5-year quasi-Poisson regression)&quot;,#dd0000
+onsmod,&quot;New ONS baseline with fixed 2010-2019 fiting period&quot;,#ff8888
+base,&quot;My baseline (2010-2019 trend in CMR by age group)&quot;,#00aa00
+dickson,&quot;Dickson\&#39;s baseline (2010-2019 average)&quot;,#4d82b4&#39;)
+lab=lab[var%in%p$z]
+p[,z:=factor(z,lab$var)]
+
+p=p[!(x&lt;2010&amp;z%in%c(&quot;onsmod&quot;,&quot;base&quot;))]
+
+xmin=min(p$x)-.5;xmax=max(p$x)+.5;xbreak=seq(xmin,xmax,.5)
+xlab=ifelse(xbreak%%1==0,xbreak,&quot;&quot;)
+ybreak=pretty(p$y,8);ymin=ybreak[1];ymax=max(ybreak)
+
+leg=data.table(x=xmin+.4,y=ymin+(ymax-ymin)*seq(.94,0,-1/15)[1:nrow(lab)],label=lab$lab)
+
+ggplot(p,aes(x=x,y=y))+
+geom_rect(aes(xmin=xmin,xmax=xmax,ymin=ymin,ymax=ymax),color=&quot;gray65&quot;,fill=NA,linewidth=.45,lineend=&quot;square&quot;)+
+geom_line(aes(color=z),linewidth=.6)+
+geom_point(data=p[z==&quot;dead&quot;],aes(color=z),size=.8)+
+geom_label(data=leg,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.85),label.r=unit(0,&quot;pt&quot;),label.padding=unit(1,&quot;pt&quot;),label.size=0,color=lab$color,size=3.7,hjust=0)+
+labs(title=&quot;Yearly deaths in England and Wales by registration date&quot;,x=NULL,y=NULL)+
+scale_x_continuous(limits=range(xbreak),breaks=xbreak,labels=xlab)+
+scale_y_continuous(limits=range(ybreak),breaks=ybreak,labels=\(x)paste0(x/1e3,&quot;k&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+scale_color_manual(values=lab$color)+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
+  axis.ticks=element_line(linewidth=.45,color=&quot;gray65&quot;),
+  axis.ticks.x=element_line(color=alpha(&quot;gray65&quot;,c(1,0))),
+  axis.ticks.length=unit(4,&quot;pt&quot;),
+  legend.position=&quot;none&quot;,
+  panel.background=element_blank(),
+  panel.grid=element_blank(),
+  plot.margin=margin(5,5,5,5),
+  plot.title=element_text(size=11.6,face=2))
+ggsave(&quot;0.png&quot;,width=5.6,height=3.6,dpi=300*4)
+
+sub=&quot;\u00a0     Source: ONS datasets \&quot;Deaths registered weekly in England and Wales, provisional\&quot; (for 2024) and \&quot;Estimating excess deaths in the UK, methodology changes: February 2024\&quot; (for earlier years). Both datasets include non-residents and are by date of occurrence and not registration. The number of deaths in 2024 is the number of deaths on weeks ending in 2024.
+      The gray baseline is a simple average of the past five years with 2020 excluded, so for example the baseline for 2023 consists of the years 2017-2019 and 2021-2022.
+      The green baseline was calculated by first taking the linear trend in CMR by five-year age groups in 2010-2019, and then the projected trend was multiplied by the population size of each age group to get the expected deaths, and the expected deaths for each age group were added together to get the yearly total expected deaths.
+      The dark red baseline is a quasi-Poisson regression of the past 5 years with April to May 2020 and December 2020 to February 2021 excluded.
+      The light red baseline was calculated with the R code provided by the ONS that was modified to use a fixed 2010-2019 fitting period (see sars2.net/uk.html).&quot;
+
+system(paste0(&quot;magick 0.png -resize 25% -trim 1.png;magick 1.png \\( -size `identify -format %w 1.png`x -font Arial -interline-spacing -3 -pointsize 43 caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&#39;&quot;,sub),&quot;&#39; -splice x24 \\) -append -trim -bordercolor white -border 28 -colors 256 1.png&quot;))</pre>
+</div>
+<p>At Mortality Watch, England and Wales gets negative excess ASMR in 2024 is you use a 2011-2019 linear baseline: [<a href="https://mortality.watch/explorer/?c=GBRTENW&t=asmr&df=2011&bm=lin_reg">https://mortality.watch/explorer/?c=GBRTENW&amp;t=asmr&amp;df=2011&amp;bm=lin_reg</a>]</p>
+<div class="width5">
+<img src="i/uk-dickson-3.png">
 </div>
 <script>
 let q=document.querySelectorAll('a,code,pre')

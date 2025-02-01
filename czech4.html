@@ -85,6 +85,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Moderna_Pfizer_mortality_ratio_by_year_of_birth_and_comorbidity_index_in_new_UZIS_data>Moderna-Pfizer mortality ratio by year of birth and comorbidity index in new UZIS data</a></li>
 <li><a href=#Mortality_risk_ratio_within_year_from_vaccination_in_new_UZIS_data>Mortality risk ratio within year from vaccination in new UZIS data</a></li>
 <li><a href=#Hospitalizations_by_weeks_after_vaccination_in_new_UZIS_data>Hospitalizations by weeks after vaccination in new UZIS data</a></li>
+<li><a href=#Relative_risk_of_Moderna_and_Pfizer_in_low_COVID_months>Relative risk of Moderna and Pfizer in low-COVID months</a></li>
 </ul>
 
 <h2>
@@ -1976,13 +1977,12 @@ system(paste0(&quot;w=`identify -format %w i1.png`;pad=14;convert -gravity north
 <p>In the following code I calculated a risk ratio within first the 52 weeks from vaccination, which was adjusted for both age group and vaccination week. I included only people with a COVID case listed because the comorbidity index was missing for people with no COVID case. Moderna got about 1.19 times higher risk ratio than Pfizer when I only normalized the rates by age and vaccination week, but the difference decreased to about 1.14 when I additionally normalized the rates by the comorbidity index:</p>
 <pre>t=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv&quot;)
 
-codes=rep(&quot;Other&quot;,26)
+codes=setNames(rep(&quot;Other&quot;,26),sprintf(&quot;CO%02d&quot;,1:26))
 codes[c(1,8,9,16,20,21,23)]=&quot;Pfizer&quot;
 codes[c(2,15)]=&quot;Moderna&quot;
 codes[3]=&quot;AstraZeneca&quot;
 codes[4]=&quot;Janssen&quot;
 codes[c(7,22)]=&quot;Novavax&quot;
-names(codes)=sprintf(&quot;CO%02d&quot;,1:26)
 
 weeks=unique(format(seq(as.Date(&quot;2020-1-1&quot;),as.Date(&quot;2024-12-31&quot;),1),&quot;%Y-%V&quot;))
 
@@ -2093,6 +2093,38 @@ system(&quot;magick 1.png -resize 25% PNG8:1.png&quot;)</pre>
 <div class="width7">
 <img src="i/czech-hospvaxweek-2.png">
 </div>
+<h2>
+<a href=#Relative_risk_of_Moderna_and_Pfizer_in_low_COVID_months id=Relative_risk_of_Moderna_and_Pfizer_in_low_COVID_months>Relative risk of Moderna and Pfizer in low-COVID months</a>
+</h2>
+<p>Kirsch did a blog post about how during a low-COVID period between weeks 21 to 40 of 2021, Moderna had about 1.5 times higher mortality rate than Pfizer within age groups: <a href="https://kirschsubstack.com/p/official-czech-republic-record-level">https://kirschsubstack.com/p/official-czech-republic-record-level</a>.</p>
+<p>I tried using the old record-level data to do a Poisson regression normalized for age and vaccination month, where I calculated the mortality risk in June to September 2021 and I only included people vaccinated before June 2021. But the relative risk was about 1.47 times higher for Moderna than Pfizer, so it roughly matches Kirsch's calculation:</p>
+<pre>b=fread(&quot;http://sars2.net/f/czbucketskeep.csv.gz&quot;)
+
+a=b[vaxmonth&lt;&quot;2021-06&quot;&amp;month&gt;=&quot;2021-06&quot;&amp;month&lt;=&quot;2021-09&quot;&amp;dose&lt;=1&amp;type!=&quot;Other&quot;]
+a[dose==0,type:=&quot;Unvaccinated&quot;]
+a=a[,.(dead=sum(dead),pop=sum(alive)),.(type,age=factor(pmin(age,100)),vaxmonth)]
+a[,type:=relevel(factor(type),&quot;Unvaccinated&quot;)]
+
+lm=glm(dead~type+age+vaxmonth,offset=log(pop),poisson,a)
+
+o=a[,.(dead=sum(dead),pop=sum(pop)),type]
+o$rr=o[,exp(coef(lm))[paste0(&quot;type&quot;,type)]]
+
+se=sqrt(diag(vcov(lm)))
+err=qnorm(.975)*se[paste0(&quot;type&quot;,o$type)]
+o[,low:=exp(log(rr)-err)][,high:=exp(log(rr)+err)]
+o[1,`:=`(rr=1,low=1,high=1)]
+
+dplyr::mutate_if(o,is.double,round,3)[order(-pop)]|&gt;print(r=F)
+#         type  dead       pop    rr   low  high
+# Unvaccinated 14515 634463184 1.000 1.000 1.000
+#       Pfizer 12446 379085660 0.294 0.282 0.308
+#  AstraZeneca  3838  53538740 0.405 0.383 0.427
+#      Moderna  2440  38525931 0.432 0.408 0.457
+#      Janssen   217   4977937 0.464 0.406 0.531
+
+o[type==&quot;Moderna&quot;,rr]/o[type==&quot;Pfizer&quot;,rr]
+# 1.46563</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
