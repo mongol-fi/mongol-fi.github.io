@@ -80,6 +80,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Excess_deaths_compared_to_percentage_of_vaccinated_people_in_European_countries>Excess deaths compared to percentage of vaccinated people in European countries</a></li>
 <li><a href=#Pull_forward_effect_in_Romania>Pull-forward effect in Romania</a></li>
 <li><a href=#What_happens_when_you_ask_ES_questions_about_his_methodology_or_show_errors_in_his_plots>What happens when you ask ES questions about his methodology or show errors in his plots</a></li>
+<li><a href=#Are_deaths_with_UCD_COVID_but_MCD_cancer_miscoded_UCD_cancer_deaths>Are deaths with UCD COVID but MCD cancer miscoded UCD cancer deaths?</a></li>
 </ul>
 
 <h2>
@@ -2050,6 +2051,116 @@ system(paste0(&quot;f=1.png;mar=100;w=`identify -format %w $f`;magick \\( $f \\)
 <div class="width11">
 <img src="i/ethical-blocked.png">
 </div>
+<h2>
+<a href=#Are_deaths_with_UCD_COVID_but_MCD_cancer_miscoded_UCD_cancer_deaths id=Are_deaths_with_UCD_COVID_but_MCD_cancer_miscoded_UCD_cancer_deaths>Are deaths with UCD COVID but MCD cancer miscoded UCD cancer deaths?</a>
+</h2>
+<p>Hugh Akston told me: <span class="quote">&quot;You will get the wrong answer with UCoD analysis from WONDER. They recoded nearly 90K deaths (and growing) from UCoD CA to COVID.&quot;</span> [<a href="https://x.com/ProfessorAkston/status/1885838579945160782">https://x.com/ProfessorAkston/status/1885838579945160782</a>]</p>
+<p>But in the following code I picked 8 random people who died in 2020 with UCD COVID and MCD cancer. [<a href="https://www.cdc.gov/nchs/data_access/vitalstatsonline.htm#Mortality_Multiple">https://www.cdc.gov/nchs/data_access/vitalstatsonline.htm#Mortality_Multiple</a>] The first MCD is typically the immediate cause of death which is listed on the first line of the death certificate, but in 7 out of 8 people the first MCD was respiratory failure, pneumonia, or adult respiratory distress syndrome. So if the people died primarily of cancer then why did they have a respiratory-related first MCD?</p>
+<pre>system(&quot;wget https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/mortality/mort2020us.zip;unzip mort2020us.zip&quot;)
+
+icd=setkey(fread(&quot;http://sars2.net/f/wonderbyicd.csv.gz&quot;)[rowid(code)==1][,code:=sub(&quot;.&quot;,&quot;&quot;,code,fixed=T)],&quot;code&quot;)
+
+t=setDT(readr::read_fwf(&quot;VS20MORT.DUSMCPUB_r20220105&quot;,fwf_cols(restatus=c(20,20),age=c(70,73),ucod=c(146,149),enicon_1=c(167,170),enicon_2=c(174,177),enicon_3=c(181,184),enicon_4=c(188,191),enicon_5=c(195,198),enicon_6=c(202,205),enicon_7=c(209,212),enicon_8=c(216,219),enicon_9=c(223,226),enicon_10=c(230,233),enicon_11=c(237,240),enicon_12=c(244,247),enicon_13=c(251,254),enicon_14=c(258,261),enicon_15=c(265,268),enicon_16=c(272,275),enicon_17=c(279,282),enicon_18=c(286,289),enicon_19=c(293,296),enicon_20=c(300,303))))
+
+d=t[restatus!=4,.(id=.I,pos=rep(0:20,each=.N),age,code=unlist(.SD,,F)),.SDcols=patterns(&quot;ucod|enicon&quot;)]
+d[,age:=ifelse(age%/%1000%in%c(1,9),age%%1000,0)]
+
+l=d[id%in%d[pos==0&amp;code==&quot;U071&quot;,id]][!is.na(code)]
+l=l[id%in%l[code%like%&quot;C|D[0-4]&quot;,id]]
+l$cause=icd[l$code,cause]
+
+set.seed(0)
+o=l[id%in%l[,sample(id,8)]]
+o[,cat(paste0(&quot;age &quot;,age[1],&quot;, &quot;,paste0(ifelse(pos==0,&quot;UCD &quot;,paste0(&quot;MCD &quot;,pos,&quot;: &quot;)),code,&quot; &quot;,cause,collapse=&quot;\n&quot;),&quot;\n\n&quot;)),id]
+
+t=fread(&quot;2022.csv.gz&quot;)
+t=t[restatus!=4][,age:=ifelse(age%/%1000%in%c(1,9),age%%1000,0)]
+sub=t[ucod==&quot;U071&quot;]
+
+icd=setkey(fread(&quot;s/f/wonderbyicd.csv.gz&quot;)[rowid(code)==1][,code:=sub(&quot;.&quot;,&quot;&quot;,code,fixed=T)],&quot;code&quot;)
+l=na.omit(sub[,.(id=.I,age,pos=rep(0:20,each=.N),code=unlist(.SD,,F)),.SDcols=patterns(&quot;ucod|enicon&quot;)])
+l=l[code!=&quot;&quot;]
+l$cause=icd[l$code,cause]
+
+l=l[id%in%l[code%like%&quot;C|D[0-4]&quot;,id]]
+l=l[id%in%l[,sample(id,4)]]
+
+l[,cat(paste0(&quot;age &quot;,age[1],&quot;, &quot;,paste0(ifelse(pos==0,&quot;UCD &quot;,paste0(&quot;MCD &quot;,pos,&quot;: &quot;)),code,&quot; &quot;,cause,collapse=&quot;\n&quot;),&quot;\n\n&quot;)),id]</pre>
+<!-- -->
+<pre>age 77, UCD U071 COVID-19
+MCD 1: J960 Acute respiratory failure
+MCD 2: R090 Asphyxia
+MCD 3: U071 COVID-19
+MCD 4: J189 Pneumonia, unspecified
+MCD 5: C349 Bronchus or lung, unspecified - Malignant neoplasms
+
+age 62, UCD U071 COVID-19
+MCD 1: A419 Septicaemia, unspecified
+MCD 2: J960 Acute respiratory failure
+MCD 3: U071 COVID-19
+MCD 4: C787 Secondary malignant neoplasm of liver - Malignant neoplasms
+MCD 5: C64 Malignant neoplasm of kidney, except renal pelvis
+
+age 69, UCD U071 COVID-19
+MCD 1: J80 Adult respiratory distress syndrome
+MCD 2: J189 Pneumonia, unspecified
+MCD 3: U071 COVID-19
+MCD 4: C56 Malignant neoplasm of ovary
+MCD 5: J449 Chronic obstructive pulmonary disease, unspecified
+MCD 6: I119 Hypertensive heart disease without (congestive) heart failure
+
+age 70, UCD U071 COVID-19
+MCD 1: J189 Pneumonia, unspecified
+MCD 2: U071 COVID-19
+MCD 3: J960 Acute respiratory failure
+MCD 4: N179 Acute renal failure, unspecified
+MCD 5: C349 Bronchus or lung, unspecified - Malignant neoplasms
+
+age 76, UCD U071 COVID-19
+MCD 1: J969 Respiratory failure, unspecified
+MCD 2: U071 COVID-19
+MCD 3: J189 Pneumonia, unspecified
+MCD 4: N288 Other specified disorders of kidney and ureter
+MCD 5: R579 Shock, unspecified
+MCD 6: C349 Bronchus or lung, unspecified - Malignant neoplasms
+MCD 7: I10 Essential (primary) hypertension
+MCD 8: I251 Atherosclerotic heart disease
+
+age 60, UCD U071 COVID-19
+MCD 1: J189 Pneumonia, unspecified
+MCD 2: U071 COVID-19
+MCD 3: C349 Bronchus or lung, unspecified - Malignant neoplasms
+MCD 4: J969 Respiratory failure, unspecified
+
+age 53, UCD U071 COVID-19
+MCD 1: J960 Acute respiratory failure
+MCD 2: A419 Septicaemia, unspecified
+MCD 3: U071 COVID-19
+MCD 4: J189 Pneumonia, unspecified
+MCD 5: J80 Adult respiratory distress syndrome
+MCD 6: D486 Breast - Uncertain neoplasms
+MCD 7: D649 Anaemia, unspecified
+
+age 84, UCD U071 COVID-19
+MCD 1: J129 Viral pneumonia, unspecified
+MCD 2: U071 COVID-19
+MCD 3: C189 Colon, unspecified - Malignant neoplasms
+MCD 4: E149 Unspecified diabetes mellitus, without complications
+MCD 5: I500 Congestive heart failure
+MCD 6: C509 Breast, unspecified - Malignant neoplasms</pre>
+<p>The code below shows the ten most common first MCDs among people with UCD COVID and MCD cancer:</p>
+<pre>&gt; l[pos==1,.N,.(code,cause)][,pct:=round(N/sum(N)*100,1)][order(-N)][1:10]|&gt;print(r=F)
+ code                                      cause    N  pct
+ U071                                   COVID-19 5554 38.8
+ J960                  Acute respiratory failure 2409 16.8
+ J969           Respiratory failure, unspecified 1497 10.5
+ I469                Cardiac arrest, unspecified 1080  7.5
+  J80        Adult respiratory distress syndrome  927  6.5
+ J189                     Pneumonia, unspecified  891  6.2
+ A419                   Septicaemia, unspecified  396  2.8
+ R092                         Respiratory arrest  246  1.7
+ R688 Other specified general symptoms and signs  141  1.0
+ R090                                   Asphyxia  120  0.8</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')

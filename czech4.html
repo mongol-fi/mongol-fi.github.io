@@ -904,6 +904,14 @@ system(&quot;mogrify -resize 25% -colors 256 1.png&quot;)</pre>
 <img src="i/czech-preferred-form-2.jpg">
 </div>
 <p>However I don't know if people were not initially allowed to choose the vaccine type, because an article dated May 2021 said: <span class="quote">&quot;You cannot currently choose which vaccine to get. Odds are you will get the Pfizer/BioNTech vaccine, as that one so far has been the most widely available, accounting for about three-fourths of the deliveries.&quot;</span> [<a href="https://www.expats.cz/czech-news/article/vaccination-in-the-czech-republic-all-you-need-to-know">https://www.expats.cz/czech-news/article/vaccination-in-the-czech-republic-all-you-need-to-know</a>]</p>
+<p>Added in February 2025: Kirsch included my screenshot above in one of his earlier Substack posts about the Czech data, but for some reason now he again wrote: <span class="quote">&quot;But vaccine brands were QUASI-RANDOMLY distributed in the Czech Republic. People didn't get to choose. They got what was available. There was no systemic or systematic bias in the distribution.&quot;</span> However someone from the Czech Republic corrected him in the comments and wrote: <span class="quote">&quot;Reservations for a specific <span class="quote">'vaccine'</span> were possible through an online reservation system, which began operating about 2 months after the start of the vaccination campaign.&quot;</span> [<a href="https://kirschsubstack.com/p/breaking-official-czech-record-level/comment/90222598">https://kirschsubstack.com/p/breaking-official-czech-record-level/comment/90222598</a>]</p>
+<p>I also posted this comment to Kirsch:</p>
+<blockquote>
+<p>And also how do you differentiate whether the vaccines were distributed quasi-randomly or not quasi-randomly?</p>
+<p>There's a bunch of biases like that Moderna recipients were older, had higher age-normalized comorbidity index, were vaccinated later, had higher age-normalized rate of vaccinators whose name matched <span class="quote">&quot;senior home&quot;</span>, and so on. So at what point do those biases become severe enough that you would say the vaccines were not distributed quasi-randomly?</p>
+<p>Or how do you differentiate between a systematic bias and a non-systematic bias? ChatGPT said that <span class="quote">&quot;Systematic bias leads to consistently skewed results in a particular direction, whereas nonsystematic bias results in random fluctuations around the true value.&quot;</span> ChatGPT said that the effect of nonsystematic biases averages out over time, and as an example of a nonsystematic bias, ChatGPT gave that <span class="quote">&quot;If a scale sometimes overestimates or underestimates weight by small amounts in random ways, it introduces nonsystematic bias.&quot;</span></p>
+<p>However in the case of the Czech data, the reason why Moderna recipients have higher average age than Pfizer recipients is not only due to random noise caused by a small sample size, or what ChatGPT suggested was a <span class="quote">&quot;nonsystematic bias&quot;</span>, but the age distribution seems to be systematically skewed.</p>
+</blockquote>
 <h2>
 <a href=#Mortality_rate_of_people_born_before_1930_calculated_by_Tom_F_rst id=Mortality_rate_of_people_born_before_1930_calculated_by_Tom_F_rst>Mortality rate of people born before 1930 calculated by Tomáš Fürst</a>
 </h2>
@@ -1844,7 +1852,7 @@ t[RokNarozeni!=&quot;-&quot;,age:=pmin(100,(2020-as.integer(substr(RokNarozeni,1
 
 a=t[,.(hosp=.N),.(age,dose,week=min_Hospitalizace)]
 b=fread(&quot;http://sars2.net/f/czbucketsdaily.csv.gz&quot;)
-b=b[,.(pop=sum(alive)),.(week=format(date,&quot;%Y-%V&quot;),dose=pmin(dose,1),age=pmin(90,age)%/%5*5)]
+b=b[,.(pop=sum(alive)),.(week=format(date,&quot;%G-%V&quot;),dose=pmin(dose,1),age=pmin(90,age)%/%5*5)]
 b=rbind(b,b[week==&quot;2022-51&quot;,.(week=setdiff(a[week!=&quot;&quot;&amp;!week%like%2020,week],week),pop),.(dose,age)])
 b=b[rowid(week,dose,age)==1]
 a=merge(a,b)
@@ -1865,7 +1873,7 @@ pct=dcast(pct,week+age~dose,value.var=&quot;pop&quot;)[,`1`:=nafill(`1`,,0)]
 pct=pct[week&gt;=b[dose==1,min(week)]]
 p=rbind(p,pct[,.(x=week,age,z=&quot;Vaccinated percent&quot;,y=`1`/(`0`+`1`)*100)])
 
-xval=unique(format(seq(as.Date(&quot;2020-1-1&quot;),as.Date(&quot;2023-12-31&quot;),1),&quot;%Y-%V&quot;))
+xval=unique(format(seq(as.Date(&quot;2020-1-1&quot;),as.Date(&quot;2023-12-31&quot;),1),&quot;%G-%V&quot;))
 p[,x:=as.integer(factor(x,xval))]
 p=na.omit(p)
 xstart=1;xend=max(p$x)
@@ -1927,7 +1935,7 @@ system(paste0(&quot;mar=$[24*4];w=`identify -format %w 1.png`;magick \\( 1.png -
 Show code
 </button><pre>t=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv&quot;)
 
-weeks=u(format(seq(as.Date(&quot;2020-1-1&quot;),as.Date(&quot;2024-12-31&quot;),1),&quot;%Y-%V&quot;))
+weeks=u(format(seq(as.Date(&quot;2020-1-1&quot;),as.Date(&quot;2024-12-31&quot;),1),&quot;%G-%V&quot;))
 
 t[,dead:=match(ifelse(DatumUmrtiLPZ==&quot;&quot;,Umrti,DatumUmrtiLPZ),weeks)]
 
@@ -1984,7 +1992,7 @@ codes[3]=&quot;AstraZeneca&quot;
 codes[4]=&quot;Janssen&quot;
 codes[c(7,22)]=&quot;Novavax&quot;
 
-weeks=unique(format(seq(as.Date(&quot;2020-1-1&quot;),as.Date(&quot;2024-12-31&quot;),1),&quot;%Y-%V&quot;))
+weeks=unique(format(seq(as.Date(&quot;2020-1-1&quot;),as.Date(&quot;2024-12-31&quot;),1),&quot;%G-%V&quot;))
 
 d=t[Infekce==1] # exclude people with no case and keep only entry for first case
 d[,date:=match(Datum_Prvni_davka,weeks)] # convert combination of year and week number to integer

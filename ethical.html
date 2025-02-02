@@ -564,7 +564,7 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
 ggsave(&quot;1.png&quot;,width=3.93,height=4.7,dpi=400*4)
 system(&quot;magick 1.png -resize 25% PNG8:1.png&quot;)</pre>
 </div>
-<p>I was expecting deaths with MCD drug overdose to explain most of the excess I45-51 cardiac deaths after subtracting deaths with MCD COVID. But actually in the next plot MCD drug deaths explained only a small part of the excess I45-51 deaths since 2020, even though I included 15 different 3-letter ICD codes for drug overdoses and not just the one or two most common codes like Ethical Skeptic. Then I thought other deaths from external causes might explain the excess deaths, since various external causes of death have remained elevated in younger age groups since 2020, but subtracting other deaths from external causes didn't get rid of the excess deaths either. So I don't know how to explain the remainder of excess deaths since 2020:</p>
+<p>I was expecting deaths with MCD drug overdose to explain most of the excess I45-51 cardiac deaths after subtracting deaths with MCD COVID. But actually in the next plot MCD drug deaths explained only a small part of the excess I45-51 deaths since 2020, even though I included 15 different 3-letter ICD codes for drug overdoses and not just the one or two most common codes like Ethical Skeptic. Then I thought other deaths from external causes might explain the excess deaths, since various external causes of death have remained elevated in younger age groups since 2020, but I didn't get rid of the excess deaths by subtracting other deaths from external causes either. So I don't know how to explain the remainder of excess deaths since 2020:</p>
 <div class="width6">
 <img src="i/ethical-heartdrug.png">
 </div>
@@ -2295,6 +2295,50 @@ theme(axis.text=element_blank(),
   plot.background=element_rect(fill=&quot;transparent&quot;,color=NA))
 ggsave(&quot;1.png&quot;,width=5.5,height=2.2,dpi=400)</pre>
 </div>
+<p>Added in February 2025: Hugh Akston told me: <span class="quote">&quot;You will get the wrong answer with UCoD analysis from WONDER. They recoded nearly 90K deaths (and growing) from UCoD CA to COVID.&quot;</span> [<a href="https://x.com/ProfessorAkston/status/1885838579945160782">https://x.com/ProfessorAkston/status/1885838579945160782</a>] But I showed him this code where I picked 4 random people who died in 2022 with UCD COVID and MCD cancer. [<a href=stat.html#Download_fixed_width_and_CSV_files_for_the_NVSS_data_used_at_CDC_WONDER>stat.html#Download_fixed_width_and_CSV_files_for_the_NVSS_data_used_at_CDC_WONDER</a>] The first MCD is typically the immediate cause of death which is listed on the first line of the death certificate, but the first MCD was respiratory failure in 3 out of 4 people. So if the people died primarily of cancer then why did they die of respiratory failure?</p>
+<pre>t=fread(&quot;2022.csv.gz&quot;)
+t=t[restatus!=4][,age:=ifelse(age%/%1000%in%c(1,9),age%%1000,0)]
+sub=t[ucod==&quot;U071&quot;]
+
+icd=setkey(fread(&quot;s/f/wonderbyicd.csv.gz&quot;)[rowid(code)==1][,code:=sub(&quot;.&quot;,&quot;&quot;,code,fixed=T)],&quot;code&quot;)
+l=na.omit(sub[,.(id=.I,age,pos=rep(0:20,each=.N),code=unlist(.SD,,F)),.SDcols=patterns(&quot;ucod|enicon&quot;)])
+l=l[code!=&quot;&quot;]
+l$cause=icd[l$code,cause]
+
+l=l[id%in%l[code%like%&quot;C|D[0-4]&quot;,id]]
+l=l[id%in%l[,sample(id,4)]]
+
+l[,cat(paste0(&quot;age &quot;,age[1],&quot;, &quot;,paste0(ifelse(pos==0,&quot;UCD &quot;,paste0(&quot;MCD &quot;,pos,&quot;: &quot;)),code,&quot; &quot;,cause,collapse=&quot;\n&quot;),&quot;\n\n&quot;)),id]</pre>
+<!-- -->
+<pre>age 82, UCD U071 COVID-19
+MCD 1: J969 Respiratory failure, unspecified
+MCD 2: U071 COVID-19
+MCD 3: C80 Malignant neoplasm without specification of site
+
+age 57, UCD U071 COVID-19
+MCD 1: J969 Respiratory failure, unspecified
+MCD 2: J841 Other interstitial pulmonary diseases with fibrosis
+MCD 3: U071 COVID-19
+MCD 4: J189 Pneumonia, unspecified
+MCD 5: D849 Immunodeficiency, unspecified
+MCD 6: Y433 Other antineoplastic drugs
+MCD 7: J159 Bacterial pneumonia, unspecified
+MCD 8: C911 Chronic lymphocytic leukaemia - Malignant neoplasms
+
+age 81, UCD U071 COVID-19
+MCD 1: J960 Acute respiratory failure
+MCD 2: R090 Asphyxia
+MCD 3: U071 COVID-19
+MCD 4: J189 Pneumonia, unspecified
+MCD 5: I500 Congestive heart failure
+MCD 6: C845 Other and unspecified T-cell lymphomas - Malignant neoplasms
+
+age 83, UCD U071 COVID-19
+MCD 1: U071 COVID-19
+MCD 2: J189 Pneumonia, unspecified
+MCD 3: E119 Non-insulin-dependent diabetes mellitus, without complications
+MCD 4: I10 Essential (primary) hypertension
+MCD 5: C61 Malignant neoplasm of prostate</pre>
 <h2>
 <a href=#Files_for_US_population_estimates_by_single_year_of_age_up_to_ages_100 id=Files_for_US_population_estimates_by_single_year_of_age_up_to_ages_100>Files for US population estimates by single year of age up to ages 100+</a>
 </h2>
@@ -3436,8 +3480,7 @@ theme(axis.text=element_text(size=11,color=&quot;black&quot;),
   plot.subtitle=element_text(margin=margin(,,4)),
   plot.title=element_text(size=11.4,face=2,margin=margin(1,,5)))
 ggsave(&quot;1.png&quot;,width=8,height=7.5,dpi=300*4)
-system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)
-</pre>
+system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
 </div>
 <h2>
 <a href=#Excess_deaths_from_natural_causes id=Excess_deaths_from_natural_causes>Excess deaths from natural causes</a>
