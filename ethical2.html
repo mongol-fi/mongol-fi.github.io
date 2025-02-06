@@ -2062,6 +2062,7 @@ icd=setkey(fread(&quot;http://sars2.net/f/wonderbyicd.csv.gz&quot;)[rowid(code)=
 
 t=setDT(readr::read_fwf(&quot;VS20MORT.DUSMCPUB_r20220105&quot;,fwf_cols(restatus=c(20,20),age=c(70,73),ucod=c(146,149),enicon_1=c(167,170),enicon_2=c(174,177),enicon_3=c(181,184),enicon_4=c(188,191),enicon_5=c(195,198),enicon_6=c(202,205),enicon_7=c(209,212),enicon_8=c(216,219),enicon_9=c(223,226),enicon_10=c(230,233),enicon_11=c(237,240),enicon_12=c(244,247),enicon_13=c(251,254),enicon_14=c(258,261),enicon_15=c(265,268),enicon_16=c(272,275),enicon_17=c(279,282),enicon_18=c(286,289),enicon_19=c(293,296),enicon_20=c(300,303))))
 
+# `restatus!=4` excludes foreign residents like CDC WONDER
 d=t[restatus!=4,.(id=.I,pos=rep(0:20,each=.N),age,code=unlist(.SD,,F)),.SDcols=patterns(&quot;ucod|enicon&quot;)]
 d[,age:=ifelse(age%/%1000%in%c(1,9),age%%1000,0)]
 
@@ -2071,21 +2072,7 @@ l$cause=icd[l$code,cause]
 
 set.seed(0)
 o=l[id%in%l[,sample(id,8)]]
-o[,cat(paste0(&quot;age &quot;,age[1],&quot;, &quot;,paste0(ifelse(pos==0,&quot;UCD &quot;,paste0(&quot;MCD &quot;,pos,&quot;: &quot;)),code,&quot; &quot;,cause,collapse=&quot;\n&quot;),&quot;\n\n&quot;)),id]
-
-t=fread(&quot;2022.csv.gz&quot;)
-t=t[restatus!=4][,age:=ifelse(age%/%1000%in%c(1,9),age%%1000,0)]
-sub=t[ucod==&quot;U071&quot;]
-
-icd=setkey(fread(&quot;s/f/wonderbyicd.csv.gz&quot;)[rowid(code)==1][,code:=sub(&quot;.&quot;,&quot;&quot;,code,fixed=T)],&quot;code&quot;)
-l=na.omit(sub[,.(id=.I,age,pos=rep(0:20,each=.N),code=unlist(.SD,,F)),.SDcols=patterns(&quot;ucod|enicon&quot;)])
-l=l[code!=&quot;&quot;]
-l$cause=icd[l$code,cause]
-
-l=l[id%in%l[code%like%&quot;C|D[0-4]&quot;,id]]
-l=l[id%in%l[,sample(id,4)]]
-
-l[,cat(paste0(&quot;age &quot;,age[1],&quot;, &quot;,paste0(ifelse(pos==0,&quot;UCD &quot;,paste0(&quot;MCD &quot;,pos,&quot;: &quot;)),code,&quot; &quot;,cause,collapse=&quot;\n&quot;),&quot;\n\n&quot;)),id]</pre>
+o[,cat(paste0(&quot;age &quot;,age[1],&quot;, &quot;,paste0(ifelse(pos==0,&quot;UCD &quot;,paste0(&quot;MCD &quot;,pos,&quot;: &quot;)),code,&quot; &quot;,cause,collapse=&quot;\n&quot;),&quot;\n\n&quot;)),id]</pre>
 <!-- -->
 <pre>age 77, UCD U071 COVID-19
 MCD 1: J960 Acute respiratory failure
