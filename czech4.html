@@ -86,7 +86,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Mortality_risk_ratio_within_year_from_vaccination_in_new_UZIS_data>Mortality risk ratio within year from vaccination in new UZIS data</a></li>
 <li><a href=#Hospitalizations_by_weeks_after_vaccination_in_new_UZIS_data>Hospitalizations by weeks after vaccination in new UZIS data</a></li>
 <li><a href=#Relative_risk_of_Moderna_and_Pfizer_in_low_COVID_months>Relative risk of Moderna and Pfizer in low-COVID months</a></li>
-<li><a href=#Cases_and_CFR_in_new_UZIS_data>Cases and CFR in new UZIS data</a></li>
+<li><a href=#Case_fatality_ratio_in_new_UZIS_data>Case fatality ratio in new UZIS data</a></li>
 </ul>
 
 <h2>
@@ -1296,7 +1296,7 @@ week of recovery
 <tr><td>
 Umrti
 </td><td>
-week of death
+week of COVID death
 </td></tr>
 <tr><td>
 Symptom
@@ -1511,7 +1511,7 @@ variant
 <tr><td>
 DatumUmrtiLPZ
 </td><td>
-date of death
+week of death from any cause
 </td></tr>
 <tr><td>
 Long_COVID
@@ -1594,14 +1594,28 @@ Deyo-Charlson Comorbidity Index
 4:       2020-12     2318
 5:       2020-13     2290
 6:       2020-14     2322</pre>
-<p>There's two different columns for the week of death: <code>Umrti</code> (death) and <code>DatumUmrtiLPZ</code> (date of death LPZ). LPZ is the Czech death certificate registry. [<a href="https://www.uzis.cz/index.php?pg=registry-sber-dat--ostatni-rezortni-registry--list-o-prohlidce-zemreleho"><a href="https://www.uzis.cz/index.php?pg=registry-sber-dat">https://www.uzis.cz/index.php?pg=registry-sber-dat</a>--ostatni-rezortni-registry--list-o-prohlidce-zemreleho</a>] For most dead people the date of death is listed in the <code>DatumUmrtiLPZ</code> column, but there's 829 rows where the <code>DatumUmrtiLPZ</code> column is empty but the <code>Umrti</code> column is not:</p>
-<pre>&gt; t[DatumUmrtiLPZ!=&quot;&quot;,.N] # more common column for week of death
+<p>There's two different columns for the week of death: <code>Umrti</code> (COVID death) and <code>DatumUmrtiLPZ</code> (date of death LPZ). LPZ is the Czech death certificate registry. [<a href="https://www.uzis.cz/index.php?pg=registry-sber-dat--ostatni-rezortni-registry--list-o-prohlidce-zemreleho"><a href="https://www.uzis.cz/index.php?pg=registry-sber-dat">https://www.uzis.cz/index.php?pg=registry-sber-dat</a>--ostatni-rezortni-registry--list-o-prohlidce-zemreleho</a>] There's 829 rows where the <code>DatumUmrtiLPZ</code> column is empty but the <code>Umrti</code> column for a COVID death is not:</p>
+<pre>&gt; t[DatumUmrtiLPZ!=&quot;&quot;,.N] # date of death in death certificate registry
 [1] 562774
-&gt; t[Umrti!=&quot;&quot;,.N] # less common column for week of death
+&gt; t[Umrti!=&quot;&quot;,.N] # date of COVID death
 [1] 43633
-&gt; t[DatumUmrtiLPZ!=&quot;&quot;|Umrti!=&quot;&quot;,.N] # 563603-562774 = 829
-[1] 563603</pre>
-<p>About 2,000 people have a date of positive test after the date of death, but in most cases the difference is only 1 or 2 weeks, so it might be if the date of positive tests is by reporting date:</p>
+&gt; t0[DatumUmrtiLPZ==&quot;&quot;&amp;Umrti!=&quot;&quot;,.N] # number of rows with only date of COVID death listed
+[1] 829</pre>
+<p>There are 354 rows where the date of death is not the same as the date of a COVID death, even though the difference is only one week in most cases:</p>
+<pre>&gt; t[Umrti!=&quot;&quot;&amp;DatumUmrtiLPZ!=&quot;&quot;&amp;DatumUmrtiLPZ!=Umrti,.(DatumUmrtiLPZ,Umrti)]
+     DatumUmrtiLPZ   Umrti
+  1:       2022-03 2022-04
+  2:       2021-12 2021-13
+  3:       2020-47 2020-48
+  4:       2021-11 2021-10
+  5:       2020-51 2020-52
+ ---
+350:       2021-15 2021-14
+351:       2020-43 2020-44
+352:       2021-06 2021-07
+353:       2021-01 2021-02
+354:       2022-44 2022-43</pre>
+<p>About 2,000 people have a date of positive test after a date of death, but in most cases the difference is only 1 or 2 weeks, so it might be if the date of positive tests is by reporting date:</p>
 <pre>&gt; t[DatumUmrtiLPZ!=&quot;&quot;&amp;DatumUmrtiLPZ&lt;DatumPozitivity,.(DatumPozitivity,DatumUmrtiLPZ)]
       DatumPozitivity DatumUmrtiLPZ
    1:         2024-03       2024-01
@@ -2149,9 +2163,107 @@ dplyr::mutate_if(o,is.double,round,3)[order(-pop)]|&gt;print(r=F)
 o[type==&quot;Moderna&quot;,rr]/o[type==&quot;Pfizer&quot;,rr]
 # 1.46563</pre>
 <h2>
-<a href=#Cases_and_CFR_in_new_UZIS_data id=Cases_and_CFR_in_new_UZIS_data>Cases and CFR in new UZIS data</a>
+<a href=#Case_fatality_ratio_in_new_UZIS_data id=Case_fatality_ratio_in_new_UZIS_data>Case fatality ratio in new UZIS data</a>
 </h2>
-<p>In the winter of 2020-2021 deaths and hospitalizations had a pattern with three distinct humps, where in ages 80+ where about half of people had been vaccinated by the time of the third hump, the third hump was lower than the first and second humps. However the same is true of cases, where in ages 80+ the third hump was much lower than the first two humps, but in ages 60-79, 40-59, and 10-39 the third hump was about as high as the first two humps:</p>
+<p>Kirsch posted this tweet: [<a href="https://x.com/stkirsch/status/1888449481668223379">https://x.com/stkirsch/status/1888449481668223379</a>]</p>
+<div class="width6">
+<img src="i/czech-cfr-3.png">
+</div>
+<p>My plot didn't show IFR but CFR. But anyway the reason why the CFR went up in the first half of 2021 was because both deaths and cases were going down, but deaths were lagging about 2-3 weeks behind deaths. When I shifted the cases forwards by 3 weeks, the CFR went down in the first half of 2021 instead:</p>
+<div class="width6">
+<img src="i/czech-cfr-1.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2)
+
+ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
+
+agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
+ages=c(10,40,60,80)
+
+weeks=unique(format(seq(as.Date(&quot;2020-1-1&quot;),as.Date(&quot;2024-12-31&quot;),1),&quot;%G-%V&quot;))
+
+t=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv.gz&quot;)
+t=t[RokNarozeni!=&quot;-&quot;]
+t[,age:=pmin(100,(2020-as.integer(substr(RokNarozeni,1,4))))]
+t=t[!is.na(age)]
+
+t[,dead:=ifelse(DatumUmrtiLPZ==&quot;&quot;,Umrti,DatumUmrtiLPZ)]
+t[,dosecase:=ifelse(Datum_Prvni_davka!=&quot;&quot;&amp;Datum_Prvni_davka&lt;=DatumPozitivity,1,0)]
+t[,dosedead:=ifelse(Datum_Prvni_davka!=&quot;&quot;,1,0)]
+
+a=t[DatumPozitivity!=&quot;&quot;,.(y=.N,z=&quot;case&quot;),.(week=DatumPozitivity,dose=dosecase,age)]
+t[,testlag:=match(dead,weeks)-match(DatumPozitivity,weeks)]
+t[,hosplag:=match(dead,weeks)-match(max_Hospitalizace,weeks)]
+a=rbind(a,t[pmax(testlag%in%0:3,hosplag%in%0:3)==1,.(y=.N,z=&quot;dead&quot;),.(week=dead,dose=dosedead,age)])
+
+w=dcast(a,age+week+dose~z,value.var=&quot;y&quot;)
+w=merge(do.call(CJ,lapply(w[,1:3],unique)),w,all.x=T)
+w[,case:=nafill(case,,0)][,dead:=nafill(dead,,0)]
+w=w[,.(dead=sum(dead),case=sum(case)),.(age=agecut(age,ages),week=match(week,weeks),dose)]
+w=rbind(w,w[,.(dead=sum(dead),case=sum(case),dose=2),.(age,week)])
+
+lab=c(&quot;Unvaccinated&quot;,&quot;Vaccinated&quot;,&quot;Unvaccinated and vaccinated&quot;)
+w[,z:=factor(dose,,lab)]
+
+p=merge(w[,.(case=ma(case,2),x=week+3),.(age,z)],w[,.(dead=ma(dead,2),x=week),.(age,z)],all=T)
+p[is.na(case),case:=0][is.na(dead),dead:=0]
+p[,y:=ifelse(case&lt;5,NA,dead/case*100)]
+p=p[!is.na(age)]
+p[y&gt;100,y:=100]
+
+xstart=1;xend=length(weeks)
+
+ggplot(p,aes(x))+
+facet_wrap(~age,ncol=1,strip.position=&quot;top&quot;,dir=&quot;v&quot;,scales=&quot;free_y&quot;)+
+geom_vline(xintercept=grep(&quot;-01&quot;,weeks),linewidth=.4,color=&quot;gray66&quot;,lineend=&quot;square&quot;)+
+geom_line(aes(y=y,color=z,linetype=z),linewidth=.6)+
+geom_text(data=p[,.(ymax=max(y,na.rm=T)),age],aes(label=sprintf(&quot;\n  Age %s  \n&quot;,age),y=ymax*.87),x=mean(c(xstart,xend)),hjust=.5,size=3.9,fontface=2)+
+labs(x=NULL,y=NULL,title=&quot;Czech Republic: Weekly percentage of COVID deaths per COVID\ncases (cases shifted 3 weeks forwards)&quot;)+
+scale_x_continuous(limits=c(xstart,xend),breaks=grep(&quot;-26&quot;,weeks),labels=2020:2024)+
+scale_y_continuous(breaks=\(x){y=pretty(x,4);y[y&lt;max(x)*.9]},labels=\(x)paste0(x,&quot;%&quot;))+
+scale_color_manual(values=c(hsv(c(7,0)/12,1,.8),&quot;black&quot;,hsv(30/36,.5,1)))+
+scale_linetype_manual(values=c(&quot;solid&quot;,&quot;solid&quot;,&quot;solid&quot;,&quot;42&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(color=guide_legend(nrow=1,byrow=F))+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.ticks=element_line(color=&quot;black&quot;,linewidth=.4),
+  axis.text.x=element_text(margin=margin(4)),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(4,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;horizontal&quot;,
+  legend.justification=&quot;right&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.margin=margin(,,5),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.4),
+  panel.grid=element_blank(),
+  panel.spacing=unit(3,&quot;pt&quot;),
+  plot.margin=margin(5,5,5,5),
+  plot.title=element_text(size=11,face=&quot;bold&quot;,margin=margin(1,,3)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=5.38,height=5.3,dpi=300*4)
+sub=&quot;Each line shows a ±2-week moving average of deaths divided by a ±2-week moving average of cases, where the lines are not drawn on weeks where the ±2-week moving average of cases is below 5. COVID deaths are deaths where the difference between the week of death and week of positive test or hospitalization is 0-3 weeks, so many deaths classified as COVID deaths here were not actually due to COVID. The age groups were determined by subtracting the year of birth from 2020 so that aging over time was not accounted for. Source: nzip.cz/data/2135-covid-19-prehled-populace.&quot;
+system(paste0(&quot;mar=$[24*4];w=`identify -format %w 1.png`;magick \\( 1.png -gravity southwest -chop 0x50 \\) \\( -size $[w-mar*2]x -font Arial -interline-spacing -3 -pointsize $[44*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -gravity southwest -splice $[mar]x$[20*4] \\) -append -resize 25% PNG8:1.png&quot;))</pre>
+</div>
+<p>The two previous plots show that regardless of whether I shifted the cases forwards or not, unvaccinated people had higher CFR than vaccinated people. Within age groups unvaccinated people had both higher COVID mortality rate than vaccinated people and a higher rate of COVID cases, but the difference in deaths was bigger than the difference in cases, which explains why unvaccinated people also had higher CFR.</p>
+<p>In the two previous plots I treated deaths that occurred within three weeks of a positive test or hospitalization as COVID deaths, because I thought that the new UZIS dataset did not indicate which deaths were due to COVID. However then I realized that the column <code>Umrti</code> showed the week of death for COVID deaths but the column <code>DatumUmrtiLPZ</code> showed the week of death for all-cause deaths. But actually it doesn't seem to make too much difference which definition for a COVID death I use, because when I determined the number of COVID deaths based on the <code>Umrti</code> column, the result was not much different from the number of deaths which occurred on the same week as the last week of a COVID hospitalization:</p>
+<div class="width6">
+<img src="i/czech-cfr-4.gif">
+</div>
+<p>In the winter of 2020-2021 deaths and hospitalizations had a pattern with three distinct humps, where in ages 80+ where about half of people had been vaccinated by the time of the third hump, the third hump was lower than the first and second humps. However a similar pattern can be seen in the next plot for cases, where in ages 80+ the third hump was much lower than the first two humps, but in ages 60-79, 40-59, and 10-39 the third hump was about as high as the first two humps:</p>
 <div class="width6">
 <img src="i/czech-cfr-2.png">
 </div>
@@ -2245,91 +2357,6 @@ ggsave(&quot;1.png&quot;,width=5.3,height=5.3,dpi=300*4)
 
 sub=&quot;The 2021 census population by 5-year age groups was used as the standard population. People were given a year of birth as a range of 5 years like 1950-1954, so here each person was assigned to a 5-year age group by subtracting the year of birth from 2020 so that aging over time was not accounted for. The resident population estimates in the 2021 census were used as the standard population. The age-standardized rates are not shown on days with population size below 10,000. Sources: nzip.cz/data/2135-covid-19-prehled-populace (cases) and github.com/PalackyUniversity/uzis-data-analysis (number of vaccinated and unvaccinated people by age).&quot;
 system(paste0(&quot;mar=$[24*4];w=`identify -format %w 1.png`;magick \\( 1.png -gravity southwest -chop 0x70 \\) \\( -size $[w-mar*2]x -font Arial -interline-spacing -3 -pointsize $[44*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -gravity southwest -splice $[mar]x$[20*4] \\) -append -resize 25% -colors 256 1.png&quot;))</pre>
-</div>
-<p>The UZIS dataset did not have information about which deaths were attributed to COVID, so in the next plot I treated any death within 3 weeks of a positive test or hospitalization as a COVID death. However especially in ages 0-39 a large fraction of deaths were probably not actually due to COVID. The two youngest age groups have weeks with high CFR in 2023 and 2024, because there were 5-week windows with a single death and a small number of cases (even though many of the deaths in ages 0-39 were not actually due to COVID):</p>
-<div class="width6">
-<img src="i/czech-cfr-1.png">
-</div>
-<div class="spoiler">
-<button>
-Show code
-</button><pre>library(data.table);library(ggplot2)
-
-ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
-
-agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
-ages=c(10,40,60,80)
-
-weeks=unique(format(seq(as.Date(&quot;2020-1-1&quot;),as.Date(&quot;2024-12-31&quot;),1),&quot;%G-%V&quot;))
-
-t=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv.gz&quot;)
-t[RokNarozeni!=&quot;-&quot;,age:=pmin(100,(2020-as.integer(substr(RokNarozeni,1,4))))]
-t=t[!is.na(age)]
-
-t[,dead:=ifelse(DatumUmrtiLPZ==&quot;&quot;,Umrti,DatumUmrtiLPZ)]
-t[,dosecase:=ifelse(Datum_Prvni_davka!=&quot;&quot;&amp;Datum_Prvni_davka&lt;=DatumPozitivity,1,0)]
-t[,dosedead:=ifelse(Datum_Prvni_davka!=&quot;&quot;,1,0)]
-
-a=t[DatumPozitivity!=&quot;&quot;,.(y=.N,z=&quot;case&quot;),.(week=DatumPozitivity,dose=dosecase,age)]
-t[,testlag:=match(dead,weeks)-match(DatumPozitivity,weeks)]
-t[,hosplag:=match(dead,weeks)-match(max_Hospitalizace,weeks)]
-a=rbind(a,t[pmax(testlag%in%0:3,hosplag%in%0:3)==1,.(y=.N,z=&quot;dead&quot;),.(week=dead,dose=dosedead,age)])
-
-w=dcast(a,age+week+dose~z,value.var=&quot;y&quot;)
-w=merge(do.call(CJ,lapply(w[,1:3],unique)),w,all.x=T)
-w[,case:=nafill(case,,0)][,dead:=nafill(dead,,0)]
-w=w[,.(dead=sum(dead),case=sum(case)),.(age=agecut(age,ages),week,dose)]
-w=rbind(w,w[,.(dead=sum(dead),case=sum(case),dose=2),.(age,week)])
-
-lab=c(&quot;Unvaccinated&quot;,&quot;Vaccinated&quot;,&quot;Unvaccinated and vaccinated&quot;)
-p=w[,.(casema=ma(case,2),y=ma(dead,2)/ma(case,2)*1e2,x=week),.(age,z=factor(dose,,lab))]
-p[casema&lt;5,y:=NA]
-
-p=p[!is.na(age)]
-p[,x:=as.integer(factor(x,weeks))]
-xstart=1;xend=length(weeks)
-
-ggplot(p,aes(x))+
-facet_wrap(~age,ncol=1,strip.position=&quot;top&quot;,dir=&quot;v&quot;,scales=&quot;free_y&quot;)+
-geom_vline(xintercept=grep(&quot;-01&quot;,weeks),linewidth=.4,color=&quot;gray66&quot;,lineend=&quot;square&quot;)+
-geom_line(aes(y=y,color=z,linetype=z),linewidth=.6)+
-geom_text(data=p[,.(ymax=max(y,na.rm=T)),age],aes(label=sprintf(&quot;\n  Age %s  \n&quot;,age),y=ymax*.87),x=mean(c(xstart,xend)),hjust=.5,size=3.9,fontface=2)+
-labs(x=NULL,y=NULL,title=&quot;Czech Republic: Percentage of COVID deaths per COVID cases&quot;)+
-scale_x_continuous(limits=c(xstart,xend),breaks=grep(&quot;-26&quot;,weeks),labels=2020:2024)+
-scale_y_continuous(breaks=\(x){y=pretty(x,4);y[y&lt;max(x)*.9]},labels=\(x)paste0(x,&quot;%&quot;))+
-scale_color_manual(values=c(hsv(c(7,0)/12,1,.8),&quot;black&quot;,hsv(30/36,.5,1)))+
-scale_linetype_manual(values=c(&quot;solid&quot;,&quot;solid&quot;,&quot;solid&quot;,&quot;42&quot;))+
-coord_cartesian(clip=&quot;off&quot;,expand=F)+
-guides(color=guide_legend(nrow=1,byrow=F))+
-theme(axis.text=element_text(size=11,color=&quot;black&quot;),
-  axis.ticks=element_line(color=&quot;black&quot;,linewidth=.4),
-  axis.text.x=element_text(margin=margin(4)),
-  axis.ticks.length.x=unit(0,&quot;pt&quot;),
-  axis.ticks.length.y=unit(4,&quot;pt&quot;),
-  legend.background=element_blank(),
-  legend.box.spacing=unit(0,&quot;pt&quot;),
-  legend.direction=&quot;horizontal&quot;,
-  legend.justification=&quot;right&quot;,
-  legend.key=element_blank(),
-  legend.key.height=unit(13,&quot;pt&quot;),
-  legend.key.width=unit(26,&quot;pt&quot;),
-  legend.margin=margin(,,5),
-  legend.position=&quot;top&quot;,
-  legend.spacing.x=unit(2,&quot;pt&quot;),
-  legend.spacing.y=unit(0,&quot;pt&quot;),
-  legend.text=element_text(size=11,vjust=.5),
-  legend.title=element_blank(),
-  panel.background=element_blank(),
-  panel.border=element_rect(fill=NA,linewidth=.4),
-  panel.grid=element_blank(),
-  panel.spacing=unit(3,&quot;pt&quot;),
-  plot.margin=margin(5,5,5,5),
-  plot.title=element_text(size=11,face=&quot;bold&quot;,margin=margin(1,,3)),
-  strip.background=element_blank(),
-  strip.text=element_blank())
-ggsave(&quot;1.png&quot;,width=5.38,height=5.3,dpi=300*4)
-sub=&quot;Each line shows a ±2-week moving average of deaths divided by a ±2-week moving average of cases, where the lines are not drawn on weeks where the ±2-week moving average of cases is below 5. COVID deaths are deaths where the difference between the week of death and week of positive test or hospitalization is 0-3 weeks, so many deaths classified as COVID deaths here were not actually due to COVID. The age groups were determined by subtracting the year of birth from 2020 so that aging over time was not accounted for. Source: nzip.cz/data/2135-covid-19-prehled-populace.&quot;
-system(paste0(&quot;mar=$[24*4];w=`identify -format %w 1.png`;magick \\( 1.png -gravity southwest -chop 0x50 \\) \\( -size $[w-mar*2]x -font Arial -interline-spacing -3 -pointsize $[44*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -gravity southwest -splice $[mar]x$[20*4] \\) -append -resize 25% -colors 256 1.png&quot;))</pre>
 </div>
 <script>
 let q=document.querySelectorAll('a,code,pre')
