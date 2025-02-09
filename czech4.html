@@ -86,6 +86,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Mortality_risk_ratio_within_year_from_vaccination_in_new_UZIS_data>Mortality risk ratio within year from vaccination in new UZIS data</a></li>
 <li><a href=#Hospitalizations_by_weeks_after_vaccination_in_new_UZIS_data>Hospitalizations by weeks after vaccination in new UZIS data</a></li>
 <li><a href=#Relative_risk_of_Moderna_and_Pfizer_in_low_COVID_months>Relative risk of Moderna and Pfizer in low-COVID months</a></li>
+<li><a href=#Cases_and_CFR_in_new_UZIS_data>Cases and CFR in new UZIS data</a></li>
 </ul>
 
 <h2>
@@ -1600,6 +1601,20 @@ Deyo-Charlson Comorbidity Index
 [1] 43633
 &gt; t[DatumUmrtiLPZ!=&quot;&quot;|Umrti!=&quot;&quot;,.N] # 563603-562774 = 829
 [1] 563603</pre>
+<p>About 2,000 people have a date of positive test after the date of death, but in most cases the difference is only 1 or 2 weeks, so it might be if the date of positive tests is by reporting date:</p>
+<pre>&gt; t[DatumUmrtiLPZ!=&quot;&quot;&amp;DatumUmrtiLPZ&lt;DatumPozitivity,.(DatumPozitivity,DatumUmrtiLPZ)]
+      DatumPozitivity DatumUmrtiLPZ
+   1:         2024-03       2024-01
+   2:         2021-21       2021-18
+   3:         2020-45       2020-44
+   4:         2020-45       2020-44
+   5:         2020-18       2020-17
+  ---
+1745:         2021-48       2020-18
+1746:         2021-12       2021-11
+1747:         2023-21       2023-09
+1748:         2021-14       2021-13
+1749:         2022-05       2022-04</pre>
 <h2>
 <a href=#Comorbidity_index_by_age_group_and_vaccine_type_in_new_UZIS_data id=Comorbidity_index_by_age_group_and_vaccine_type_in_new_UZIS_data>Comorbidity index by age group and vaccine type in new UZIS data</a>
 </h2>
@@ -2133,6 +2148,189 @@ dplyr::mutate_if(o,is.double,round,3)[order(-pop)]|&gt;print(r=F)
 
 o[type==&quot;Moderna&quot;,rr]/o[type==&quot;Pfizer&quot;,rr]
 # 1.46563</pre>
+<h2>
+<a href=#Cases_and_CFR_in_new_UZIS_data id=Cases_and_CFR_in_new_UZIS_data>Cases and CFR in new UZIS data</a>
+</h2>
+<p>In the winter of 2020-2021 deaths and hospitalizations had a pattern with three distinct humps, where in ages 80+ where about half of people had been vaccinated by the time of the third hump, the third hump was lower than the first and second humps. However the same is true of cases, where in ages 80+ the third hump was much lower than the first two humps, but in ages 60-79, 40-59, and 10-39 the third hump was about as high as the first two humps:</p>
+<div class="width6">
+<img src="i/czech-cfr-2.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2)
+
+agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
+ages=c(10,40,60,80)
+
+weeks=unique(format(seq(as.Date(&quot;2020-1-1&quot;),as.Date(&quot;2024-12-31&quot;),1),&quot;%G-%V&quot;))
+
+t=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv.gz&quot;)
+t[RokNarozeni!=&quot;-&quot;,age:=pmin(100,(2020-as.integer(substr(RokNarozeni,1,4))))]
+t[,dose:=ifelse(Datum_Prvni_davka!=&quot;&quot;&amp;Datum_Prvni_davka&lt;=DatumPozitivity,1,0)]
+
+a=t[DatumPozitivity!=&quot;&quot;,.(cases=.N),.(week=DatumPozitivity,dose,age)]
+a=merge(do.call(CJ,lapply(a[,-4],unique)),a,all.x=T)[is.na(cases),cases:=0][]
+
+b=fread(&quot;http://sars2.net/f/czbucketsdaily.csv.gz&quot;)
+b=b[,.(pop=sum(alive)),.(week=format(date,&quot;%G-%V&quot;),dose=pmin(dose,1),age=pmin(90,age)%/%5*5)]
+b=rbind(b,b[week==&quot;2022-51&quot;,.(week=setdiff(a[week!=&quot;&quot;&amp;!week%like%2020,week],week),pop),.(dose,age)])
+b=b[rowid(week,dose,age)==1]
+a=merge(a,b)
+a=a[!week%like%2024]
+a=a[age&gt;=10]
+
+a=rbind(a,a[,.(cases=sum(cases),pop=sum(pop),dose=2),.(week,age)])
+
+a=merge(fread(&quot;http://sars2.net/f/czcensus2021pop.csv&quot;)[,.(std=sum(pop)),.(age=age%/%5*5)][,std:=std/sum(std)],a)
+lab=c(&quot;Unvaccinated&quot;,&quot;Vaccinated&quot;,&quot;Unvaccinated and vaccinated&quot;)
+p=a[,.(pop=sum(pop),y=sum(cases/pop*std/7*365e5)),.(age=agecut(age,ages),week,z=factor(dose,,lab))]
+p[pop&lt;1e4,y:=NA]
+
+ymax=p[,.(ymax=max(y,na.rm=T)),age]
+p=merge(p,ymax)[,.(week,y=y/ymax*100,age,z)]
+
+pct=b[,.(pop=sum(pop)),.(week,age=agecut(age,ages),dose)]
+pct=dcast(pct,week+age~dose,value.var=&quot;pop&quot;)[,`1`:=nafill(`1`,,0)]
+pct=pct[week&gt;=b[dose==1,min(week)]]
+p=rbind(p,pct[,.(week,age,z=&quot;Vaccinated percent&quot;,y=`1`/(`0`+`1`)*100)])
+
+xval=unique(format(seq(as.Date(&quot;2020-1-1&quot;),as.Date(&quot;2023-12-31&quot;),1),&quot;%G-%V&quot;))
+
+p=p[!is.na(age)]
+p=p[week&lt;=&quot;2024-01&quot;]
+p[,x:=match(week,weeks)]
+
+ggplot(p,aes(x))+
+facet_wrap(~age,ncol=1,strip.position=&quot;top&quot;,dir=&quot;v&quot;,scales=&quot;free_y&quot;)+
+geom_vline(xintercept=grep(&quot;-01&quot;,weeks),linewidth=.4,color=&quot;gray66&quot;,lineend=&quot;square&quot;)+
+geom_vline(xintercept=range(p$x),linewidth=.4,lineend=&quot;square&quot;)+
+geom_hline(yintercept=c(0,100),linewidth=.4,lineend=&quot;square&quot;)+
+geom_line(aes(y=y,color=z,linetype=z),linewidth=.6)+
+geom_label(data=ymax,aes(label=sprintf(&quot;\n  Age %s (max %.0f)  \n&quot;,age,ymax),y=100),x=max(p$x),lineheight=.5,hjust=1,vjust=1,size=3.6,fill=alpha(&quot;white&quot;,1),label.r=unit(0,&quot;pt&quot;),label.padding=unit(0,&quot;pt&quot;),label.size=.4)+
+labs(x=NULL,y=NULL,title=&quot;Czech Republic: Weekly age-standardized rate of COVID cases\nper 100,000 person-years&quot;,subtitle=&quot;Displayed as percentage of maximum value shown in parentheses&quot;)+
+scale_x_continuous(limits=range(p$x),breaks=grep(&quot;-26&quot;,weeks),labels=2020:2024)+
+scale_y_continuous(breaks=1:4*20,limits=c(0,100),labels=\(x)paste0(x,&quot;%&quot;))+
+scale_color_manual(values=c(hsv(c(7,0)/12,1,.8),&quot;black&quot;,hsv(30/36,.5,1)))+
+scale_linetype_manual(values=c(&quot;solid&quot;,&quot;solid&quot;,&quot;solid&quot;,&quot;42&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(color=guide_legend(nrow=2,byrow=F))+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.ticks=element_line(color=&quot;black&quot;,linewidth=.4),
+  axis.text.x=element_text(margin=margin(4)),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(4,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;horizontal&quot;,
+  legend.justification=&quot;center&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.margin=margin(,,4),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.grid=element_blank(),
+  panel.spacing=unit(3,&quot;pt&quot;),
+  plot.margin=margin(5,5,5,5),
+  plot.subtitle=element_text(size=11,margin=margin(,,3)),
+  plot.title=element_text(size=11,face=&quot;bold&quot;,margin=margin(1,,5)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=5.3,height=5.3,dpi=300*4)
+
+sub=&quot;The 2021 census population by 5-year age groups was used as the standard population. People were given a year of birth as a range of 5 years like 1950-1954, so here each person was assigned to a 5-year age group by subtracting the year of birth from 2020 so that aging over time was not accounted for. The resident population estimates in the 2021 census were used as the standard population. The age-standardized rates are not shown on days with population size below 10,000. Sources: nzip.cz/data/2135-covid-19-prehled-populace (cases) and github.com/PalackyUniversity/uzis-data-analysis (number of vaccinated and unvaccinated people by age).&quot;
+system(paste0(&quot;mar=$[24*4];w=`identify -format %w 1.png`;magick \\( 1.png -gravity southwest -chop 0x70 \\) \\( -size $[w-mar*2]x -font Arial -interline-spacing -3 -pointsize $[44*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -gravity southwest -splice $[mar]x$[20*4] \\) -append -resize 25% -colors 256 1.png&quot;))</pre>
+</div>
+<p>The UZIS dataset did not have information about which deaths were attributed to COVID, so in the next plot I treated any death within 3 weeks of a positive test or hospitalization as a COVID death. However especially in ages 0-39 a large fraction of deaths were probably not actually due to COVID. The two youngest age groups have weeks with high CFR in 2023 and 2024, because there were 5-week windows with a single death and a small number of cases (even though many of the deaths in ages 0-39 were not actually due to COVID):</p>
+<div class="width6">
+<img src="i/czech-cfr-1.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2)
+
+ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
+
+agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
+ages=c(10,40,60,80)
+
+weeks=unique(format(seq(as.Date(&quot;2020-1-1&quot;),as.Date(&quot;2024-12-31&quot;),1),&quot;%G-%V&quot;))
+
+t=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv.gz&quot;)
+t[RokNarozeni!=&quot;-&quot;,age:=pmin(100,(2020-as.integer(substr(RokNarozeni,1,4))))]
+t=t[!is.na(age)]
+
+t[,dead:=ifelse(DatumUmrtiLPZ==&quot;&quot;,Umrti,DatumUmrtiLPZ)]
+t[,dosecase:=ifelse(Datum_Prvni_davka!=&quot;&quot;&amp;Datum_Prvni_davka&lt;=DatumPozitivity,1,0)]
+t[,dosedead:=ifelse(Datum_Prvni_davka!=&quot;&quot;,1,0)]
+
+a=t[DatumPozitivity!=&quot;&quot;,.(y=.N,z=&quot;case&quot;),.(week=DatumPozitivity,dose=dosecase,age)]
+t[,testlag:=match(dead,weeks)-match(DatumPozitivity,weeks)]
+t[,hosplag:=match(dead,weeks)-match(max_Hospitalizace,weeks)]
+a=rbind(a,t[pmax(testlag%in%0:3,hosplag%in%0:3)==1,.(y=.N,z=&quot;dead&quot;),.(week=dead,dose=dosedead,age)])
+
+w=dcast(a,age+week+dose~z,value.var=&quot;y&quot;)
+w=merge(do.call(CJ,lapply(w[,1:3],unique)),w,all.x=T)
+w[,case:=nafill(case,,0)][,dead:=nafill(dead,,0)]
+w=w[,.(dead=sum(dead),case=sum(case)),.(age=agecut(age,ages),week,dose)]
+w=rbind(w,w[,.(dead=sum(dead),case=sum(case),dose=2),.(age,week)])
+
+lab=c(&quot;Unvaccinated&quot;,&quot;Vaccinated&quot;,&quot;Unvaccinated and vaccinated&quot;)
+p=w[,.(casema=ma(case,2),y=ma(dead,2)/ma(case,2)*1e2,x=week),.(age,z=factor(dose,,lab))]
+p[casema&lt;5,y:=NA]
+
+p=p[!is.na(age)]
+p[,x:=as.integer(factor(x,weeks))]
+xstart=1;xend=length(weeks)
+
+ggplot(p,aes(x))+
+facet_wrap(~age,ncol=1,strip.position=&quot;top&quot;,dir=&quot;v&quot;,scales=&quot;free_y&quot;)+
+geom_vline(xintercept=grep(&quot;-01&quot;,weeks),linewidth=.4,color=&quot;gray66&quot;,lineend=&quot;square&quot;)+
+geom_line(aes(y=y,color=z,linetype=z),linewidth=.6)+
+geom_text(data=p[,.(ymax=max(y,na.rm=T)),age],aes(label=sprintf(&quot;\n  Age %s  \n&quot;,age),y=ymax*.87),x=mean(c(xstart,xend)),hjust=.5,size=3.9,fontface=2)+
+labs(x=NULL,y=NULL,title=&quot;Czech Republic: Percentage of COVID deaths per COVID cases&quot;)+
+scale_x_continuous(limits=c(xstart,xend),breaks=grep(&quot;-26&quot;,weeks),labels=2020:2024)+
+scale_y_continuous(breaks=\(x){y=pretty(x,4);y[y&lt;max(x)*.9]},labels=\(x)paste0(x,&quot;%&quot;))+
+scale_color_manual(values=c(hsv(c(7,0)/12,1,.8),&quot;black&quot;,hsv(30/36,.5,1)))+
+scale_linetype_manual(values=c(&quot;solid&quot;,&quot;solid&quot;,&quot;solid&quot;,&quot;42&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(color=guide_legend(nrow=1,byrow=F))+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.ticks=element_line(color=&quot;black&quot;,linewidth=.4),
+  axis.text.x=element_text(margin=margin(4)),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(4,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;horizontal&quot;,
+  legend.justification=&quot;right&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.margin=margin(,,5),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.4),
+  panel.grid=element_blank(),
+  panel.spacing=unit(3,&quot;pt&quot;),
+  plot.margin=margin(5,5,5,5),
+  plot.title=element_text(size=11,face=&quot;bold&quot;,margin=margin(1,,3)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=5.38,height=5.3,dpi=300*4)
+sub=&quot;Each line shows a ±2-week moving average of deaths divided by a ±2-week moving average of cases, where the lines are not drawn on weeks where the ±2-week moving average of cases is below 5. COVID deaths are deaths where the difference between the week of death and week of positive test or hospitalization is 0-3 weeks, so many deaths classified as COVID deaths here were not actually due to COVID. The age groups were determined by subtracting the year of birth from 2020 so that aging over time was not accounted for. Source: nzip.cz/data/2135-covid-19-prehled-populace.&quot;
+system(paste0(&quot;mar=$[24*4];w=`identify -format %w 1.png`;magick \\( 1.png -gravity southwest -chop 0x50 \\) \\( -size $[w-mar*2]x -font Arial -interline-spacing -3 -pointsize $[44*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -gravity southwest -splice $[mar]x$[20*4] \\) -append -resize 25% -colors 256 1.png&quot;))</pre>
+</div>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
