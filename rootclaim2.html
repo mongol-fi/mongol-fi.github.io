@@ -74,6 +74,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Correlation_across_countries_between_COVID_cases_and_vaccinated_percent>Correlation across countries between COVID cases and vaccinated percent</a></li>
 <li><a href=#PureProfile_survey_about_COVID_cases>PureProfile survey about COVID cases</a></li>
 <li><a href=#Kirschs_13_000_person_poll_on_Substack>Kirsch's 13,000-person poll on Substack</a></li>
+<li><a href=#9_increase_in_CFR_after_vaccine_rollout_in_California_nursing_homes>9% increase in CFR after vaccine rollout in California nursing homes</a></li>
 <li><a href=#Comorbidities_in_Czech_data>Comorbidities in Czech data</a></li>
 <li><a href=#Moderna_Pfizer_mortality_ratio>Moderna-Pfizer mortality ratio</a></li>
 <li><a href=#Moderna_Pfizer_mortality_ratio_in_a_Hungarian_study>Moderna-Pfizer mortality ratio in a Hungarian study</a></li>
@@ -359,6 +360,97 @@ t[(`num shots`==0|(`num shots`&gt;0&amp;time%like%&quot;Before|Both&quot;))&amp;
 <p>Another person in the comments seems to have implied that they tested positive for COVID at one point but they still answered that they didn't get COVID: <span class="quote">&quot;I'm taking <span class="quote">'got covid'</span> to mean tested positive on one of those OTC AG kits, while having symptoms. That's how I answered. In truth, I never had <span class="quote">'covid'</span> because I never had any novel symptoms, nor do I accept those test kits as revealing anything real about my health (or anyone else's).&quot;</span></p>
 <p>One commenter pointed out: <span class="quote">&quot;I also think the opposite is true that the unvaccinated don't want to admit they had covid or they didn't test for it and so they have no idea if an illness was covid. I'm unvaccinated and I think I had it twice but I can't say for sure because I didn't test for it. I just thought the symptoms were different than your average flu.&quot;</span></p>
 <p>Another comment said: <span class="quote">&quot;Those polls don't work man, for various obvious reasons such as people not getting vaccine in the first place, due to natural immunity, because of being young and healthy, plus people being tied closer to health care measurements, such as vaccines, receicing also more testing. But of course the biggest flaw here is that people don't actually know how many times they got Covid. Such layman polls only prove that the vast majority of people are incompetent to interpret statistics.&quot;</span></p>
+<h3>
+<a href=#9_increase_in_CFR_after_vaccine_rollout_in_California_nursing_homes id=9_increase_in_CFR_after_vaccine_rollout_in_California_nursing_homes>9% increase in CFR after vaccine rollout in California nursing homes</a>
+</h3>
+<p>Kirsch posted this plot, where he had added annotations to a plot from the website of the California Department of Public Health:</p>
+<div class="width6">
+<img src="i/rootclaim-nursingcfr-2.png">
+</div>
+<p>The caption fo the original plot by CDPH says that the plot is supposed to show cumulative COVID deaths as a percentage of cumulative cases 30 days earlier: [<a href="https://kirschsubstack.com/p/exclusive-the-cdph-is-unable-to-explain">https://kirschsubstack.com/p/exclusive-the-cdph-is-unable-to-explain</a>]</p>
+<div class="width10">
+<img src="i/rootclaim-nursingcfr-5.png">
+</div>
+<p>However I think CDPH might have forgotten to actually shift the cases by 30 days, because the plot by CDPH looks similar to my black line here where I didn't shift the cases and not the red line where I shifted cases forwards by 4 weeks, and in my red line the cumulative CFR actually went down during January and February of 2021:</p>
+<div class="width6">
+<img src="i/rootclaim-nursingcfr-4.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2)
+
+system(&quot;wget https://data.cms.gov/sites/default/files/dataset_zips/ea365a77467a04182b55114c5791c2e3/COVID-19%20Nursing%20Home%20Data.zip;unzip &#39;COVID-19 Nursing Home Data.zip&#39;&quot;)
+
+t=fread(&quot;COVID-19 Nursing Home Data/2025-01-05/COVID-19 Nursing Home Data 01.05.2025.csv&quot;)
+d=rbind(t[,group:=&quot;Entire United States&quot;],t[`Provider State`==&quot;CA&quot;][,group:=&quot;California only&quot;])
+d[,dead:=`Residents Weekly COVID-19 Deaths`]
+d[,case:=`Residents Weekly Confirmed COVID-19`]
+d[,date:=as.Date(`Week Ending`,&quot;%m/%d/%y&quot;)-3]
+a=d[,.(dead=sum(dead,na.rm=T),case=sum(case,na.rm=T)),.(group,date)]
+a[,shifted:=c(rep(0,4),head(case,-4)),group]
+
+lab=c(&quot;Unadjusted&quot;,&quot;Cases shifted forwards by 4 weeks&quot;)
+p=a[,.(x=rep(date,2),y=rep(cumsum(dead),2)/c(cumsum(case),cumsum(shifted))*100,z=factor(rep(lab,each=.N),lab)),group]
+p=p[is.finite(y)]
+
+xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
+xbreak=seq(xstart+182,xend,&quot;year&quot;)
+p=p[x%in%xstart:xend]
+yend=max(p$y,na.rm=T)
+
+ggplot(p,aes(x,y))+
+facet_wrap(~group,dir=&quot;v&quot;,scales=&quot;free_x&quot;)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),linewidth=.4,color=&quot;gray88&quot;,lineend=&quot;square&quot;)+
+geom_line(aes(color=z),linewidth=.6)+
+geom_point(aes(color=z),stroke=0,size=1.1)+
+geom_label(data=p[rowid(group)==1],aes(label=sprintf(&quot;\n  %s  \n&quot;,group),y=yend),x=xend,lineheight=.5,hjust=1,vjust=1,size=3.6,fill=alpha(&quot;white&quot;,1),label.r=unit(0,&quot;pt&quot;),label.padding=unit(0,&quot;pt&quot;),label.size=.4)+
+labs(x=NULL,y=NULL,title=&quot;US nursing home data: Cumulative COVID deaths as percentage of\ncumulative COVID cases&quot;,caption=&quot;Source: data.cms.gov/covid-19/covid-19-nursing-home-data&quot;)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=year(xbreak))+
+scale_y_continuous(limits=c(0,yend),labels=\(x)paste0(x,&quot;%&quot;))+
+scale_color_manual(values=c(&quot;black&quot;,&quot;#ff6666&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(color=guide_legend(ncol=2,byrow=F))+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.text.x=element_text(margin=margin(4)),
+  axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
+  axis.ticks.length=unit(4,&quot;pt&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.title=element_text(size=11,face=2),
+  axis.title.x=element_text(margin=margin(3)),
+  axis.title.y=element_text(margin=margin(,2)),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.justification=&quot;left&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.margin=margin(,,4),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.4),
+  panel.grid.major=element_blank(),
+  panel.spacing=unit(3,&quot;pt&quot;),
+  plot.caption=element_text(size=11,color=&quot;gray50&quot;),
+  plot.margin=margin(5,5,5,5),
+  plot.title=element_text(size=11,face=2,margin=margin(0,,3)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=5.5,height=4.5,dpi=300*4)
+system(&quot;magick 1.png -trim -resize 25% -bordercolor white -border 22 -colors 256 1.png&quot;)</pre>
+</div>
+<p>In the black line where I didn't shift the cases and in the plot on CDPH's website, there's a dip in CFR during the COVID wave around December 2020 to February 2021, because the CFR went down during the earlier part of the COVID wave because the deaths had not yet caught up to cases, but during the later part of the COVID wave the CFR went up because there was now a surplus of deaths relative to new cases. There's another similar dip in CFR during the COVID wave in the summer of 2020: [<a href="https://www.cdph.ca.gov/Programs/CID/DCDC/Pages/COVID-19/SNFsCOVID_19.aspx">https://www.cdph.ca.gov/Programs/CID/DCDC/Pages/COVID-19/SNFsCOVID_19.aspx</a>]</p>
+<div class="width8">
+<img src="i/rootclaim-nursingcfr.png">
+</div>
+<p>In the plot above during the COVID wave in the winter of 2020-2021, cases peaked on the week ending December 20th 2020 but deaths peaked three weeks later on the week ending January 10th 2021, and the CFR was the lowest in the two weeks in between. But during the early part of the COVID wave the deaths had not yet caught up to cases so there was a temporary reduction in the CFR.</p>
+<p>In the next plot which shows non-cumulative CFR instead of cumulative CFR, the black unadjusted line has a big spike during the tail end of the COVID wave around February 2021, because by February 2021 there were no longer as many people with new cases as during the previous weeks, but people who had acquired a new case during the previous weeks were still dying from COVID. But in the red line where I shifted the cases 3 weeks forwards, the CFR now had a big drop between December 2020 and January 2021:</p>
+<div class="width6">
+<img src="i/rootclaim-nursingcfr-6.png">
+</div>
 <h3>
 <a href=#Comorbidities_in_Czech_data id=Comorbidities_in_Czech_data>Comorbidities in Czech data</a>
 </h3>
