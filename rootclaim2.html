@@ -1133,87 +1133,7 @@ print(a,r=F)</pre>
 <div class="width6">
 <img src="i/rootclaim-spirolm-1.png">
 </div>
-<p>The reason why his proportion of explained variance increased so much when he added a different term for each COVID wave is that for example during the first Omicron wave there was a very high number of cases relative to deaths, but during the spring 2020 wave there was a low number of deaths relative to cases. If he would've looked at COVID deaths instead of COVID cases, then he wouldn't even have necessarily needed to split his model into different terms for different COVID waves.</p>
-<p>Pantazatos said that he shifted the date of cases 8 days forwards, but he took data for cases from OWID which has only weekly data for new cases in the United States, so he may have shifted the cases forwards by either 2 weeks or 1 week depending on how he assigned the cases to week numbers. At OWID the number of new cases in the past week is listed on Sundays even in the United States, but the CDC dataset for excess deaths used MMWR weeks which end on Saturdays, so in the following code I converted OWID's data to MMWR weeks by assigning deaths on each Sunday to the MMWR week of the Saturday before it.</p>
-<p>But anyway, in the following code I did a similar model as Pantazatos where I compared excess deaths in his CDC dataset against weekly new cases at OWID, but I didn't add separate terms for different COVID waves. My <code>r^2</code> value was about 0.38 when I didn't shift the cases, 0.40 when I shifted cases forwards by 1 week, and 0.36 when I shifted cases forwards by 2 weeks. However my <code>r^2</code> value increased to about 0.71 when I compared the excess deaths against COVID deaths instead of cases, so my <code>r^2</code> value was close to the same as the value Pantazatos got when he split the COVID cases into 8 different terms for different waves:</p>
-<pre>library(data.table);library(MMWRweek)
-
-download.file(&quot;https://covid.ourworldindata.org/data/owid-covid-data.csv&quot;,&quot;owid-covid-data.csv&quot;)
-
-owid=fread(&quot;owid-covid-data.csv&quot;)[location==&quot;United States&quot;]
-cdc=fread(&quot;AH_Excess_Deaths_by_Sex__Age__and_Race_and_Hispanic_Origin_20250211.csv&quot;)
-
-o=owid[,.(date=date-1,cases=new_cases,coviddead=new_deaths,vax=new_vaccinations)]
-o=merge(owid[,.(date=date-1+7,cases1=new_cases)],o,all=T)
-o=merge(owid[,.(date=date-1+14,cases2=new_cases)],o,all=T)
-o=cbind(o[,-1],setNames(MMWRweek(o$date)[-3],c(&quot;year&quot;,&quot;week&quot;)))
-o=o[,lapply(.SD,sum,na.rm=T),.(year,week),.SDcols=1:(ncol(o)-2)]
-
-d=cdc[Sex==&quot;All Sexes&quot;&amp;RaceEthnicity==&quot;All Race/Ethnicity Groups&quot;&amp;AgeGroup==&quot;All Ages&quot;]
-
-ex=d[MMWRyear%in%2020:2022,.(excess=`Number above average (unweighted)`,year=MMWRyear,week=MMWRweek)]
-
-me=merge(ex,o,all.r=T)
-me[is.na(me)]=0
-
-summary(lm(excess~cases,me))$r.squared # 0.379 (weekly number of new cases explains only about 38% of variance in excess deaths)
-summary(lm(excess~cases1,me))$r.squared # 0.404 (shifting cases forwards by one week increased explained variance)
-summary(lm(excess~cases2,me))$r.squared # 0.359 (shifting cases forwards by two weeks reduced explained variance)
-summary(lm(excess~coviddead,me))$r.squared # 0.714 (COVID deaths explain about 71% of variance in excess deaths)</pre>
-<p>When I added weekly new vacine doses to the model, my <code>r^2</code> value increased only from about 0.379 to 0.384 for cases and from about 0.714 to 0.735 for deaths, so the increase in the <code>r^2</code> value contributed by vaccines was not too impressive when I didn't allow each COVID wave to have its own term in the model:</p>
-<pre>summary(lm(excess~cases+vax,me))$r.squared # 0.384
-summary(lm(excess~coviddead+vax,me))$r.squared # 0.735</pre>
-<p>One problem with the model by Pantazatos was that he took excess deaths from a CDC dataset which used the average number of deaths on the corresponding MMWR week number of 2015-2019 as the baseline for each week, so it exaggerated excess deaths in 2021 and 2022 relative to 2020 because in reality the United States has an increasing trend in deaths per year so the baseline should've been higher in 2022 than in 2020. So part of his additional variance explained by vaccines might have actually been because his baseline produced superfluous excess deaths in 2021 and 2022, which happened to partially coincide with periods when vaccine doses were administered. And because his model had a different term for each COVID wave, it allowed the weight of COVID waves in 2021 and 2022 to be reduced in order to accommodate a higher weight to vaccines.</p>
-<p>In this plot which shows excess deaths in the CDC dataset, there's no week where the excess mortality is even close to zero after the first few weeks of 2020:</p>
-<div class="width6">
-<img src="i/rootclaim-spirolm-2.png">
-</div>
-<p>However with a more accurate method of calculating excess deaths, there should be close to zero excess mortality around March to May 2022 and around March 2021. At Mortality Watch if you plot ASMR in the United States with a 2010-2019 linear baseline, there's even a few weeks that get negative excess mortality in March and April of 2022. [<a href="https://www.mortality.watch/explorer/?c=USA&ct=weekly&df=2020%2520W01&bm=lin_reg">https://www.mortality.watch/explorer/?c=USA&amp;ct=weekly&amp;df=2020%2520W01&amp;bm=lin_reg</a>]</p>
-<p>Pantazatos wrote that there were a total of 1,743,770 excess deaths in 2020-2022. When I downloaded the CDC dataset he used, I got exactly the same number of total excess deaths in MMWR years 2020-2022 when I looked at the column <span class="quote">&quot;Number above average (unweighted)&quot;</span>. There were about 590,000 excess deaths in the MMWR year 2020, 670,000 in 2021, and 490,000 in 2022:</p>
-<pre>cdc=fread(&quot;AH_Excess_Deaths_by_Sex__Age__and_Race_and_Hispanic_Origin_20250211.csv&quot;)
-cdc=cdc[MMWRyear%in%2020:2022&amp;Sex==&quot;All Sexes&quot;&amp;RaceEthnicity==&quot;All Race/Ethnicity Groups&quot;&amp;AgeGroup==&quot;All Ages&quot;]
-
-cdc[,sum(`Number above average (unweighted)`)] # 1743770 (same as Pantazatos)
-
-o=cdc[,.(cdcexcess=sum(`Number above average (unweighted)`)),.(year=MMWRyear)]
-print(o,r=F)
-# year cdcexcess
-# 2020    585409
-# 2021    670667
-# 2022    487694</pre>
-<p>However when I used my own more accurate method to calculate excess deaths where I multiplied the 2011-2019 linear trend in CMR for each age by the mid-year resident population estimates of the age, I got only about 1.27 million excess deaths in 2020-2022. I got about 470,000 excess deaths in 2020, 520,000 in 2021, and 290,000 in 2022. So the CDC dataset had about 120,000 more excess deaths in 2020, 160,000 in 2021, and 200,000 in 2022, so the CDC dataset exaggerated excess deaths each year but it exaggerated excess deaths the most in 2022:</p>
-<pre>pop=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)
-pop=merge(pop,pop[year%in%2011:2019,.(year=years,base=predict(lm(dead/pop~year),.(year=years))),age])
-pop=pop[,.(dead=sum(dead),base=sum(base*pop)),year]
-
-print(merge(o,pop[,.(year,myexcess=dead-base)])[,difference:=cdcexcess-myexcess][],r=F)
-# year cdcexcess myexcess difference
-# 2020    585409   468885     116524
-# 2021    670667   515125     155542
-# 2022    487694   285019     202675</pre>
-<p>In the following code I calculated a more accurate weekly baseline adjusted for seasonality so that I first used the same method as above to calculate the expected deaths for each year, and I divided the yearly expected deaths by the number of days in the year and multiplied it by 7 to get the weekly expected deaths for each year. Then I adjusted the baseline for seasonality by calculating the average difference between the actual deaths and weekly expected deaths for each MMWR week number in 2015-2019 and I added the difference to the baseline for the corresponding MMWR week number of each year.</p>
-<p>In the following code I did simple a linear model where I first compared COVID deaths against all-cause deaths, and next I also added a term for weekly new vaccine doses to the model. When I switched from the inaccurate average baseline to my more accurate baseline, I was expecting the additional contribution of vaccines to the <code>r^2</code> value to get lower, but actually it increased from about 2.1% to about 2.9% (even though it was still lower than the increase of approximately 5.0% that Pantazatos got):</p>
-<pre>pop=fread(&quot;https://sars2.net/f/uspopdead.csv&quot;)
-
-base=merge(pop,pop[year%in%2011:2019,.(year=2011:2023,base=predict(lm(dead/pop~year),.(year=2011:2023))),age])
-base=base[,.(base=sum(base*pop)),year]
-base=merge(d[,.(year=MMWRyear,week=MMWRweek,dead=`Deaths (unweighted)`)],base)
-base[,base:=base/(365+(year%%4==0))*7]
-weekly=base[year%in%2015:2019,.(weekly=mean(dead-base)),week]
-weekly=rbind(weekly,weekly[week==52,.(week=53,weekly)])
-ex2=merge(weekly,base)[year%in%2020:2022,.(excess2=dead-base-weekly),,.(year,week)]
-
-me=merge(me,ex2)
-
-# inaccurate baseline
-summary(lm(excess~coviddead,me))$r.squared # 0.714
-summary(lm(excess~coviddead+vax,me))$r.squared # 0.735 (adding vaccines to the model increased r^2 by about 0.021)
-
-# accurate baseline
-summary(lm(excess2~coviddead,me))$r.squared # 0.725
-summary(lm(excess2~coviddead+vax,me))$r.squared # 0.754 (adding vaccines to the model increased r^2 by about 0.029)</pre>
-<p>In the <code>uspopdead.csv</code> file I used vintage 2023 population estimates that are based on the 2020 census for 2020-2022, and I used vintage 2020 population estimates that are based on the 2010 census for 2010-2019. But in order to get rid of a sudden jump between the years 2019 and 2020 when the census base was switched, I multiplied the 2010-based population estimates with a linear slope so that they were equal to the 2020-based population estimates in 2020. [<a href=ethical.html#Files_for_US_population_estimates_by_single_year_of_age_up_to_ages_100>ethical.html#Files_for_US_population_estimates_by_single_year_of_age_up_to_ages_100</a>]</p>
-<p>From the next plot you can see that excess deaths have a much better correlation with COVID deaths than with COVID cases, and you can also see that CDC's inaccurate baseline exaggerates excess deaths in 2022 relative to 2020:</p>
+<p>The reason why his proportion of explained variance increased so much when he added a different term for each COVID wave is that for example during the first Omicron wave there was a very high number of cases relative to deaths, but during the spring 2020 wave there was a low number of deaths relative to cases. But if Pantazatos would've looked at COVID deaths instead of COVID cases, then he wouldn't even have necessarily needed to split his model into different terms for different COVID waves, because COVID deaths have a much higher correlation with excess mortality:</p>
 <div class="width6">
 <img src="i/rootclaim-spirolm-3.png">
 </div>
@@ -1302,6 +1222,95 @@ theme(axis.text=element_text(size=11,color=&quot;black&quot;),
 ggsave(&quot;1.png&quot;,width=5.7,height=4.5,dpi=300*4)
 system(&quot;magick 1.png -trim -resize 25% -bordercolor white -border 22 -colors 256 1.png&quot;)</pre>
 </div>
+<p>Pantazatos said that he shifted the dates of COVID cases 8 days forwards, but he took data for cases from OWID which has only weekly data for new cases in the United States, so he may have shifted the cases forwards by either 2 weeks or 1 week depending on how he assigned the cases to week numbers. At OWID the number of new cases in the past week is listed on Sundays even in the United States, but the CDC dataset for excess deaths used MMWR weeks which end on Saturdays.</p>
+<p>But anyway, in the following code I did a similar model as Pantazatos where I compared excess deaths in his CDC dataset against weekly new cases at OWID, but I didn't add separate terms for different COVID waves. My <code>r^2</code> value was about 0.38 when I didn't shift the cases, 0.40 when I shifted cases forwards by 1 week, and 0.36 when I shifted cases forwards by 2 weeks. However my <code>r^2</code> value increased to about 0.71 when I compared the excess deaths against COVID deaths instead of cases, so my <code>r^2</code> value was close to the same as the value Pantazatos got when he split the COVID cases into 8 different terms for different waves:</p>
+<pre>library(data.table);library(MMWRweek)
+
+download.file(&quot;https://covid.ourworldindata.org/data/owid-covid-data.csv&quot;,&quot;owid-covid-data.csv&quot;)
+
+owid=fread(&quot;owid-covid-data.csv&quot;)[location==&quot;United States&quot;]
+cdc=fread(&quot;AH_Excess_Deaths_by_Sex__Age__and_Race_and_Hispanic_Origin_20250211.csv&quot;)
+
+o=owid[,.(date=date-1,cases=new_cases,coviddead=new_deaths,vax=new_vaccinations)]
+o=merge(owid[,.(date=date-1+7,cases1=new_cases)],o,all=T)
+o=merge(owid[,.(date=date-1+14,cases2=new_cases)],o,all=T)
+o=cbind(o[,-1],setNames(MMWRweek(o$date)[-3],c(&quot;year&quot;,&quot;week&quot;)))
+o=o[,lapply(.SD,sum,na.rm=T),.(year,week),.SDcols=1:(ncol(o)-2)]
+
+d=cdc[Sex==&quot;All Sexes&quot;&amp;RaceEthnicity==&quot;All Race/Ethnicity Groups&quot;&amp;AgeGroup==&quot;All Ages&quot;]
+
+ex=d[MMWRyear%in%2020:2022,.(excess=`Number above average (unweighted)`,year=MMWRyear,week=MMWRweek)]
+
+me=merge(ex,o,all.r=T)
+me[is.na(me)]=0
+
+summary(lm(excess~cases,me))$r.squared # 0.379 (weekly number of new cases explains only about 38% of variance in excess deaths)
+summary(lm(excess~cases1,me))$r.squared # 0.404 (shifting cases forwards by one week increased explained variance)
+summary(lm(excess~cases2,me))$r.squared # 0.359 (shifting cases forwards by two weeks reduced explained variance)
+summary(lm(excess~coviddead,me))$r.squared # 0.714 (COVID deaths explain about 71% of variance in excess deaths)</pre>
+<p>When I added weekly new vacine doses to the model, my <code>r^2</code> value increased only from about 0.379 to 0.384 for cases and from about 0.714 to 0.735 for deaths:</p>
+<pre>summary(lm(excess~cases+vax,me))$r.squared # 0.384
+summary(lm(excess~coviddead+vax,me))$r.squared # 0.735</pre>
+<p>But the plot twist is that in both models the coefficient for vaccines was negative, which means that the weekly number of new vaccine doses administered was inversely associated with weekly excess deaths:</p>
+<pre>coef(lm(excess~cases+vax,me))
+# (Intercept)       cases         vax
+#  8.1779e+03  5.1947e-03 -8.4827e-05
+
+coef(lm(excess~coviddead+vax,me))
+# (Intercept)   coviddead         vax
+#  4.7433e+03  1.0385e+00 -1.8758e-04</pre>
+<p>One problem with the model by Pantazatos was that he took excess deaths from a CDC dataset which used the average number of deaths on the corresponding MMWR week number of 2015-2019 as the baseline for each week, so it exaggerated excess deaths in 2021 and 2022 relative to 2020 because in reality the United States has an increasing trend in deaths per year so the baseline should've been higher in 2022 than in 2020. So part of his additional variance explained by vaccines might have actually been because his baseline produced superfluous excess deaths in 2021 and 2022 which happened to partially coincide with periods when vaccine doses were administered. And because his model had a different term for each COVID wave, it allowed the weight of the COVID waves in 2021 and 2022 to be reduced in order to accommodate a higher weight to vaccines.</p>
+<p>In this plot which shows excess deaths in the CDC dataset, after the first few weeks of 2020 there's no week where the excess mortality is even close to zero:</p>
+<div class="width6">
+<img src="i/rootclaim-spirolm-2.png">
+</div>
+<p>However with a more accurate method of calculating excess mortality, there should be close to zero excess mortality around March to May 2022 and around March 2021. At Mortality Watch if you plot ASMR in the United States with a 2010-2019 linear baseline, there's even a few weeks that get negative excess mortality in March and April of 2022. [<a href="https://www.mortality.watch/explorer/?c=USA&ct=weekly&df=2020%2520W01&bm=lin_reg">https://www.mortality.watch/explorer/?c=USA&amp;ct=weekly&amp;df=2020%2520W01&amp;bm=lin_reg</a>]</p>
+<p>Pantazatos wrote that there were a total of 1,743,770 excess deaths in 2020-2022. When I downloaded the CDC dataset he used, I got the same number of total excess deaths in MMWR years 2020-2022 when I looked at the column <span class="quote">&quot;Number above average (unweighted)&quot;</span>. There were about 590,000 excess deaths in the MMWR year 2020, 670,000 in 2021, and 490,000 in 2022:</p>
+<pre>cdc=fread(&quot;AH_Excess_Deaths_by_Sex__Age__and_Race_and_Hispanic_Origin_20250211.csv&quot;)
+cdc=cdc[MMWRyear%in%2020:2022&amp;Sex==&quot;All Sexes&quot;&amp;RaceEthnicity==&quot;All Race/Ethnicity Groups&quot;&amp;AgeGroup==&quot;All Ages&quot;]
+
+cdc[,sum(`Number above average (unweighted)`)] # 1743770 (same as Pantazatos)
+
+o=cdc[,.(cdcexcess=sum(`Number above average (unweighted)`)),.(year=MMWRyear)]
+print(o,r=F)
+# year cdcexcess
+# 2020    585409
+# 2021    670667
+# 2022    487694</pre>
+<p>However when I used my own more accurate method to calculate excess deaths where I multiplied the 2011-2019 linear trend in CMR for each age by the mid-year resident population estimates of the age, I got only about 1.27 million excess deaths in 2020-2022. I got about 470,000 excess deaths in 2020, 520,000 in 2021, and 290,000 in 2022. So the CDC dataset had about 120,000 more excess deaths in 2020, 160,000 in 2021, and 200,000 in 2022, so the CDC dataset exaggerated excess deaths each year but it exaggerated excess deaths the most in 2022:</p>
+<pre>pop=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)
+pop=merge(pop,pop[year%in%2011:2019,.(year=years,base=predict(lm(dead/pop~year),.(year=years))),age])
+pop=pop[,.(dead=sum(dead),base=sum(base*pop)),year]
+
+print(merge(o,pop[,.(year,myexcess=dead-base)])[,difference:=cdcexcess-myexcess][],r=F)
+# year cdcexcess myexcess difference
+# 2020    585409   468885     116524
+# 2021    670667   515125     155542
+# 2022    487694   285019     202675</pre>
+<p>In the following code I calculated a more accurate weekly baseline adjusted for seasonality so that I first used the same method as in the previous code to calculate the expected deaths for each year, and I divided the yearly expected deaths by the number of days in the year and multiplied it by 7 to get the weekly expected deaths for each year. Then I adjusted the baseline for seasonality by calculating the average difference between the actual deaths and weekly expected deaths for each MMWR week number in 2015-2019 and I added the difference to the baseline for the corresponding MMWR week number of each year.</p>
+<p>In the following code I did simple a linear model where I first compared COVID deaths against all-cause deaths, and next I also added a term for weekly new vaccine doses to the model. However regardless of whether I looked at CDC's inaccurate excess deaths or my own more accurate excess deaths, the weekly number of new vaccine doses administered still got a negative coefficient in the model, which means that vaccines were inversely associated with excess mortality:</p>
+<pre># for details see sars2.net/ethical.html#Files_for_US_population_estimates_by_single_year_of_age_up_to_ages_100
+pop=fread(&quot;https://sars2.net/f/uspopdead.csv&quot;)
+
+base=merge(pop,pop[year%in%2011:2019,.(year=2011:2023,base=predict(lm(dead/pop~year),.(year=2011:2023))),age])
+base=base[,.(base=sum(base*pop)),year]
+base=merge(d[,.(year=MMWRyear,week=MMWRweek,dead=`Deaths (unweighted)`)],base)
+base[,base:=base/(365+(year%%4==0))*7]
+weekly=base[year%in%2015:2019,.(weekly=mean(dead-base)),week]
+weekly=rbind(weekly,weekly[week==52,.(week=53,weekly)])
+ex2=merge(weekly,base)[year%in%2020:2022,.(excess2=dead-base-weekly),,.(year,week)]
+
+me=merge(me,ex2)
+
+# inaccurate baseline
+summary(lm(excess~coviddead,me))$r.squared # 0.714
+summary(lm(excess~coviddead+vax,me))$r.squared # 0.735 (adding vaccines to the model increased r^2 by about 0.021)
+coef(lm(excess~coviddead+vax,me))[&quot;vax&quot;] # -0.000188 (vaccines have negative coefficient)
+
+# accurate baseline
+summary(lm(excess2~coviddead,me))$r.squared # 0.725
+summary(lm(excess2~coviddead+vax,me))$r.squared # 0.754 (adding vaccines to the model increased r^2 by about 0.029)
+coef(lm(excess2~coviddead+vax,me))[&quot;vax&quot;] # -0.000227 (vaccines have negative coefficient)</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
