@@ -1192,16 +1192,16 @@ print(merge(o,pop[,.(year,myexcess=dead-base)])[,difference:=cdcexcess-myexcess]
 # 2021    670667   515125     155542
 # 2022    487694   285019     202675</pre>
 <p>In the following code I calculated a more accurate weekly baseline adjusted for seasonality so that I first used the same method as above to calculate the expected deaths for each year, and I divided the yearly expected deaths by the number of days in the year and multiplied it by 7 to get the weekly expected deaths for each year. Then I adjusted the baseline for seasonality by calculating the average difference between the actual deaths and weekly expected deaths for each MMWR week number in 2015-2019 and I added the difference to the baseline for the corresponding MMWR week number of each year.</p>
-<p>In the following code I did simple a linear model where I first compared COVID deaths against all-cause deaths, and next I also added a term for weekly new vaccine doses to the model. When I switched from the inaccurate average baseline to my more accurate baseline, the additional contribution of vaccines to the <code>r^2</code> value diminished from about 0.021 to about 0.001:</p>
+<p>In the following code I did simple a linear model where I first compared COVID deaths against all-cause deaths, and next I also added a term for weekly new vaccine doses to the model. When I switched from the inaccurate average baseline to my more accurate baseline, I was expecting the additional contribution of vaccines to the <code>r^2</code> value to get lower, but actually it increased from about 2.1% to about 2.9% (even though it was still lower than the increase of approximately 5.0% that Pantazatos got):</p>
 <pre>pop=fread(&quot;https://sars2.net/f/uspopdead.csv&quot;)
 
 base=merge(pop,pop[year%in%2011:2019,.(year=2011:2023,base=predict(lm(dead/pop~year),.(year=2011:2023))),age])
 base=base[,.(base=sum(base*pop)),year]
 base=merge(d[,.(year=MMWRyear,week=MMWRweek,dead=`Deaths (unweighted)`)],base)
 base[,base:=base/(365+(year%%4==0))*7]
-weekly=dead[year%in%2015:2019,.(weekly=mean(dead-base)),week]
+weekly=base[year%in%2015:2019,.(weekly=mean(dead-base)),week]
 weekly=rbind(weekly,weekly[week==52,.(week=53,weekly)])
-ex2=merge(weekly,dead)[year%in%2020:2022,.(excess2=dead-base+weekly),,.(year,week)]
+ex2=merge(weekly,base)[year%in%2020:2022,.(excess2=dead-base-weekly),,.(year,week)]
 
 me=merge(me,ex2)
 
@@ -1210,9 +1210,98 @@ summary(lm(excess~coviddead,me))$r.squared # 0.714
 summary(lm(excess~coviddead+vax,me))$r.squared # 0.735 (adding vaccines to the model increased r^2 by about 0.021)
 
 # accurate baseline
-summary(lm(excess2~coviddead,me))$r.squared # 0.693
-summary(lm(excess2~coviddead+vax,me))$r.squared # 0.694 (adding vaccines to the model increased r^2 by about 0.001)</pre>
+summary(lm(excess2~coviddead,me))$r.squared # 0.725
+summary(lm(excess2~coviddead+vax,me))$r.squared # 0.754 (adding vaccines to the model increased r^2 by about 0.029)</pre>
 <p>In the <code>uspopdead.csv</code> file I used vintage 2023 population estimates that are based on the 2020 census for 2020-2022, and I used vintage 2020 population estimates that are based on the 2010 census for 2010-2019. But in order to get rid of a sudden jump between the years 2019 and 2020 when the census base was switched, I multiplied the 2010-based population estimates with a linear slope so that they were equal to the 2020-based population estimates in 2020. [<a href=ethical.html#Files_for_US_population_estimates_by_single_year_of_age_up_to_ages_100>ethical.html#Files_for_US_population_estimates_by_single_year_of_age_up_to_ages_100</a>]</p>
+<p>From the next plot you can see that excess deaths have a much better correlation with COVID deaths than with COVID cases, and you can also see that CDC's inaccurate baseline exaggerates excess deaths in 2022 relative to 2020:</p>
+<div class="width6">
+<img src="i/rootclaim-spirolm-3.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button><pre>library(data.table);library(ggplot2);library(MMWRweek)
+
+download.file(&quot;https://covid.ourworldindata.org/data/owid-covid-data.csv&quot;,&quot;owid-covid-data.csv&quot;)
+
+cdc=fread(&quot;AH_Excess_Deaths_by_Sex__Age__and_Race_and_Hispanic_Origin_20250211.csv&quot;)
+
+o=owid[,.(date=date-1,cases=new_cases,dead=new_deaths,vax=new_vaccinations)]
+o=cbind(o[,-1],setNames(MMWRweek(o$date)[-3],c(&quot;year&quot;,&quot;week&quot;)))
+o=o[,lapply(.SD,sum,na.rm=T),.(year,week),.SDcols=1:(ncol(o)-2)]
+
+d=cdc[Sex==&quot;All Sexes&quot;&amp;RaceEthnicity==&quot;All Race/Ethnicity Groups&quot;&amp;AgeGroup==&quot;All Ages&quot;]
+
+ex=d[MMWRyear%in%2020:2022,.(excess=`Number above average (unweighted)`,year=MMWRyear,week=MMWRweek)]
+
+me=merge(ex,o,all.r=T)
+me[is.na(me)]=0
+
+pop=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)
+
+base=merge(pop,pop[year%in%2011:2019,.(year=2011:2023,base=predict(lm(dead/pop~year),.(year=2011:2023))),age])
+base=base[,.(base=sum(base*pop)),year]
+base=merge(d[,.(year=MMWRyear,week=MMWRweek,dead=`Deaths (unweighted)`)],base)
+base[,base:=base/(365+(year%%4==0))*7]
+weekly=base[year%in%2015:2019,.(weekly=mean(dead-base)),week]
+weekly=rbind(weekly,weekly[week==52,.(week=53,weekly)])
+ex2=merge(weekly,base)[year%in%2020:2022,.(excess2=dead-(base+weekly)),,.(year,week)]
+
+me=merge(me,ex2)
+
+lab=strsplit(&quot;Excess deaths (CDC&#39;s inaccurate baseline; 2015-2019 average)
+Excess deaths (my accurate baseline; CMR trend by age × population)
+COVID deaths
+COVID cases
+Vaccine doses&quot;,&quot;\\n&quot;)[[1]]
+
+p=me[,.(x=MMWRweek2Date(year,week,4),y=c(excess,excess2,dead,cases,vax),z=factor(rep(lab,each=.N),lab))]
+p=p[,.(x,y=scale(y)[,1]),z]
+
+xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2023-1-1&quot;)
+xbreak=seq(xstart+182,xend,&quot;year&quot;)
+p=p[x%in%xstart:xend]
+
+ggplot(p,aes(x,y))+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),linewidth=.4,color=&quot;gray82&quot;)+
+geom_hline(yintercept=0,linewidth=.4)+
+geom_line(aes(color=z),linewidth=.6)+
+geom_point(aes(color=z),stroke=0,size=1.1)+
+labs(x=NULL,y=NULL,title=&quot;United States: z-scores of weekly variables&quot;,caption=&quot;Sources: OWID, sars2.net/f/uspopdead.csv, and CDC dataset \&quot;AH Excess Deaths by Sex, Age, and Race and Hispanic Origin\&quot;.&quot;|&gt;str_wrap(72))+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=year(xbreak))+
+scale_y_continuous(breaks=\(x)pretty(x,7))+
+scale_color_manual(values=c(&quot;gray60&quot;,&quot;black&quot;,&quot;#ff0000&quot;,&quot;#ffaaaa&quot;,&quot;#bb00bb&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(color=guide_legend(ncol=1,byrow=F))+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.text.x=element_text(margin=margin(4)),
+  axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
+  axis.ticks.length=unit(5,&quot;pt&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.title=element_text(size=11,face=2),
+  axis.title.x=element_text(margin=margin(3)),
+  axis.title.y=element_text(margin=margin(,2)),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.justification=&quot;left&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.margin=margin(,,5),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.4),
+  panel.grid.major=element_blank(),
+  panel.spacing=unit(3,&quot;pt&quot;),
+  plot.caption=element_text(size=11,color=&quot;gray50&quot;),
+  plot.margin=margin(5,5,5,5),
+  plot.title=element_text(size=11.5,face=2,margin=margin(1,,3)))
+ggsave(&quot;1.png&quot;,width=5.7,height=4.5,dpi=300*4)
+system(&quot;magick 1.png -trim -resize 25% -bordercolor white -border 22 -colors 256 1.png&quot;)</pre>
+</div>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
