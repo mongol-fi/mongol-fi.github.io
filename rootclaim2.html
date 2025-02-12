@@ -1262,58 +1262,52 @@ coef(lm(excess~cases+vax,me))
 coef(lm(excess~coviddead+vax,me))
 # (Intercept)   coviddead         vax
 #  4.7433e+03  1.0385e+00 -1.8758e-04</pre>
-<p>In his Substack post Pantazatos only included a model where he looked at COVID cases split into 8 different waves combined with vaccines. But he didn't include a model where he looked at COVID cases as a single term combined with vaccines, and he also didn't include a model where he looked at COVID deaths combined with vaccines. It might be because in both models he would've gotten a negative coefficient for vaccines.</p>
-<p>In the following code I took data for cases from the same OWID dataset that Pantazatos used and not from the <code>owid-covid-data.csv</code> I used earlier where the number of cases is slightly different, and I shifted the date of cases 8 days forwards like Pantazatos. I determined the MMWR week range of the 8 COVID waves by overlaying a plot of cases on top of the plot by Pantazatos which showed the period of each wave. In the models which had separate terms for each COVID wave, Pantazatos got an <code>r^2</code> value of about 0.715 when he didn't include a term for vaccine and about 0.765 when he did include a term for vaccines. However I don't understand how my code below was different from his calculation, because I got an <code>r^2</code> value of about 0.780 regardless of whether I included the term for vaccines or not:</p>
+<p>In his Substack post Pantazatos only included a model where he looked at COVID cases split into 8 different waves combined with vaccines. But he didn't include a model where he looked at COVID cases as a single term combined with vaccines, and he also didn't include a model where he looked at COVID deaths combined with vaccines. It might be because in both models he would've gotten a negative coefficient for vaccines. (Edit: He told me he hadn't done a model based on COVID deaths instead of cases.)</p>
+<p>In the following code I took data for cases from the same OWID dataset that Pantazatos used and not from the <code>owid-covid-data.csv</code> I used earlier where the number of cases is slightly different, and I shifted the date of cases 8 days forwards like Pantazatos. Pantazatos provided me the starting weeks of each COVID wave. In his models which had separate terms for each COVID wave, Pantazatos got an <code>r^2</code> value of about 0.715 when he didn't include a term for vaccine and about 0.765 when he did include a term for vaccines. However I don't understand how my code below was different from his calculation, because I got an <code>r^2</code> value of about 0.780 without the vaccine term and 0.789 with the vaccine term:</p>
 <pre>library(data.table);library(MMWRweek)
 
-# starting MMWR week of 8 COVID waves
-waves=data.table(year=rep(2020:2022,c(3,3,2)),week=c(1,24,39,12,27,46,16,45))
+waves=data.table(year=rep(2020:2022,c(3,3,2)),week=c(1,24,37,10,26,44,14,43))
 
 owid=fread(&quot;owid-covid-data.csv&quot;)[location==&quot;United States&quot;]
 vax=owid[,.(MMWRweek(date),vax=new_vaccinations)][,.(vax=sum(vax,na.rm=T)),.(year=MMWRyear,week=MMWRweek)]
 
-case=fread(&quot;daily-new-confirmed-covid-19-cases.csv&quot;)
-case=case[Entity==&quot;United States&quot;,.(MMWRweek(Day+8),cases=.SD[[3]])]
-case=case[,.(cases=sum(cases)),.(year=MMWRyear,week=MMWRweek)]
-case=rbind(case[,.(year=2020,week=1:2,cases=0)],case)
+case=fread(&quot;daily-new-confirmed-covid-19-cases.csv&quot;)[Entity==&quot;United States&quot;]
+case=case[,.(MMWRweek(Day+8),cases=.SD[[3]])][,.(cases=sum(cases)),.(year=MMWRyear,week=MMWRweek)]
 
-cul=\(x,y)y[cut(x,c(y,Inf),,T,F)]
-case$wave=as.integer(factor(case[,cul(year*100+week,waves[,year*100+week])]))
-case=cbind(case,`colnames&lt;-`(sapply(1:8,\(i)case[,ifelse(wave==i,cases,0)]),paste0(&quot;w&quot;,1:8)))
+excess=fread(&quot;AH_Excess_Deaths_by_Sex__Age__and_Race_and_Hispanic_Origin_20250211.csv&quot;)
+excess=excess[Sex==&quot;All Sexes&quot;&amp;RaceEthnicity==&quot;All Race/Ethnicity Groups&quot;&amp;AgeGroup==&quot;All Ages&quot;]
+excess=excess[,.(excess=`Number above average (unweighted)`,year=MMWRyear,week=MMWRweek)]
 
-adhoc=fread(&quot;AH_Excess_Deaths_by_Sex__Age__and_Race_and_Hispanic_Origin_20250211.csv&quot;)
-ex=adhoc[Sex==&quot;All Sexes&quot;&amp;RaceEthnicity==&quot;All Race/Ethnicity Groups&quot;&amp;AgeGroup==&quot;All Ages&quot;]
-ex=ex[MMWRyear%in%2020:2022,.(excess=`Number above average (unweighted)`,year=MMWRyear,week=MMWRweek)]
-
-me=merge(merge(ex,case),vax,all.x=T)
-me[is.na(me)]=0
+me=merge(merge(excess,case,all=T),vax,all=T)[year%in%2020:2022];me[is.na(me)]=0
+me$wave=me[,findInterval(year*100+week,waves[,year*100+week])]
+me=cbind(me,`colnames&lt;-`(sapply(1:8,\(i)me[,ifelse(wave==i,cases,0)]),paste0(&quot;w&quot;,1:8)))
 
 summary(lm(excess~w1+w2+w3+w4+w5+w6+w7+w8,me))
 # Call:
 # lm(formula = excess ~ w1 + w2 + w3 + w4 + w5 + w6 + w7 + w8,
 #     data = me)
-#
+
 # Residuals:
 #    Min     1Q Median     3Q    Max
-#  -6847  -1695   -103   1210  12746
-#
+#  -6891  -1618   -156   1104  12608
+
 # Coefficients:
 #             Estimate Std. Error t value Pr(&gt;|t|)
-# (Intercept) 4.96e+03   4.89e+02   10.14  &lt; 2e-16 ***
-# w1          5.88e-02   6.47e-03    9.09  6.0e-16 ***
-# w2          1.92e-02   2.91e-03    6.59  7.2e-10 ***
-# w3          1.27e-02   7.78e-04   16.35  &lt; 2e-16 ***
-# w4          2.90e-03   2.93e-03    0.99  0.32307
-# w5          1.66e-02   1.17e-03   14.17  &lt; 2e-16 ***
-# w6          4.63e-03   3.39e-04   13.66  &lt; 2e-16 ***
-# w7          4.20e-03   1.24e-03    3.38  0.00094 ***
-# w8          1.65e-02   3.67e-03    4.50  1.4e-05 ***
+# (Intercept) 5.36e+03   4.88e+02   10.99  &lt; 2e-16 ***
+# w1          5.66e-02   6.47e-03    8.75  4.4e-15 ***
+# w2          1.87e-02   3.02e-03    6.19  5.5e-09 ***
+# w3          1.26e-02   7.79e-04   16.15  &lt; 2e-16 ***
+# w4          1.05e-03   2.67e-03    0.39    0.695
+# w5          1.61e-02   1.19e-03   13.56  &lt; 2e-16 ***
+# w6          4.57e-03   3.39e-04   13.49  &lt; 2e-16 ***
+# w7          3.40e-03   1.24e-03    2.74    0.007 **
+# w8          1.45e-02   3.47e-03    4.19  4.8e-05 ***
 # ---
 # Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
-#
+
 # Residual standard error: 3230 on 148 degrees of freedom
 # Multiple R-squared:  0.78,    Adjusted R-squared:  0.768
-# F-statistic: 65.7 on 8 and 148 DF,  p-value: &lt;2e-16
+# F-statistic: 65.6 on 8 and 148 DF,  p-value: &lt;2e-16
 
 summary(lm(excess~w1+w2+w3+w4+w5+w6+w7+w8+vax,me))
 # Call:
@@ -1322,27 +1316,27 @@ summary(lm(excess~w1+w2+w3+w4+w5+w6+w7+w8+vax,me))
 #
 # Residuals:
 #    Min     1Q Median     3Q    Max
-#  -6837  -1683   -100   1213  12779
+#  -6918  -1641    -24   1277  12805
 #
 # Coefficients:
-#             Estimate Std. Error t value Pr(&gt;|t|)
-# (Intercept) 4.87e+03   5.44e+02    8.95  1.5e-15 ***
-# w1          5.93e-02   6.62e-03    8.97  1.3e-15 ***
-# w2          1.94e-02   2.99e-03    6.49  1.2e-09 ***
-# w3          1.27e-02   7.97e-04   15.89  &lt; 2e-16 ***
-# w4          1.77e-03   4.06e-03    0.44   0.6625
-# w5          1.65e-02   1.21e-03   13.70  &lt; 2e-16 ***
-# w6          4.60e-03   3.44e-04   13.39  &lt; 2e-16 ***
-# w7          4.24e-03   1.25e-03    3.39   0.0009 ***
-# w8          1.66e-02   3.68e-03    4.51  1.3e-05 ***
-# vax         3.03e-05   7.52e-05    0.40   0.6875
+#              Estimate Std. Error t value Pr(&gt;|t|)
+# (Intercept)  4.80e+03   5.33e+02    9.00  1.1e-15 ***
+# w1           5.97e-02   6.49e-03    9.20  3.2e-16 ***
+# w2           2.03e-02   3.04e-03    6.68  4.7e-10 ***
+# w3           1.22e-02   7.81e-04   15.63  &lt; 2e-16 ***
+# w4          -6.51e-03   4.05e-03   -1.61   0.1106
+# w5           1.54e-02   1.20e-03   12.86  &lt; 2e-16 ***
+# w6           4.40e-03   3.41e-04   12.90  &lt; 2e-16 ***
+# w7           3.62e-03   1.23e-03    2.95   0.0037 **
+# w8           1.48e-02   3.42e-03    4.33  2.8e-05 ***
+# vax          2.00e-04   8.20e-05    2.45   0.0156 *
 # ---
 # Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 #
-# Residual standard error: 3240 on 147 degrees of freedom
-# Multiple R-squared:  0.78,    Adjusted R-squared:  0.767
-# F-statistic: 58.1 on 9 and 147 DF,  p-value: &lt;2e-16</pre>
-<p>The next table shows the results of 6 different models out of which 3 included a term for vaccines. I got a negative coefficient for vaccines in 2 of the 3 models, but neither type of model was included in the post by Pantazatos. So I don't know if he did similar models himself but he didn't publish their results because they did not fit his expectation that vaccines would be positively associated with excess deaths:</p>
+# Residual standard error: 3180 on 147 degrees of freedom
+# Multiple R-squared:  0.789,   Adjusted R-squared:  0.776
+# F-statistic: 60.9 on 9 and 147 DF,  p-value: &lt;2e-16</pre>
+<p>The next table shows the results of 6 different models out of which 3 included a term for vaccines. I got a negative coefficient for vaccines in 2 of the 3 models, but neither type of model was included in the post by Pantazatos:</p>
 <table>
 <tr><th>
 Model
