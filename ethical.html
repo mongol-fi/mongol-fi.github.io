@@ -2424,7 +2424,7 @@ system(&quot;magick 1.png -resize 25% -colorspace gray 1.png&quot;)
 <li>CDC WONDER uses population estimates based on the 2010 census for 2010 to 2020 but population estimates based on the 2020 census for 2021 and later years, so some age groups have a big jump in the population size between 2020 and 2021. The same problem does not exist between the switch from the estimates based on the 2000 census to the estimates based on the 2010 census, because CDC WONDER uses 2000-2010 intercensal estimates for 2000-2009 which were modified to eliminate the jump in population size between 2010 and 2011, but the 2010-2020 intercensal estimates are not scheduled to be published until 2025.</li>
 <li>CDC WONDER uses vintage 2021 population estimates for 2021, vintage 2022 estimates for 2022, and so on, even though in later vintages the earlier estimates have often been revised considerably, and the Census Bureau recommends people to generally use the latest-vintage estimates.</li>
 </ul>
-<p>The following code downloads the 2020-2023 resident population estimates that are based on the 2020 census and the 2010-2020 resident population estimates that are based on the 2010 census: <a href="https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/">https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/</a>, <a href="https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/national/asrh/">https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/national/asrh/</a>. I also included mid-year population projections for 2024 and 2025: <a href="https://www2.census.gov/programs-surveys/popproj/datasets/2023/2023-popproj/">https://www2.census.gov/programs-surveys/popproj/datasets/2023/2023-popproj/</a>.</p>
+<p>The following code downloads the 2020-2023 resident population estimates that are based on the 2020 census and the 2010-2020 resident population estimates that are based on the 2010 census: <a href="https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/">https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/</a>, <a href="https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/national/asrh/">https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/national/asrh/</a>. I also included mid-year population projections for 2024-2060 so that I multiplied the population projections for each age by the ratio between the mid-2023 resident population estimate and the population projection for 2023: <a href="https://www2.census.gov/programs-surveys/popproj/datasets/2023/2023-popproj/">https://www2.census.gov/programs-surveys/popproj/datasets/2023/2023-popproj/</a>.</p>
 <p>In order to get rid of a sudden jump in the population estimates at the point when the new and old estimates are merged, the old estimates are multiplied by a linear slope so that they are the same in 2020 as the new estimates. For example for the age 80, the vintage 2023 population estimate for 2020 is 1,450,396 and the vintage 2020 estimate for 2020 is 1,526,957, so their ratio is about 0.9499, so I'm multiplying the old estimate by about <code>.9+.1*0.9499</code> for 2011, by about <code>.8+.2*0.9499</code> for 2012, and so on. (However a slight problem with my approach is that the mid-year population estimates for 2020 had already been reduced by COVID deaths, so COVID deaths in the first half of 2020 are reflected in the slope by which the population estimates for 2011 to 2019 are multiplied.)</p>
 <pre>old=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/national/asrh/nc-est2020-agesex-res.csv&quot;)
 new=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/nc-est2023-agesex-res.csv&quot;)
@@ -2438,13 +2438,14 @@ o=merge(merge(old[year==2020,.(age,old=pop)],new[year==2020,.(age,new=pop)])[,.(
 # multiply old population estimates by a linear slope so they match new estimates in 2020
 o=rbind(o[year!=2020,.(year,age,pop=round(pop*(1-(((year-2010)/10))*(1-ratio))))],new)
 
-# include population projections for 2024-2025
+# include population projections for 2024-2060 adjusted to match 2023 resident population estimatess in 2023
 proj=fread(&quot;https://www2.census.gov/programs-surveys/popproj/datasets/2023/2023-popproj/np2023_d1_mid.csv&quot;)
-proj=proj[SEX==0&amp;ORIGIN==0&amp;RACE==0&amp;YEAR%in%2024:2025,.(year=YEAR,age=rep(0:100,each=.N),pop=unlist(.SD[,-(1:5)]))]
-o=rbind(o,proj)
+proj=proj[SEX==0&amp;ORIGIN==0&amp;RACE==0&amp;YEAR&gt;=2023,.(year=YEAR,age=rep(0:100,each=.N),pop=unlist(.SD[,-(1:5)]))]
+mult=o[year==2023,pop]/proj[year==2023]$pop
+o=rbind(o,proj[,pop:=pop*mult][year&gt;2023])
 
-# add a column for yearly deaths for the sake of convenience in calculating prepandemic mortality trends
-o=merge(o,fread(&quot;http://sars2.net/f/usyearlydead.csv&quot;),all=T)
+# add a column for yearly deaths from CDC WONDER for convenience (downloaded in February 2025)
+o=merge(o,fread(&quot;https://sars2.net/f/usyearlydead.csv&quot;),all=T)
 
 fwrite(o[order(year,age)],&quot;uspopdead.csv&quot;,na=&quot;&quot;)</pre>
 <p>I uploaded the output here: <a href=f/uspopdead.csv>f/uspopdead.csv</a>.</p>
