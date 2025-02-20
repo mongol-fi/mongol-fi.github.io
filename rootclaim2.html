@@ -1444,7 +1444,7 @@ coef(lm(excess~coviddead+vax,me))
 # (Intercept)   coviddead         vax
 #  4.7433e+03  1.0385e+00 -1.8758e-04</pre>
 <p>In his Substack post Pantazatos only included a model where he looked at COVID cases split into 8 different waves combined with vaccines. But he didn't include a model where he looked at COVID cases as a single term combined with vaccines, and he also didn't include a model where he looked at COVID deaths combined with vaccines. It might be because in both models he would've gotten a negative coefficient for vaccines. (Edit: He told me he hadn't done a model based on COVID deaths instead of cases.)</p>
-<p>In the following code I took data for cases from the same OWID dataset that Pantazatos used and not from the <code>owid-covid-data.csv</code> I used earlier where the number of cases is slightly different, and I shifted the date of cases 8 days forwards like Pantazatos. Pantazatos provided me the starting weeks of each COVID wave. In his models which had separate terms for each COVID wave, Pantazatos got an <code>r^2</code> value of about 0.715 when he didn't include a term for vaccine and about 0.765 when he did include a term for vaccines. However I don't understand how my code below was different from his calculation, because I got an <code>r^2</code> value of about 0.780 without the vaccine term and 0.789 with the vaccine term:</p>
+<p>In the following code I took data for cases from the same OWID dataset that Pantazatos used and not from the <code>owid-covid-data.csv</code> file I used earlier where the number of cases is slightly different, and I shifted the dates of cases 8 days forwards like Pantazatos. Pantazatos provided me the starting weeks of each COVID wave. In his models which had separate terms for each COVID wave, Pantazatos got an <code>r^2</code> value of about 0.715 when he didn't include a term for vaccine and about 0.765 when he did include a term for vaccines. However I don't understand how my code below was different from his calculation, because I got an <code>r^2</code> value of about 0.780 without the vaccine term and 0.789 with the vaccine term:</p>
 <pre>library(data.table);library(MMWRweek)
 
 waves=data.table(year=rep(2020:2022,c(3,3,2)),week=c(1,24,37,10,26,44,14,43))
@@ -1663,7 +1663,7 @@ negative
 <p>Pantazatos got weekly excess deaths from a CDC dataset titled <span class="quote">"AH Excess Deaths by Sex, Age, and Race and Hispanic Origin"</span>: <a href="https://data.cdc.gov/NCHS/AH-Excess-Deaths-by-Sex-Age-and-Race-and-Hispanic-/m74n-4hbs/about_data">https://data.cdc.gov/NCHS/AH-Excess-Deaths-by-Sex-Age-and-Race-and-Hispanic-/m74n-4hbs/about_data</a>. <span class="quote">"AH"</span> means <span class="quote">"ad hoc"</span>, because the CDC dataset was a supplementary dataset that the CDC produced as part of their analysis for excess deaths but that was not updated regularly. [<a href="https://www.cdc.gov/nchs/covid19/covid-19-mortality-data-files.htm">https://www.cdc.gov/nchs/covid19/covid-19-mortality-data-files.htm</a>]</p>
 <p>In the primary datasets for excess deaths the CDC published, the CDC used a Poisson regression with a spline trend to calculate the baseline. CDC's website says: <span class="quote">"Counts of deaths in the most recent weeks were compared with historical trends (from 2013 to present) to determine whether the number of deaths in recent weeks was significantly higher than expected, using Farrington surveillance algorithms (1). The <span class="quote">'surveillance'</span> package in R (2) was used to implement the Farrington algorithms, which use overdispersed Poisson generalized linear models with spline terms to model trends in counts, accounting for seasonality."</span> [<a href="https://www.cdc.gov/nchs/nvss/vsrr/covid19/excess_deaths.htm">https://www.cdc.gov/nchs/nvss/vsrr/covid19/excess_deaths.htm</a>]</p>
 <p>However the ad-hoc dataset used by Pantazatos employed a simple 2015-2019 average baseline which exaggerated excess deaths in 2022 relative to 2020. For example the baseline for MMWR week of 1 of each year was the average of MMWR weeks 1 of 2015-2019, even though in reality there was an increasing trend in deaths so by 2022 the baseline should've been higher than in 2020.</p>
-<p>At first I was confused by CDC's ad-hoc dataset because the value of the column <span class="quote">"Average number of deaths (unweighted)"</span> was not the same for each year, so I thought the column might have shown the average of the past 5 years and not the average of the years 2015-2019. However then I noticed there was a bug from the year 2020 onwards where the <span class="quote">"Average number of deaths (unweighted)"</span> column didn't actually show the baseline but it was instead identical to the column <span class="quote">"Deaths (unweighted)"</span> which shows the actual number of deaths. But if you subtract the column <span class="quote">"Number above average (unweighted)"</span> from the column <span class="quote">"Deaths (unweighted)"</span>, the result is always the same as the average number of deaths in 2015-2019, so you can tell that each year does in fact have the same baseline:</p>
+<p>At first I was confused by CDC's ad-hoc dataset because the value of the column <span class="quote">"Average number of deaths (unweighted)"</span> was not the same for each year, so I thought the column might have shown the average of the past 5 years and not the average of the years 2015-2019. However then I noticed there was a bug from the year 2020 onwards where the column <span class="quote">"Average number of deaths (unweighted)"</span> didn't actually show the baseline but it was instead identical to the column <span class="quote">"Deaths (unweighted)"</span> which shows the actual number of deaths. But if you subtract the column <span class="quote">"Number above average (unweighted)"</span> from the column <span class="quote">"Deaths (unweighted)"</span>, the result is always the same as the average number of deaths in 2015-2019, so you can tell that each year does in fact have the same baseline:</p>
 <pre>adhoc=fread(&quot;AH_Excess_Deaths_by_Sex__Age__and_Race_and_Hispanic_Origin_20250211.csv&quot;)
 adhoc=adhoc[Sex==&quot;All Sexes&quot;&amp;RaceEthnicity==&quot;All Race/Ethnicity Groups&quot;&amp;AgeGroup==&quot;All Ages&quot;]
 adhoc[MMWRweek==1,.(MMWRyear,MMWRweek,`Deaths (unweighted)`,`Average number of deaths (unweighted)`,`Number above average (unweighted)`)]|&gt;print(r=F)
@@ -1689,8 +1689,8 @@ adhoc[MMWRweek==1,.(MMWRyear,MMWRweek,deaths_minus_excess=`Deaths (unweighted)`-
 #     2021        1               60499
 #     2022        1               60499
 #     2023        1               60499</pre>
-<p>So in the model by Pantazatos where vaccines explained 5% of additional variance in excess mortality beyond COVID cases, it might have partially been because his baseline produced superfluous excess deaths in 2021 and 2022 which happened to partially coincide with periods when vaccine doses were administered. And because his model had a different term for each COVID wave, it allowed the weight of the COVID waves in 2021 and 2022 to be reduced in order to accommodate a higher weight to vaccines.</p>
-<p>In this plot which shows excess deaths in CDC's ad-hoc dataset, after the first few weeks of 2020 there's no week where the excess mortality is even close to zero:</p>
+<p>But anyway since Pantazatos used a 2015-2019 average baseline which exaggerated excess deaths in 2022 and 2021 relative to 2020, in his model where vaccines explained 5% of additional variance in excess mortality beyond COVID cases, it might have partially been because his baseline produced superfluous excess deaths in 2021 and 2022 which happened to partially coincide with periods when vaccine doses were administered. And because his model had a different term for each COVID wave, it allowed the weight of the COVID waves in 2021 and 2022 to be reduced in order to accommodate a higher weight to vaccines.</p>
+<p>In this plot by Pantazatos which shows excess deaths in CDC's ad-hoc dataset, after the first few weeks of 2020 there's no week where the excess mortality is even close to zero:</p>
 <div class="width6">
 <img src="i/rootclaim-spirolm-2.png">
 </div>
@@ -1703,6 +1703,7 @@ adhoc[,sum(`Number above average (unweighted)`)] # 1743770 (same as Pantazatos)
 
 o=adhoc[,.(cdc_adhoc_excess=sum(`Number above average (unweighted)`)),.(year=MMWRyear)]
 
+# primary analysis where the baseline was calculated using a Farrington surveillance algorithm
 main=fread(&quot;Excess_Deaths_Associated_with_COVID-19.csv&quot;)
 main=main[Type==&quot;Predicted (weighted)&quot;&amp;Outcome==&quot;All causes&quot;&amp;State==&quot;United States&quot;]
 main=main[,.(main_excess=sum(`Excess Estimate`)),.(year=Year)]
@@ -1712,9 +1713,9 @@ o=rbind(o,Total=list(&quot;Total&quot;,sum(o$cdc_adhoc_excess),sum(o$cdc_main_ex
 o[,difference:=cdc_adhoc_excess-cdc_main_excess]
 print(o,r=F)
 #  year cdc_adhoc_excess cdc_main_excess difference
-#  2020           585409          459421     125988
+#  2020           585409          459421     125988 # difference is smallest in 2020
 #  2021           670667          530876     139791
-#  2022           487694          331469     156225
+#  2022           487694          331469     156225 # difference is biggest in 2022
 # Total          1743770         1321766     422004</pre>
 <p>In the following code I used my own method to calculate excess deaths where I multiplied the 2011-2019 linear trend in CMR for each age by the mid-year resident population estimates of the age. But I got about about 1.27 million excess deaths in 2020-2022, so it's similar to CDC's main dataset for excess deaths:</p>
 <pre>pop=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)
@@ -1729,7 +1730,7 @@ cbind(o[,-4],my_excess)|&gt;print(r=F)
 #  2022           487694          331469    285019
 # Total          1743770         1321766   1269029</pre>
 <p>In the following code I calculated a more accurate weekly baseline adjusted for seasonality. First I multiplied the 2011-2019 linear trend in CMR for each age by the mid-year resident population estimates of the age to get the yearly expected deaths for each age, and I added together the expected deaths for all ages to get the total yearly expected deaths. Then I divided the yearly expected deaths by the number of days in the year and multiplied it by 7 to get the weekly expected deaths for each year. Then I adjusted the baseline for seasonality by calculating the average difference between the actual deaths and weekly expected deaths for each MMWR week number in 2015-2019, and I added the difference to the baseline for the corresponding MMWR week number of each year.</p>
-<p>In the code below I again did a linear model where I first compared COVID deaths against all-cause deaths, and next I also added a term for weekly new vaccine doses to the model. However regardless of whether I took the excess deaths from CDC's ad-hoc dataset or if I used my own more accurate method of calculating excess deaths, the weekly number of new vaccine doses still got a negative coefficient in the model, which means that vaccines were inversely associated with excess mortality:</p>
+<p>I again did a linear model where I first compared COVID deaths against all-cause deaths, and next I also added a term for weekly new vaccine doses to the model. However regardless of whether I took the excess deaths from CDC's ad-hoc dataset or if I used my own more accurate method of calculating excess deaths, the weekly number of new vaccine doses still got a negative coefficient in the model, which means that vaccines were inversely associated with excess mortality:</p>
 <pre># sars2.net/ethical.html#Files_for_US_population_estimates_by_single_year_of_age_up_to_ages_100
 pop=fread(&quot;https://sars2.net/f/uspopdead.csv&quot;)
 
@@ -1804,7 +1805,7 @@ t[,cor(total_vaccinations,excess_deaths)] # 0.96581 (not adjusted for population
 <pre>t[,cor(total_vaccinations/population,excess_deaths/population)] # -0.20514 (adjusted for population size)</pre>
 <p>Allen got an adjusted r-squared value of about 0.71 between excess deaths and vaccine doses. However my adjusted r-squared value was about 0.92:</p>
 <pre>summary(t[,lm(doses~dead-expecteddead)])$adj.r # 0.91934</pre>
-<p>Then I compared my table to the mean values in this table:</p>
+<p>In order to find why my r-squared value was different from Allen, I tried to compare my table to the mean values in Allen's Table 2:</p>
 <div class="width5">
 <img src="i/rootclaim-allen-2.png">
 </div>
@@ -1812,6 +1813,7 @@ t[,cor(total_vaccinations,excess_deaths)] # 0.96581 (not adjusted for population
 <pre>d=data.table(variable=names(t[,-1]),my=colMeans(t[,-1]))
 d$allen=c(4624.1,5124.1,320.25,8618100,521180,3329200,236380,70588)
 d[,difference:=my-allen]
+d[,differencepct:=(my/allen-1)*100]
 print(d,r=f)
 #            variable         my      allen difference differencepct
 #     expected_deaths    4624.12    4624.10      0.025    0.00054065
