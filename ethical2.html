@@ -193,7 +193,7 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
 ggsave(&quot;1.png&quot;,width=4,height=3,dpi=350*4)
 system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 </div>
-<p>In the next plot I adjusted the 2010-2020 population estimates using the same method as in the gray lines in my plot above. It reduced my total excess ASMR in 2024 from about 1.0% to about -4.6%:</p>
+<p>In the next plot I adjusted the 2010-2020 population estimates using the same method as in the gray lines in my plot above. It reduced my total excess ASMR in 2024 from about 0.7% to about -4.9% (Edit: plot updated in February 2025 when mortality data for 2024 had become nearly complete):</p>
 <div class="width7">
 <img src="i/ethical-allcause-3.png">
 </div>
@@ -214,9 +214,10 @@ oldpop=old[YEAR!=2021&amp;MONTH!=4.2&amp;AGE!=999,.(year=YEAR,month=floor(MONTH)
 newpop=new[AGE!=999,.(year=YEAR,month=floor(MONTH),pop=TOT_POP,age=AGE)]
 
 proj=fread(&quot;https://www2.census.gov/programs-surveys/popproj/datasets/2023/2023-popproj/np2023_d1_mid.csv&quot;)
-proj=proj[SEX==0&amp;ORIGIN==0&amp;RACE==0&amp;YEAR%in%2024:2025,.(x=c(7,19),age=rep(0:100,each=.N),pop=unlist(.SD[,-(1:5)]))]
-proj=rbind(newpop[year==2023&amp;month==12,.(x=0,pop,age)],proj)
-newpop=rbind(newpop,proj[,spline(x,pop,xout=1:12),age][,.(age,year=2024,month=x,pop=y)])
+proj=proj[SEX==0&amp;ORIGIN==0&amp;RACE==0&amp;YEAR%in%2023:2025,.(x=c(7,19,31),age=rep(0:100,each=.N),pop=unlist(.SD[,-(1:5)]))]
+projmult=newpop[year==2023&amp;month==7,pop]/proj[x==7,pop]
+proj[,pop:=pop*projmult[age+1]]
+newpop=rbind(newpop,proj[,spline(x,pop,xout=25:36),age][,.(age,year=2024,month=x-24,pop=y)])
 
 oldmod=oldpop[!(year==2020&amp;month&gt;4)]
 oldmod=merge(mult,oldmod[,.(year,month,pop,slope=seq(0,1,,.N)),age])
@@ -225,7 +226,8 @@ oldmod=oldmod[,.(age,year,month,pop=pop*(slope*mult+(1-slope)*1))]
 a=cbind(rbind(oldpop[!(year==2020&amp;month&gt;=4)],newpop),group=&quot;Original unmodified population estimates&quot;)
 a=rbind(a,cbind(rbind(oldmod[!(year==2020&amp;month==4)],newpop),group=&quot;Population estimates based on 2010 census multiplied by linear slope&quot;))
 
-a=merge(a,fread(&quot;http://sars2.net/f/usdeadmonthly.csv&quot;)[!(year==2024&amp;month&gt;9)])
+<h2><a href=#a_merge_a_fread_quot_http_sars2_net_f_usdeadmonthly_csv_quot_year_2024_amp_month_gt_9 id=a_merge_a_fread_quot_http_sars2_net_f_usdeadmonthly_csv_quot_year_2024_amp_month_gt_9>a=merge(a,fread(&quot;http://sars2.net/f/usdeadmonthly.csv&quot;)[!(year==2024&amp;month&gt;9)])</a></h2>
+a=merge(a,fread(&quot;http://sars2.net/f/usdeadmonthly.csv&quot;)[year&lt;2025])
 
 std=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/nc-est2023-agesex-res.csv&quot;)
 a=merge(std[SEX==0&amp;AGE!=999,.(age=AGE,std=POPESTIMATE2020)][,std:=std/sum(std)],a)
@@ -303,14 +305,14 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   strip.text=element_text(size=7,face=2,margin=margin(,,2)))
 ggsave(&quot;1.png&quot;,width=4.7,height=3.9,dpi=400*4)
 
-sub=&quot;\u00a0     The data for deaths was retrieved from CDC WONDER on November 21st 2024 UTC, so some deaths are still missing in 2024 because of a registration delay.
-      The yearly total excess mortality percentage is shown above the year.
+sub=&quot;\u00a0     The yearly total excess mortality percentage is shown above the year.
+      The data for deaths was retrieved from CDC WONDER on February 22nd 2025 UTC, so only few deaths in 2024 are missing because of a registration delay.
       ASMR was calculated by single year of age so that the vintage 2023 mid-2020 resident population estimates were used as the standard population.
       The baseline was calculated by doing a linear regression for monthly data in 2011 to 2019. Only May to September were included in the linear regression. In order to calculate the seasonality-adjusted baseline, the average difference between the actual ASMR and baseline during each January of 2011 to 2019 was added to the baseline for each January, and similarly for other months.
       Monthly resident population estimates by single year of age were downloaded from www2.census.
 gov/programs-surveys/popest/datasets/2020-2023/national/asrh/nc-est2023-alldata-r-file0{1..8}.csv, and from the corresponding files in the 2010-2020 directory.
-      Vintage 2023 population estimates based on the 2020 census are used for April 2020 to December 2023, and vintage 2020 population estimates based on the 2010 census are used for January 2011 to March 2020. In the bottom panel the 2010-based estimates were multiplied by a linear slope so that they were equal to the 2020-based estimates in April 2020 when the two sets of estimates were merged. The 2010-based estimates cover a total of 121 months from April 2010 until April 2020, and for example for the age 80 the ratio between the 2020-based and 2010-based estimates was about 0.946 in April 2020, so the population estimate for age 80 was multiplied by about 1/121*0.946+120/121 in May 2010, by about 2/121*0.946+119/121 in June 2010, and so on. A similar method is used in the Census Bureau&#39;s intercensal population estimates, but intercensal estimates for 2010-2020 have not yet been published.
-      Monthly population estimates for 2024 were calculated as a spline interpolation of the population estimate on December 2023 and mid-year population projections for 2024 and 2025: www2.census.gov/programs-surveys/popproj/datasets/2023/2023-popproj/np2023_d1_mid.csv.&quot;
+      Vintage 2023 population estimates based on the 2020 census are used for April 2020 to December 2023, and vintage 2020 population estimates based on the 2010 census are used for January 2011 to March 2020. In the bottom panel the 2010-based estimates were multiplied by a linear slope so that they were equal to the 2020-based estimates in April 2020 when the two sets of estimates were merged. The 2010-based estimates cover a total of 121 months from April 2010 until April 2020, and for example for the age 80 the ratio between the 2020-based and 2010-based estimates was about 0.946 in April 2020, so the population estimate for age 80 was multiplied by about 1/121*0.946+120/121 in May 2010, by about 2/121*0.946+119/121 in June 2010, and so on. A similar adjustment is incorporated in the Census Bureau&#39;s intercensal population estimates, but the intercensal estimates for 2010-2020 are only scheduled to be published in 2025.
+      Monthly population estimates for 2024 were calculated as a spline interpolation of the mid-year population projections for 2023-2025, where the population projections for each age were first multiplied by the ratio of mid-2023 resident population estimates divided by the mid-2023 population projections: www2.census.gov/programs-surveys/popproj/datasets/2023/2023-popproj/np2023_d1_mid.csv.&quot;
 
 system(paste0(&quot;mar=120;w=`identify -format %w 1.png`;magick 1.png \\( -size $[w-mar*2]x -font Arial -interline-spacing -4 -pointsize 152 caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&#39;&quot;,sub),&quot;&#39; -gravity southwest -splice $[mar]x70 \\) -append -resize 25% -colorspace gray -colors 16 1.png&quot;))</pre>
 </div>
@@ -745,7 +747,7 @@ system(&quot;magick i[12].png +append 1.png;w=`identify -format %w 1.png`;pad=26
 <p>The worst part: this 22-sigma event has not ended.</p>
 <p><img src=i/ethical-217-1.png class=width8></p>
 </blockquote>
-<p>In the replies someone asked: <span class="quote">"The 'from Covid (U07.1)' line ends after Q1 2022 because…it goes to zero? Or are we missing data since then?"</span> [<a href="https://x.com/41Adanac/status/1864418767444562232">https://x.com/41Adanac/status/1864418767444562232</a>] But Ethical Skeptic replied: <span class="quote">"No, just no death certificates with Covid as UCoD since then reported by the states."</span> However actually most weeks had less than 10 deaths so the number of deaths was suppressed by CDC WONDER. There's a bunch of deaths with UCD COVID if you look at the fixed-width NVSS files where the deaths are not suppressed, even though the files only include monthly data but not weekly data.</p>
+<p>In the replies someone asked: <span class="quote">"The <span class="quote">'from Covid (U07.1)'</span> line ends after Q1 2022 because…it goes to zero? Or are we missing data since then?"</span> [<a href="https://x.com/41Adanac/status/1864418767444562232">https://x.com/41Adanac/status/1864418767444562232</a>] But Ethical Skeptic replied: <span class="quote">"No, just no death certificates with Covid as UCoD since then reported by the states."</span> However actually most weeks had less than 10 deaths so the number of deaths was suppressed by CDC WONDER. There's a bunch of deaths with UCD COVID if you look at the fixed-width NVSS files where the deaths are not suppressed, even though the files only include monthly data but not weekly data.</p>
 <p>But anyway, when I did a query for deaths with UCD A-Q in ages 2-17, I also got a sustained elevation in deaths above the baseline since around May 2022, but I don't know how to explain it. So this looks like one case where Ethical Skeptic has found a genuine increase in deaths without having to rely on any of his tricks or adjustments:</p>
 <div class="width6">
 <img src="i/ethical-217-2.png">
@@ -1546,14 +1548,14 @@ system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
 <h2>
 <a href=#Summer_trough_regression_in_2014_2019 id=Summer_trough_regression_in_2014_2019>Summer trough regression in 2014-2019</a>
 </h2>
-<p>ES posted this tweet: [<a href="https://x.com/EthicalSkeptic/status/1869746508276392017">https://x.com/EthicalSkeptic/status/1869746508276392017</a>)]</p>
+<p>ES posted this tweet: [<a href="https://x.com/EthicalSkeptic/status/1869746508276392017">https://x.com/EthicalSkeptic/status/1869746508276392017</a>]</p>
 <blockquote>
-<p>How troll-analysts fabricate their disinfo 'graphs':</p>
+<p>How troll-analysts fabricate their disinfo <span class="quote">'graphs'</span>:</p>
 <p>Paltering the Baseline - fails to detect variation asymmetry in baseline years - Gaussian-blends this bias into their linear regression (creates an unseen future deficit - but looks wonderful now).</p>
 <p>Don't possess the real world experience to know to index growth by stable (trough) periods alone.</p>
 <p>Fails to employ professional Pull-Forward Effect praxis.</p>
 <p>Fail to follow up on their work later, to see if their model was valid (we do this in spades👍).</p>
-<p>I can easily replicate their graphs, but could not respect myself or sleep at night if I published them as 'truth'. They do not have the skills to replicate my charts.</p>
+<p>I can easily replicate their graphs, but could not respect myself or sleep at night if I published them as <span class="quote">'truth'</span>. They do not have the skills to replicate my charts.</p>
 <p><img src=i/ethical-trough-1.jpg class=width11></p>
 </blockquote>
 <p>However the slope of his line for the trough regression doesn't even seem to match the actual summer troughs in his plot. Here I added four different baselines fitted against the troughs, but all of the baselines were much steeper than the line for his trough regression:</p>
