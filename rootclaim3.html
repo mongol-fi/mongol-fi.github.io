@@ -148,14 +148,12 @@ date       people_vaccinated_per_hundred excess_mortality
 <p><img src=i/rootclaim-hongkong-1.jpg class=width5></p>
 </blockquote>
 <p>Morris's plot was based on a paper published by China CDC titled <span class="quote">"Association Between COVID-19 Vaccination Coverage and Case Fatality Ratio: a Comparative Study - Hong Kong SAR, China and Singapore, December 2021-March 2022"</span>: <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC9433760/">https://pmc.ncbi.nlm.nih.gov/articles/PMC9433760/</a>.</p>
-<p>In Table 1 of the paper the percentage of fully vaccinated people in ages 70 and above in Hong Kong was listed as 56.82%, which is higher than in Morris's plot, but it might because Morris's plot showed the percentage of vaccinated people on January 1st 2022 but the paper by China CDC appears to have shown the percentage of vaccinated people on an unspecified date when the authors retrieved the data from a Hong Kong government website:</p>
+<p>In Table 1 of the paper b,the percentage of fully vaccinated people in ages 70 and above in Hong Kong was listed as 56.82%, which is higher than in Morris's plot, but it might because Morris's plot showed the percentage of vaccinated people on January 1st 2022 but the paper by China CDC appears to have shown the percentage of vaccinated people at a later date:</p>
 <div class="width10">
 <img src="i/rootclaim-hongkong-2.png">
 </div>
-<p>I took mid-2022 resident population estimates in Hong Kong from here, which I interpolated to daily resident population estimates: <a href="https://www.censtatd.gov.hk/en/web_table.html?id=110-01001&full_series=1&download_csv=1">https://www.censtatd.gov.hk/en/web_table.html?id=110-01001&amp;full_series=1&amp;download_csv=1</a>. I took the number of people who had received a second dose from here: <a href="https://data.gov.hk/en-data/dataset/hk-hhb-hhbcovid19-vaccination-rates-over-time-by-age">https://data.gov.hk/en-data/dataset/hk-hhb-hhbcovid19-vaccination-rates-over-time-by-age</a>. When I calculated the average cumulative number of people in each age group who had received a second dose between December 31st 2021 and March 22nd 2022, and I then divided it with the mean interpolated population estimates during the same period, the resulting percentage was only about 51% for ages 70-79 and 28% for ages 80+:</p>
-<pre># download other file manually: https://www.censtatd.gov.hk/en/web_table.html?id=110-01001&amp;full_series=1&amp;download_csv=1
-
-download.file(&quot;https://www.healthbureau.gov.hk/download/opendata/COVID19/vaccination-rates-over-time-by-age.csv&quot;,&quot;vaccination-rates-over-time-by-age.csv&quot;)
+<p>I took mid-2022 resident population estimates in Hong Kong from here, which I interpolated to daily resident population estimates: <a href="https://www.censtatd.gov.hk/en/web_table.html?id=110-01001&full_series=1&download_csv=1">https://www.censtatd.gov.hk/en/web_table.html?id=110-01001&amp;full_series=1&amp;download_csv=1</a>. I took the number of people who had received a second dose from here: <a href="https://data.gov.hk/en-data/dataset/hk-hhb-hhbcovid19-vaccination-rates-over-time-by-age">https://data.gov.hk/en-data/dataset/hk-hhb-hhbcovid19-vaccination-rates-over-time-by-age</a>. When I calculated the average cumulative number of people in each age group who had received a second dose between December 31st 2021 and March 22nd 2022, and I then divided it with the mean interpolated population estimates during the same period, the resulting percentage of people with a second dose was only about 51% in ages 70-79 and 28% in ages 80+:</p>
+<pre>download.file(&quot;https://www.healthbureau.gov.hk/download/opendata/COVID19/vaccination-rates-over-time-by-age.csv&quot;,&quot;vaccination-rates-over-time-by-age.csv&quot;)
 
 ages=c(0,2:8*10)
 agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
@@ -165,7 +163,9 @@ t[,age:=as.integer(sub(&quot;^&#39;?(\\d*).*&quot;,&quot;\\1&quot;,`Age Group`))
 a=t[,.(vax=sum(`Inactivated 2nd dose`+`mRNA 2nd dose`)),.(age=agecut(age,ages),date=Date)]
 a=a[,.(vax=cumsum(vax),date),age]
 
+# download manually: https://www.censtatd.gov.hk/en/web_table.html?id=110-01001&amp;full_series=1&amp;download_csv=1
 pop=fread(&quot;Table 110-01001_en.csv&quot;)
+
 pop=pop[V1%like%&quot;Both sexes&quot;&amp;!V2%like%&quot;All&quot;,.(age=0:17*5,year=rep(1961:2024,each=.N),pop=as.numeric(unlist(.SD))*1e3),.SDcols=seq(3,129,2)]
 pop=pop[,.(pop=sum(pop)),.(age=agecut(age,ages),date=as.Date(paste0(year,&quot;-7-1&quot;)))]
 dates=unique(a$date)
@@ -184,9 +184,9 @@ mutate_if(me,is.double,round)|&gt;print(r=F)
 # 60-69  753179 1131261      67
 # 70-79  303767  595878      51
 #   80+  103134  389774      26</pre>
-<p>The percentage of people with a second dose in ages 60-69 was about 65% in my code above but about 81.24% in the paper by China CDC. The reason for the difference might partially be if the paper by China CDC looked at the percentage of vaccinated people at the end of the observation period, but even on March 22nd I got only about 76% vaccinated people in ages 60-69 which was still lower than in the paper by China CDC. The authors might have also taken the percentage of vaccinated people on the date when they retrieved the data which might have been after the observation period had already ended.</p>
+<p>The percentage of people with a second dose in ages 60-69 was about 65% in my code above but about 81.24% in the paper by China CDC. It might be because my code showed the average percentage of vaccinated people throughout the observation period but the paper by China CDC may have shown the percentage of vaccinated people at the end of the observation period. But even on March 22nd which was the last day of the observation period, I got only about 76% vaccinated people in ages 60-69 which was still lower than the figure in the paper by China CDC.</p>
 <p>A note below Table 1 of the China CDC paper says: <span class="quote">"Note: CFR, vaccination coverage was obtained and calculated from the Government of the Hong Kong SAR, China (<a href="https://www.coronavirus.gov.hk/eng/index.html">https://www.coronavirus.gov.hk/eng/index.html</a>) and Ministry of Health in Singapore (<a href="https://www.moh.gov.sg/">https://www.moh.gov.sg/</a>)."</span> The linked website doesn't currently seem to include time series data of vaccinated people by date, but it only shows the present percentage of vaccinated people.</p>
-<p>However an old snashot of the linked website had more detailed data, which included a CSV file that showed the number of people with a second dose by age group along with population estimates for the age group. [<a href="https://web.archive.org/web/20220313215249/https://www.covidvaccine.gov.hk/en/dashboard">https://web.archive.org/web/20220313215249/https://www.covidvaccine.gov.hk/en/dashboard</a>, section <span class="quote">"Vaccine Doses Administered (Age Group)"</span>, link <span class="quote">"Click to Download CSV data"</span>] In a CSV file from March 13th 2022, the number of people with a second dose was close to identical to the data I used above, but the population estimate of ages 60-69 was about 7% lower, which explained why the percentage of people with a second dose was higher than in my code:</p>
+<p>However an old snashot of the linked website had more detailed data, which included a CSV file that showed the number of people with a second dose by age group along with population estimates for each age group. [<a href="https://web.archive.org/web/20220313215249/https://www.covidvaccine.gov.hk/en/dashboard">https://web.archive.org/web/20220313215249/https://www.covidvaccine.gov.hk/en/dashboard</a>, section <span class="quote">"Vaccine Doses Administered (Age Group)"</span>, link <span class="quote">"Click to Download CSV data"</span>] For example in a CSV file from March 13th 2022, the number of people with a second dose was close to identical to the data I used above, but the population estimate of ages 60-69 was about 7% lower, so it caused the percentage of vaccinated people to be higher than in my calculation:</p>
 <pre>hk=fread(&quot;https://web.archive.org/web/20220313214525if_/https://static.data.gov.hk/covid-vaccine/bar_age.csv&quot;)
 hk=hk[,.(vax_hk=sum(secondDose.total),pop_hk=sum(population)),.(age=agecut(as.integer(sub(&quot;\\D*(\\d+).*&quot;,&quot;\\1&quot;,age_group)),ages))]
 hk[,percent_hk:=vax_hk/pop_hk*100]
@@ -203,7 +203,7 @@ print(mutate_if(merge(me,hk),is.double,round),r=F)
 # 60-69  834089 1135344      73  834095 1071800         78
 # 70-79  360110  600110      60  360107  560500         64
 #   80+  139950  389555      36  139966  401800         35</pre>
-<p>But in any case it should be clear that Hong Kong had a low percentage of vaccinated people in elderly age groups during the first Omicron wave, even though many additional people got vaccinated during the Omicron wave who had earlier not been vaccinated:</p>
+<p>But in any case, it should be clear that Hong Kong had a low percentage of vaccinated elderly people during the first Omicron wave, even though many additional people got vaccinated during the first half of 2022:</p>
 <div class="width7">
 <img src="i/rootclaim-hongkong-3.png">
 </div>
