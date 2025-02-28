@@ -574,18 +574,30 @@ system(&quot;for f in i[1-5].png;do convert $f -trim -bordercolor white -border 
 <a href=#Estimate_of_COVID_deaths_averted_by_vaccination_in_the_United_States id=Estimate_of_COVID_deaths_averted_by_vaccination_in_the_United_States>Estimate of COVID deaths averted by vaccination in the United States</a>
 </h3>
 <p>In the previous section I estimated the number of COVID deaths averted by vaccination in England, but here I apply the same method to data for the United States.</p>
-<p>The CDC has published a dataset which shows the number of COVID deaths by week, age group, and vaccination status: <a href="https://data.cdc.gov/Public-Health-Surveillance/Rates-of-COVID-19-Cases-or-Deaths-by-Age-Group-and/54ys-qyzm/about_data">https://data.cdc.gov/Public-Health-Surveillance/Rates-of-COVID-19-Cases-or-Deaths-by-Age-Group-and/54ys-qyzm/about_data</a>. The CDC dataset only includes data from October 3rd 2021 up to April 1st 2023. Partially vaccinated people are also excluded, because the dataset only includes unvaccinated people and people who had received the second dose at least 2 weeks ago. The dataset also includes only a subset of US jurisdictions, so the total population size included in the dataset ranges from about 107 million to 130 million depending on the week.</p>
+<p>The CDC has published a dataset which shows the number of COVID deaths by week, age group, and vaccination status: <a href="https://data.cdc.gov/Public-Health-Surveillance/Rates-of-COVID-19-Cases-or-Deaths-by-Age-Group-and/54ys-qyzm">https://data.cdc.gov/Public-Health-Surveillance/Rates-of-COVID-19-Cases-or-Deaths-by-Age-Group-and/54ys-qyzm</a>. The CDC dataset only includes data from October 3rd 2021 up to April 1st 2023. Partially vaccinated people are also excluded, because the dataset only includes unvaccinated people and people who had received the second dose at least 2 weeks ago. The dataset also includes only a subset of US jurisdictions, so the total population size included in the dataset ranges from about 107 million to 130 million depending on the week.</p>
 <p>In the CDC dataset there is a total of 55,978 COVID deaths in vaccinated people and 76,295 COVID deaths in unvaccinated people. In the code below I calculated that if vaccinated people would've had the same COVID mortality rate as unvaccinated people for each combination of week and age group, there would've been a total of 525,747 COVID deaths in vaccinated people, which is almost 10 times higher than the actual number of COVID deaths in vaccinated people:</p>
-<pre>t=fread(&quot;Rates_of_COVID-19_Cases_or_Deaths_by_Age_Group_and_Updated__Bivalent__Booster_Status_20241231.csv&quot;)
-t=t[outcome==&quot;death&quot;&amp;age_group!=&quot;all_ages&quot;&amp;vaccination_status==&quot;vaccinated&quot;]
+<pre># downloaded from data.cdc.gov/Public-Health-Surveillance/Rates-of-COVID-19-Cases-or-Deaths-by-Age-Group-and/54ys-qyzm
+t=fread(&quot;https://sars2.net/f/Rates_of_COVID-19_Cases_or_Deaths_by_Age_Group_and_Updated__Bivalent__Booster_Status_20241231.csv&quot;)
 
+# exclude rows where outcome is case, rows where only people with a booster are counted as vaccinated, and rows for all ages
+t=t[outcome==&quot;death&quot;&amp;vaccination_status==&quot;vaccinated&quot;&amp;age_group!=&quot;all_ages&quot;]
+
+# turn the column for age groups into a factor so it gets sorted properly
 age=unique(t$age_group)
 t[,age_group:=factor(age_group,age[order(as.integer(sub(&quot;[-+].*&quot;,&quot;&quot;,age)))])]
 
-a=t[,.(vaxpop=mean(vaccinated_population),unvaxpop=mean(unvaccinated_population),vaxdead=sum(vaccinated_with_outcome),expected_vax_dead=sum(unvaccinated_with_outcome/unvaccinated_population*vaccinated_population)),,age_group]
+# calculate sum of weekly deaths and mean of weekly population sizes by age group
+# calculate expected vaccinated deaths by multiplying vaccinated population with unvaccinated mortality rate
+a=t[,.(vaxpop=mean(vaccinated_population),unvaxpop=mean(unvaccinated_population),
+  vaxdead=sum(vaccinated_with_outcome),unvaxdead=sum(vaccinated_with_outcome),
+  expected_vax_dead=sum(unvaccinated_with_outcome/unvaccinated_population*vaccinated_population)),,age_group]
 
+# add a row for the total in all ages
 a=rbind(a,a[,lapply(.SD,sum),.SDcols=-1][,age_group:=&quot;Total&quot;])
+
+# how many times higher vaccinated deaths would&#39;ve been at unvaccinated mortality rates for each combination of age and week
 a[,ratio:=expected_vax_dead/vaxdead]
+
 print(mutate_at(mutate_at(a,2:5,round),6,round,1),r=F)
 # age_group   vaxpop unvaxpop vaxdead expected_vax_dead ratio
 #     0.5-4   210137  4796556       1                 2   1.8
@@ -605,7 +617,7 @@ print(mutate_at(mutate_at(a,2:5,round),6,round,1),r=F)
 &gt; uspop=fread(&quot;http://sars2.net/f/uspopdeadmonthly.csv&quot;)
 &gt; uspop[date&gt;=&quot;2021-10&quot;&amp;date&lt;=&quot;2023-03&quot;,sum(pop),date][,mean(V1)]
 [1] 333297623</pre>
-<p>The calculation <code>469769/.337/.36</code> would give about 3.9 million COVID deaths averted by vaccination in the entire US population since the start of 2021, which is likely too high. But my calculation doesn't account for the healthy vaccinee effect. And it doesn't take into account that in early 2021 there were not yet as many people vaccinated as during the time period included in the CDC dataset. And my calculation also doesn't take into account that unvaccinated people acquired natural immunity over time, so compared to the period included in the CDC dataset, the ratio between unvaccinated and vaccinated COVID mortality was earlier higher but later lower.</p>
+<p>The calculation <code>469769/.337/.36</code> would give about 3.9 million COVID deaths averted by vaccination in the entire US population since the start of 2021, which is likely too high. But my calculation doesn't account for the healthy vaccinee effect. And I didn't take into account that in early 2021 there were not yet as many people vaccinated as during the time period included in the CDC dataset. And I also didn't take into account that unvaccinated people acquired natural immunity over time, so compared to the period included in the CDC dataset, the ratio between unvaccinated and vaccinated COVID mortality was earlier higher but later lower.</p>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
