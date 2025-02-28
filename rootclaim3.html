@@ -111,7 +111,7 @@ ua=\(x,y,...){u=unique(x);y(u,...)[match(x,u)]}
 dotcode=\(x)ifelse(x%like%&quot;^ &quot;,substr(x,2,4),sub(&quot;(...)(.)&quot;,&quot;\\1.\\2&quot;,x))
 l[,code:=ua(code,dotcode)][,ucod:=ua(ucod,dotcode)]
 
-icd=fread(&quot;http://sars2.net/f/wondericd.csv&quot;)[rowid(code)==1][,setNames(cause,code)]
+icd=fread(&quot;http://sars2.net/f/wondericd.csv&quot;)[,setNames(cause,code)]
 
 sub=l[ucod==&quot;U07.1&quot;]
 
@@ -218,10 +218,8 @@ Part 1, line 2: J18.9 Pneumonia, unspecified</pre>
 &gt; sub[,length(unique(id))]
 [1] 2279</pre>
 <p>Here's a random sample of 4 out of the 2,279 people:</p>
-<pre>&gt; icd2=fread(&quot;https://sars2.net//f/wonderbyicd.csv.gz&quot;)[rowid(code)==1][,setNames(cause,code)]
-&gt; icd2[]=ifelse(nchar(icd2)&gt;80,paste0(substr(icd2,1,80),&quot;...&quot;),icd2)
-&gt; set.seed(0)
-&gt; sub[id%in%sample(unique(id),4),cat(paste0(&quot;Age &quot;,age[1],&quot;, UCD &quot;,ucod[1],&quot; &quot;,icd2[ucod[1]],&quot;:\n&quot;,paste0(ifelse(line==6,&quot;Part 2&quot;,paste0(&quot;Part 1, line &quot;,line)),&quot;: &quot;,code,&quot; &quot;,icd2[code],collapse=&quot;\n&quot;),&quot;\n\n&quot;)),id]
+<pre>&gt; set.seed(0)
+&gt; sub[id%in%sample(unique(id),4),cat(paste0(&quot;Age &quot;,age[1],&quot;, UCD &quot;,ucod[1],&quot; &quot;,icd[ucod[1]],&quot;:\n&quot;,paste0(ifelse(line==6,&quot;Part 2&quot;,paste0(&quot;Part 1, line &quot;,line)),&quot;: &quot;,code,&quot; &quot;,icd[code],collapse=&quot;\n&quot;),&quot;\n\n&quot;)),id]
 Age 28, UCD X42 Accidental poisoning by and exposure to narcotics and psychodysleptics [hallucin...:
 Part 1, line 1: T40.4 Other synthetic narcotics
 Part 1, line 1: X42 Accidental poisoning by and exposure to narcotics and psychodysleptics [hallucin...
@@ -583,32 +581,31 @@ t=fread(&quot;https://sars2.net/f/Rates_of_COVID-19_Cases_or_Deaths_by_Age_Group
 t=t[outcome==&quot;death&quot;&amp;vaccination_status==&quot;vaccinated&quot;&amp;age_group!=&quot;all_ages&quot;]
 
 # turn the column for age groups into a factor so it gets sorted properly
-age=unique(t$age_group)
-t[,age_group:=factor(age_group,age[order(as.integer(sub(&quot;[-+].*&quot;,&quot;&quot;,age)))])]
+t[,age_group:={x=unique(age_group);factor(age_group,x[order(as.integer(sub(&quot;[-+].*&quot;,&quot;&quot;,x)))])}]
 
 # calculate sum of weekly deaths and mean of weekly population sizes for each age group
-# calculate expected vaccinated deaths by multiplying vaccinated population with unvaccinated mortality rate
-a=t[,.(vaxpop=mean(vaccinated_population),unvaxpop=mean(unvaccinated_population),
-  vaxdead=sum(vaccinated_with_outcome),unvaxdead=sum(unvaccinated_with_outcome),
+# calculate expected vaccinated deaths by multiplying vaccinated population size with unvaccinated mortality rate
+a=t[,.(unvaxpop=mean(unvaccinated_population),vaxpop=mean(vaccinated_population),
+  unvaxdead=sum(unvaccinated_with_outcome),vaxdead=sum(vaccinated_with_outcome),
   expected_vax_dead=sum(unvaccinated_with_outcome/unvaccinated_population*vaccinated_population)),,age_group]
 
 # add a row for the total in all ages
 a=rbind(a,a[,lapply(.SD,sum),.SDcols=-1][,age_group:=&quot;Total&quot;])
 
 # how many times higher vaccinated deaths would&#39;ve been at unvaccinated mortality rates for each combination of age and week
-a[,ratio:=expected_vax_dead/vaxdead]
+a[,expected_vs_actual_vax_dead:=expected_vax_dead/vaxdead]
 
 print(mutate_at(mutate_at(a,2:6,round),7,round,1),r=F)
-# age_group   vaxpop unvaxpop vaxdead unvaxdead expected_vax_dead ratio
-#     0.5-4   210137  4796556       1        45                 2   1.8
-#      5-11  3053111  8680746       3        44                14   4.5
-#     12-17  5727495  4226753      14        87               111   8.0
-#     18-29 13083352  8004547     167       749              1094   6.6
-#     30-49 23799554  9128129    1427      5956             13781   9.7
-#     50-64 19330422  4335462    6703     16680             68197  10.2
-#     65-79 13739954  1318177   19918     28308            289130  14.5
-#       80+  3938661   625606   27745     24426            153419   5.5
-#     Total 82882686 41115976   55978     76295            525747   9.4</pre>
+# age_group unvaxpop   vaxpop unvaxdead vaxdead expected_vax_dead expected_vs_actual_vax_dead
+#     0.5-4  4796556   210137        45       1                 2                         1.8
+#      5-11  8680746  3053111        44       3                14                         4.5
+#     12-17  4226753  5727495        87      14               111                         8.0
+#     18-29  8004547 13083352       749     167              1094                         6.6
+#     30-49  9128129 23799554      5956    1427             13781                         9.7
+#     50-64  4335462 19330422     16680    6703             68197                        10.2
+#     65-79  1318177 13739954     28308   19918            289130                        14.5
+#       80+   625606  3938661     24426   27745            153419                         5.5
+#     Total 41115976 82882686     76295   55978            525747                         9.4</pre>
 <p>So even though my calculation included only a bit over a third of the US population and it only applied to the period of October 3rd 2021 to April 1st 2023, I still got 469,769 COVID deaths averted by vaccination (from <code>525747-55978</code>).</p>
 <p>On CDC WONDER the total number of deaths with underlying cause COVID was 292,316 in the period of October 3rd 2021 to April 1st 2023, 304,643 in earlier weeks of the MMWR year 2021, and 269,871 between April 2nd 2023 and February 28th 2025. [<a href="https://wonder.cdc.gov/mcd-icd10-provisional.html">https://wonder.cdc.gov/mcd-icd10-provisional.html</a>] So the period included in the CDC dataset only accounted for about 33.7% of all COVID deaths since the start of the MMWR year 2021.</p>
 <p>The average weekly number of people included in the CDC dataset is about 120 million, which is about 36.0% of the average US resident population estimate between October 2021 and March 2023:</p>
