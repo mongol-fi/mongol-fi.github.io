@@ -586,10 +586,10 @@ t=t[outcome==&quot;death&quot;&amp;vaccination_status==&quot;vaccinated&quot;&am
 age=unique(t$age_group)
 t[,age_group:=factor(age_group,age[order(as.integer(sub(&quot;[-+].*&quot;,&quot;&quot;,age)))])]
 
-# calculate sum of weekly deaths and mean of weekly population sizes by age group
+# calculate sum of weekly deaths and mean of weekly population sizes for each age group
 # calculate expected vaccinated deaths by multiplying vaccinated population with unvaccinated mortality rate
 a=t[,.(vaxpop=mean(vaccinated_population),unvaxpop=mean(unvaccinated_population),
-  vaxdead=sum(vaccinated_with_outcome),unvaxdead=sum(vaccinated_with_outcome),
+  vaxdead=sum(vaccinated_with_outcome),unvaxdead=sum(unvaccinated_with_outcome),
   expected_vax_dead=sum(unvaccinated_with_outcome/unvaccinated_population*vaccinated_population)),,age_group]
 
 # add a row for the total in all ages
@@ -598,17 +598,17 @@ a=rbind(a,a[,lapply(.SD,sum),.SDcols=-1][,age_group:=&quot;Total&quot;])
 # how many times higher vaccinated deaths would&#39;ve been at unvaccinated mortality rates for each combination of age and week
 a[,ratio:=expected_vax_dead/vaxdead]
 
-print(mutate_at(mutate_at(a,2:5,round),6,round,1),r=F)
-# age_group   vaxpop unvaxpop vaxdead expected_vax_dead ratio
-#     0.5-4   210137  4796556       1                 2   1.8
-#      5-11  3053111  8680746       3                14   4.5
-#     12-17  5727495  4226753      14               111   8.0
-#     18-29 13083352  8004547     167              1094   6.6
-#     30-49 23799554  9128129    1427             13781   9.7
-#     50-64 19330422  4335462    6703             68197  10.2
-#     65-79 13739954  1318177   19918            289130  14.5
-#       80+  3938661   625606   27745            153419   5.5
-#     Total 82882686 41115976   55978            525747   9.4</pre>
+print(mutate_at(mutate_at(a,2:6,round),7,round,1),r=F)
+# age_group   vaxpop unvaxpop vaxdead unvaxdead expected_vax_dead ratio
+#     0.5-4   210137  4796556       1        45                 2   1.8
+#      5-11  3053111  8680746       3        44                14   4.5
+#     12-17  5727495  4226753      14        87               111   8.0
+#     18-29 13083352  8004547     167       749              1094   6.6
+#     30-49 23799554  9128129    1427      5956             13781   9.7
+#     50-64 19330422  4335462    6703     16680             68197  10.2
+#     65-79 13739954  1318177   19918     28308            289130  14.5
+#       80+  3938661   625606   27745     24426            153419   5.5
+#     Total 82882686 41115976   55978     76295            525747   9.4</pre>
 <p>So even though my calculation included only a bit over a third of the US population and it only applied to the period of October 3rd 2021 to April 1st 2023, I still got 469,769 COVID deaths averted by vaccination (from <code>525747-55978</code>).</p>
 <p>On CDC WONDER the total number of deaths with underlying cause COVID was 292,316 in the period of October 3rd 2021 to April 1st 2023, 304,643 in earlier weeks of the MMWR year 2021, and 269,871 between April 2nd 2023 and February 28th 2025. [<a href="https://wonder.cdc.gov/mcd-icd10-provisional.html">https://wonder.cdc.gov/mcd-icd10-provisional.html</a>] So the period included in the CDC dataset only accounted for about 33.7% of all COVID deaths since the start of the MMWR year 2021.</p>
 <p>The average weekly number of people included in the CDC dataset is about 120 million, which is about 36.0% of the average US resident population estimate between October 2021 and March 2023:</p>
