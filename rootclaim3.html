@@ -73,6 +73,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Are_vaccine_deaths_underreported_or_overreported_at_VAERS>Are vaccine deaths underreported or overreported at VAERS?</a></li>
 <li><a href=#Response_by_Berliner_Zeitung_to_Ute_Kr_gers_article_about_turbo_cancer>Response by Berliner Zeitung to Ute Krüger's article about turbo cancer</a></li>
 <li><a href=#Estimate_of_COVID_deaths_averted_by_vaccination_based_on_English_ONS_data>Estimate of COVID deaths averted by vaccination based on English ONS data</a></li>
+<li><a href=#Estimate_of_COVID_deaths_averted_by_vaccination_in_the_United_States>Estimate of COVID deaths averted by vaccination in the United States</a></li>
 </ul></li>
 </ul>
 
@@ -574,6 +575,42 @@ system(&quot;for f in i[1-5].png;do convert $f -trim -bordercolor white -border 
 <pre>&gt; 236695*626550748.2/97175073
 [1] 1526126</pre>
 <p>I did not adjust my calculation to account for the different percentage of vaccinated people in England and the US or for the differences in age structure.</p>
+<h3>
+<a href=#Estimate_of_COVID_deaths_averted_by_vaccination_in_the_United_States id=Estimate_of_COVID_deaths_averted_by_vaccination_in_the_United_States>Estimate of COVID deaths averted by vaccination in the United States</a>
+</h3>
+<p>In the previous section I estimated the number of COVID deaths averted by vaccination in England, but here I apply the same method to data for the United States.</p>
+<p>The CDC has published a dataset which shows the number of COVID deaths by week, age group, and vaccination status: <a href="https://data.cdc.gov/Public-Health-Surveillance/Rates-of-COVID-19-Cases-or-Deaths-by-Age-Group-and/54ys-qyzm/about_data">https://data.cdc.gov/Public-Health-Surveillance/Rates-of-COVID-19-Cases-or-Deaths-by-Age-Group-and/54ys-qyzm/about_data</a>. The CDC dataset only includes data from October 3rd 2021 up to April 1st 2023. Partially vaccinated people are also excluded, because the dataset only includes unvaccinated people and people who had received the second dose at least 2 weeks ago. The dataset also includes only a subset of US jurisdictions, so the total population size included in the dataset ranges from about 107 million to 130 million depending on the week.</p>
+<p>In the CDC dataset there is a total of 55,978 COVID deaths in vaccinated people and 76,295 COVID deaths in unvaccinated people. In the code below I calculated that if vaccinated people would've had the same COVID mortality rate as unvaccinated people for each combination of week and age group, there would've been a total of 525,747 COVID deaths in vaccinated people, which is almost 10 times higher than the actual number of COVID deaths in vaccinated people:</p>
+<pre>t=fread(&quot;Rates_of_COVID-19_Cases_or_Deaths_by_Age_Group_and_Updated__Bivalent__Booster_Status_20241231.csv&quot;)
+t=t[outcome==&quot;death&quot;&amp;age_group!=&quot;all_ages&quot;&amp;vaccination_status==&quot;vaccinated&quot;]
+
+age=unique(t$age_group)
+t[,age_group:=factor(age_group,age[order(as.integer(sub(&quot;[-+].*&quot;,&quot;&quot;,age)))])]
+
+a=t[,.(vaxpop=mean(vaccinated_population),unvaxpop=mean(unvaccinated_population),vaxdead=sum(vaccinated_with_outcome),expected_vax_dead=sum(unvaccinated_with_outcome/unvaccinated_population*vaccinated_population)),,age_group]
+
+a=rbind(a,a[,lapply(.SD,sum),.SDcols=-1][,age_group:=&quot;Total&quot;])
+a[,ratio:=expected_vax_dead/vaxdead]
+print(mutate_at(mutate_at(a,2:5,round),6,round,1),r=F)
+# age_group   vaxpop unvaxpop vaxdead expected_vax_dead ratio
+#     0.5-4   210137  4796556       1                 2   1.8
+#      5-11  3053111  8680746       3                14   4.5
+#     12-17  5727495  4226753      14               111   8.0
+#     18-29 13083352  8004547     167              1094   6.6
+#     30-49 23799554  9128129    1427             13781   9.7
+#     50-64 19330422  4335462    6703             68197  10.2
+#     65-79 13739954  1318177   19918            289130  14.5
+#       80+  3938661   625606   27745            153419   5.5
+#     Total 82882686 41115976   55978            525747   9.4</pre>
+<p>So even though my calculation included only a bit over a third of the US population and it only applied to the period of October 3rd 2021 to April 1st 2023, I still got 469,769 COVID deaths averted by vaccination (from <code>525747-55978</code>).</p>
+<p>On CDC WONDER the total number of deaths with underlying cause COVID was 292,316 in the period of October 3rd 2021 to April 1st 2023, 304,643 in earlier weeks of the MMWR year 2021, and 269,871 between April 2nd 2023 and February 28th 2025. [<a href="https://wonder.cdc.gov/mcd-icd10-provisional.html">https://wonder.cdc.gov/mcd-icd10-provisional.html</a>] So the period included in the CDC dataset only accounted for about 33.7% of all COVID deaths since the start of the MMWR year 2021.</p>
+<p>The average number of people included in the CDC dataset was about 120 million, which is about 36.0% of the average US resident population estimate between October 2021 and March 2023:</p>
+<pre>&gt; t[,sum(vaccinated_population+unvaccinated_population),mmwr_week][,mean(V1)]
+[1] 119884655
+&gt; uspop=fread(&quot;http://sars2.net/f/uspopdeadmonthly.csv&quot;)
+&gt; uspop[date&gt;=&quot;2021-10&quot;&amp;date&lt;=&quot;2023-03&quot;,sum(pop),date][,mean(V1)]
+[1] 333297623</pre>
+<p>The calculation <code>469769/.337/.36</code> would give about 3.9 million COVID deaths averted by vaccination in the entire US population since the start of 2021, which is likely too high. But my calculation doesn't account for the healthy vaccinee effect. And it doesn't take into account that in early 2021 there were not yet as many people vaccinated as during the time period included in the CDC dataset. And my calculation also doesn't take into account that unvaccinated people acquired natural immunity over time, so compared to the period included in the CDC dataset, the ratio between unvaccinated and vaccinated COVID mortality was earlier higher but later lower.</p>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
