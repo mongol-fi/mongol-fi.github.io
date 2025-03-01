@@ -74,6 +74,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Response_by_Berliner_Zeitung_to_Ute_Kr_gers_article_about_turbo_cancer>Response by Berliner Zeitung to Ute Krüger's article about turbo cancer</a></li>
 <li><a href=#Estimate_of_COVID_deaths_averted_by_vaccination_based_on_English_ONS_data>Estimate of COVID deaths averted by vaccination based on English ONS data</a></li>
 <li><a href=#Estimate_of_COVID_deaths_averted_by_vaccination_in_the_United_States>Estimate of COVID deaths averted by vaccination in the United States</a></li>
+<li><a href=#Underreporting_factor_at_VAERS_in_light_of_Kirschs_Medicare_data>Underreporting factor at VAERS in light of Kirsch's Medicare data</a></li>
 </ul></li>
 <li><a href=#Kirschs_bulletproof_arguments>Kirsch's bulletproof arguments</a>
 <ul class=toc>
@@ -623,6 +624,100 @@ print(mutate_at(mutate_at(a,2:6,round),7,round,1),r=F)
 &gt; uspop[date&gt;=&quot;2021-10&quot;&amp;date&lt;=&quot;2023-03&quot;,sum(pop),date][,mean(V1)]
 [1] 333297623</pre>
 <p>The calculation <code>469769/.337/.36</code> would give about 3.9 million COVID deaths averted by vaccination in the entire US population since the start of 2021, which is likely too high. But my calculation doesn't account for the healthy vaccinee effect. And I didn't take into account that in early 2021 there were not yet as many people vaccinated as during the time period included in the CDC dataset. And I also didn't take into account that unvaccinated people acquired natural immunity over time, so compared to the period included in the CDC dataset, the ratio between unvaccinated and vaccinated COVID mortality was earlier higher but later lower.</p>
+<h3>
+<a href=#Underreporting_factor_at_VAERS_in_light_of_Kirschs_Medicare_data id=Underreporting_factor_at_VAERS_in_light_of_Kirschs_Medicare_data>Underreporting factor at VAERS in light of Kirsch's Medicare data</a>
+</h3>
+<p>Kirsch has an anonymous source who works at HHS who has given him several sets of data from Medicare, which includes a spreadsheet that shows the number of deaths by days since vaccination among people who were vaccinated in 2021. [<a href="https://kirschsubstack.com/p/data-from-us-medicare-and-the-new">https://kirschsubstack.com/p/data-from-us-medicare-and-the-new</a>]</p>
+<p>Kirsch originally published the spreadsheet on his S3 server in December 2023, but I uploaded the spreadsheet here so it's easier to download: <a href=f/COVID_vax_jan_feb_mar_2021_plus_ALL_deaths_in_medicare_per_day.xlsx>f/COVID_vax_jan_feb_mar_2021_plus_ALL_deaths_in_medicare_per_day.xlsx</a>.</p>
+<p>In the spreadsheet there is a greatly reduced number of deaths in the first days following vaccination due to the healthy vaccinee effect. The average number of deaths on days 100 to 365 since vaccination is about 4,047, but the average number of deaths on days 0-6 since vaccination is only about 1,763:</p>
+<div class="width8">
+<img src="i/rootclaim-vaersmed.png">
+</div>
+<p>The spreadsheet also shows the daily number of deaths in unvaccinated people, which also includes people who were actually vaccinated but who had no vaccination record known to Medicare:</p>
+<div class="width7">
+<img src="i/rootclaim-vaersmed-2.png">
+</div>
+<p>In the spreadsheet there is a total of 2,787,479 deaths in the year 2021, out of which 1,395,511 deaths were in unvaccinated people or people with no known vaccination record, but unvaccinated deaths are missing from January 2021.</p>
+<p>Medicare is generally only available to people aged 65 and above, but it is also available to younger people with certain medical conditions or disabilities. About 98% of the US population aged 65 and above is enrolled on Medicare. On CDC WONDER in the year 2021, there are 2,494,699 deaths among US residents aged 65 and above and 3,464,138 deaths in all ages.</p>
+<p>So the spreadsheet published by Kirsch seems to contain nearly all deaths in 2021 among US residents aged 65 and above.</p>
+<p>However in the spreadsheet there is such a low number of deaths in the days following vaccination that there are only 12,344 people who were vaccinated in 2021 but who died 0 to 6 days from vaccination.</p>
+<p>In contrast when I excluded non-US reports at VAERS, there were a total of 3,497 reports for people whose vaccine type was listed as COVID-19, whose vaccination date was in 2021, and whose date of death was within 0 to 6 days from vaccination: [<a href="https://vaers.hhs.gov/data/datasets.html">https://vaers.hhs.gov/data/datasets.html</a>]</p>
+<pre>t=do.call(rbind,lapply(2020:2024,\(i)
+  Reduce(merge,lapply(c(&quot;DATA&quot;,&quot;VAX&quot;,&quot;SYMPTOMS&quot;),\(x)fread(paste0(i,&quot;VAERS&quot;,x,&quot;.csv&quot;))))))
+
+d=t[VAX_TYPE==&quot;COVID19&quot;&amp;DATEDIED!=&quot;&quot;&amp;STATE!=&quot;FR&quot;] # FR is foreign reports
+d[,DATEDIED:=as.Date(DATEDIED,&quot;%m/%d/%Y&quot;)]
+d[,VAX_DATE:=as.Date(VAX_DATE,&quot;%m/%d/%Y&quot;)]
+d[year(VAX_DATE)==2021,sum(as.integer(DATEDIED-VAX_DATE)%in%0:6)] # 3497</pre>
+<p>So in Kirsch's spreadsheet there are only about 3.5 times more people who died within 0 to 6 days from vaccination than at VAERS (from <code>12344/3497</code>). So it doesn't seem to leave room for a 40-fold underreporting factor proposed by Kirsch, unless the proportion of unreported deaths is much lower during the first week from vaccination than during later weeks.</p>
+<p>Kirsch's spreadsheet is missing deaths in people who were not on Medicare which includes most people under the age of 65, and it's missing the time between vaccination and death for people who had no vaccination record known to Medicare. But his spreadsheet still probably includes data for the majority of US residents who died within 0 to 6 days from vaccination in 2021.</p>
+<p>The number of people who were vaccinated in 2021 and who died on the day of vaccination was 426 at VAERS and 738 in Kirsch's Medicare spreadsheet, so the figure in the Medicare spreadsheet is only about 1.7 times higher. On CDC WONDER there's a total of 3,464,138 deaths in 2021, so the daily average number of deaths is about 9,491, which is only about 22 times higher than the number of deaths at VAERS on the day of vaccination, which again doesn't seem to leave room for a 40-fold underreporting factor (unless the underreporting factor is lower on the day of vaccination than on subsequent days).</p>
+<p>On the day after vaccination, there's 906 deaths in VAERS and 1344 deaths in Kirsch's Medicare data, so the ratio is about 1.48 which is even lower than the ratio on the day of vaccination. However on subsequent days the ratio of deaths in deaths in the Medicare data to deaths in VAERS generally gets higher, until during days 50 to 300 it stabilizes to around 50 to 100 times more deaths in Medicare than VAERS:</p>
+<div class="width7">
+<img src="i/rootclaim-vaersmed-3.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>library(data.table);library(ggplot2)
+
+t=do.call(rbind,lapply(2020:2024,\(i)Reduce(merge,lapply(c(&quot;DATA&quot;,&quot;VAX&quot;,&quot;SYMPTOMS&quot;),\(x)fread(paste0(i,&quot;VAERS&quot;,x,&quot;.csv&quot;))))))
+
+d=t[VAX_TYPE==&quot;COVID19&quot;&amp;DATEDIED!=&quot;&quot;&amp;STATE!=&quot;FR&quot;]
+d[,DATEDIED:=as.Date(DATEDIED,&quot;%m/%d/%Y&quot;)]
+d[,VAX_DATE:=as.Date(VAX_DATE,&quot;%m/%d/%Y&quot;)]
+p=d[year(VAX_DATE)==2021,.(y=.N,z=2),.(x=as.integer(DATEDIED-VAX_DATE))]
+
+f=&quot;COVID_vax_jan_feb_mar_2021_plus_ALL_deaths_in_medicare_per_day.xlsx&quot;
+download.file(paste0(&quot;https://sars2.net/f/&quot;,f),f)
+med=setDT(read_excel(f,sheet=4))
+p=rbind(p,med[,.(x=`died_days_after`,y=`# deaths`,z=1)])
+
+xmin=0;xmax=500;ymin=0;ymax=5000;xbreak=0:10*50;ybreak=0:5*1000
+p=p[x%in%xmin:xmax]
+break2=seq(0,ymax,,5);lab2=c(&quot;1e-4&quot;,&quot;1e-3&quot;,&quot;0.01&quot;,&quot;0.1&quot;,&quot;1&quot;)
+
+p=na.omit(rbind(p,dcast(p,x~z,value.var=&quot;y&quot;)[x&gt;=0,.(x,y=`2`/`1`,z=3)]))
+
+note=stringr::str_wrap(paste0(&quot;Ratios on days 0 to 6: &quot;,p[z==3&amp;x&lt;7,paste(sprintf(&quot;%.2f&quot;,y),collapse=&quot;, &quot;)]),40)
+p[z==3,y:=(log10(y)+4)/4*ymax]
+
+p[,z:=factor(z,,c(&quot;Kirsch Medicare data&quot;,&quot;VAERS&quot;,&quot;Medicare-VAERS ratio&quot;))]
+
+ggplot(p,aes(x,y,z))+
+annotate(&quot;rect&quot;,xmin=xmin,xmax=xmax,ymin=ymin,ymax=ymax,linewidth=.4,fill=NA,color=&quot;black&quot;,lineend=&quot;square&quot;)+
+annotate(&quot;text&quot;,x=xmax*.027,y=ymax*.96,lineheight=.9,vjust=1,hjust=0,label=note,size=3.9,color=&quot;gray50&quot;)+
+geom_line(aes(color=z),linewidth=.6)+
+labs(x=&quot;Days since vaccination&quot;,y=&quot;Number of deaths&quot;,title=&quot;Deaths by days since vaccination among people vaccinated in 2021&quot;)+
+scale_x_continuous(limits=c(xmin,xmax),breaks=xbreak)+
+scale_y_continuous(limits=c(ymin,ymax),breaks=ybreak,sec.axis=sec_axis(trans=~.*1,breaks=break2,labels=lab2,name=&quot;Ratio (log scale)&quot;))+
+scale_color_manual(values=c(&quot;#f77&quot;,&quot;#77f&quot;,&quot;gray60&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(color=guide_legend(ncol=2,byrow=F))+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
+  axis.ticks.length=unit(4,&quot;pt&quot;),
+  axis.text.y.right=element_text(color=&quot;gray50&quot;),
+  axis.title.y.right=element_text(color=&quot;gray50&quot;),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.margin=margin(,,4),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  plot.margin=margin(5,5,5,5),
+  plot.title=element_text(size=11.3,face=2,margin=margin(2,,4)))
+ggsave(&quot;1.png&quot;,width=6,height=3.7,dpi=300*4)
+system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)
+</pre>
+</div>
 <h2>
 <a href=#Kirschs_bulletproof_arguments id=Kirschs_bulletproof_arguments>Kirsch's bulletproof arguments</a>
 </h2>
