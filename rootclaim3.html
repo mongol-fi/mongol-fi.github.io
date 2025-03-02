@@ -75,6 +75,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Estimate_of_COVID_deaths_averted_by_vaccination_based_on_English_ONS_data>Estimate of COVID deaths averted by vaccination based on English ONS data</a></li>
 <li><a href=#Estimate_of_COVID_deaths_averted_by_vaccination_in_the_United_States>Estimate of COVID deaths averted by vaccination in the United States</a></li>
 <li><a href=#Underreporting_factor_at_VAERS_in_light_of_Kirschs_Medicare_data>Underreporting factor at VAERS in light of Kirsch's Medicare data</a></li>
+<li><a href=#Percentage_of_cases_that_resulted_in_a_death_in_CDC_case_record_data>Percentage of cases that resulted in a death in CDC case record data</a></li>
 </ul></li>
 <li><a href=#Kirschs_bulletproof_arguments>Kirsch's bulletproof arguments</a>
 <ul class=toc>
@@ -716,13 +717,167 @@ theme(axis.text=element_text(size=11,color=&quot;black&quot;),
   plot.margin=margin(5,5,5,5),
   plot.title=element_text(size=11.3,face=2,margin=margin(2,,4)))
 ggsave(&quot;1.png&quot;,width=6,height=3.7,dpi=300*4)
-system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)
-</pre>
+system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
 </div>
+<h3>
+<a href=#Percentage_of_cases_that_resulted_in_a_death_in_CDC_case_record_data id=Percentage_of_cases_that_resulted_in_a_death_in_CDC_case_record_data>Percentage of cases that resulted in a death in CDC case record data</a>
+</h3>
+<p>Kirsch has been saying that the CFR went up in the United States in the first months after the vaccine rollout which shows that vaccines were not effective.</p>
+<p>The CDC has published two datasets which have one row for each COVID case with a total of about 106 million rows. One version of the dataset contains columns for state and county, but the number of deaths is suppressed for combinations of variables with 0-10 deaths so about 55% of deaths are suppressed to protect privacy: <a href="https://data.cdc.gov/Case-Surveillance/COVID-19-Case-Surveillance-Public-Use-Data-with-Ge/n8mc-b4w4/about_data">https://data.cdc.gov/Case-Surveillance/COVID-19-Case-Surveillance-Public-Use-Data-with-Ge/n8mc-b4w4/about_data</a>. The other version is missing columns for state and county but the deaths are not suppressed: <a href="https://data.cdc.gov/Case-Surveillance/COVID-19-Case-Surveillance-Public-Use-Data/vbim-akqf/about_data">https://data.cdc.gov/Case-Surveillance/COVID-19-Case-Surveillance-Public-Use-Data/vbim-akqf/about_data</a>.</p>
+<p>At first I tried using the suppressed version of the dataset to calculate CFR, but the deaths were more likely to be suppressed during periods with low COVID deaths which biased the results, so here I used the non-suppressed version of the dataset.</p>
+<p>Normally CFR is calculated by comparing aggregate statistics for the number of cases against the number of deaths, so the cases have to be shifted forwards or the deaths have to be shifted backwards to account for the delay between cases and deaths. For example in this US nursing home data, there was an upwards trend CFR during the first 8 weeks of 2021 when I didn't shift the cases, but it changed to a downwards trend when I shifted the cases forwards by 3 weeks:</p>
+<div class="width6">
+<img src="i/rootclaim-caserecord-1.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>system(&quot;wget https://data.cms.gov/sites/default/files/dataset_zips/ea365a77467a04182b55114c5791c2e3/COVID-19%20Nursing%20Home%20Data.zip;unzip &#39;COVID-19 Nursing Home Data.zip&#39;&quot;)
+
+library(data.table);library(ggplot2)
+
+ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
+
+d=fread(Sys.glob(&quot;COVID-19 Nursing Home Data/*/COVID-19 Nursing Home Data *.csv&quot;))
+setnames(d,&quot;Residents Weekly COVID-19 Deaths&quot;,&quot;dead&quot;)
+setnames(d,&quot;Residents Weekly Confirmed COVID-19&quot;,&quot;case&quot;)
+d[,date:=as.Date(`Week Ending`,&quot;%m/%d/%y&quot;)-3]
+a=d[,.(dead=sum(dead,na.rm=T),case=sum(case,na.rm=T)),date]
+
+a[,shifted1:=c(rep(0,1),head(case,-1))]
+a[,shifted2:=c(rep(0,2),head(case,-2))]
+a[,shifted3:=c(rep(0,3),head(case,-3))]
+
+lab=c(&quot;Unadjusted&quot;,paste0(&quot;Cases shifted forwards by &quot;,1:3,&quot; weeks&quot;))
+p=a[,.(x=rep(date,4),y=rep(ma(dead,1),2)/c(ma(case,1),ma(shifted1,1),ma(shifted2,1),ma(shifted3,1))*100,z=factor(rep(lab,each=.N),lab))][y!=Inf]
+
+xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
+xbreak=seq(xstart+182,xend,&quot;year&quot;)
+p=p[x%in%xstart:xend]
+yend=max(p$y,na.rm=T)
+
+ggplot(p,aes(x,y))+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),linewidth=.4,color=&quot;gray88&quot;,lineend=&quot;square&quot;)+
+geom_line(aes(color=z),linewidth=.6)+
+geom_point(aes(color=z),stroke=0,size=1.1)+
+labs(x=NULL,y=NULL,title=&quot;US nursing home data: COVID deaths as percentage of COVID cases\n(±1-week moving average)&quot;,caption=&quot;Source: data.cms.gov/covid-19/covid-19-nursing-home-data&quot;)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=year(xbreak))+
+scale_y_continuous(limits=c(0,yend),labels=\(x)paste0(x,&quot;%&quot;))+
+scale_color_manual(values=c(&quot;black&quot;,&quot;#b00&quot;,&quot;#f66&quot;,&quot;#fbb&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(color=guide_legend(ncol=1,byrow=F))+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.text.x=element_text(margin=margin(4)),
+  axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
+  axis.ticks.length=unit(4,&quot;pt&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.title=element_text(size=11,face=2),
+  axis.title.x=element_text(margin=margin(3)),
+  axis.title.y=element_text(margin=margin(,2)),
+  legend.background=element_blank(),
+  legend.box.background=element_rect(color=&quot;black&quot;,linewidth=.4),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.justification=c(1,1),
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.margin=margin(3,5,3,3),
+  legend.position=c(1,1),
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.4),
+  panel.grid.major=element_blank(),
+  plot.caption=element_text(size=11,color=&quot;gray50&quot;),
+  plot.margin=margin(5,5,5,5),
+  plot.title=element_text(size=11,face=2,margin=margin(,,4)))
+ggsave(&quot;1.png&quot;,width=5.52,height=3.3,dpi=300*4)
+system(&quot;magick 1.png -trim -resize 25% -bordercolor white -border 22 -colors 256 1.png&quot;)</pre>
+</div>
+<p>So based on the nursing home data, whether CFR went up or down in the first two months after the vaccine rollout depends on how much the cases are shifted.</p>
+<p>However CDC's case record data makes it possible to calculate CFR without having to shift the cases, and in CDC's data the percentage of cases that resulted in a death went down each month between December 2020 and March 2021:</p>
+<div class="width7">
+<img src="i/rootclaim-caserecord-2.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>library(data.table);library(ggplot2)
+
+t=fread(&quot;COVID-19_Case_Surveillance_Public_Use_Data_20250216.csv&quot;)
+a=t[,.N,.(date=cdc_case_earliest_dt,age=age_group,died=death_yn)]
+
+a[is.na(age),age:=&quot;Missing&quot;]
+a[,age:=sub(&quot;Years&quot;,&quot;years&quot;,(sub(&quot; - &quot;,&quot;-&quot;,age)))]
+a[,age:=factor(age,unique(age))]
+
+a[,month:=substr(as.Date(date,&quot;%Y/%m/%d&quot;),1,7)]
+a=a[month!=&quot;2020-01&quot;]
+
+a=a[,.(case=sum(count),dead=sum(count[died==&quot;Yes&quot;])),.(month,age)]
+a=rbind(a,a[,.(dead=sum(dead),case=sum(case),age=&quot;Total&quot;),month])
+a=a[age!=&quot;Missing&quot;][,age:=droplevels(age)]
+
+p=a[,.(x=as.Date(paste0(month,&quot;-1&quot;)),y=dead/case*100,age)]
+
+xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2023-1-1&quot;)
+p=p[x%in%xstart:xend];xbreak=seq(xstart+182,xend,&quot;year&quot;)
+
+ggplot(p,aes(x+15,y))+
+facet_wrap(~age,ncol=2,dir=&quot;v&quot;,scales=&quot;free&quot;)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),linewidth=.4,color=&quot;gray83&quot;)+
+geom_hline(data=p[,range(c(0,y)),age],aes(yintercept=V1),linewidth=.4,lineend=&quot;square&quot;)+
+geom_vline(xintercept=c(xstart,xend),linewidth=.4,lineend=&quot;square&quot;)+
+geom_line(linewidth=.6)+
+geom_point(stroke=0,size=1.1)+
+geom_label(data=p[,max(y),age],aes(label=age,y=V1),x=xend,lineheight=.5,hjust=1,vjust=1,size=3.6,fill=&quot;white&quot;,label.r=unit(0,&quot;pt&quot;),label.padding=unit(5,&quot;pt&quot;),label.size=.4)+
+labs(x=NULL,y=NULL,title=&quot;CDC case record data: Percentage of COVID cases that resulted in a death&quot;)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=year(xbreak))+
+scale_y_continuous(limits=c(0,NA),breaks=\(x)pretty(x,3),labels=\(x)paste0(x,&quot;%&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(color=guide_legend(nrow=1))+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.text.x=element_text(margin=margin(3)),
+  axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
+  axis.ticks.length=unit(4,&quot;pt&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.title=element_text(size=11,face=2),
+  axis.title.x=element_text(margin=margin(3)),
+  axis.title.y=element_text(margin=margin(,2)),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.justification=&quot;left&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.margin=margin(,,5),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.grid.major=element_blank(),
+  panel.spacing.x=unit(3,&quot;pt&quot;),
+  panel.spacing.y=unit(2,&quot;pt&quot;),
+  plot.caption=element_text(size=10,color=&quot;gray50&quot;),
+  plot.margin=margin(5,5,5,5),
+  plot.title=element_text(size=11,face=2,margin=margin(1,,4)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=5.97,height=5,dpi=300*4)
+
+sub=&quot;The x-axis shows the month of the cdc_case_earliest column, which is the earliest date out of report date, positive test date, and case onset date. The y-axis shows the percentage of case records where the value of the `death_yn` column was `Yes`. Source: CDC dataset \&quot;COVID-19 Case Surveillance Public Use Data\&quot;.&quot;
+system(paste0(&quot;magick 1.png -trim 1.png;w=`identify -format %w 1.png`;magick 1.png \\( -size $[w]x -font Arial -interline-spacing -3 -pointsize $[42*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -splice x80 \\) -append -resize 25% -bordercolor white -border 24 1.png&quot;))</pre>
+</div>
+<p>The plot above also shows that ages 80+ and 70-79 had higher CFR in late 2020 than during the Delta wave, but the age groups between 20-29 and 50-59 had much higher CFR during the Delta wave than in late 2020, which might be because the younger age groups had a much higher percentage of unvaccinated people during the Delta wave than the older age groups.</p>
 <h2>
 <a href=#Kirschs_bulletproof_arguments id=Kirschs_bulletproof_arguments>Kirsch's bulletproof arguments</a>
 </h2>
-<p>On February 10th 2025 UTC, Kirsch published a Substack post where he listed a few of his supposedly bulletproof arguments that the COVID vaccines offered no benefit in reducing mortality risk: <a href="https://kirschsubstack.com/p/my-bulletproof-arguments-that-the">https://kirschsubstack.com/p/my-bulletproof-arguments-that-the</a>. I'm not sure if his post was meant to be part of the Rootclaim debate or not, but I'll try to address some of the points he raised anyway.</p>
+<p>In February 2025 Kirsch published a Substack post where he presented his supposedly bulletproof arguments that the COVID vaccines did not reduce mortality risk: <a href="https://kirschsubstack.com/p/my-bulletproof-arguments-that-the">https://kirschsubstack.com/p/my-bulletproof-arguments-that-the</a>. I'm not sure if his post was meant to be part of the Rootclaim debate or not, but I'll try to address a couple of points he raised anyway.</p>
 <h3>
 <a href=#Israeli_study_by_Arbel_et_al_about_mortality_in_people_with_and_without_a_booster_dose id=Israeli_study_by_Arbel_et_al_about_mortality_in_people_with_and_without_a_booster_dose>Israeli study by Arbel et al. about mortality in people with and without a booster dose</a>
 </h3>
@@ -795,13 +950,14 @@ exp(coef(lm))[2] # 0.09523696</pre>
 <p>So they lied about R0. It amplified R0.</p>
 </blockquote>
 <p>However the explanation for why Israel and Denmark had a high number of cases per capita might be that they performed a much higher number of tests per capita than the United States. During the first two months of 2022, the number of tests per capita was about 5 times higher in both Denmark and Israel than the United States:</p>
-<pre>t=fread(&quot;owid-covid-data.csv&quot;)
-t[location%in%c(&quot;Israel&quot;,&quot;Denmark&quot;,&quot;United States&quot;)&amp;date&gt;=&quot;2022-1-1&quot;&amp;date&lt;=&quot;2022-2-28&quot;,.(new_tests_per_thousand=sum(new_tests_per_thousand,na.rm=T)),location]|&gt;print(r=F)
+<pre>t=fread(&quot;https://covid.ourworldindata.org/data/owid-covid-data.csv&quot;)
+d=t[location%in%c(&quot;Israel&quot;,&quot;Denmark&quot;,&quot;United States&quot;)&amp;date&gt;=&quot;2022-1-1&quot;&amp;date&lt;=&quot;2022-2-28&quot;]
+d[,.(new_tests_per_thousand=sum(new_tests_per_thousand,na.rm=T)),location]|&gt;print(r=F)
 #      location new_tests_per_thousand
 #       Denmark               1571.140
 #        Israel               1388.049
 # United States                295.654</pre>
-<p>If you look at COVID deaths instead of cases which is less sensitive to the number of tests performed, the 7-day moving average of deaths during the Omicron wave was slightly higher in the United States than in Denmark or Israel: [<a href="https://ourworldindata.org/explorers/covid?Metric=Confirmed+deaths&Interval=7-day+rolling+average&country=USA&#x7e;ISR~DNK">https://ourworldindata.org/explorers/covid?Metric=Confirmed+deaths&amp;Interval=7-day+rolling+average&amp;country=USA~ISR~DNK</a>]</p>
+<p>If instead of COVID cases you look at COVID deaths which is less sensitive to the number of tests performed, the peak 7-day moving average of deaths per capita during the Omicron wave was slightly higher in the United States than in Denmark or Israel: [<a href="https://ourworldindata.org/explorers/covid?Metric=Confirmed+deaths&Interval=7-day+rolling+average&country=USA&#x7e;ISR~DNK">https://ourworldindata.org/explorers/covid?Metric=Confirmed+deaths&amp;Interval=7-day+rolling+average&amp;country=USA~ISR~DNK</a>]</p>
 <div class="width6">
 <img src="i/rootclaim-dkis-3.png">
 </div>
