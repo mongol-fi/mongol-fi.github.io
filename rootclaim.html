@@ -1560,7 +1560,7 @@ merge(d,vax)[,cor(asmr/base,vax)] # 0.0689673</pre>
 <div class="width6">
 <img src="i/rootclaim-dowd-4.png">
 </div>
-<p>Another study published in 2025 looked at the rates of sudden cardiac arrest and sudden cardiac death among young athletes in the United States, but neither had a statistically significant difference when the years 2020-2022 were compared against the years 2017-2019: [<a href="https://jamanetwork.com/journals/jamanetworkopen/fullarticle/2830557">https://jamanetwork.com/journals/jamanetworkopen/fullarticle/2830557</a>]</p>
+<p>Another study published in 2025 looked at the rates of sudden cardiac arrest and sudden cardiac death among young athletes in the United States, but neither rate had a statistically significant difference between the years 2017-2019 and 2020-2022: [<a href="https://jamanetwork.com/journals/jamanetworkopen/fullarticle/2830557">https://jamanetwork.com/journals/jamanetworkopen/fullarticle/2830557</a>]</p>
 <div class="maxwidth">
 <img src=i/rootclaim-dowd-12.png class=width6><img src=i/rootclaim-dowd-13.png class=width6>
 </div>
@@ -1995,6 +1995,84 @@ base=us[year%in%2010:2019,.(base=predict(lm(dead/pop~year),.(year=2021))),age]
 a=merge(us[year==2021],base)[,base:=base*pop]
 a[age&gt;=65,sum(dead)-sum(base)]/a[,sum(dead)-sum(base)] # 0.568729</pre>
 </blockquote>
+<p>Added even later: Even from a plot of raw unadjusted deaths, it's easy to see how the bump in deaths during the Delta wave was much bigger in unvaccinated people than vaccinated people:</p>
+<div class="width6">
+<img src="i/rootclaim-medicareraw.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>library(data.table);library(ggplot2);library(readxl)
+
+ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
+
+f=&quot;http://sars2.net/f/COVID_vax_jan_feb_mar_2021_plus_ALL_deaths_in_medicare_per_day.xlsx&quot;
+
+s8=setDT(read_excel(f,sheet=8))
+p=s8[,.(x=as.Date(BENE_DEATH_DT),y=num_benes,z=3)]
+
+s5=setDT(read_excel(f,sheet=5))
+p=rbind(s5[,.(x=as.Date(BENE_DEATH_DT),y=NUM_BENES,z=1)],p)
+
+p=rbind(p,dcast(p,x~z,value.var=&quot;y&quot;)[,.(x,y=`1`-`3`,z=2)])
+
+p[,z:=factor(z,,c(&quot;All people&quot;,&quot;Vaccinated&quot;,&quot;Unvaccinated&quot;))]
+p[,y:=ma(y,3),z]
+
+xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
+xbreak=seq(xstart+182,xend,&quot;year&quot;)
+p=p[x%in%xstart:xend]
+ybreak=pretty(c(0,p$y),7)
+
+segx=seq(xstart,xend,&quot;month&quot;)
+
+ggplot(p,aes(x,y,z))+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray75&quot;,linewidth=.4)+
+annotate(&quot;segment&quot;,x=segx,xend=segx,y=0,yend=max(ybreak)*.025,color=&quot;gray75&quot;,linewidth=.4)+
+geom_line(aes(color=z),linewidth=.6)+
+labs(x=NULL,y=NULL,title=&quot;Daily deaths in United States among Medicare recipients&quot;)+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=xbreak,labels=year(xbreak))+
+scale_y_continuous(limits=range(ybreak),breaks=ybreak,labels=\(x)ifelse(x==0,x,paste0(x/1e3,&quot;k&quot;)))+
+scale_color_manual(values=c(&quot;black&quot;,&quot;#f66&quot;,&quot;#66f&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.text.x=element_text(margin=margin(4)),
+  axis.text.y=element_text(margin=margin(,3)),
+  axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(4,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.background=element_rect(color=&quot;black&quot;,linewidth=.4),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.justification=c(1,1),
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.margin=margin(3,5,3,3),
+  legend.position=c(1,1),
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.4),
+  panel.spacing=unit(2,&quot;pt&quot;),
+  plot.margin=margin(5,5,2,5),
+  plot.subtitle=element_text(margin=margin(,,5)),
+  plot.title=element_text(size=11,face=2,margin=margin(2,,4)))
+ggsave(&quot;1.png&quot;,width=5.3,height=2.8,dpi=300*4)
+
+sub=&quot;\u00a0    Source: kirschsubstack.com/p/data-from-us-medicare-and-the-new, spreadsheet \&quot;data-transparency/USA/Medicare/COVID vax jan feb mar 2021 plus ALL deaths in medicare per day.xlsx\&quot; (copied to sars2.net/f/COVID_vax_jan_feb_mar_2021_plus_
+ALL_deaths_in_medicare_per_day.xlsx).
+     All lines are moving averages where the window extends 3 days backwards and 3 days forwards.
+     Unvaccinated people also include people who were vaccinated but who had no vaccination record known to Medicare. The number of unvaccinated people decreases considerably in late 2021 and early 2022, when people whose primary course doses were not known to Medicare got a booster dose that was known to Medicare.
+     The Medicare dataset includes a total of 8,263,446 deaths in 2020-2022 which is about 82% of total deaths in the United States in 2020-2022 returned by CDC WONDER.
+     The vast majority of people under the age of 65 are excluded from the Medicare dataset, because Medicare is generally available to only people aged 65 and above, but it is also available to younger people with certain medical conditions or disabilities. About 98% of the US population aged 65 and above is enrolled on Medicare.&quot;
+
+system(paste0(&quot;mogrify -trim 1.png;magick 1.png \\( -size `identify -format %w 1.png`x -font Arial -interline-spacing -3 -pointsize $[40*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -splice x80 \\) -append -resize 25% -bordercolor white -border 24 -colors 256 1.png&quot;))</pre>
+</div>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
