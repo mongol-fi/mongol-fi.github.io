@@ -88,6 +88,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Hospitalizations_by_weeks_after_vaccination_in_new_UZIS_data>Hospitalizations by weeks after vaccination in new UZIS data</a></li>
 <li><a href=#Relative_risk_of_Moderna_and_Pfizer_in_low_COVID_months>Relative risk of Moderna and Pfizer in low-COVID months</a></li>
 <li><a href=#Case_fatality_ratio_in_new_UZIS_data>Case fatality ratio in new UZIS data</a></li>
+<li><a href=#Daily_raw_number_of_deaths_by_vaccination_status>Daily raw number of deaths by vaccination status</a></li>
 </ul>
 
 <h2>
@@ -2712,6 +2713,89 @@ theme(axis.text=element_text(size=11,color=&quot;black&quot;),
 ggsave(&quot;1.png&quot;,width=5.38,height=5.3,dpi=300*4)
 sub=&quot;Each line shows a ±2-week moving average cases that led to a COVID death for the given week divided by a ±2-week moving average of total cases for the same week, where the week is the week of a positive test result. The lines are not drawn on weeks where the ±2-week moving average of cases is below 5. COVID deaths are deaths listed in the `Umrti` column. The age groups were determined by subtracting the year of birth from 2020 so that aging over time was not accounted for. People are counted as vaccinated on the week of the first dose. Source: nzip.cz/data/2135-covid-19-prehled-populace.&quot;
 system(paste0(&quot;mar=$[24*4];w=`identify -format %w 1.png`;magick \\( 1.png -gravity southwest -chop 0x50 \\) \\( -size $[w-mar*2]x -font Arial -interline-spacing -3 -pointsize $[44*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -gravity southwest -splice $[mar]x$[20*4] \\) -append -resize 25% PNG8:1.png&quot;))</pre>
+</div>
+<h2>
+<a href=#Daily_raw_number_of_deaths_by_vaccination_status id=Daily_raw_number_of_deaths_by_vaccination_status>Daily raw number of deaths by vaccination status</a>
+</h2>
+<p>In December 2023 Kirsch published a spreadsheet he received from a source at HHS, which shows the daily number of deaths by vaccination status among people enrolled to Medicare. It shows that the spike in deaths during the Delta wave was much more pronounced in unvaccinated people than vaccinated people: [<a href=rootclaim.html#Post_by_Spiro_Pantazatos_for_mortality_by_state_during_the_Delta_wave>rootclaim.html#Post_by_Spiro_Pantazatos_for_mortality_by_state_during_the_Delta_wave</a>]</p>
+<div class="width6">
+<img src="i/rootclaim-medicareraw.png">
+</div>
+<p>I also tried making a similar plot for the Czech data. In the Czech Republic the Delta wave only peaked around November to December 2021, but even from the top panel below which shows the raw number of deaths, you can see that the increase in deaths during the Delta wave was much more pronounced in unvaccinated people than vaccinated people:</p>
+<div class="width6">
+<img src="i/czech-rawfacet.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>library(data.table);library(ggplot2);library(readxl)
+
+ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
+
+ages=c(0,3:9*5,50:89,18:20*5)
+
+t=fread(&quot;http://sars2.net/f/czbucketsdaily.csv.gz&quot;)
+t[,z:=ifelse(dose==0,3,2)]
+
+p=t[,.(y=as.double(sum(dead))),.(z,x=date)]
+p=rbind(p,p[,.(y=sum(y),z=1),x])[,type:=1]
+
+a=t[,.(dead=sum(dead),pop=sum(alive)),.(z,x=date,age=ages[findInterval(age,ages)])]
+a=rbind(a,a[,.(dead=sum(dead),pop=sum(pop),z=1),.(x,age)])
+a=merge(a,fread(&quot;http://sars2.net/f/czcensus2021pop.csv&quot;)[,std:=pop/sum(pop)][,.(std=sum(std)),.(age=ages[findInterval(age,ages)])])
+p=rbind(p,a[,.(y=sum(dead/pop*std*365e5),type=2),.(x,z)])
+
+p[,z:=factor(z,,c(&quot;All people&quot;,&quot;Vaccinated&quot;,&quot;Unvaccinated&quot;))]
+p[,type:=factor(type,,c(&quot;Deaths&quot;,&quot;Age-standardized mortality rate per 100,000 person-years&quot;))]
+p[,y:=ma(y,3),,.(type,z)]
+
+xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2023-1-1&quot;)
+xbreak=seq(xstart+182,xend,&quot;year&quot;)
+p=p[x%in%xstart:xend]
+ybreak=pretty(c(0,p$y),7)
+
+segx=seq(xstart,xend,&quot;month&quot;)
+
+ggplot(p,aes(x,y,z))+
+facet_wrap(~type,dir=&quot;v&quot;,scales=&quot;free&quot;)+
+geom_vline(xintercept=seq(xstart,xend,&quot;month&quot;),color=&quot;gray92&quot;,linewidth=.4)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;black&quot;,linewidth=.4)+
+geom_line(aes(color=z),linewidth=.6)+
+labs(x=NULL,y=NULL,title=&quot;Daily deaths and ASMR in Czech Republic (±3-day moving average)&quot;)+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=xbreak,labels=year(xbreak))+
+scale_y_continuous(limits=\(x)c(0,max(x)*1.02),breaks=\(x)pretty(x,6))+
+scale_color_manual(values=c(&quot;black&quot;,&quot;#f66&quot;,&quot;#66f&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.text.x=element_text(margin=margin(3)),
+  axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(4,&quot;pt&quot;),
+  legend.box.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;horizontal&quot;,
+  legend.justification=&quot;right&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.margin=margin(),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.4),
+  panel.spacing=unit(2,&quot;pt&quot;),
+  plot.margin=margin(5,5,5,5),
+  plot.title=element_text(hjust=1,size=11,face=2,margin=margin(2,,4)),
+  strip.background=element_blank(),
+  strip.text=element_text(margin=margin(,,4),size=11,hjust=0))
+ggsave(&quot;1.png&quot;,width=5.3,height=4.3,dpi=300*4)
+
+sub=&quot;Source: github.com/PalackyUniversity/uzis-data-analysis. People are counted as vaccinated from the day of the first dose. Partially vaccinated people are not excluded. The age groups used for ASMR were 0-14, single years of age for ages 50-89, and 5-year age groups for other ages. The resident population estimates in the 2021 census were used as the standard population.&quot;
+system(paste0(&quot;mogrify -trim 1.png;magick 1.png \\( -size `identify -format %w 1.png`x -font Arial -interline-spacing -3 -pointsize $[43*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -splice x80 \\) -append -resize 25% -bordercolor white -border 24 -colors 256 1.png&quot;))</pre>
 </div>
 <script>
 let q=document.querySelectorAll('a,code,pre')
