@@ -526,6 +526,10 @@ system(&quot;magick 0.png -resize 25% 1.png&quot;)</pre>
 <img src="i/czech-composition-2.png">
 </div>
 <p>In the plot above unvaccinated people have 174% excess mortality in December 2021 but 43% in September 2021, so it's an approximately 1.92-fold increase in mortality (from <code>(173.53+100)/(42.68+100)</code>). But vaccinated people only have an approximately 1.54-fold increase in mortality when December 2021 is compared to September 2021 (from <code>(5.46+100)/(-31.64+100)</code>). In the US Medicare data that Kirsch published in 2023, the spikes in deaths during COVID waves were also bigger in unvaccinated people than vaccinated people.</p>
+<div class="spoiler">
+<button>
+Show code
+</button>
 <pre>library(data.table)
 
 b=fread(&quot;http://sars2.net/f/czbuckets.csv.gz&quot;)[dose&lt;=4]
@@ -533,8 +537,8 @@ b[,dose:=ifelse(dose==0,&quot;Unvaccinated&quot;,paste(&quot;Dose&quot;,dose,&qu
 b2=fread(&quot;http://sars2.net/f/czbucketskeep.csv.gz&quot;)[dose%in%1:4][,dose:=paste0(&quot;Dose &quot;,dose,&quot; or more&quot;)]
 b=rbind(b,b2)[month&gt;=&quot;2020-12&quot;]
 
-me=merge(b,b[,.(base=sum(dead)/sum(alive)),.(age,month)])
-# me=merge(b,b[,.(base=sum(dead)/sum(alive)),age]) # use 2021-2022 total as baseline for each month
+me=merge(b,b[dose%like%&quot;Unvaccinated|1 or more&quot;,.(base=sum(dead)/sum(alive)),.(age,month)])
+# me=merge(b,b[dose%like%&quot;Unvaccinated|1 or more&quot;,.(base=sum(dead)/sum(alive)),age]) # use 2021-2022 total as baseline for each month
 
 a=me[,base:=base*alive][,.(alive=sum(alive),dead=sum(dead),base=sum(base)),.(month,dose)]
 a=rbind(a,a[,.(dead=sum(dead),alive=sum(alive),base=sum(base),month=&quot;Total&quot;),dose])
@@ -568,7 +572,8 @@ pheatmap::pheatmap(mpop,filename=&quot;i2.png&quot;,display_numbers=disp2,
   breaks=seq(0,maxcolor2,,256),
   sapply(seq(1,0,,256),\(i)rgb(i,i,i)))
 
-system(&quot;w=`identify -format %w i1.png`;pad=38;convert -gravity northwest -pointsize 41 -font Arial-Bold \\( -splice x24 -size $[w-pad]x caption:&#39;Czech record-level data: Excess mortality percent relative to total Czech population matched by age and observation month&#39; -extent $[w-pad]x -gravity center \\) i1.png -gravity northwest \\( -size $[w-40]x caption:&#39;Person-years by dose and month&#39; -extent $[w-pad]x -gravity center \\) i2.png -append 1.png&quot;)</pre>
+system(&quot;w=`identify -format %w i1.png`;pad=38;convert -gravity northwest -pointsize 40 -font Arial-Bold \\( -splice x24 -size $[w-pad]x caption:&#39;Czech record-level data: Excess mortality percent relative to total Czech population matched by age and observation month&#39; -extent $[w-pad]x -gravity center \\) i1.png -gravity northwest \\( -size $[w-40]x caption:&#39;Person-years by dose and month&#39; -extent $[w-pad]x -gravity center \\) i2.png -append 1.png&quot;)</pre>
+</div>
 <h2>
 <a href=#Triangle_plot_for_excess_mortality_by_month_of_vaccination_and_month_of_death id=Triangle_plot_for_excess_mortality_by_month_of_vaccination_and_month_of_death>Triangle plot for excess mortality by month of vaccination and month of death</a>
 </h2>
