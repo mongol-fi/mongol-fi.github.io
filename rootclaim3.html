@@ -76,6 +76,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Estimate_of_COVID_deaths_averted_by_vaccination_in_the_United_States>Estimate of COVID deaths averted by vaccination in the United States</a></li>
 <li><a href=#Underreporting_factor_at_VAERS_in_light_of_Kirschs_Medicare_data>Underreporting factor at VAERS in light of Kirsch's Medicare data</a></li>
 <li><a href=#Percentage_of_cases_that_resulted_in_a_death_in_CDC_case_surveillance_data>Percentage of cases that resulted in a death in CDC case surveillance data</a></li>
+<li><a href=#Yearly_deaths_at_NVSS_with_underlying_cause_related_to_vaccination>Yearly deaths at NVSS with underlying cause related to vaccination</a></li>
 </ul></li>
 <li><a href=#Kirschs_bulletproof_arguments>Kirsch's bulletproof arguments</a>
 <ul class=toc>
@@ -1012,6 +1013,120 @@ Drop
 </td>
 </tr>
 </table>
+<h3>
+<a href=#Yearly_deaths_at_NVSS_with_underlying_cause_related_to_vaccination id=Yearly_deaths_at_NVSS_with_underlying_cause_related_to_vaccination>Yearly deaths at NVSS with underlying cause related to vaccination</a>
+</h3>
+<p>The NVSS mortality data that can be queried through CDC WONDER has been published here as fixed-width text files: <a href="https://www.cdc.gov/nchs/nvss/mortality_public_use_data.htm">https://www.cdc.gov/nchs/nvss/mortality_public_use_data.htm</a>. At CDC WONDER the number of deaths is suppressed on rows with 1-9 deaths but the deaths are not suppressed in the fixed-width files.</p>
+<p>I came up with the list shown below of ICD codes that are potentially related to vaccine injury, but my list is probably missing some codes. Relative to a 2015-2019 average baseline, the NVSS files have about 130 extra deaths in 2021 for the code T88.1 (<span class="quote">"Other complications following immunization, not elsewhere classified"</span>), 140 for T88.7 (<span class="quote">"Unspecified adverse effect of drug or medicament"</span>), 193 for Y59.0 (<span class="quote">"Viral vaccines"</span>), and 13 for Y59.9 (<span class="quote">"Vaccine or biological substance, unspecified"</span>). However many death records include two or more of the codes. For underlying cause of death, the maximum yearly number of deaths for any of the codes shown below was 2 before 2021, but in 2021 there were 66 deaths with underlying cause Y59.0 (<span class="quote">"Viral vaccines"</span>) and 5 deaths with the underlying cause Y59.9 (<span class="quote">"Vaccine or biological substance, unspecified"</span>):</p>
+<div class="width13">
+<img src="i/rootclaim-nvssvax.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>v=fread(&quot;xz -dc http://sars2.net/f/vital.csv.xz&quot;)
+
+icd3=fread(text=&quot;code;cause
+Y62.3;Failure of sterile precautions during injection or immunization
+Y64.1;Contaminated medical or biological substance, injected or used for immunization&quot;)
+
+icd=fread(&quot;http://sars2.net/f/wondericd.csv&quot;)
+icd2=fread(&quot;http://sars2.net/f/wonderbyicd.csv.gz&quot;)[rowid(code)==1,.(code,cause)]
+icd=rbind(icd3,icd2,icd)[rowid(code)==1]
+
+a=v[,.(dead=c(sum(mcd),sum(ucd)),type=1:2),.(cause,year)]
+a=a[cause%like%&quot;Y59[089]|T88[01679]|Y623|Y641&quot;]
+a[,code:=ifelse(nchar(cause)==3,cause,sub(&quot;(...)(.)&quot;,&quot;\\1.\\2&quot;,cause))]
+a=merge(a[,cause:=NULL],icd)
+
+ar=a[,tapply(dead,.(type,paste0(code,&quot;: &quot;,cause),year),c)]
+ar[is.na(ar)]=0
+maxcolor=max(ar);exp=.7
+
+for(i in 1:2){
+  m=ar[i,,]
+  pheatmap::pheatmap(m^exp,filename=paste0(&quot;i&quot;,i,&quot;.png&quot;),display_numbers=round(m),
+    cluster_rows=F,cluster_cols=F,legend=F,cellwidth=19,cellheight=14,fontsize=9,fontsize_number=8,
+    border_color=NA,na_col=&quot;white&quot;,
+    number_color=ifelse(m^exp&gt;maxcolor^exp*.4,&quot;white&quot;,&quot;black&quot;),
+    breaks=seq(0,maxcolor^exp,,256),
+    sapply(seq(1,0,,256),\(i)rgb(i,i,i)))}
+
+system(paste0(&quot;w=`identify -format %w i1.png`;pad=20;magick -size $[w-pad*2]x -font Arial-Bold -pointsize 42 \\( caption:&#39;NVSS: Yearly deaths in United States with multiple cause of death possibly related to vaccination&#39; -font Arial caption:&#39;Multiple cause of death&#39; -splice $[pad]x10 \\) i1.png \\( caption:&#39;Underlying cause of death&#39; -splice $[pad]x \\) i2.png -append -trim -bordercolor white -border 24 -colorspace gray 1.png&quot;))</pre>
+</div>
+<p>So there seems to have been a genuine increase in deaths related to viral vaccines in 2021, even though it might be partially because more viral vaccines were administered in 2021 than in earlier years.</p>
+<p>The following code shows the list of causes of death for 8 random deaths in 2021 with the underlying cause Y59.0 (<span class="quote">"Viral vaccines"</span>). In the case of 5 of 8 deaths the immediate cause of death was T88.1 (<span class="quote">"Other complications following immunization, not elsewhere classified"</span>), but for the three other deaths the immediate causes were cardiac arrest, anaphylactic shock, and R99 (which is used for unknown or undefined cause of death):</p>
+<pre>system(&quot;wget https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/mortality/mort2021us.zip;unzip mort2021us.zip&quot;)
+
+t=setDT(readr::read_fwf(&quot;VS21MORT.DUSMCPUB_r20230320.txt&quot;,fwf_cols(restatus=c(20,20),age=c(70,73),ucod=c(146,149),cause1=c(165,170),cause2=c(172,177),cause3=c(179,184),cause4=c(186,191),cause5=c(193,198),cause6=c(200,205),cause7=c(207,212),cause8=c(214,219),cause9=c(221,226),cause10=c(228,233),cause11=c(235,240),cause12=c(242,247),cause13=c(249,254),cause14=c(256,261),cause15=c(263,268),cause16=c(270,275),cause17=c(277,282),cause18=c(284,289),cause19=c(291,296),cause20=c(298,303)),col_types=cols(cause14=col_character())))
+
+t=t[restatus!=4]
+t[,age:=ifelse(age%/%1000%in%c(1,9),age%%1000,0)]
+
+l=na.omit(t[,.(id=.I,age,pos=rep(1:20,each=.N),ucod,cause=unlist(.SD,,F)),.SDcols=patterns(&quot;cause&quot;)])
+
+l[,line:=substr(cause,1,1)][,code:=substr(cause,3,6)]
+
+ua=\(x,y,...){u=unique(x);y(u,...)[match(x,u)]}
+dotcode=\(x)ifelse(x%like%&quot;^ &quot;,substr(x,2,4),sub(&quot;(...)(.)&quot;,&quot;\\1.\\2&quot;,x))
+l[,code:=ua(code,dotcode)][,ucod:=ua(ucod,dotcode)]
+
+icd=fread(&quot;http://sars2.net/f/wondericd.csv&quot;)[,setNames(cause,code)]
+
+sub=l[id%in%id[ucod==&quot;Y59.0&quot;]]
+set.seed(0)
+sub[id%in%sample(unique(id),8),paste0(&quot;Age &quot;,age[1],&quot;, UCD &quot;,ucod[1],&quot; &quot;,icd[ucod[1]],&quot;:\n&quot;,paste0(ifelse(line==6,&quot;Part 2&quot;,paste0(&quot;Part 1, line &quot;,line)),&quot;: &quot;,code,&quot; &quot;,icd[code],collapse=&quot;\n&quot;)),id]$V1|&gt;writeLines(sep=&quot;\n\n&quot;)</pre>
+<!-- -->
+<pre>Age 73, UCD Y59.0 Viral vaccines:
+Part 1, line 1: R99 Other ill-defined and unspecified causes of mor...
+Part 1, line 2: T88.1 Other complications following immunization, not...
+Part 1, line 2: Y59.0 Viral vaccines
+Part 2: I25.1 Atherosclerotic heart disease
+Part 2: I10 Essential (primary) hypertension
+Part 2: E78.5 Hyperlipidaemia, unspecified
+Part 2: C61 Malignant neoplasm of prostate
+
+Age 73, UCD Y59.0 Viral vaccines:
+Part 1, line 1: T80.5 Anaphylactic shock due to serum
+Part 1, line 1: Y59.0 Viral vaccines
+Part 1, line 3: B24 Unspecified human immunodeficiency virus [HIV] ...
+
+Age 81, UCD Y59.0 Viral vaccines:
+Part 1, line 1: T88.1 Other complications following immunization, not...
+Part 1, line 1: Y59.0 Viral vaccines
+Part 1, line 2: I25.5 Ischaemic cardiomyopathy
+Part 1, line 3: E11.9 Non-insulin-dependent diabetes mellitus, withou...
+
+Age 74, UCD Y59.0 Viral vaccines:
+Part 1, line 1: I46.9 Cardiac arrest, unspecified
+Part 1, line 2: R58 Haemorrhage, not elsewhere classified
+Part 1, line 3: T88.1 Other complications following immunization, not...
+Part 1, line 3: Y59.0 Viral vaccines
+
+Age 90, UCD Y59.0 Viral vaccines:
+Part 1, line 1: T88.1 Other complications following immunization, not...
+Part 1, line 1: Y59.0 Viral vaccines
+Part 2: F01.9 Vascular dementia, unspecified
+
+Age 65, UCD Y59.0 Viral vaccines:
+Part 1, line 1: T88.1 Other complications following immunization, not...
+Part 1, line 1: Y59.0 Viral vaccines
+Part 2: E78.5 Hyperlipidaemia, unspecified
+Part 2: I10 Essential (primary) hypertension
+Part 2: K22.7 Barrett esophagus
+Part 2: I49.9 Cardiac arrhythmia, unspecified
+
+Age 66, UCD Y59.0 Viral vaccines:
+Part 1, line 1: T88.1 Other complications following immunization, not...
+Part 1, line 1: Y59.0 Viral vaccines
+
+Age 69, UCD Y59.0 Viral vaccines:
+Part 1, line 1: T88.1 Other complications following immunization, not...
+Part 1, line 1: Y59.0 Viral vaccines
+Part 2: F10.2 Mental and behavioural disorders due to use of ...
+Part 2: I10 Essential (primary) hypertension
+Part 2: N17.9 Acute renal failure, unspecified</pre>
 <h2>
 <a href=#Kirschs_bulletproof_arguments id=Kirschs_bulletproof_arguments>Kirsch's bulletproof arguments</a>
 </h2>
@@ -1023,8 +1138,8 @@ Drop
 <blockquote>
 <p>My favorite takedown articles is this research letter by Vinay Prasad which pointed out that a prominent study showing the vaccinated had 10X lower COVID mortality than the unvaccinated simply forgot to point out that the disparity happened during non-COVID periods as well.</p>
 <blockquote>
-<p>In one of the most important revelations of the pandemic, <a href=https://www.nejm.org/doi/full/10.1056/NEJMc2306683>Høeg et al. (2024)</a> pointed out that in <a href=https://pubmed.ncbi.nlm.nih.gov/34879190/>Arbel, 2021</a>, the non-COVID mortality (NCACM) differences <strong>more than completely accounted for the 94.6% lower mortality benefit claimed in the study</strong>. T<strong>he vaccine didn't reduce mortality at all; it increased it!</strong></p>
-<p>In their reply, Arbel et al. <strong>acknowledged the failure</strong>, and then tried unsuccessfully to rescue their result with <a href=https://www.nejm.org/doi/full/10.1056/NEJMc2306683>a ridiculous new analysis</a>. They never corrected their original paper to note that <strong>the difference in mortality happened in non-COVID periods</strong>.</p>
+<p>In one of the most important revelations of the pandemic, <a href=https://www.nejm.org/doi/full/10.1056/NEJMc2306683>Høeg et al. (2024)</a> pointed out that in <a href=https://pubmed.ncbi.nlm.nih.gov/34879190/>Arbel, 2021</a>, the non-COVID mortality (NCACM) differences more than completely accounted for the 94.6% lower mortality benefit claimed in the study. The vaccine didn't reduce mortality at all; it increased it!</p>
+<p>In their reply, Arbel et al. acknowledged the failure, and then tried unsuccessfully to rescue their result with <a href=https://www.nejm.org/doi/full/10.1056/NEJMc2306683>a ridiculous new analysis</a>. They never corrected their original paper to note that the difference in mortality happened in non-COVID periods.</p>
 </blockquote>
 </blockquote>
 <p>Kirsch wrote that <span class="quote">"the disparity happened during non-COVID periods as well"</span>. But the study by Arbel et al. did not even compare mortality during a COVID period and a non-COVID period. The study lasted from August 6th 2021 until September 29th 2021 which coincided with the Delta wave, so there was high COVID mortality in Israel during the entire period of the study. [<a href="https://ourworldindata.org/explorers/covid?Metric=Confirmed+deaths&Interval=7-day+rolling+average&country=~ISR">https://ourworldindata.org/explorers/covid?Metric=Confirmed+deaths&amp;Interval=7-day+rolling+average&amp;country=~ISR</a>]</p>
