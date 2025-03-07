@@ -1510,6 +1510,77 @@ year   vax asmr # ASMR per 100,000 person-years in May of each year
 2022 FALSE 1584</pre>
 <p>If you would've used the second half of 2022 as your low-COVID period then it wouldn't have been confounded as much by the temporal HVE. My code above shows the ratio between unvaccinated and vaccinated ASMR was about 3.4 in May 2021 but only about 1.8 in May 2022.</p>
 </blockquote>
+<p>In the English ONS data, the ratio between unvaccinated and vaccinated mortality is also elevated during the Delta wave in August 2021 and during the COVID wave in the winter of 2021-2022:</p>
+<div class="width7">
+<img src="i/rootclaim-czechrate-5.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>library(data.table);library(ggplot2)
+
+t=fread(&quot;http://sars2.net/f/ons.csv&quot;)
+t=rbind(t[ed==7&amp;month&lt;=&quot;2021-03&quot;],t[ed==9])
+t[,x:=as.Date(paste0(month,&quot;-15&quot;))]
+t[,vax:=factor(status!=&quot;Unvaccinated&quot;,,c(&quot;Unvaccinated&quot;,&quot;Vaccinated&quot;))]
+a=t[age!=&quot;Total&quot;,.(y=sum(dead)/sum(pop)*1e5),.(age,x,vax,cause)]
+a=rbind(a,t[age==&quot;Total&quot;&amp;status%like%&quot;accin&quot;,.(x,y=asmr,age=&quot;All ages&quot;,vax,cause)])
+
+p=a[cause!=&quot;Non-COVID-19 deaths&quot;]
+p[cause==&quot;Deaths involving COVID-19&quot;,cause:=&quot;COVID deaths&quot;]
+
+xstart=as.Date(&quot;2021-1-1&quot;);xend=as.Date(&quot;2023-6-1&quot;);xbreak=seq(xstart,xend,&quot;year&quot;)
+
+ggplot(p)+
+facet_wrap(~age,dir=&quot;v&quot;,scales=&quot;free_y&quot;,ncol=2)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray60&quot;,linewidth=.4)+
+geom_rect(data=p[,max(y),age],aes(xmin=xstart,xmax=xend,ymin=0,ymax=V1),linewidth=.4,fill=NA,color=&quot;black&quot;,lineend=&quot;square&quot;)+
+geom_line(aes(x,y,linetype=cause,color=vax))+
+geom_text(data=p[,max(y),age],aes(x=as.Date(&quot;2022-7-1&quot;),y=V1,label=age),hjust=.5,fontface=2,vjust=1.5,size=3.8)+
+labs(x=NULL,y=NULL,title=&quot;Monthly mortality rates in English ONS data&quot;)+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=xbreak,labels=year(xbreak))+
+scale_y_continuous(breaks=\(x){y=pretty(x,4);y[y&lt;.85*max(x)]},labels=\(x)ifelse(x&lt;1000,x,paste0(x/1e3,&quot;k&quot;)))+
+scale_color_manual(values=c(&quot;#66f&quot;,&quot;#f66&quot;,&quot;black&quot;))+
+scale_linetype_manual(values=c(&quot;solid&quot;,&quot;11&quot;))+
+scale_alpha_manual(values=1:0)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(color=guide_legend(order=1),linetype=guide_legend(order=2))+
+theme(axis.text=element_text(hjust=0,size=11,color=&quot;black&quot;),
+  axis.title=element_text(size=11,face=2),
+  axis.text.x=element_text(margin=margin(3)),
+  axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(4,&quot;pt&quot;),
+  legend.background=element_rect(color=&quot;black&quot;,linewidth=.4),
+  legend.box.margin=margin(,,2),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;horizontal&quot;,
+  legend.justification=&quot;right&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(21,&quot;pt&quot;),
+  legend.margin=margin(3,4,3,3),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.spacing=unit(2,&quot;pt&quot;),
+  plot.margin=margin(5,5,5,5),
+  plot.title=element_text(hjust=.5,size=11,face=2,margin=margin(2,,4)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=5.47,height=4.3,dpi=300*4)
+
+sub=&quot;The values for individual age groups are crude mortality rates per 100,000 person-years, and the values for all ages are age-standardized mortality rates per 100,000 person-years. The data was taken from Tables 1 and 2 of the ONS dataset \&quot;Deaths involving COVID-19 by vaccination status, England\&quot;. Data for the first three months of 2021 was taken from the July 2022 edition and data for other months was taken from the August 2023 edition. People are counted as vaccinated on the day of the first dose. COVID deaths are deaths where COVID was mentioned anywhere on the death certificate.&quot;
+system(paste0(&quot;mogrify -trim 1.png;magick 1.png \\( -size `identify -format %w 1.png`x -font Arial -interline-spacing -3 -pointsize $[43*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -splice x80 \\) -append -resize 25% -bordercolor white -border 24 -colors 256 1.png&quot;))</pre>
+</div>
+<p>This plot also shows how the ratio between unvaccinated and vaccinated mortality rate has one peak during the COVID wave in August 2021 and another peak during the COVID wave in the winter of 2021-2022, but the ratio is lower between the COVID waves:</p>
+<div class="width7">
+<img src="i/rootclaim-czechrate-6.png">
+</div>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
