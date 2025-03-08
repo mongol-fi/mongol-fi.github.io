@@ -1595,37 +1595,99 @@ system(paste0(&quot;mogrify -trim 1.png;magick 1.png \\( -size `identify -format
 <div class="width13">
 <img src="i/rootclaim-czechrate-7.png">
 </div>
-<p>Kirsch included only people born between 1950 and 1954 in his analysis. The new dataset has 672,876 rows where the year of birth is 1950-1954, which is 31 more than Kirsch's number of people alive at the start of the first week. I don't know what explains the difference. However the rows include 13,457 rows for second cases and 666 rows for third cases, so Kirsch should've subtracted them from his number of people alive:</p>
-<pre>&gt; system(&quot;wget https://data.mzcr.cz/data/distribuce/402/Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv&quot;)
-&gt; nzip=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv&quot;)
-&gt; nzip[RokNarozeni==&quot;1950-1954&quot;,.N,Infekce]
-   Infekce      N
-1:      NA 482237 # people with no case listed
-2:       1 176516 # people with 1 or more cases listed
-3:       2  13457 # people with 2 or more cases listed
-4:       3    666 # people with 3 cases listed (or possibly 3 or more cases)</pre>
-<p>The new dataset has one row for people with zero or one cases but multiple rows for people with multiple cases, even though for some reason the maximum case number is only 3, so I don't know if for example the case number of 4th and further cases is listed as 3.</p>
+<p>Kirsch included only people born between 1950 and 1954 in his analysis. The new dataset has 672,876 rows where the year of birth is between 1950 and 1954, which is 31 more than Kirsch's number of people alive at the start of the first week. I don't know what explains the difference. However the rows include 13,457 rows for second cases and 666 rows for third cases, so Kirsch should've subtracted them from his number of people alive:</p>
+<pre>system(&quot;wget https://data.mzcr.cz/data/distribuce/402/Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv&quot;)
+nzip=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv&quot;)
+nzip[RokNarozeni==&quot;1950-1954&quot;,.N,Infekce]
+#    Infekce      N
+# 1:      NA 482237 # people with no case listed
+# 2:       1 176516 # people with 1 or more cases listed
+# 3:       2  13457 # people with 2 or more cases listed
+# 4:       3    666 # people with 3 cases listed (or possibly 3 or more cases since case numbers only go up to 3)</pre>
 <p>People born in 1950-1954 were 70-74 years old on December 31st 2020, but the Czech resident population estimate for ages 70-74 on December 31st 2020 is 619,783. [<a href=czech.html#Deaths_and_population_estimates_by_single_year_of_age_from_Eurostat>czech.html#Deaths_and_population_estimates_by_single_year_of_age_from_Eurostat</a>] In the 2021 census on March 27th 2021, the population estimate of ages 70-74 was 618,629. [<a href="https://vdb.czso.cz/vdbvo2/faces/en/index.jsf?page=vystup-objekt&z=T&f=TABULKA&skupId=4449&katalog=33517&pvo=SLD21022-VSE&pvo=SLD21022-VSE&str=v335">https://vdb.czso.cz/vdbvo2/faces/en/index.jsf?page=vystup-objekt&amp;z=T&amp;f=TABULKA&amp;skupId=4449&amp;katalog=33517&amp;pvo=SLD21022-VSE&amp;pvo=SLD21022-VSE&amp;str=v335</a>] But even <code>672876-13457-666</code> is 658,753 which is much higher than the resident population estimates.</p>
 <p>The old record-level dataset has 678,999 people with a date of birth between 1950 and 1954, out of whom 13,419 have a date of death in 2020, which gives a population size of 665,580 at the start of 2021: [<a href="https://github.com/PalackyUniversity/uzis-data-analysis/tree/main/data">https://github.com/PalackyUniversity/uzis-data-analysis/tree/main/data</a>]</p>
-<pre>&gt; system(&quot;wget https://github.com/skirsch/Czech/raw/refs/heads/main/data/CR_records.csv.xz&quot;)
-&gt; rec=fread(&quot;CR_records.csv.xz&quot;)
-&gt; rec[Rok_narozeni%in%1950:1954][,.(total=.N,died2020=sum(year(DatumUmrti)==2020,na.rm=T))]
-    total died2020
-1: 678999    13419</pre>
+<pre>system(&quot;wget https://github.com/skirsch/Czech/raw/refs/heads/main/data/CR_records.csv.xz&quot;)
+rec=fread(&quot;CR_records.csv.xz&quot;)
+rec[Rok_narozeni%in%1950:1954][,.(total=.N,died2020=sum(year(DatumUmrti)==2020,na.rm=T))]
+#     total died2020
+# 1: 678999    13419</pre>
 <p>So I don't know why the number of people in the record-level datasets is much higher than the resident population estimates.</p>
-<p>By week 52 of 2021, Kirsch's spreadsheet has a population size of 651,074 people out of whom 81,470 are unvaccinated, so the percentage of unvaccinated people is about 12.5%. When I excluded rows for second and third cases, I got only 637,025 people who had not died by the end of week 52 of 2021 out of whom only 79,116 were unvaccinated, but because both the numerator and denominator were smaller, the percentage of unvaccinated people was 12.4% so it was still similar to Kirsch's spreadsheet:</p>
-<pre>&gt; nzip2=nzip[RokNarozeni==&quot;1950-1954&quot;][is.na(Infekce)|Infekce==1][DatumUmrtiLPZ==&quot;&quot;|DatumUmrtiLPZ&gt;&quot;2021-52&quot;]
-&gt; nzip2[,.(total=.N,unaccinated=sum(Datum_Prvni_davka==&quot;&quot;|Datum_Prvni_davka&gt;&quot;2021-52&quot;))]
-    total unaccinated
-1: 637025       79116</pre>
-<p>However the difference between the new and old record-level datasets is bigger, because on December 30th 2021 which is the middle day of week 52 of 2021, the old record-level dataset has 649,506 people alive out of whom 91,458 had no vaccine dose listed, so the percentage of unvaccinated people is about 14.1%:</p>
-<pre>&gt; rec=fread(&quot;CR_records.csv&quot;)
-&gt; d1=as.Date(&quot;2021-12-30&quot;)
-&gt; sub=rec[Rok_narozeni%in%1950:1954]
-&gt; sub[!(!is.na(DatumUmrti)&amp;DatumUmrti&lt;=d1),.(total=.N,unvaccinated=sum(!(!is.na(Datum_1)&amp;Datum_1&lt;=d1)))]
-    total unvaccinated
-1: 649506        91458</pre>
-<p>But regardless there's relatively few people with two or more cases listed, so I guess Kirsch's error of counting people with multiple cases multiple times doesn't make that much difference. It's a bigger problem that the mortality rates during his low-COVID period were heavily impacted by the temporal healthy vaccinee effect.</p>
+<p>By week 52 of 2021, Kirsch's spreadsheet has a population size of 651,074 people out of whom 81,470 are unvaccinated, so the percentage of unvaccinated people is about 12.5%. When I excluded rows for second and third cases, I got only 637,025 people who had not died by the end of week 52 of 2021 out of whom only 79,116 were unvaccinated, but because both the numerator and denominator were now smaller, the percentage of unvaccinated people was 12.4% so it was still similar to Kirsch's spreadsheet:</p>
+<pre>nzip2=nzip[RokNarozeni==&quot;1950-1954&quot;][is.na(Infekce)|Infekce==1][DatumUmrtiLPZ==&quot;&quot;|DatumUmrtiLPZ&gt;&quot;2021-52&quot;]
+nzip2[,.(total=.N,unaccinated=sum(Datum_Prvni_davka==&quot;&quot;|Datum_Prvni_davka&gt;&quot;2021-52&quot;))]
+#     total unaccinated
+# 1: 637025       79116</pre>
+<p>This plot also shows that Kirsch's error makes almost no difference in the ratio between unvaccinated and vaccinated mortality rate:</p>
+<div class="width7">
+<img src="i/rootclaim-czechrate-8.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>library(data.table);library(ggplot2)
+
+nzip=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv&quot;)
+t=nzip[RokNarozeni==&quot;1950-1954&quot;]
+t=t[!(Datum_Prvni_davka!=&quot;&quot;&amp;DatumUmrtiLPZ!=&quot;&quot;&amp;Datum_Prvni_davka&gt;DatumUmrtiLPZ)]
+t[,vax:=Datum_Prvni_davka!=&quot;&quot;&amp;Datum_Prvni_davka&lt;=DatumUmrtiLPZ]
+
+weeks=data.table(date=seq(as.Date(&quot;2019-1-1&quot;),as.Date(&quot;2024-12-31&quot;),1))
+weeks=weeks[,week:=format(date,&quot;%G-%V&quot;)][rowid(week)==4]
+setkey(weeks,&quot;week&quot;)
+
+t=rbind(t[,type:=1],t[!(!is.na(Infekce)&amp;Infekce&gt;1)][,type:=2])
+died=t[,.(vaxdead=sum(vax),unvaxdead=sum(!vax)),.(week=weeks[DatumUmrtiLPZ,date],type)]
+vax=t[,.(newvax=.N),.(week=weeks[Datum_Prvni_davka,date],type)]
+a=merge(died,vax,all=T)[!is.na(week)][is.na(newvax),newvax:=0]
+
+a[,unvaxpop:=totals[type]-cumsum(unvaxdead)-cumsum(newvax),type]
+a[,vaxpop:=cumsum(newvax)-cumsum(vaxdead),type]
+
+p=a[,.(x=week,type,y=(unvaxdead/unvaxpop)/(vaxdead/vaxpop))][y!=Inf]
+
+ybreak=pretty(p$y,7)
+xstart=as.Date(&quot;2021-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;);xbreak=seq(xstart+182,xend,&quot;year&quot;)
+
+p[,type:=factor(type,,c(&quot;People with multiple cases counted multiple times (like Kirsch)&quot;,&quot;People with multiple cases counted only once (corrected)&quot;))]
+
+ggplot(p,aes(x,y))+
+geom_hline(yintercept=ybreak,color=ifelse(ybreak==1,&quot;gray50&quot;,&quot;gray90&quot;),linewidth=.4)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),linewidth=.4,color=&quot;gray50&quot;,lineend=&quot;square&quot;)+
+geom_line(aes(color=type),linewidth=.6)+
+labs(x=NULL,y=NULL,title=&quot;Czech NZIP record-level data, people born between 1950 and 1954: Ratio\nbetween unvaccinated and vaccinated mortality rate&quot;)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=year(xbreak))+
+scale_y_continuous(breaks=ybreak)+
+scale_color_manual(values=c(&quot;#f33&quot;,&quot;#0b0&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.ticks=element_line(color=&quot;black&quot;,linewidth=.4),
+  axis.text.x=element_text(margin=margin(4)),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(4,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.justification=&quot;left&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.margin=margin(,,5),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.4),
+  panel.grid=element_blank(),
+  panel.spacing=unit(3,&quot;pt&quot;),
+  plot.margin=margin(5,5,5,5),
+  plot.title=element_text(size=11,face=&quot;bold&quot;,margin=margin(2,,3)))
+ggsave(&quot;1.png&quot;,width=5.8,height=3.6,dpi=300*4)
+
+system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
+</div>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
