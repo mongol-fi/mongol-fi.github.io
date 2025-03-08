@@ -69,6 +69,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Increase_in_N17_acute_renal_failure_deaths>Increase in N17 acute renal failure deaths</a></li>
 <li><a href=#Acute_renal_failure_deaths_in_other_countries>Acute renal failure deaths in other countries</a></li>
 <li><a href=#Did_excess_AKI_deaths_result_in_more_life_years_lost_than_COVID>Did excess AKI deaths result in more life years lost than COVID?</a></li>
+<li><a href=#Weekly_N17_AKI_deaths_and_switch_from_MICAR_to_MedCoder>Weekly N17 AKI deaths and switch from MICAR to MedCoder</a></li>
 <li><a href=#Cancer_deaths_under_two_ICD_codes_in_Minnesota>Cancer deaths under two ICD codes in Minnesota</a></li>
 <li><a href=#Increase_in_deaths_with_MCD_other_specified_disorders_of_skin_and_subcutaneous_tissue>Increase in deaths with MCD other specified disorders of skin and subcutaneous tissue</a></li>
 <li><a href=#Deaths_with_MCD_other_venous_embolism_and_thrombosis>Deaths with MCD other venous embolism and thrombosis</a></li>
@@ -758,6 +759,48 @@ lines(p$year,p$trend2,type=&quot;l&quot;,lty=2,col=&quot;gray60&quot;,lwd=1.5)
 legend(&quot;bottomleft&quot;,legend=leg,lty=c(1,2,2),col=c(&quot;black&quot;,&quot;black&quot;,&quot;gray60&quot;),lwd=1.5)
 dev.off()</pre>
 </div>
+<p>WelcomeTheEagle showed me this WHO dataset which has the yearly number of deaths by ICD code and age group in various countries: <a href="https://www.who.int/data/data-collection-tools/who-mortality-database">https://www.who.int/data/data-collection-tools/who-mortality-database</a>. It doesn't seem to have clear increase in N17 deaths in the past few years either:</p>
+<div class="width6">
+<img src="i/beaudoin-who.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>system(&quot;wget https://cdn.who.int/media/docs/default-source/world-health-data-platform/mortality-raw-data/{mort_country_codes,morticd10_part{3..6}}.zip;for x in mort*zip;do unzip $x;done&quot;)
+
+code=fread(&quot;country_codes&quot;)
+setnames(code,&quot;country&quot;,&quot;Country&quot;)
+
+t=do.call(rbind,lapply(Sys.glob(&quot;Morticd10_part[3-6]&quot;),\(x)fread(x)))
+t=merge(t,code)
+
+t[name==&quot;United Kingdom, England and Wales&quot;,name:=&quot;England and Wales&quot;]
+t[name==&quot;United Kingdom, Scotland&quot;,name:=&quot;Scotland&quot;]
+t[name==&quot;United States of America&quot;,name:=&quot;United States&quot;]
+
+a=t[Cause%like%&quot;N17&quot;,.(name,year=Year,dead=rowSums(.SD),Sex),.SDcols=patterns(&quot;^Deaths&quot;)]
+a=a[,.(dead=sum(dead,na.rm=T)),.(name,year)]
+a=a[year&gt;=2010]
+pick=a[year&lt;2023&amp;dead&gt;0,.N,name][N==max(N),name]
+pick=intersect(a[,sum(dead),name][order(-V1),name],pick)[1:20]
+a=a[name%in%pick][,name:=factor(name,pick)]
+
+m=a[,tapply(dead,.(name,year),c)]
+
+disp=kimi(m)
+m=m/apply(m,1,max,na.rm=T)
+
+pal=colorRampPalette(hsv(22/36,c(0,.6,.6),c(1,1,0)))(256)
+
+pheatmap::pheatmap(m,filename=&quot;1.png&quot;,display_numbers=disp,
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=17,cellheight=12,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;white&quot;,
+  number_color=ifelse(m&gt;=.5,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(0,1,,length(pal)),pal)
+
+system(&quot;magick 1.png -gravity center -extent 100%x100% 1.png;w=`identify -format %w 1.png`;pad=24;convert -gravity northwest -pointsize 41 -interline-spacing -2 -font Arial-Bold \\( -size $[w-pad*2]x caption:&#39;WHO: Yearly deaths with underlying cause N17 (acute renal failure)&#39; -splice $[pad]x14 \\) \\( -size $[w-pad*2]x -font Arial -pointsize 37 caption:&#39;Source: who.int/data/data-collection-tools/who-mortality-database. Countries with data missing during any year out of 2010-2022 were excluded. Top 20 countries shown sorted by total deaths. Each row has its own color scheme where the maximum value is black and zero is white.&#39; -splice $[pad]x10 \\) \\( 1.png -shave 0x6 \\) -append -dither none -colors 256 1.png&quot;)</pre>
+</div>
 <h2>
 <a href=#Did_excess_AKI_deaths_result_in_more_life_years_lost_than_COVID id=Did_excess_AKI_deaths_result_in_more_life_years_lost_than_COVID>Did excess AKI deaths result in more life years lost than COVID?</a>
 </h2>
@@ -818,6 +861,87 @@ kid=a[year&gt;=2020,.(dead=sum(dead)-sum(base*pop)),age]
 kid[,sum(dead)] # 51618.2 (total deaths)
 kid[,weighted.mean(ex[age+1],dead)] # 16.31 (average remaining life expectancy)
 kid[,sum(dead*ex[age+1])] # 841704.6 (total remaining life expectancy)</pre>
+<h2>
+<a href=#Weekly_N17_AKI_deaths_and_switch_from_MICAR_to_MedCoder id=Weekly_N17_AKI_deaths_and_switch_from_MICAR_to_MedCoder>Weekly N17 AKI deaths and switch from MICAR to MedCoder</a>
+</h2>
+<p>There's a sharp jump up in weekly N17 deaths between 2021 and 2022 which coincides with a sharp jump down in N28.8 deaths. There's also similar but smaller jumps between 2020 and 2021:</p>
+<div class="width6">
+<img src="i/beaudoin-weekly.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>t=fread(&quot;http://sars2.net/f/wondern17weekly.csv&quot;)
+
+t=merge(t,fread(&quot;http://sars2.net/f/wondericd.csv&quot;)[,.(cause=code,name=cause)])
+t[,cause:=paste0(cause,&quot;: &quot;,name)]
+
+p=dcast(t,week+cause~type,value.var=&quot;dead&quot;)
+p=p[,.(x=week-3,y=c(mcd,mcd-nafill(and,,0)),type=rep(1:2,each=.N),cause)]
+p[,type:=factor(type,,c(&quot;MCD COVID not subtracted&quot;,&quot;MCD COVID subtracted&quot;))]
+
+ybreak=pretty(p$y*1.1,7)
+xstart=as.Date(&quot;2018-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;);xbreak=seq(xstart+182,xend,&quot;year&quot;)
+
+ggplot(p,aes(x,y))+
+
+geom_hline(yintercept=ybreak,color=&quot;gray80&quot;,linewidth=.4)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),linewidth=.4,color=&quot;gray80&quot;,lineend=&quot;square&quot;)+
+geom_line(aes(color=cause,alpha=type),linewidth=.6)+
+labs(x=NULL,y=NULL,title=&quot;CDC WONDER: Weekly number of deaths by multiple cause of death&quot;)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=year(xbreak))+
+scale_y_continuous(breaks=ybreak)+
+scale_color_manual(values=hsv(c(0,12)/36,1,.8))+
+scale_alpha_manual(values=c(1,.5))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.title=element_text(size=11,face=2),
+  axis.text.x=element_text(margin=margin(3)),
+  axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(4,&quot;pt&quot;),
+  legend.background=element_rect(color=&quot;black&quot;,linewidth=.4),
+  legend.box=&quot;vertical&quot;,
+  legend.box.just=&quot;left&quot;,
+  legend.box.margin=margin(,,2),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.justification=c(0,1),
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(21,&quot;pt&quot;),
+  legend.margin=margin(3,4,3,3),
+  legend.position=c(0,1),
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.4),
+  panel.spacing=unit(2,&quot;pt&quot;),
+  plot.margin=margin(5,5,5,5),
+  plot.title=element_text(size=11,face=2,margin=margin(2,,4)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=6,height=4,dpi=300*4)
+system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
+</div>
+<p>The sudden jump between 2021 and 2022 might be because CDC switched from the old SuperMICAR and MICAR software to MedCoder. The jump between 2020 and 2021 might be if the CDC adopted a new set of coding rules used with the old system at the start of 2021.</p>
+<p>US death certificates do not contain ICD codes but the codes are assigned by semi-automatically by the CDC's National Center for Health Statistics. In the old MMDS system that was used by the NVSS up to 2021, first the SuperMICAR program converted the causes of death to an internal coding system, then MICAR converted the internal codes to ICD codes, then ACME assigned an underlying cause of death, and then TRANSAX combined redundant causes of death using the linkage provisions of the ICD. [<a href="https://www.cdc.gov/nchs/nvss/mmds/about_mmds.htm">https://www.cdc.gov/nchs/nvss/mmds/about_mmds.htm</a>] At the start of the year 2022, the CDC switched to a new system called MedCoder, where the SuperMICAR and MICAR components were replaced but the old ACME and TRANSAX components were retained.</p>
+<p>In a meeting in 2023, Robert Anderson who is the chief of the mortality statistics branch of the National Center for Health Statistics said the following: [<a href="https://ncvhs.hhs.gov/wp-content/uploads/2023/09/Transcript-Full-Committee-Meeting-July-19-2023.pdf">https://ncvhs.hhs.gov/wp-content/uploads/2023/09/Transcript-Full-Committee-Meeting-July-19-2023.pdf</a>]</p>
+<blockquote>
+<p>No ICD codes appears on the death certificates. It is all free text that gets reported. That is what we are asking. NCHS, as of 2011, does all of the cause-of-death coding. We take that text that is reported on the death certificate and we assign the ICD codes. Prior to 2011, some states did their own coding. But because of state budget issues, there were a lot of states that were asking us to take on the coding. There was a point at which we were not sure how much we needed to budget each year to do the codes. We centralized all of the coding starting in 2011. We - cause-of-death coding.</p>
+<p>The coding is largely automated. We currently use the software called MedCoder. This is a successor to a system called Mortality Medical Data System. Some of you may be familiar with software terms like SuperMICAR and MICAR. ACME and TRANSAX - those were the programs in that suite of software for MMDS.</p>
+<p>We implemented MedCoder and I will talk a little bit more in more detail about this in just a minute of how MedCoder works. We did that mainly - we made this transition mainly because with volume of deaths that we have to code, we really needed to increase the throughput of the system. MMDS was capable of coding 70 to 75 percent of records automatically. MedCoder is able to code about 85 percent - that is a really big deal with current volume of deaths that we have. We have roughly 3 million deaths so 15 percent of 3 million is still about 450,000 records that require manual review and some manual coding. At 75 percent, you are talking about 750,000. It was significant savings in terms of resources.</p>
+<p>[…]</p>
+<p>As I said before, all information on the death certificate that can be coded is coded and we store it. In addition, we store the text literals as well for quality control purposes and in case we need to look at something that perhaps does not have a code. We have done this with a lot of the drug mortality because the drug information in ICD-10 is not that detailed. We store all that information. And then of course, we return the codes that we produced to the states and retain a copy for national statistics.</p>
+<p>The turn-around time right now for coding and for the automated coding is a few hours at most. But for the manually coded records, it is right now taking us about 12 days on average to return information back to the states. The more records we can code automatically of course the better.</p>
+<p>Then with regard to MedCoder, MedCoder is based on some machine learning and natural language processing but also there are some rules-based programming that are retained from the old MMDS system.</p>
+<p>ACME and TRANSAX, which was the module that did the underlying cause selection has been retained in the MedCoder system. That is a rule-based - based on a set of decision tables that re used to select the underlying cause.</p>
+<p>The natural language processing and machine learning are used to interpret the medical terms that are reported on the death certificate to assign what we call the multiple cause codes that are then used for input to ACME to select the underlying cause of death.</p>
+<p>We implemented this fully in 2022.</p>
+</blockquote>
 <h2>
 <a href=#Cancer_deaths_under_two_ICD_codes_in_Minnesota id=Cancer_deaths_under_two_ICD_codes_in_Minnesota>Cancer deaths under two ICD codes in Minnesota</a>
 </h2>
