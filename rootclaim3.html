@@ -89,6 +89,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Initial_analysis>Initial analysis</a></li>
 <li><a href=#Comment_by_Kirsch_at_Substack>Comment by Kirsch at Substack</a></li>
 <li><a href=#Comparison_to_English_ONS_data>Comparison to English ONS data</a></li>
+<li><a href=#Comparison_to_Dutch_CBS_data>Comparison to Dutch CBS data</a></li>
 <li><a href=#Kirsch_counted_people_with_multiple_cases_multiple_times>Kirsch counted people with multiple cases multiple times</a></li>
 </ul></li>
 <li><a href=#New_analysis_of_Czech_data>New analysis of Czech data</a>
@@ -1588,6 +1589,137 @@ ggsave(&quot;1.png&quot;,width=5.47,height=4.3,dpi=300*4)
 
 sub=&quot;The values for individual age groups are crude mortality rates per 100,000 person-years, and the values for all ages are age-standardized mortality rates per 100,000 person-years. The data was taken from Tables 1 and 2 of the ONS dataset \&quot;Deaths involving COVID-19 by vaccination status, England\&quot;. Data for the first three months of 2021 was taken from the July 2022 edition and data for other months was taken from the August 2023 edition. People are counted as vaccinated on the day of the first dose. COVID deaths are deaths where COVID was mentioned anywhere on the death certificate.&quot;
 system(paste0(&quot;mogrify -trim 1.png;magick 1.png \\( -size `identify -format %w 1.png`x -font Arial -interline-spacing -3 -pointsize $[43*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -splice x80 \\) -append -resize 25% -bordercolor white -border 24 -colors 256 1.png&quot;))</pre>
+</div>
+<h3>
+<a href=#Comparison_to_Dutch_CBS_data id=Comparison_to_Dutch_CBS_data>Comparison to Dutch CBS data</a>
+</h3>
+<p>In February 2024 the Dutch Centraal Bureau voor de Statistiek published data for weekly COVID and non-COVID ASMR by vaccination status. They included one set of data where people were counted as vaccinated immediately after the first dose and another set where people were only counted as vaccinated two weeks after the second dose (or 4 weeks after the first dose in the case of vaccine types like J&amp;J that only had one dose). The data can be downloaded from the CSV files under sections 3.3.1 to 3.3.8 here: <a href="https://www.cbs.nl/nl-nl/longread/rapportages/2024/covid-vaccinatiestatus-en-sterfte/3-resultaten">https://www.cbs.nl/nl-nl/longread/rapportages/2024/covid-vaccinatiestatus-en-sterfte/3-resultaten</a>.</p>
+<p>The Dutch CBS data is similar to the Czech and English data in the sense that the ratio between unvaccinated and vaccinated ASMR was elevated during the COVID wave in the winter of 2021-2022:</p>
+<div class="width6">
+<img src="i/rootclaim-cbs.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>t=fread(&quot;http://sars2.net/f/dutch_cbs_aukema.csv&quot;)
+
+a=rbind(t[,cause:=&quot;All causes&quot;],t[covid==F][,cause:=&quot;Not COVID&quot;])
+a=a[,.(y=sum(asmr)),.(x=week_ending,status,cause,ltc=long_term_care)]
+
+p=a[,.(y=y[status==&quot;Unvaccinated&quot;]/y[status==&quot;Vaccinated&quot;]),.(x,z=cause,ltc)]
+p[,ltc:=factor(ltc,,c(&quot;Not in long-term care&quot;,&quot;In long-term care&quot;))]
+
+xstart=as.Date(&quot;2021-1-1&quot;);xend=as.Date(&quot;2023-1-1&quot;)
+xbreak=seq(xstart+182,xend,&quot;year&quot;)
+p=p[x%in%xstart:xend]
+ybreak=pretty(c(0,p$y),5)
+
+ggplot(p,aes(x,y,z))+
+facet_wrap(~ltc,dir=&quot;h&quot;,scales=&quot;free&quot;)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray75&quot;,linewidth=.4)+
+geom_hline(yintercept=ybreak,color=&quot;gray75&quot;,linewidth=.4)+
+geom_line(aes(color=z),linewidth=.6)+
+geom_label(data=p[rowid(ltc)==1],aes(x=xend,y=max(ybreak),label=ltc),fill=&quot;white&quot;,label.r=unit(0,&quot;pt&quot;),label.padding=unit(5,&quot;pt&quot;),label.size=.4,color=&quot;black&quot;,size=3.7,hjust=1,vjust=1)+
+labs(x=NULL,y=NULL,title=&quot;Dutch CBS data: Ratio between unvaccinated and vaccinated ASMR&quot;)+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=xbreak,labels=year(xbreak))+
+scale_y_continuous(limits=range(ybreak),breaks=ybreak)+
+scale_color_manual(values=c(&quot;black&quot;,&quot;#f99&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.text.x=element_text(margin=margin(4)),
+  axis.text.y=element_text(margin=margin(,3)),
+  axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(4,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;horizontal&quot;,
+  legend.justification=&quot;center&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.margin=margin(,,5),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(3,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.4),
+  panel.spacing=unit(2,&quot;pt&quot;),
+  plot.margin=margin(5,5,5,5),
+  plot.subtitle=element_text(margin=margin(,,5)),
+  plot.title=element_text(size=11,face=2,margin=margin(2,,3)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=5.25,height=3,dpi=300*4)
+system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
+</div>
+<p>In May 2021 when vaccinated people had low ASMR due to the temporal healthy vaccinee effect, the straggler effect caused unvaccinated people to have a spike in ASMR even though there was not a high number of COVID deaths. By September 2021 the temporal healthy vaccinee effect had worn out so vaccinated people now had much higher ASMR than in May 2021, and the ratio between unvaccinated and vaccinated ASMR was about 2.5. But during the COVID wave in December 2021, the ratio increased to about 3.0 because unvaccinated people had much higher COVID ASMR than vaccinated people:</p>
+<div class="width6">
+<img src="i/rootclaim-cbs-2.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>t=fread(&quot;http://sars2.net/f/dutch_cbs_aukema.csv&quot;)[,asmr:=asmr/7*365]
+t=t[long_term_care==F]
+a=rbind(t[,cause:=&quot;All causes&quot;],t[covid==F][,cause:=&quot;Not COVID&quot;])
+a=a[,.(y=sum(asmr)),.(x=week_ending,status,cause)]
+
+stat=c(&quot;Unvaccinated&quot;,&quot;Vaccinated&quot;)
+p=a[status%in%stat][,status:=factor(status,stat)]
+
+xstart=as.Date(&quot;2021-1-1&quot;);xend=as.Date(&quot;2023-1-1&quot;)
+xbreak=seq(xstart+182,xend,&quot;year&quot;)
+p=p[x%in%xstart:xend]
+ybreak=pretty(c(0,p$y),5)
+
+ggplot(p,aes(x,y,z))+
+geom_vline(xintercept=seq(xstart,xend,&quot;month&quot;),color=&quot;gray88&quot;,linewidth=.4)+
+geom_hline(yintercept=ybreak,color=&quot;gray88&quot;,linewidth=.4)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),linewidth=.4)+
+geom_line(aes(color=status,linetype=cause),linewidth=.6)+
+labs(x=NULL,y=NULL,title=&quot;Dutch CBS data: ASMR per 100,000 person-years (not long-term care)&quot;)+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=xbreak,labels=year(xbreak))+
+scale_y_continuous(limits=range(ybreak),breaks=ybreak)+
+scale_color_manual(values=c(&quot;#55f&quot;,&quot;#f55&quot;))+
+scale_linetype_manual(values=c(&quot;solid&quot;,&quot;11&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(color=guide_legend(order=1),linetype=guide_legend(order=2))+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.text.x=element_text(margin=margin(4)),
+  axis.text.y=element_text(margin=margin(,3)),
+  axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(4,&quot;pt&quot;),
+  legend.background=element_rect(color=&quot;black&quot;,linewidth=.4),
+  legend.box.margin=margin(,,3),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;horizontal&quot;,
+  legend.justification=&quot;center&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(24,&quot;pt&quot;),
+  legend.margin=margin(3,4,3,3),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(3,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.4),
+  panel.spacing=unit(2,&quot;pt&quot;),
+  plot.margin=margin(5,5,5,5),
+  plot.subtitle=element_text(margin=margin(,,5)),
+  plot.title=element_text(size=11,face=2,margin=margin(1,,4)))
+ggsave(&quot;1.png&quot;,width=5.6,height=3,dpi=300*4)
+
+sub=&quot;Source: cbs.nl/nl-nl/longread/rapportages/2024/covid-vaccinatiestatus-en-sterfte/3-
+resultaten. People are counted as vaccinated on the day of the first dose. People insured for long-term care were excluded.&quot;
+system(paste0(&quot;mogrify -trim 1.png;magick 1.png \\( -size `identify -format %w 1.png`x -font Arial -interline-spacing -3 -pointsize $[40*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -splice x80 \\) -append -resize 25% -bordercolor white -border 24 -colors 256 1.png&quot;))</pre>
 </div>
 <h3>
 <a href=#Kirsch_counted_people_with_multiple_cases_multiple_times id=Kirsch_counted_people_with_multiple_cases_multiple_times>Kirsch counted people with multiple cases multiple times</a>
