@@ -2111,7 +2111,7 @@ system(paste0(&quot;mogrify -trim 1.png;magick 1.png \\( -size `identify -format
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2);library(readxl)
+<pre>library(data.table);library(ggplot2)
 
 iso=data.table(date=as.Date(&quot;2019-1-1&quot;)+0:2e3)[,week:=format(date,&quot;%G-%V&quot;)][rowid(week)==4,setNames(date,week)]
 
@@ -2131,7 +2131,7 @@ p=rbind(p[,type:=1],fit[,.(x=`class&lt;-`(x,&quot;Date&quot;),y,age,type=2)])
 
 p[,type:=factor(type,,c(&quot;Ratio between unvaccinated and vaccinated CMR&quot;,&quot;Smoothed spline fitted against low-COVID periods&quot;))]
 
-yend=8;xstart=as.Date(&quot;2021-1-1&quot;);xend=as.Date(&quot;2023-1-1&quot;);xbreak=seq(xstart+182,xend,&quot;year&quot;);p=p[x%in%xstart:xend]
+yend=7;xstart=as.Date(&quot;2021-1-1&quot;);xend=as.Date(&quot;2023-1-1&quot;);xbreak=seq(xstart+182,xend,&quot;year&quot;);p=p[x%in%xstart:xend]
 
 hl=data.table(start=c(min(fit1)-3,min(fit2)-3,max(fit1)+4),end=c(max(fit1)+4,xend,min(fit2)-3))
 hl[,label:=factor(c(1,1,2),,c(&quot;Low-COVID period&quot;,&quot;High-COVID period&quot;))]
@@ -2152,9 +2152,9 @@ geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray50&quot;
 geom_rect(data=hl,aes(xmin=start,xmax=end,fill=label),ymin=0,ymax=Inf,alpha=.3,linewidth=.15)+
 geom_line(aes(x,y,color=type),linewidth=.6)+
 geom_label(data=p[rowid(age)==1],aes(label=age),x=xend,y=yend,fill=&quot;white&quot;,label.r=unit(0,&quot;pt&quot;),label.padding=unit(4,&quot;pt&quot;),label.size=.4,size=3.8,hjust=1,vjust=1)+
-labs(x=NULL,y=NULL,title=&quot;Czech Republic: Ratio between unvaccinated and vaccinated CMR by age group&quot;,subtitle=paste0(&quot;The number in parentheses shows extra deaths in unvaccinated people during the high-COVID period relative to the green baseline (total &quot;,round(sum(saved)),&quot;)&quot;)|&gt;stringr::str_wrap(80))+
+labs(x=NULL,y=NULL,title=&quot;Czech Republic: Ratio between unvaccinated and vaccinated CMR by age group&quot;,subtitle=paste0(&quot;The number in parentheses shows extra deaths in unvaccinated people during the high-COVID period relative to the green baseline (total &quot;,round(sum(saved)),&quot;).&quot;)|&gt;stringr::str_wrap(80))+
 scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=xbreak,labels=year(xbreak))+
-scale_y_continuous(limits=c(0,yend),breaks=seq(1,7,2))+
+scale_y_continuous(limits=c(0,yend),breaks=seq(1,6,2),sec.axis=dup_axis())+
 scale_color_manual(values=c(&quot;black&quot;,&quot;#0a0&quot;))+
 scale_fill_manual(values=c(&quot;#7c7&quot;,&quot;#faa&quot;))+
 coord_cartesian(clip=&quot;off&quot;,expand=F)+
@@ -2186,12 +2186,12 @@ theme(axis.text=element_text(size=11,color=&quot;black&quot;),
   strip.background=element_blank(),
   strip.text=element_blank())
 ggsave(&quot;1.png&quot;,width=6.2,height=4.6,dpi=300*4)
-sub=&quot;Source: github.com/PalackyUniversity/uzis-data-analysis. People are counted as vaccinated from the day of the first dose, and partially vaccinated people are not excluded.&quot;
+sub=&quot;Source: github.com/PalackyUniversity/uzis-data-analysis. People are counted as vaccinated from the day of the first dose, and partially vaccinated people are not excluded. The crude mortality rates were calculated using moving averages for both deaths and population where the window extended 1 week backwards and 1 weeks forwards.&quot;
 system(paste0(&quot;mogrify -trim 1.png;magick 1.png \\( -size `identify -format %w 1.png`x -font Arial -interline-spacing -3 -pointsize $[43*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -splice x80 \\) -append -resize 25% -bordercolor white -border 24 -dither none -colors 256 1.png&quot;))</pre>
 </div>
 <p>I got a total of 10,720 extra deaths in unvaccinated people during the high-COVID period. When I applied my previous method of estimating lives saved based on COVID deaths to the same period of weeks, it gave me a total of 28,953 lives saved.</p>
-<p>It took me a while to figure out why the number of deaths was now only about a third of the number using my previous method. But then I realized it was because in the elderly age groups with the most COVID deaths, the vaccinated population size was bigger than the unvaccinated population size. And the bigger number using my previous methodology represented the lives saved in vaccinated people relative to a counterfactual scenario where no-one was vaccinated, so it was a product of the vaccinated population size. But the smaller number using my new methodology represented the number of extra deaths in unvaccinated people, so it was a product of the unvaccinated population size.</p>
-<p>In the following code I modified my new method so that instead I calculated the lives saved in vaccinated people relative to a counterfactual scenario where vaccinated people had the same relative increase in mortality as unvaccinated people. So I now multiplied the ratio between unvaccinated and vaccinated CMR with the number of deaths in vaccinated people and then I subtracted the actual deaths in vaccinated people. However I still got only 19,368 lives saved which was lower than the figure based on my earlier methodology, but I don't know why:</p>
+<p>It took me a while to figure out why the number of deaths was now only about a third of the number using my previous method. But then I realized it was because in the elderly age groups with the most COVID deaths, the vaccinated population size was bigger than the unvaccinated population size. And the bigger number I calculated with my previous methodology represented the lives saved in vaccinated people relative to a counterfactual scenario where no-one was vaccinated, so it was a product of the vaccinated population size. But the smaller number I calculated with my new methodology represented the number of extra deaths in unvaccinated people, so it was a product of the unvaccinated population size.</p>
+<p>In the following code I modified my new method so that instead I calculated the lives saved in vaccinated people relative to a counterfactual scenario where vaccinated people had the same relative increase in mortality as unvaccinated people. So I now divided the ratio between unvaccinated and vaccinated CMR with the baseline spline ratio, I multiplied the result by the number of deaths in vaccinated people, and I subtracted the actual deaths in vaccinated people. However I still got only 19,368 lives saved which was lower than the figure based on my earlier methodology, but I don't know why:</p>
 <pre># divide ages to age groups
 ages=c(0,25,40,50,seq(60,95,5))
 agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
