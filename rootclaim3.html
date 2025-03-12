@@ -1339,52 +1339,52 @@ Vaccine
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2);library(readxl)
+<pre>library(data.table);library(ggplot2)
 
 ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
 
-ages=c(0,3:9*5,50:89,18:20*5)
+cul=\(x,y)y[cut(x,c(y,Inf),,T,F)]
+ages=c(0,seq(15,45,5),50:89,seq(90,100,5))
 
 t=fread(&quot;http://sars2.net/f/czbucketsdaily.csv.gz&quot;)
-t[,z:=ifelse(dose==0,3,2)]
+t[,dose:=pmin(dose,1)]
 
-p=t[,.(y=as.double(sum(dead))),.(z,x=date)]
-p=rbind(p,p[,.(y=sum(y),z=1),x])[,type:=1]
+p=t[,.(y=sum(dead)),.(dose,x=date)]
+p=rbind(p,p[,.(y=sum(y),dose=2),x])[,facet:=1]
 
-a=t[,.(dead=sum(dead),pop=sum(alive)),.(z,x=date,age=ages[findInterval(age,ages)])]
-a=rbind(a,a[,.(dead=sum(dead),pop=sum(pop),z=1),.(x,age)])
-a=merge(a,fread(&quot;http://sars2.net/f/czcensus2021pop.csv&quot;)[,std:=pop/sum(pop)][,.(std=sum(std)),.(age=ages[findInterval(age,ages)])])
-p=rbind(p,a[,.(y=sum(dead/pop*std*365e5),type=2),.(x,z)])
+a=t[,.(dead=sum(dead),pop=sum(alive)),.(dose,x=date,age=cul(age,ages))]
+a=rbind(a,a[,.(dead=sum(dead),pop=sum(pop),dose=2),.(x,age)])
+std=fread(&quot;http://sars2.net/f/czcensus2021pop.csv&quot;)
+a=merge(a,std[,std:=pop/sum(pop)][,.(std=sum(std)),.(age=cul(age,ages))])
+p=rbind(p,a[,.(y=sum(dead/pop*std*365e5),facet=2),.(x,dose)])
 
-p[,z:=factor(z,,c(&quot;All people&quot;,&quot;Vaccinated&quot;,&quot;Unvaccinated&quot;))]
-p[,type:=factor(type,,c(&quot;Deaths&quot;,&quot;Age-standardized mortality rate per 100,000 person-years&quot;))]
-p[,y:=ma(y,3),,.(type,z)]
+p[,y:=ma(y,3),,.(facet,dose)]
 
-p=rbind(p,dcast(p[type%like%&quot;Age&quot;],x~z,value.var=&quot;y&quot;)[,.(x,y=Unvaccinated/Vaccinated,type=&quot;Unvaccinated to vaccinated ASMR ratio&quot;,z=&quot;All people&quot;)][y&lt;5])
+p=rbind(p,dcast(p[facet==2],x~dose,value.var=&quot;y&quot;)[,.(x,y=`0`/`1`,facet=3,dose=2)][y&lt;5])
 
-xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2023-1-1&quot;)
-xbreak=seq(xstart+182,xend,&quot;year&quot;)
+p[,dose:=factor(dose,,c(&quot;Unvaccinated&quot;,&quot;Vaccinated&quot;,&quot;All people&quot;))]
+p[,facet:=factor(facet,,c(&quot;Deaths&quot;,&quot;Age-standardized mortality rate per 100,000 person-years&quot;,&quot;Unvaccinated to vaccinated ASMR ratio&quot;))]
+
+xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2023-1-1&quot;);xbreak=seq(xstart+182,xend,&quot;year&quot;)
 p=p[x%in%xstart:xend]
 ybreak=pretty(c(0,p$y),7)
 
-segx=seq(xstart,xend,&quot;month&quot;)
-
 hl=data.table(start=as.Date(c(&quot;2021-6-14&quot;,&quot;2021-10-4&quot;)),end=as.Date(c(&quot;2021-9-26&quot;,&quot;2022-5-8&quot;)))
-hl[,label:=c(&quot;Kirsch zero-COVID period&quot;,&quot;Kirsch high-COVID period&quot;)][,label:=factor(label,unique(label))]
+hl[,label:=factor(1:2,,c(&quot;Kirsch low-COVID period&quot;,&quot;Kirsch high-COVID period&quot;))]
 
 ggplot(p)+
-facet_wrap(~type,dir=&quot;v&quot;,scales=&quot;free&quot;)+
+facet_wrap(~facet,dir=&quot;v&quot;,scales=&quot;free&quot;)+
 geom_vline(xintercept=seq(xstart,xend,&quot;month&quot;),color=&quot;gray92&quot;,linewidth=.4)+
 geom_rect(data=hl,aes(xmin=start,xmax=end,fill=label),ymin=0,ymax=Inf,alpha=.4,linewidth=.15)+
 geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;black&quot;,linewidth=.4)+
-geom_line(aes(x,y,color=z),linewidth=.6)+
+geom_line(aes(x,y,color=dose),linewidth=.6)+
 labs(x=NULL,y=NULL,title=&quot;Daily deaths and ASMR in Czech Republic (±3-day moving average)&quot;)+
 scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=xbreak,labels=year(xbreak))+
 scale_y_continuous(limits=\(x)c(0,max(x)*1.02),breaks=\(x)pretty(x,4))+
-scale_color_manual(values=c(&quot;black&quot;,&quot;#f66&quot;,&quot;#66f&quot;))+
+scale_color_manual(values=c(&quot;#66f&quot;,&quot;#f66&quot;,&quot;black&quot;))+
 scale_fill_manual(values=c(&quot;#7c7&quot;,&quot;#faa&quot;))+
 coord_cartesian(clip=&quot;off&quot;,expand=F)+
-guides(fill=guide_legend(keyheight=unit(1,&quot;pt&quot;),order=2),color=guide_legend(order=1))+
+guides(color=guide_legend(order=1),fill=guide_legend(keyheight=unit(1,&quot;pt&quot;),order=2))+
 theme(axis.text=element_text(size=11,color=&quot;black&quot;),
   axis.text.x=element_text(margin=margin(3)),
   axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
@@ -1393,15 +1393,16 @@ theme(axis.text=element_text(size=11,color=&quot;black&quot;),
   legend.box.background=element_blank(),
   legend.box.spacing=unit(0,&quot;pt&quot;),
   legend.box=&quot;vertical&quot;,
+  legend.box.just=&quot;right&quot;,
   legend.direction=&quot;horizontal&quot;,
   legend.justification=&quot;right&quot;,
   legend.key=element_blank(),
   legend.key.height=unit(13,&quot;pt&quot;),
   legend.key.width=unit(26,&quot;pt&quot;),
-  legend.margin=margin(,,2),
+  legend.margin=margin(,,3),
   legend.position=&quot;top&quot;,
-  legend.spacing.x=unit(2,&quot;pt&quot;),
-  legend.spacing.y=unit(2,&quot;pt&quot;),
+  legend.spacing.x=unit(3,&quot;pt&quot;),
+  legend.spacing.y=unit(1,&quot;pt&quot;),
   legend.text=element_text(size=11,vjust=.5),
   legend.title=element_blank(),
   panel.background=element_blank(),
@@ -1411,11 +1412,11 @@ theme(axis.text=element_text(size=11,color=&quot;black&quot;),
   plot.margin=margin(5,5,5,5),
   plot.title=element_text(hjust=1,size=11,face=2,margin=margin(2,,4)),
   strip.background=element_blank(),
-  strip.text=element_text(margin=margin(,,4),size=11,hjust=0,face=2))
+  strip.text=element_text(margin=margin(,,3),size=11,hjust=0,face=2))
 ggsave(&quot;1.png&quot;,width=5.3,height=4.8,dpi=300*4)
 
 sub=&quot;Source: github.com/PalackyUniversity/uzis-data-analysis. People are counted as vaccinated from the day of the first dose. Partially vaccinated people are not excluded. The age groups used for ASMR were 0-14, single years of age for ages 50-89, and 5-year age groups for other ages. The resident population estimates in the 2021 census were used as the standard population.&quot;
-system(paste0(&quot;mogrify -trim 1.png;magick 1.png \\( -size `identify -format %w 1.png`x -font Arial -interline-spacing -3 -pointsize $[43*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -splice x80 \\) -append -resize 25% -bordercolor white -border 24 -colors 256 1.png&quot;))</pre>
+system(paste0(&quot;mogrify -trim 1.png;magick 1.png \\( -size `identify -format %w 1.png`x -font Arial -interline-spacing -3 -pointsize $[43*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -splice x80 \\) -append -resize 25% -bordercolor white -border 24 -dither none -colors 256 1.png&quot;))</pre>
 </div>
 <p>In the United States the peak in deaths during the Delta wave occurred about three months earlier than in the Czech Republic. But in the United States the increase in deaths during the Delta wave was also much more pronounced in unvaccinated people than vaccinated people:</p>
 <div class="width6">
@@ -2016,7 +2017,7 @@ print(round(o),r=F)
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2);library(readxl)
+<pre>library(data.table);library(ggplot2)
 
 ages=c(0,3:19*5)
 cul=\(x,y)y[cut(x,c(y,Inf),,T,F)]
