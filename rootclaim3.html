@@ -97,6 +97,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Cumulative_CFR_in_people_born_in_1950_1954>Cumulative CFR in people born in 1950-1954</a></li>
 <li><a href=#Cases_in_unvaccinated_people_relative_to_vaccinated_people>Cases in unvaccinated people relative to vaccinated people</a></li>
 <li><a href=#Estimate_of_lives_saved_by_vaccines_based_on_COVID_mortality_rates>Estimate of lives saved by vaccines based on COVID mortality rates</a></li>
+<li><a href=#Estimating_lives_saved_by_vaccination_in_winter_2021_2022_based_on_all_cause_mortality>Estimating lives saved by vaccination in winter 2021-2022 based on all-cause mortality</a></li>
 </ul></li>
 </ul>
 
@@ -1520,10 +1521,14 @@ year   vax asmr # ASMR per 100,000 person-years in May of each year
 2022 FALSE 1584</pre>
 <p>If you would've used the second half of 2022 as your low-COVID period then it wouldn't have been confounded as much by the temporal HVE. My code above shows the ratio between unvaccinated and vaccinated ASMR was about 3.4 in May 2021 but only about 1.8 in May 2022.</p>
 </blockquote>
+<p>Added later: Kirsch has now also added other low-COVID periods and a narrower high-COVID period to his spreadsheet. So now in the period with the highest COVID deaths on weeks 45-52 of 2021, unvaccinated people had about 4.3 times higher mortality than vaccinated people. And in a low-COVID period on weeks 19-47 of 2022, unvaccinated people only had about 2.0 times higher mortality than vaccinated people: [<a href="https://github.com/skirsch/Czech/blob/main/analysis/vax_24_1950_CC.xlsx">https://github.com/skirsch/Czech/blob/main/analysis/vax_24_1950_CC.xlsx</a>]</p>
+<div class="width7">
+<img src="i/rootclaim-czechrate-9.png">
+</div>
 <h3>
 <a href=#Comparison_to_English_ONS_data id=Comparison_to_English_ONS_data>Comparison to English ONS data</a>
 </h3>
-<p>In the English ONS data, the ratio between unvaccinated and vaccinated mortality is also elevated during the COVID wave that peaks in August 2021 and the wave that peaks in December 2021 to January 2022:</p>
+<p>In the English ONS data, the ratio between unvaccinated and vaccinated mortality is elevated during the COVID wave that peaks in August 2021 and the wave that peaks in December 2021 to January 2022. There is a small dent in the ratio during the months in between, but it's not too big because unvaccinated people also have fairly high COVID mortality between the two peaks:</p>
 <div class="maxwidth">
 <img src=i/rootclaim-czechrate-5.png width=600><img src=i/rootclaim-czechrate-6.png width=600>
 </div>
@@ -2000,6 +2005,239 @@ print(round(o),r=F)
 # 2023  865     2428       1563
 # 2024  201      397        196</pre>
 <p>Because each week has a different baseline in my method, my method takes into account that unvaccinated people acquire natural immunity over time and different variants have different lethality. But my method doesn't take into account that unvaccinated people might be more likely to die of COVID due to HVE.</p>
+<h3>
+<a href=#Estimating_lives_saved_by_vaccination_in_winter_2021_2022_based_on_all_cause_mortality id=Estimating_lives_saved_by_vaccination_in_winter_2021_2022_based_on_all_cause_mortality>Estimating lives saved by vaccination in winter 2021-2022 based on all-cause mortality</a>
+</h3>
+<p>In the newer Czech record-level dataset from November 2024, the <code>Umrti</code> column shows the week of COVID death and the <code>DatumUmrtiLPZ</code> shows the week of death from all causes. I don't know how COVID deaths are defined in the dataset. But the next plot shows that COVID deaths seem to be undercounted in unvaccinated people, because even though I excluded COVID deaths from the blue dotted line, unvaccinated people still have a fairly big increase in ASMR during the COVID wave in November to December 2021:</p>
+<div class="width5">
+<img src="i/rootclaim-cznoncovid.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>library(data.table);library(ggplot2);library(readxl)
+
+ages=c(0,3:19*5)
+cul=\(x,y)y[cut(x,c(y,Inf),,T,F)]
+
+nzip=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv.gz&quot;)
+nzip=nzip[!(Umrti!=&quot;&quot;&amp;Datum_Prvni_davka&gt;Umrti)]
+covid=nzip[Umrti!=&quot;&quot;&amp;RokNarozeni!=&quot;-&quot;,.N,.(Umrti,RokNarozeni,vax=Datum_Prvni_davka!=&quot;&quot;&amp;Datum_Prvni_davka&lt;=Umrti)]
+covid=covid[,.(coviddead=sum(N)),.(dose=ifelse(vax,2,3),age=cul(2020-as.integer(substr(RokNarozeni,1,4)),ages),week=Umrti)]
+
+t=fread(&quot;http://sars2.net/f/czbucketsdaily.csv&quot;)
+a=t[,.(dead=sum(dead),pop=sum(alive)),.(dose=ifelse(dose==0,3,2),week=format(date,&quot;%G-%V&quot;),age=cul(age,ages))]
+a=merge(a,covid,all=T)[week%like%&quot;202[012]&quot;]
+a[is.na(a)]=0
+a=rbind(a,a[,.(dose=1,dead=sum(dead),pop=sum(pop),coviddead=sum(coviddead)),.(age,week)])
+
+a=merge(fread(&quot;http://sars2.net/f/czcensus2021pop.csv&quot;)[,std:=pop/sum(pop)][,.(std=sum(std)),.(age=cul(age,ages))],a)
+
+p=a[,.(dead=sum(dead/pop*std*365e5),coviddead=sum(coviddead/pop*std*365e5)),.(week,dose)]
+
+iso=data.table(date=as.Date(&quot;2019-1-1&quot;)+(0:2e3))[,week:=format(date,&quot;%G-%V&quot;)]
+iso=iso[rowid(week)==4,setNames(date,week)]
+
+p=p[,.(x=iso[week],dose,y=c(dead,dead-coviddead),type=rep(1:2,each=.N))]
+p[,type:=factor(type,,c(&quot;All causes&quot;,&quot;Not COVID&quot;))]
+
+p[,dose:=factor(dose,,c(&quot;All people&quot;,&quot;Vaccinated&quot;,&quot;Unvaccinated&quot;))]
+p$facet=1
+
+p=rbind(p,dcast(p,x+type~dose,value.var=&quot;y&quot;)[,.(x,type,y=Unvaccinated/Vaccinated,dose=&quot;All people&quot;,facet=2)])
+p[,facet:=factor(facet,,c(&quot;Age-standardized mortality rate per 100,000 person-years&quot;,&quot;Ratio between unvaccinated and vaccinated ASMR&quot;))]
+
+p=p[x&gt;=&quot;2021-1-7&quot;]
+
+xstart=as.Date(&quot;2021-1-1&quot;);xend=as.Date(&quot;2023-1-1&quot;)
+xbreak=seq(xstart+182,xend,&quot;year&quot;)
+p=p[x%in%xstart:xend]
+ybreak=pretty(c(0,p$y),7)
+
+ggplot(p)+
+facet_wrap(~facet,dir=&quot;v&quot;,scales=&quot;free&quot;)+
+geom_vline(xintercept=seq(xstart,xend,&quot;month&quot;),color=&quot;gray92&quot;,linewidth=.4)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;black&quot;,linewidth=.4)+
+geom_line(aes(x,y,color=dose,linetype=type),linewidth=.6)+
+labs(x=NULL,y=NULL,title=&quot;Weekly ASMR in Czech Republic&quot;)+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=xbreak,labels=year(xbreak))+
+scale_y_continuous(limits=\(x)c(0,max(x)*1.02),breaks=\(x)pretty(x,4))+
+scale_color_manual(values=c(&quot;black&quot;,&quot;#f66&quot;,&quot;#66f&quot;))+
+scale_fill_manual(values=c(&quot;#7c7&quot;,&quot;#faa&quot;))+
+scale_linetype_manual(values=c(&quot;solid&quot;,&quot;11&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(fill=guide_legend(keyheight=unit(1,&quot;pt&quot;),order=2),color=guide_legend(order=1))+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.text.x=element_text(margin=margin(3)),
+  axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(4,&quot;pt&quot;),
+  legend.box.background=element_blank(),
+  legend.box.margin=margin(,,3),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.box=&quot;vertical&quot;,
+  legend.box.just=&quot;right&quot;,
+  legend.direction=&quot;horizontal&quot;,
+  legend.justification=&quot;right&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(24,&quot;pt&quot;),
+  legend.margin=margin(),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(3,&quot;pt&quot;),
+  legend.spacing.y=unit(1,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.4),
+  panel.grid.major.y=element_line(linewidth=.4,color=&quot;gray92&quot;),
+  panel.spacing=unit(2,&quot;pt&quot;),
+  plot.margin=margin(5,5,5,5),
+  plot.title=element_text(hjust=1,size=11,face=2,margin=margin(2,,3)),
+  strip.background=element_blank(),
+  strip.text=element_text(margin=margin(,,3),size=11,hjust=0,face=2))
+ggsave(&quot;1.png&quot;,width=4.8,height=4.2,dpi=300*4)
+
+sub=&quot;Source: github.com/PalackyUniversity/uzis-data-analysis (all-cause deaths and population size) and nzip.cz/data/2135-covid-19-prehled-populace (COVID deaths). People are counted as vaccinated from the day of the first dose. Partially vaccinated people are not excluded. The age groups used for ASMR were 0-14, and 5-year age groups up to 90-94, and 95+. The resident population estimates in the 2021 census were used as the standard population.&quot;
+system(paste0(&quot;mogrify -trim 1.png;magick 1.png \\( -size `identify -format %w 1.png`x -font Arial -interline-spacing -3 -pointsize $[43*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -splice x80 \\) -append -resize 25% -bordercolor white -border 24 -dither none -colors 256 1.png&quot;))</pre>
+</div>
+<p>So in my earlier calculation where I estimated lives saved by vaccines comparing the COVID mortality rates in vaccinated and unvaccinated people, I might have actually underestimated the lives saved if the number of COVID deaths in unvaccinated people too low in my source dataset. So next I tried estimating the lives saved based on all-cause mortality instead, except I only looked at the period between week 41 of 2021 and week 18 of 2022 when there was a relatively high number of COVID deaths. I used weeks 24 to 40 of 2021 and weeks 19 to 52 of 2022 as my low-COVID reference periods.</p>
+<p>I calculated the baseline for each age group by fitting a spline against the ratio of unvaccinated to vaccinated CMR during the low-COVID periods. And then for each week in my high-COVID period, I divided the actual ratio of unvaccinated to vaccinated CMR with the baseline, I multiplied it by the vaccinated CMR, and I multiplied the result by the unvaccinated population size to get the expected deaths in unvaccinated people. And then I subtracted the expected deaths from the actual deaths to get the estimate of extra deaths during the high-COVID period:</p>
+<div class="width7">
+<img src="i/rootclaim-cznoncovid-2.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>library(data.table);library(ggplot2);library(readxl)
+
+iso=data.table(date=as.Date(&quot;2019-1-1&quot;)+0:2e3)[,week:=format(date,&quot;%G-%V&quot;)][rowid(week)==4,setNames(date,week)]
+
+ages=c(0,25,40,50,seq(60,95,5))
+agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
+
+t=fread(&quot;http://sars2.net/f/czbucketsdaily.csv.gz&quot;)
+a=t[,.(dead=sum(dead),pop=sum(alive)),,.(age=agecut(age,ages),dose=pmin(dose,1),week=format(date,&quot;%G-%V&quot;))]
+a=a[,.(dead=ma(dead,1),pop=ma(pop,1),week),.(dose,age)]
+
+p=a[,.(y=(dead/pop)[dose==0]/(dead/pop)[dose==1]),.(x=iso[week],age)][y==Inf,y:=NA]
+
+fit1=iso[a[week&gt;=&quot;2021-24&quot;&amp;week&lt;=&quot;2021-40&quot;,unique(week)]]
+fit2=iso[a[week&gt;=&quot;2022-19&quot;,unique(week)]]
+fit=p[x%in%c(fit1,fit2)][,predict(smooth.spline(x,y,spar=.9),as.integer(unique(p$x))),age]
+p=rbind(p[,type:=1],fit[,.(x=`class&lt;-`(x,&quot;Date&quot;),y,age,type=2)])
+
+p[,type:=factor(type,,c(&quot;Ratio between unvaccinated and vaccinated CMR&quot;,&quot;Smoothed spline fitted against low-COVID periods&quot;))]
+
+yend=8;xstart=as.Date(&quot;2021-1-1&quot;);xend=as.Date(&quot;2023-1-1&quot;);xbreak=seq(xstart+182,xend,&quot;year&quot;);p=p[x%in%xstart:xend]
+
+hl=data.table(start=c(min(fit1)-3,min(fit2)-3,max(fit1)+4),end=c(max(fit1)+4,xend,min(fit2)-3))
+hl[,label:=factor(c(1,1,2),,c(&quot;Low-COVID period&quot;,&quot;High-COVID period&quot;))]
+
+d=a[,.(dead0=dead[dose==0],dead1=dead[dose==1],pop0=pop[dose==0],pop1=pop[dose==1]),,.(age,week)]
+d[,x:=.GRP,week]
+d[,ratio:=(dead0/pop0)/(dead1/pop1)]
+fit=rbind(d[week&gt;=&quot;2021-24&quot;&amp;week&lt;=&quot;2021-40&quot;],d[week&gt;=&quot;2022-19&quot;])
+d$base=fit[,predict(smooth.spline(x,ratio,spar=.9),as.integer(unique(d$x))),age]$y
+saved=d[week&gt;=&quot;2021-41&quot;&amp;week&lt;=&quot;2022-18&quot;,sum(dead0-ratio/base*(dead1/pop1)*pop0),age]$V1
+levels(p$age)=paste0(levels(p$age),&quot; (&quot;,round(saved),&quot;)&quot;)
+
+ggplot(p)+
+facet_wrap(~age,dir=&quot;v&quot;,ncol=3)+
+geom_vline(xintercept=seq(xstart,xend,&quot;month&quot;),color=&quot;gray92&quot;,linewidth=.3)+
+geom_hline(yintercept=1:9,color=&quot;gray92&quot;,linewidth=.3)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray50&quot;,linewidth=.4)+
+geom_rect(data=hl,aes(xmin=start,xmax=end,fill=label),ymin=0,ymax=Inf,alpha=.3,linewidth=.15)+
+geom_line(aes(x,y,color=type),linewidth=.6)+
+geom_label(data=p[rowid(age)==1],aes(label=age),x=xend,y=yend,fill=&quot;white&quot;,label.r=unit(0,&quot;pt&quot;),label.padding=unit(4,&quot;pt&quot;),label.size=.4,size=3.8,hjust=1,vjust=1)+
+labs(x=NULL,y=NULL,title=&quot;Czech Republic: Ratio between unvaccinated and vaccinated CMR by age group&quot;,subtitle=paste0(&quot;The number in parentheses shows extra deaths in unvaccinated people during the high-COVID period relative to the green baseline (total &quot;,round(sum(saved)),&quot;)&quot;)|&gt;stringr::str_wrap(80))+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=xbreak,labels=year(xbreak))+
+scale_y_continuous(limits=c(0,yend),breaks=seq(1,7,2))+
+scale_color_manual(values=c(&quot;black&quot;,&quot;#0a0&quot;))+
+scale_fill_manual(values=c(&quot;#7c7&quot;,&quot;#faa&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(fill=guide_legend(order=2),color=guide_legend(order=1))+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.text.x=element_text(margin=margin(3)),
+  axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(4,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.just=&quot;top&quot;,
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.justification=&quot;left&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.margin=margin(,,5),
+  legend.position=&quot;top&quot;,
+  legend.spacing=unit(2,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.4),
+  panel.spacing=unit(0,&quot;pt&quot;),
+  plot.margin=margin(5,5,5,5),
+  plot.subtitle=element_text(margin=margin()),
+  plot.title=element_text(hjust=0,size=11,face=2,margin=margin(2,,4)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=6.2,height=4.6,dpi=300*4)
+sub=&quot;Source: github.com/PalackyUniversity/uzis-data-analysis. People are counted as vaccinated from the day of the first dose, and partially vaccinated people are not excluded.&quot;
+system(paste0(&quot;mogrify -trim 1.png;magick 1.png \\( -size `identify -format %w 1.png`x -font Arial -interline-spacing -3 -pointsize $[43*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -splice x80 \\) -append -resize 25% -bordercolor white -border 24 -dither none -colors 256 1.png&quot;))</pre>
+</div>
+<p>I got a total of 10,720 extra deaths in unvaccinated people during the high-COVID period. When I applied my previous method of estimating lives saved based on COVID deaths to the same period of weeks, it gave me a total of 28,953 lives saved.</p>
+<p>It took me a while to figure out why the number of deaths was now only about a third of the number using my previous method. But then I realized it was because in the elderly age groups with the most COVID deaths, the vaccinated population size was bigger than the unvaccinated population size. And the bigger number using my previous methodology represented the lives saved in vaccinated people relative to a counterfactual scenario where no-one was vaccinated, so it was a product of the vaccinated population size. But the smaller number using my new methodology represented the number of extra deaths in unvaccinated people, so it was a product of the unvaccinated population size.</p>
+<p>In the following code I modified my new method so that instead I calculated the lives saved in vaccinated people relative to a counterfactual scenario where vaccinated people had the same relative increase in mortality as unvaccinated people. So I now multiplied the ratio between unvaccinated and vaccinated CMR with the number of deaths in vaccinated people and then I subtracted the actual deaths in vaccinated people. However I still got only 19,368 lives saved which was lower than the figure based on my earlier methodology, but I don't know why:</p>
+<pre># divide ages to age groups
+ages=c(0,25,40,50,seq(60,95,5))
+agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
+
+# `czbucketsdaily.csv.gz` shows deaths and person-days for each combination of date, age, and dose number
+# it was generated by code at sars2.net/czech.html#Bucket_analysis
+t=fread(&quot;http://sars2.net/f/czbucketsdaily.csv.gz&quot;)
+a=t[,.(dead=sum(dead),pop=sum(alive)),,.(age=agecut(age,ages),dose=pmin(dose,1),week=format(date,&quot;%G-%V&quot;))]
+
+# take moving averages (not really necessary here but retained to remain consistent with other code)
+ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
+a=a[,.(dead=ma(dead,1),pop=ma(pop,1),week),.(dose,age)]
+
+# 0 is unvaccinated and 1 is vaccinated
+d=a[,.(dead0=dead[dose==0],dead1=dead[dose==1],pop0=pop[dose==0],pop1=pop[dose==1]),,.(age,week)]
+
+# add a column for weeks converted to integers starting from 1
+d[,x:=.GRP,week]
+
+# unvaccinated CMR divided by vaccinated CMR
+d[,ratio:=(dead0/pop0)/(dead1/pop1)]
+
+# fit a spline to the ratio between unvaccinated and vaccinated CMR in low-COVID periods
+fit=d[(week&gt;=&quot;2021-24&quot;&amp;week&lt;=&quot;2021-40&quot;)|week&gt;=&quot;2022-19&quot;]
+d$base=fit[,predict(smooth.spline(x,ratio,spar=.9),as.integer(unique(d$x))),age]$y
+
+# calculate lives saved in the high-COVID period relative to a scenario where no-one was vaccinated
+# `ratio/base*dead1` is actual ratio divided by spline baseline ratio and multiplied by vaccinated deaths
+o=d[week&gt;=&quot;2021-41&quot;&amp;week&lt;=&quot;2022-18&quot;,.(actualvaxdead=sum(dead1),expectedvaxdead=sum(ratio/base*dead1)),age]
+o[,livessaved:=expectedvaxdead-actualvaxdead]
+o=rbind(o,o[,-1][,lapply(.SD,sum)][,age:=&quot;Total&quot;])
+print(mutate_if(o,is.double,round),r=F)
+#   age actualvaxdead expectedvaxdead livessaved
+#  0-24           125             127          2
+# 25-39           376             481        105
+# 40-49           990            1222        233
+# 50-59          2435            3009        574
+# 60-64          2435            3123        689
+# 65-69          4717            6511       1794
+# 70-74          7368           10699       3331
+# 75-79          9094           12386       3292
+# 80-84          9063           13220       4157
+# 85-89          8479           11707       3228
+# 90-94          5830            7609       1778
+#   95+          1829            2015        186
+# Total         52741           72109      19368</pre>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
