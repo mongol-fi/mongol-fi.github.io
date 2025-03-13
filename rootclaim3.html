@@ -1951,48 +1951,42 @@ system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
 <a href=#Estimate_of_lives_saved_by_vaccines_based_on_COVID_mortality_rates id=Estimate_of_lives_saved_by_vaccines_based_on_COVID_mortality_rates>Estimate of lives saved by vaccines based on COVID mortality rates</a>
 </h3>
 <p>Earlier I used a method to estimate lives saved by vaccines in the English ONS data and US CDC data, where for each combination of time period and age group, I multiplied the population size of vaccinated people with the COVID mortality rate of unvaccinated people and then I subtracted vaccinated COVID deaths.</p>
-<p>When I now tried to apply the same method to the newer Czech record-level dataset that was published in November 2024, I got a total of 41,024 lives saved. It's the equivalent of about 1.3 million lives in the US population if it's simply multiplied with the ratio of US and Czech mid-2021 resident population estimates (<code>332048977/10505772</code>):</p>
-<pre># from https://www.nzip.cz/data/2135-covid-19-prehled-populace
-f=&quot;https://data.mzcr.cz/data/distribuce/402/Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv&quot;
-download.file(f,sub(&quot;.*/&quot;,&quot;&quot;,f))
-
-library(data.table)
-t=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv&quot;)
+<p>When I now tried to apply the same method to the newer Czech record-level dataset that was published in November 2024, I got a total of 41,114 lives saved. It's the equivalent of about 1.3 million lives in the US population if it's simply multiplied with the ratio of US and Czech mid-2021 resident population estimates (<code>332048977/10505772</code>):</p>
+<pre>library(data.table)
+t=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv.gz&quot;)
 
 # rename columns
-n=c(RokNarozeni=&quot;age&quot;,Datum_Prvni_davka=&quot;vax&quot;,DatumUmrtiLPZ=&quot;dead&quot;,Umrti=&quot;coviddead&quot;)
+n=c(RokNarozeni=&quot;born&quot;,Datum_Prvni_davka=&quot;vax&quot;,DatumUmrtiLPZ=&quot;dead&quot;,Umrti=&quot;coviddead&quot;)
 setnames(t,names(n),n)
 
-# exclude people with a year of birth missing
-# there are many superfluous rows with almost all fields including the year of birth missing
-t=t[age!=&quot;-&quot;]
+# exclude rows with a year of birth missing
+# there are many superfluous rows with almost all columnns including the year of birth missing
+t=t[born!=&quot;-&quot;]
 
 # exclude a few rows with an implausibly early year of birth
-t=t[!age%like%&quot;^18|190|1910&quot;]
+t=t[!born%like%&quot;^18|190|1910&quot;]
 
-# exclude duplicate rows for people with two or more cases
-# this might also exclude people with a date of COVID death listed for the 2nd case but not the 1st case
-# there&#39;s no way to tell which rows belong to the same person
-# so I don&#39;t know if a death after a 2nd case is also listed under the 1st case or only the 2nd case
-t=t[!(!is.na(Infekce)&amp;Infekce&gt;1)]
+# make another dataframe where duplicate rows for people with two or more cases are excluded
+# COVID deaths are only listed under the case which led to the death but all-cause deaths are listed under all cases
+t2=t[!(!is.na(Infekce)&amp;Infekce&gt;1)]
 
 # get all-cause deaths and COVID deaths for each combination of week, age, and vaccination status
-dead=t[,.(vaxdead=sum(vax!=&quot;&quot;),unvaxdead=sum(vax==&quot;&quot;)),.(week=dead,age)]
-coviddead=t[,.(vaxcoviddead=sum(vax!=&quot;&quot;),unvaxcoviddead=sum(vax==&quot;&quot;)),.(week=coviddead,age)]
+dead=t2[,.(vaxdead=sum(vax!=&quot;&quot;),unvaxdead=sum(vax==&quot;&quot;)),.(week=dead,born)]
+coviddead=t[,.(vaxcoviddead=sum(vax!=&quot;&quot;),unvaxcoviddead=sum(vax==&quot;&quot;)),.(week=coviddead,born)]
 
 # get number of new vaccinated people each week to calculate vaccinated population size
-vax=t[,.(newvax=.N),.(week=vax,age)]
+vax=t2[,.(newvax=.N),.(week=vax,born)]
 
 # merge dataframes and add rows filled with zeroes for missing combinations of variables
 a=merge(dead,merge(coviddead,vax,all=T),all=T)[!is.na(week)]
 a[is.na(a)]=0
 a=rbind(a,cbind(expand.grid(lapply(a[,1:2],unique)),a[1,-(1:2)][,1:5:=0][]))
-a=a[rowid(week,age)==1][order(age,week)]
-a=merge(a,t[,.(startpop=.N),age])[week!=&quot;&quot;]
+a=a[rowid(week,born)==1][order(born,week)]
+a=merge(a,t2[,.(startpop=.N),born])[week!=&quot;&quot;]
 
 # calculate vaccinated and unvaccinated population sizes for each combination of week and age group
-a[,unvaxpop:=startpop-cumsum(unvaxdead)-cumsum(newvax),age]
-a[,vaxpop:=cumsum(newvax)-cumsum(vaxdead),age]
+a[,unvaxpop:=startpop-cumsum(unvaxdead)-cumsum(newvax),born]
+a[,vaxpop:=cumsum(newvax)-cumsum(vaxdead),born]
 
 # get expected vaccinated COVID deaths at unvaccinated mortality rates
 o=a[,year:=as.integer(substr(week,1,4))][]
@@ -2000,11 +1994,10 @@ o=o[,.(dead=sum(vaxcoviddead),expected=sum(unvaxcoviddead/unvaxpop*vaxpop,na.rm=
 o[,livessaved:=expected-dead]
 print(round(o),r=F)
 # year dead expected livessaved
-# 2020   57        1        -56
-# 2021 4185    29066      24881
-# 2022 3121    17561      14440
-# 2023  865     2428       1563
-# 2024  201      397        196</pre>
+# 2021 4193    29097      24904
+# 2022 3146    17623      14477
+# 2023  874     2451       1577
+# 2024  205      416        211</pre>
 <p>Because each week has a different baseline in my method, my method takes into account that unvaccinated people acquire natural immunity over time and different variants have different lethality. But my method doesn't take into account that unvaccinated people might be more likely to die of COVID due to HVE.</p>
 <h3>
 <a href=#Estimating_lives_saved_by_vaccines_in_winter_2021_2022_based_on_all_cause_mortality id=Estimating_lives_saved_by_vaccines_in_winter_2021_2022_based_on_all_cause_mortality>Estimating lives saved by vaccines in winter 2021-2022 based on all-cause mortality</a>
@@ -2103,8 +2096,16 @@ ggsave(&quot;1.png&quot;,width=4.8,height=4.2,dpi=300*4)
 sub=&quot;Source: github.com/PalackyUniversity/uzis-data-analysis (all-cause deaths and population size) and nzip.cz/data/2135-covid-19-prehled-populace (COVID deaths). People are counted as vaccinated from the day of the first dose. Partially vaccinated people are not excluded. The age groups used for ASMR were 0-14, and 5-year age groups up to 90-94, and 95+. The resident population estimates in the 2021 census were used as the standard population.&quot;
 system(paste0(&quot;mogrify -trim 1.png;magick 1.png \\( -size `identify -format %w 1.png`x -font Arial -interline-spacing -3 -pointsize $[43*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -splice x80 \\) -append -resize 25% -bordercolor white -border 24 -dither none -colors 256 1.png&quot;))</pre>
 </div>
-<p>So in my earlier calculation where I estimated lives saved by vaccines comparing the COVID mortality rates in vaccinated and unvaccinated people, I might have actually underestimated the lives saved if the number of COVID deaths in unvaccinated people too low in my source dataset. So next I tried estimating the lives saved based on all-cause mortality instead, except I only looked at the period between week 41 of 2021 and week 18 of 2022 when there was a relatively high number of COVID deaths. I used weeks 24 to 40 of 2021 and weeks 19 to 52 of 2022 as my low-COVID reference periods.</p>
-<p>I calculated the baseline for each age group by fitting a spline against the ratio of unvaccinated to vaccinated CMR during the low-COVID periods. And then for each week in my high-COVID period, I calculated the ratio between the actual unvaccinated to vaccinated CMR divided with the spline baseline ratio, I divided unvaccinated deaths by the ratio to get the expected deaths in unvaccinated people, and I subtracted the total expected deaths during the high-COVID period from the total actual deaths to get the total extra deaths in unvaccinated people:</p>
+<p>If 2024 which only had partial data is excluded, then the number of COVID deaths in the new record-level dataset is identical to the number of deaths in a file published by the Czech Ministry of Health: [<a href="https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19">https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19</a>]</p>
+<pre>um=fread(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/umrti.csv&quot;)
+um[year(datum)&lt;2024,.N] # 43372
+
+# this contains the whole year 2023 because week 52 of 2023 ends on December 31st
+nzip=fread(&quot;https://data.mzcr.cz/data/distribuce/402/Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv&quot;)
+nzip[,.N,.(week=Umrti)][week!=&quot;&quot;&amp;week&lt;=&quot;2023-52&quot;,sum(N)] # 43372</pre>
+<p>So it might be that COVID deaths are undercounted in the Czech Republic in general and not only in the new record-level dataset.</p>
+<p>But anyway, in my earlier calculation where I estimated lives saved by vaccines comparing the COVID mortality rates in vaccinated and unvaccinated people, I might have actually underestimated the lives saved if the number of COVID deaths in unvaccinated people was too low in my source dataset. So next I tried estimating the lives saved based on all-cause mortality instead, except I only looked at the period between week 41 of 2021 and week 18 of 2022 when there was a relatively high number of COVID deaths. My low-COVID reference periods were weeks 24 to 40 of 2021 and weeks 19 to 52 of 2022.</p>
+<p>I calculated the baseline for each age group by fitting a spline against the ratio of unvaccinated to vaccinated CMR during the low-COVID periods. And then for each week in my high-COVID period, I calculated the ratio of unvaccinated to vaccinated CMR and I divided it with the spline baseline ratio, I divided unvaccinated deaths by the resulting ratio to get the expected deaths in unvaccinated people, and I subtracted the total expected deaths during the high-COVID period from the total actual deaths to get the total extra deaths in unvaccinated people:</p>
 <div class="width7">
 <img src="i/rootclaim-cznoncovid-2.png">
 </div>
@@ -2115,6 +2116,8 @@ Show code
 <pre>library(data.table);library(ggplot2)
 
 iso=data.table(date=as.Date(&quot;2019-1-1&quot;)+0:2e3)[,week:=format(date,&quot;%G-%V&quot;)][rowid(week)==4,setNames(date,week)]
+
+ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
 
 ages=c(0,25,40,50,seq(60,95,5))
 agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
@@ -2187,10 +2190,10 @@ ggsave(&quot;1.png&quot;,width=6.2,height=4.6,dpi=300*4)
 sub=&quot;Source: github.com/PalackyUniversity/uzis-data-analysis. People are counted as vaccinated from the day of the first dose, and partially vaccinated people are not excluded. The crude mortality rates were calculated using moving averages for both deaths and population where the window extended 1 week backwards and 1 weeks forwards.&quot;
 system(paste0(&quot;mogrify -trim 1.png;magick 1.png \\( -size `identify -format %w 1.png`x -font Arial -interline-spacing -3 -pointsize $[43*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -splice x80 \\) -append -resize 25% -bordercolor white -border 24 -dither none -colors 256 1.png&quot;))</pre>
 </div>
-<p>So for example on week 48 of 2021 in ages 70-74, unvaccinated people had about 4.214 times higher crude mortality rate than vaccinated people. But if the ratio would've followed the trend in low-COVID periods, the spline fitted against the low-COVID periods showed that unvaccinated people should've had only about 2.321 times higher CMR than vaccinated people. So the actual ratio was about 1.815 times higher than the baseline ratio on the same week. In ages 70-74 on week 48 of 2021, the ±1-week moving average for deaths in unvaccinated people was about 184.333. So I calculated the number of extra deaths in unvaccinated people as <code>184.333-184.333/1.815</code>, which is about 83. And then I calculated the total extra deaths by adding together the number of extra deaths across all age groups and all weeks.</p>
-<p>I got a total of 6,496 extra deaths in unvaccinated people during the high-COVID period. When I applied my previous method of estimating lives saved based on COVID deaths to the same period of weeks, it gave me a total of 28,953 lives saved.</p>
-<p>It took me a while to figure out why the number of deaths was now only about a fourth of the number using my previous method. But then I realized it was because in the elderly age groups with the most COVID deaths, the vaccinated population size was bigger than the unvaccinated population size. And the bigger number I calculated with my previous methodology represented the lives saved in vaccinated people relative to a counterfactual scenario where no-one was vaccinated, so it was a product of the vaccinated population size. But the smaller number I calculated with my new methodology represented the number of extra deaths in unvaccinated people, so it was a product of the unvaccinated population size.</p>
-<p>In the following code I modified my new method so that instead I calculated the lives saved in vaccinated people relative to a counterfactual scenario where vaccinated people had the same relative increase in mortality during the high-COVID period as unvaccinated people. So I now divided the ratio between unvaccinated and vaccinated CMR with the baseline spline ratio, I multiplied the result by the number of deaths in vaccinated people, and I subtracted the actual deaths in vaccinated people. However I still got only 19,368 lives saved which was lower than the figure based on my earlier methodology, but I don't know why:</p>
+<p>So for example on week 48 of 2021 in ages 70-74, unvaccinated people had about 4.214 times higher crude mortality rate than vaccinated people. But the green spline shows that the baseline ratio on the same week was only about 2.321, so the actual ratio was about 1.815 times higher than the baseline. In ages 70-74 on week 48 of 2021, the ±1-week moving average for deaths in unvaccinated people was about 184.333. So I calculated the number of extra deaths in unvaccinated people as <code>184.333-184.333/1.815</code>, which is about 83. And then I calculated the total extra deaths by adding together the number of extra deaths across all age groups and all weeks.</p>
+<p>I got a total of 6,496 extra deaths in unvaccinated people during the high-COVID period. But when I applied my previous method of estimating lives saved based on COVID deaths to the same period of weeks, it gave me a total of 29,002 lives saved which was about 4 times higher.</p>
+<p>It took me a while to figure out why there was such a big difference between the numbers. But then I realized it was because in the elderly age groups with the most COVID deaths, the vaccinated population size was bigger than the unvaccinated population size. And the bigger number I calculated with my previous method represented the lives saved in vaccinated people relative to a counterfactual scenario where no-one was vaccinated, so it was a product of the vaccinated population size. But the smaller number I calculated with my new method represented the number of extra deaths in unvaccinated people, so it was a product of the unvaccinated population size.</p>
+<p>In the following code I modified my new method so that instead I calculated the lives saved in vaccinated people relative to a counterfactual scenario where vaccinated people had the same relative increase in mortality during the high-COVID period as unvaccinated people. So I now divided the ratio between unvaccinated and vaccinated CMR with the baseline spline ratio, I multiplied the result by the number of deaths in vaccinated people, and I subtracted the actual deaths in vaccinated people. However I still got only 19,368 lives saved which was about a third lower than the figure based on my earlier method (but I don't know why because I was expecting the figure to be higher):</p>
 <pre># divide ages to age groups
 ages=c(0,25,40,50,seq(60,95,5))
 agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
