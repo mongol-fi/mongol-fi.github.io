@@ -99,6 +99,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Estimate_of_lives_saved_by_vaccines_based_on_COVID_mortality_rates>Estimate of lives saved by vaccines based on COVID mortality rates</a></li>
 <li><a href=#Estimate_of_lives_saved_by_vaccines_in_winter_2021_2022_based_on_all_cause_mortality>Estimate of lives saved by vaccines in winter 2021-2022 based on all-cause mortality</a></li>
 <li><a href=#Age_normalized_CFR>Age-normalized CFR</a></li>
+<li><a href=#CFR_by_variant>CFR by variant</a></li>
 </ul></li>
 <li><a href=#Contributions_to_the_debate_by_other_people>Contributions to the debate by other people</a>
 <ul class=toc>
@@ -2556,6 +2557,70 @@ pheatmap::pheatmap(m2,filename=&quot;i2.png&quot;,display_numbers=round(m2),
 
 system(&quot;mogrify -trim i[12].png;w=`identify -format %w i1.png`;magick -pointsize 43 -font Arial-Bold -size $[w]x caption:&#39;Percentage of vaccinated people by age group in Czech Republic&#39; i1.png caption:&#39;Percentage of all-cause deaths out of total monthly deaths&#39; i2.png -splice x12 -append -trim -bordercolor white -border 18 -dither none -colors 256 1.png&quot;)</pre>
 </div>
+<h3>
+<a href=#CFR_by_variant id=CFR_by_variant>CFR by variant</a>
+</h3>
+<p>Kirsch has been saying that the vaccines are not effective because they don't reduce CFR, because his analysis of the Czech data showed that the cumulative CFR went up in early 2021 after the vaccine rollout. However my previous plots showed that there were not yet many people vaccinated until March or April of 2021, and there was actually a considerable drop in CFR that started around April 2021 after a large number of people had been vaccinated.</p>
+<p>Kirsch also has not considered that the Alpha variant in early 2021 may have had lower CFR than the Delta variant later in 2021.</p>
+<p>About 9% of cases in the newer Czech record-level dataset include a column which shows the variant associated with the case. The percentage of cases that resulted in a death was about 5 times higher for Delta than Alpha:</p>
+<pre>ua=\(x,y,...){u=unique(x);y(u,...)[match(x,u)]}
+
+t=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv.gz&quot;)
+
+n=c(Infekce=&quot;infection&quot;,RokNarozeni=&quot;born&quot;,Datum_Prvni_davka=&quot;vaxdate&quot;,DatumUmrtiLPZ=&quot;dead&quot;)
+n=c(n,Umrti=&quot;coviddead&quot;,Mutace=&quot;variant&quot;,DatumPozitivity=&quot;casedate&quot;)
+setnames(t,names(n),n)
+
+t[variant==&quot;&quot;,variant:=&quot;Unknown&quot;][variant==&quot;JIN&quot;,variant:=&quot;Other&quot;][variant==&quot;Alfa&quot;,variant:=&quot;Alpha&quot;]
+t[ua(variant,like,&quot;Omikron&quot;),variant:=&quot;Omicron&quot;]
+
+t=t[born!=&quot;-&quot;&amp;!ua(born,like,&quot;^18|190|1910&quot;)]
+
+a=t[!is.na(infection),.(dead=sum(coviddead!=&quot;&quot;),cases=.N),variant]
+a[,cfr:=round(dead/cases*100,2)]
+print(a[order(-cfr)],r=F)
+#  variant  dead   cases  cfr
+#  Unknown 39062 3793483 1.03
+#    Delta  3397  439114 0.77
+#    Other    73   16101 0.45
+#  Omicron   958  453717 0.21
+#    Alpha   141   83622 0.17</pre>
+<p>However in the Czech data unvaccinated people had higher CFR than vaccinated people, and in the Alpha era there were more unvaccinated people than in the Delta era. So in the next code I did a Poisson regression to calculate a CFR adjusted for age and vaccination status. Relative to a baseline of all variants, the adjusted CFR was about 1.5 times higher for Alpha but about 3.1 times higher for Delta:</p>
+<pre>t[,dose:=as.integer(vaxdate!=&quot;&quot;&amp;vaxdate&lt;=casedate)]
+
+t2=t[!(!is.na(infection)&amp;infection&gt;1)]
+
+dead=t2[dead!=&quot;&quot;,.(unvaxdead=sum(dose==0),vaxdead=sum(dose==1)),.(week=dead,born)]
+vax=t2[vaxdate!=&quot;&quot;,.(newvax=.N),.(week=vaxdate,born)]
+
+a=merge(dead,vax,all=T);a[is.na(a)]=0
+a=rbind(a,cbind(expand.grid(lapply(a[,1:2],unique)),a[1,-(1:2)][,1:3:=0][]))
+a=a[rowid(week,born)==1][order(born,week)]
+a=merge(a,t2[,.(startpop=.N),born])
+a[,unvaxpop:=startpop-cumsum(unvaxdead)-cumsum(newvax),born]
+a[,vaxpop:=cumsum(newvax)-cumsum(vaxdead),born]
+
+me=a[,.(born,week,pop=c(unvaxpop,vaxpop),dose=rep(0:1,each=.N))]
+case=t[!is.na(infection),.(case=.N,dead=sum(coviddead!=&quot;&quot;)),.(dose,week=casedate,born,variant)]
+me=merge(me,case,all=T)
+me[is.na(case),case:=0][is.na(dead),dead:=0]
+me=rbind(me,me[,.(dead=sum(dead),case=sum(case),pop=pop[1],variant=&quot;Total&quot;),.(born,week,dose)])
+
+me=me[!is.na(variant)&amp;!is.na(pop)]
+me[,variant:=relevel(relevel(factor(variant),&quot;Unknown&quot;),&quot;Total&quot;)]
+
+o=me[,.(dead=sum(dead),cases=sum(case)),,variant]
+lm=glm(dead/case~born+dose+variant+offset(log(pop)),poisson,me)
+o$relativecfr=round(c(1,exp(coef(lm))[o[-1,paste0(&quot;variant&quot;,variant)]]),2)
+print(o,r=F)
+# variant  dead   cases relativecfr
+#   Total 43631 4786034        1.00
+# Unknown 39062 3793480        0.96
+#   Alpha   141   83622        1.53
+#   Delta  3397  439114        3.10
+# Omicron   958  453717        2.11
+#   Other    73   16101        1.84</pre>
+<p>In the code above the relative CFR was not adjusted for observation week, even though part of the reason why the CFR got lower over time was that more people gained natural immunity over time. However after adjusting for observation week, the relative CFR dropped to about 1.22 for Delta and 0.61 for Alpha, so the ratio between Delta and Alpha remained close to 2 like in my code above.</p>
 <h2>
 <a href=#Contributions_to_the_debate_by_other_people id=Contributions_to_the_debate_by_other_people>Contributions to the debate by other people</a>
 </h2>
