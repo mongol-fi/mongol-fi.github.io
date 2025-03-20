@@ -607,16 +607,17 @@ GN095906.1|Sequence 687 from Patent WO2009037279|16-APR-2009|Plants with increas
 BD179519.1|Highly thermophilic bacterium-derived protein and gene encoding it|15-MAY-2003|Highly thermophilic bacterium-derived protein and gene encoding it|JP2002325574-A 10 12-NOV-2002 THE INSTITUTE OF PHYSICAL AND CHEMICAL RESEARCH|</pre>
 <p>To reproduce the table above, go here: <a href="https://blast.ncbi.nlm.nih.gov/Blast.cgi?PROGRAM=blastn">https://blast.ncbi.nlm.nih.gov/Blast.cgi?PROGRAM=blastn</a>. Enter <code>CTCCTCGGCGGGCACGT</code> to the field at the top, switch the database to <span class="quote">"Patent sequences(pat)"</span>, and click BLAST. Then copy the accession numbers up to the last result where query coverage and identity are both 100%, and run the code above with the accessions joined by commas inserted as the id parameter.</p>
 <p>The Moderna patent includes a total of 33,915 sequences. It's an unusual practice to include such a large amount of genetic material in a single patent, so McKernan called it a <span class="quote">"kitchen sink patent"</span>. You can download all sequences from here: <a href="https://seqdata.uspto.gov/docdetail?docId=US09587003B2">https://seqdata.uspto.gov/docdetail?docId=US09587003B2</a>. Their average length is about 1,700 bases and their total length is about 58 million bases:</p>
-<pre>$ sed &#39;s/.*SEQUENCE: /&gt;/;/^[&lt; ]/d;s/  *[0-9]*\r$//;s/ //g&#39; Psips/Data/03/US/2017/870/095/B2/sequence/US09587003-20170307-S00001.TXT|seqkit stat
+<pre>$ unzip US09587003-20170307-SUPP.zip
+$ sed &#39;s/.*SEQUENCE: /&gt;/;/^[&lt; ]/d;s/  *[0-9]*\r$//;s/ //g&#39; Psips/Data/03/US/2017/870/095/B2/sequence/US09587003-20170307-S00001.TXT|seqkit stat
 file  format  type  num_seqs     sum_len  min_len  avg_len  max_len
 -     FASTA   DNA     33,915  57,673,267        7  1,700.5   18,787</pre>
-<p>The Moderna patent contains 4,573 amino acid sequences and 406 RNA sequences that contain U bases. I believe the remaining 28,936 sequences include all or nearly all human protein-coding genes, because the human genome contains about 20,000 protein-coding genes and their average length is about 1,500 bases:</p>
+<p>The Moderna patent contains 4,573 amino acid sequences and 406 RNA sequences that contain U bases. And out of the remaining 28,936 sequences, 24,363 sequences don't have any stop codons in the middle if they are translated. I believe they include all or nearly all human protein-coding genes, because the human genome contains about 20,000 protein-coding genes and their average length is about 1,500 bases:</p>
 <pre>$ wget ftp://ftp.ensembl.org/pub/release-109/fasta/homo_sapiens/cds/Homo_sapiens.GRCh38.cds.all.fa.gz
 $ seqkit fx2tab Homo_sapiens.GRCh38.cds.all.fa.gz|grep transcript_biotype:protein_coding|awk &#39;!a[$7]++&#39;|seqkit tab2fx|seqkit stat
 file  format  type  num_seqs     sum_len  min_len  avg_len  max_len
 -     FASTA   DNA     19,562  29,733,131        3  1,519.9  100,272</pre>
 <p>When I generated all 19-base segments of Wuhan-Hu-1 with the poly(A) tail removed and I searched for them within the the Moderna patent, there were 3 other 19-base segments besides Jikky's segment which had a perfect match to the patent:</p>
-<pre>$ sed &#39;s/.*SEQUENCE: /&gt;/;/^[&lt; ]/d;s/  *[0-9]*\r$//;s/ //g&#39; Psips/Data/03/US/2017/870/095/B2/sequence/US09587003-20170307-S00001.TXT|seqkit grep -svrp &#39;[^acgt]&#39;&gt;moderna.fa
+<pre>$ tr -d \\r&lt;Psips/Data/03/US/2017/870/095/B2/sequence/US09587003-20170307-S00001.TXT|awk &#39;/TYPE: DNA/&#39; RS= &#39;ORS=\n\n&#39;|sed &#39;s/&lt;400&gt; SEQUENCE: /&gt;/;/^[&lt; ]/d;s/  *[0-9]*$//;s/ //g&#39;|seqkit grep -svp u&gt;moderna.fa
 $ bowtie2-build --thread 4 moderna.fa{,}
 $ seqkit replace -sip&#39;a*$&#39; sars2.fa|seqkit sliding -W19 -s1|seqkit replace -p&#39;.*:&#39;&gt;frag.fa
 $ bowtie2 -p4 --no-unal -x moderna.fa --score-min C,0,-1 -fU frag.fa&gt;moderna.sam
@@ -627,10 +628,7 @@ sars2_pos    patent_sequence_number  match_start_in_patent_sequence  sequence
 8293-8311    30068                   1160                            CTATAACAAAGTTGAAAAC
 23601-23619  11651                   2760                            CTACGTGCCCGCCGAGGAG</pre>
 <p>(The last sequence above matched both the patent sequence IDs 11651 and 11652 but Bowtie2 only returned one of the matches.)</p>
-<p>If the amino acid and RNA sequences are excluded, the Moderna patent has a total of about 49 million 19-base segments:</p>
-<pre>$ sed &#39;s/.*SEQUENCE: /&gt;/;/^[&lt; ]/d;s/  *[0-9]*\r$//;s/ //g&#39; Psips/Data/03/US/2017/870/095/B2/sequence/US09587003-20170307-S00001.TXT|seqkit seq -s|grep -v &#39;[^acgt]&#39;|awk &#39;{x+=length-18}END{print x}&#39;
-49159360</pre>
-<p>And there's 29,885 19-base segments in Wuhan-Hu-1, so if both collections of segments would be random, the expected number of exact matches between the collections would be <code>.25^19*49159360*29885*2</code> which is about 11.</p>
+<p>If the amino acid and RNA sequences are excluded, the Moderna patent has a total of about 49 million 19-base segments. And there's 29,885 19-base segments in Wuhan-Hu-1. So if both collections of segments would be random, the expected number of exact matches between the collections would be <code>.25^19*49159360*29885*2</code> which is about 11.</p>
 <p>Jikky wrote this about the 19-base segment: <span class="quote">"In order for that sequence to have arisen in that virus, the virus which was manufactured with its HIV inserts, had to have had been infected into patented cell lines supplied by Moderna that had that unique sequence not seen in any other virus."</span> [<a href="https://www.arkmedic.info/p/how-to-blast-your-way-to-the-truth">https://www.arkmedic.info/p/how-to-blast-your-way-to-the-truth</a>] However it's possible for bioweaponeers to edit the genome as a text file and then synthesize the whole genome, so they don't have to find a cell line which contains the 12-base segment they want to insert, then infect that cell line with the virus a zillion times until the right piece of the cell line's genome happens to get inserted to the right spot of the viral genome by chance. In the comments of Jikky's Substack post, Jennifer Smith who is a PhD virologist also said that <span class="quote">"the <span class="quote">'accidental'</span> nature you implied is less likely than purposeful construction"</span>. [<a href="https://www.arkmedic.info/p/how-to-blast-your-way-to-the-truth/comment/4545048">https://www.arkmedic.info/p/how-to-blast-your-way-to-the-truth/comment/4545048</a>]</p>
 <p>Jikky also stated it as a fact that SARS-CoV-2 was made using an MSH3 cell line patented by Moderna: <span class="quote">"Irrespective of whether it was released there it distracts from the fact that it was made in a lab using a Moderna patented MSH3_mut cell line."</span> [<a href="https://x.com/JikkyKjj/status/1474581145979293702">https://x.com/JikkyKjj/status/1474581145979293702</a>]</p>
 <p>Kevin McKernan was blocked by Jikkyleaks in 2022 after McKernan debunked Jikky's Modernagate theory in this thread: <a href="https://x.com/Kevin_McKernan/status/1484987210508255233">https://x.com/Kevin_McKernan/status/1484987210508255233</a>. I recommend reading the whole thread. McKernan said that Jikkyleaks had dumped his reputation on a Bible codes interpretation of BLAST: [<a href="https://twitter.com/search?q=from%3Akevin_mckernan+to%3Ajikkykjj+since:2022-2-10&f=live">https://twitter.com/search?q=from%3Akevin_mckernan+to%3Ajikkykjj+since:2022-2-10&amp;f=live</a>]</p>
@@ -649,6 +647,37 @@ sars2_pos    patent_sequence_number  match_start_in_patent_sequence  sequence
 <p>Furthermore, even if Moderna were to attempt to obtain a patent right for <span class="quote">"SEQ ID 11652,"</span> I believe it would be a difficult process. Realistically, if Moderna were to pursue a patent right for <span class="quote">"SEQ ID 11652,"</span> the specification would need to explicitly describe the usage, function, and effects of <span class="quote">"SEQ ID 11652"</span> in order to meet the aforementioned support requirement. However, none of the specifications in the Patents 1 to 5 mention <span class="quote">"SEQ ID 11652,"</span> nor is there any disclosure suggesting it.</p>
 <p>Additionally, Moderna does not address the complementary sequence of <span class="quote">"CTACGTGCCCGCCGAGGAG,"</span> which is <span class="quote">"CTCCTCGGCGGGCACGTAG,"</span> anywhere in the specification. Therefore, the patent rights of the Patents 1 to 5 never extend to the <span class="quote">'CTCCTCGGCGGGCACGTAG'</span> sequence of the COVID-19 virus.</p>
 </blockquote>
+<p>Another addendum: I went to nucleotide BLAST: <a href="https://blast.ncbi.nlm.nih.gov/Blast.cgi?PROGRAM=blastn">https://blast.ncbi.nlm.nih.gov/Blast.cgi?PROGRAM=blastn</a>. I entered the accession of SARS-CoV-2 to the text field at the top (NC_045512), and I changed the database to patent sequences. I set the Entrez query to <code>0:2019[dp] Moderna</code> to return patent sequences that were published at GenBank before 2020 and that matched the word Moderna in any of the fields. Then under algorithm parameters I reduced the word size to 16, I increased the expect threshold to 1000, and I increased maximum target sequences to 1000.</p>
+<p>There were a total of 495 results. The best matches with 100% identity were 23 bases long, but even they had an expect value of about 2.3, which means that about 2.3 similarly close matches were expected to occur by chance:</p>
+<div class="width9">
+<img src="i/modernagate-blast.png">
+</div>
+<p>The expect values of the perfect 19-base matches were about 381, which means that about 381 similarly close matches were expected to occur by chance within the set of patent sequences that were published before 2020 and that matched the word <span class="quote">"Moderna"</span>.</p>
+<p>Then I clicked <span class="quote">"Download"</span> and selected <span class="quote">"Hit Table (text)"</span>. It showed that there were 176 perfect matches with a length of 19 bases, 55 with length 20, 6 with length 21, 13 with length 22, and 6 with length 23:</p>
+<pre>$ awk &#39;$3==100&amp;&amp;$4&gt;=19{a[$4]++}END{for(i in a)print i,a[i]}&#39; Downloads/XRM91BX9013-Alignment.txt
+19 176
+20 55
+21 6
+22 13
+23 6</pre>
+<p>There weren't even that many duplicate matches among the perfect matches that were at least 19 bases long, because the matches started at 92 unique positions of the genome of SARS-CoV-2. There were also 256 unique patent sequences which had a perfect match at least 19 bases long:</p>
+<pre>$ awk &#39;$3==100&amp;&amp;$4&gt;=19&#39; Downloads/XRM91BX9013-Alignment.txt|cut -f7|sort -u|wc -l
+92
+$ awk &#39;$3==100&amp;&amp;$4&gt;=19&#39; Downloads/XRM91BX9013-Alignment.txt|cut -f2|sort -u|wc -l
+256</pre>
+<p>The perfect matches that were at least 19 bases long covered 1,532 bases of the genome of SARS-CoV-2, which is about 5% of the total length of the genome:</p>
+<pre>$ awk &#39;$3==100&amp;&amp;$4&gt;=19{for(i=$7;i&lt;=$8;i++)a[i]}END{print length(a)}&#39; Downloads/XRN2HBFD016-Alignment.txt
+1532</pre>
+<p>When I clicked <span class="quote">"Search Summary"</span>, it showed that the total length of the entries in the patent database which matched the Entrez query <code>0:2019[dp] Moderna</code> was about a billion bases:</p>
+<div class="width5">
+<img src="i/modernagate-blast-2.png">
+</div>
+<p>When I tried repeating the same search but I removed the word <span class="quote">"Moderna"</span> from the Entrez query, I got an error that said <span class="quote">"Problem with taxonomic lookup and/or entrez, please consider changing."</span> So I wasn't able to look up the total length of sequences published before 2020 in the patent database. However the total length of all sequences in the patent database up to March 2025 was about 28.3 billion bases. So about 4% of the total length was made up by sequences that were published before 2020 and that matched the keyword <span class="quote">"Moderna"</span>.</p>
+<p>When I searched the nucleotide database at GenBank for the query <code>0:2019[dp] moderna patent</code>, there were 671,931 results: [<a href="https://www.ncbi.nlm.nih.gov/nuccore/?term=0%3A2019%5Bdp%5D+moderna+patent">https://www.ncbi.nlm.nih.gov/nuccore/?term=0%3A2019%5Bdp%5D+moderna+patent</a>]</p>
+<div class="width6">
+<img src="i/modernagate-genbank.png">
+</div>
+<p>But there were 46,221,952 results when I searched for <code>0:2019[dp] patent</code>. So the sequences that matched the keyword <span class="quote">"Moderna"</span> accounted for about 1.4% of the total results.</p>
 <h3>
 <a href=#Alex_Washburnes_endonuclease_fingerprint_paper id=Alex_Washburnes_endonuclease_fingerprint_paper>Alex Washburne's endonuclease fingerprint paper</a>
 </h3>
