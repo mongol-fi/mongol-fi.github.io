@@ -105,6 +105,12 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <ul class=toc>
 <li><a href=#Comparison_of_COVID_deaths_in_2022_relative_to_2021_by_Spiro_Pantazatos>Comparison of COVID deaths in 2022 relative to 2021 by Spiro Pantazatos</a></li>
 </ul></li>
+<li><a href=#Substack_post_by_Kirsch_from_March_26th>Substack post by Kirsch from March 26th</a>
+<ul class=toc>
+<li><a href=#14_3_above_baseline_mortality_for_Pfizer>14.3% above baseline mortality for Pfizer</a></li>
+<li><a href=#Comparison_of_Moderna_and_Pfizer_in_record_level_data_from_the_United_States>Comparison of Moderna and Pfizer in record-level data from the United States</a></li>
+<li><a href=#Study_about_fatal_adverse_event_reports_in_Norwegian_nursing_homes>Study about fatal adverse event reports in Norwegian nursing homes</a></li>
+</ul></li>
 </ul>
 
 <h2>
@@ -2898,6 +2904,130 @@ print(round(o,2),r=F)
 # 2022 0.13
 # 2023 0.22</pre>
 <p>So since my relative risk was about 1.7 times higher in 2023 than 2022, it's not surprising that by 2023 the gap in COVID mortality between less-vaccinated and more-vaccinated states would've gotten even smaller than in 2022. The CDC dataset I used only extended up to April 22nd 2023, but if I would've been able to include the rest of 2023 in my calculation, then the RR in 2023 might have been even higher.</p>
+<h2>
+<a href=#Substack_post_by_Kirsch_from_March_26th id=Substack_post_by_Kirsch_from_March_26th>Substack post by Kirsch from March 26th</a>
+</h2>
+<h3>
+<a href=#14_3_above_baseline_mortality_for_Pfizer id=14_3_above_baseline_mortality_for_Pfizer>14.3% above baseline mortality for Pfizer</a>
+</h3>
+<p>Kirsch wrote:</p>
+<blockquote>
+<p><img src=i/rootclaim-pfizer14-1.png class=width6><br> <em>Moderna had 1.4 VAERS death reports per dose compared to Pfizer. From the Czech data, we know that Moderna increases ACM by at least 20% over baseline mortality. This means that Pfizer increased your ACM by more than 14.3%. That's a train wreck.</em></p>
+<h3 id="executive-summary">Executive summary</h3>
+<p>It's always been next to impossible to estimate the increase in all cause mortality (ACM) caused by Pfizer because in all the big datasets we have Pfizer is the safest of all the vaccines. So there is no comparator.</p>
+<p>But if we use the novel method described below, we can estimate that <strong>Pfizer raised your all-cause mortality by <em>at least</em></strong>** 14.3% **and Moderna raised it by <em>at least</em> 20% on average for at least a year or more. Both of those are a disaster because COVID itself (at best) increased average crude mortality rate (CMR) by 20% per year.</p>
+<p>In short, <strong>the cure was far deadlier than the disease</strong>.</p>
+<h3 id="the-method">The method</h3>
+<p>Here's a novel method to estimate the minimum increase in ACM caused by the Pfizer vaccine.</p>
+<ol type="1">
+<li><p>Basically, we know from the <a href=https://kirschsubstack.com/p/a-summary-of-why-the-czech-republic>Czech Republic data</a> that the Moderna vaccine is at least a 20% increase over ACM (since it is a 20% increase over Pfizer).</p></li>
+<li><p>From VAERS, we find that there were 1.4X more Moderna death reports than Pfizer on a per dose basis.</p></li>
+</ol>
+<p>If we use that as a fixed value (a 20% increase over baseline), then we simply use the differential brand mortality reporting ratio in VAERS for death events per dose and we can use the chart above (<a href=https://github.com/skirsch/python/blob/876fcf660d876d801d7af9dd9dff06b9804517b7/VAERS_pfizer_ACM.py>source code</a>) to get the number which is 14.3%.</p>
+</blockquote>
+<p>However if Moderna has 1.2 times the baseline mortality and Moderna has 1.4 times higher mortality than Pfizer, then from <code>1.2/1.4</code> you get that Pfizer has about 14.3% lower than baseline mortality.</p>
+<p>So it's not 14.3% above the baseline but 14.3% below the baseline.</p>
+<p>The last line in the code below defines the y-axis values in Kirsch's plot. In the <code>VAERS_ratios</code> variable he accidentally calculated excess deaths for Moderna divided by excess deaths for Pfizer: [<a href="https://github.com/skirsch/python/blob/876fcf660d876d801d7af9dd9dff06b9804517b7/VAERS_pfizer_ACM.py">https://github.com/skirsch/python/blob/876fcf660d876d801d7af9dd9dff06b9804517b7/VAERS_pfizer_ACM.py</a>]</p>
+<pre>B = 0.008  # Baseline ACM (0.8%)
+
+# Define Pfizer ACM increase over baseline (%)
+pfizer_acm_increase_pct = np.linspace(0.01, 0.8, 500)  # 1% to 80% increase over baseline
+
+B = 0.008
+M = 0.0096  # Fixed Moderna ACM = 20% over baseline
+P_vals = B * (1 + pfizer_acm_increase_pct)
+VAERS_ratios = (M - B) / (P_vals - B)</pre>
+<p>The <code>VAERS_ratios</code> variable should've been just <code>M / P</code> and not <code>(M - B) / (P_vals - B)</code>, which would've correctly given him a y-axis value of 1.4 at an x-axis value of about -14.3%:</p>
+<div class="width6">
+<img src="i/rootclaim-pfizer14-2.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>#!/usr/local/bin/python3
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+B = 0.008  # Baseline ACM (0.8%)
+
+pfizer_acm_increase_pct = np.linspace(-0.2,0.8,500)
+
+B = 0.008
+M = 0.0096  # Fixed Moderna ACM = 20% over baseline
+P_vals = B * (1 + pfizer_acm_increase_pct)
+VAERS_ratios = M / P_vals
+
+plt.figure(figsize=(10, 6))
+plt.plot(pfizer_acm_increase_pct * 100, VAERS_ratios, label=&#39;VAERS Ratio (Moderna : Pfizer)&#39;)
+plt.axhline(y=1.4, color=&#39;gray&#39;, linestyle=&#39;--&#39;, label=&#39;Target VAERS Ratio (1.4)&#39;)
+plt.axvline(x=(1.2/1.4-1)*100, color=&#39;red&#39;, linestyle=&#39;--&#39;, label=&#39;Pfizer ACM = 14.3% below baseline&#39;)
+plt.title(&#39;VAERS Moderna:Pfizer Ratio vs. Pfizer ACM Increase Over Baseline&#39;)
+plt.xlabel(&#39;Pfizer ACM Increase Over Baseline (%)&#39;)
+plt.ylabel(&#39;VAERS Report Ratio (Moderna : Pfizer)&#39;)
+plt.grid(True)
+plt.legend()
+plt.tight_layout()
+plt.show()</pre>
+</div>
+<p>And anyway Kirsch's ratio of 1.4 times more deaths per report at VAERS was not even adjusted for age, but in VAERS reports for COVID vaccines where the age field is not missing, the average age was about 5 years higher for Moderna than Pfizer: [<a href="https://vaers.hhs.gov/data/datasets.html">https://vaers.hhs.gov/data/datasets.html</a>]</p>
+<pre>v=do.call(rbind,lapply(2020:2024,\(i)Reduce(merge,lapply(c(&quot;DATA&quot;,&quot;VAX&quot;,&quot;SYMPTOMS&quot;),\(x)fread(paste0(i,&quot;VAERS&quot;,x,&quot;.csv.gz&quot;))))))
+v[VAX_TYPE==&quot;COVID19&quot;,.(reports=.N,meanage=mean(AGE_YRS,na.rm=T)),VAX_MANU][order(-reports)]|&gt;print(r=F)
+#             VAX_MANU reports meanage
+#     PFIZER\\BIONTECH  657316  48.900
+#              MODERNA  632445  54.013
+#              JANSSEN  106281  47.237
+# UNKNOWN MANUFACTURER    8447  53.305
+#              NOVAVAX     671  48.726</pre>
+<p>The country identifiers of European countries were removed from VAERS in November 2022, but in an old snapshot of the VAERS data from November 2022 which still included the country identifiers, the ratio of deaths per reports was about twice as high for Pfizer as Moderna in Germany and Austria (which were the two European countries that had the most reports in VAERS). [<a href=czech4.html#Ratio_of_deaths_per_adverse_event_reports_in_VAERS_calculated_by_Hans_Joachim_Kremer>czech4.html#Ratio_of_deaths_per_adverse_event_reports_in_VAERS_calculated_by_Hans_Joachim_Kremer</a>]</p>
+<p>This section addresses a Substack post by Kirsch titled <span class="quote">"Pfizer likely increased your all-cause mortality by at least 14%; Moderna was even worse at 20%"</span>: <a href="https://kirschsubstack.com/p/pfizer-likely-increased-your-all">https://kirschsubstack.com/p/pfizer-likely-increased-your-all</a>.</p>
+<h3>
+<a href=#Comparison_of_Moderna_and_Pfizer_in_record_level_data_from_the_United_States id=Comparison_of_Moderna_and_Pfizer_in_record_level_data_from_the_United_States>Comparison of Moderna and Pfizer in record-level data from the United States</a>
+</h3>
+<p>Kirsch wrote: <span class="quote">"If the US collected and published record-level data like the Czech Republic, we'd know for sure."</span></p>
+<p>However he has already published a record-level dataset from the United States himself, which shows that Pfizer had higher age-normalized mortality than Moderna: [<a href=connecticut.html#ASMR_by_vaccine_brand_and_month>connecticut.html#ASMR_by_vaccine_brand_and_month</a>]</p>
+<div class="width7">
+<img src="i/ct-asmrtype.png">
+</div>
+<p>Kirsch's US dataset only includes Medicare recipients in Connecticut, but about 98% of the US population aged 65 and above is enrolled on Medicare and ages 65 and above account for most deaths, so the Connecticut dataset includes a total of 56,958 deaths, which is only about 14% less deaths than Barry's NZ dataset.</p>
+<p>When I used the Connecticut Medicare data to do a Poisson regression adjusted for age group and observation month, the relative mortality risk against a baseline of all vaccinated people was about 1.06 for Pfizer but 0.84 for Moderna:</p>
+<pre>t=fread(&quot;http://sars2.net/f/ctbucketskeep.csv.gz&quot;)
+
+a=t[dose==1&amp;age&gt;=65][,age:=pmin(age,95)%/%5*5]
+a=a[,.(dead=sum(dead),pop=sum(alive)),.(type,month,age)]
+a=rbind(a,a[,.(dead=sum(dead),pop=sum(pop),type=&quot;All&quot;),.(month,age)])
+a[,type:=relevel(factor(type),&quot;All&quot;)]
+
+lm=glm(dead~type+factor(age)+month+offset(log(pop)),poisson,a)
+
+o=a[,.(dead=sum(dead),persondays=sum(pop)),,type]
+coef=coef(lm)[paste0(&quot;type&quot;,o$type)]
+ci=qnorm(.975)*sqrt(diag(vcov(lm)))[paste0(&quot;type&quot;,o$type)]
+o[,rr:=exp(coef)][,low:=exp(coef-ci)][,high:=exp(coef+ci)]
+
+print(mutate_if(o,is.double,round,2),r=F)
+#    type  dead persondays   rr  low high
+#     All 56958  493035327   NA   NA   NA
+# Janssen  1609    9556885 1.67 1.59 1.75
+# Moderna 15313  176236542 0.84 0.83 0.86
+#  Pfizer 40036  307241900 1.06 1.04 1.07</pre>
+<h3>
+<a href=#Study_about_fatal_adverse_event_reports_in_Norwegian_nursing_homes id=Study_about_fatal_adverse_event_reports_in_Norwegian_nursing_homes>Study about fatal adverse event reports in Norwegian nursing homes</a>
+</h3>
+<p>Kirsch wrote: <span class="quote">"The <a href=https://www.bmj.com/content/373/bmj.n1372>BMJ reported</a> that an expert review commissioned by the Norwegian Medicines Agency determined that <strong>36% </strong>of the first 100 deaths reported after COVID vaccination were <span class="quote">'likely'</span> to <span class="quote">'possibly'</span> caused by the vaccine. So that's an objective source confirming that my readers got it right that the cure was worse than the disease<strong>.</strong>"</span></p>
+<p>The BMJ article didn't make it clear if the 100 deaths were the first 100 deaths from all causes or only deaths that were suspected to be related to vaccination.</p>
+<p>However the Norwegian paper the BMJ article was based on said: <span class="quote">"In the period 27 December 2020 to 15 February 2021, about 29 400 of Norway's roughly 35 000 nursing home patients were vaccinated with the mRNA vaccine BNT162b2. During the same period, the Norwegian Medicines Agency received 100 reports of suspected fatal adverse reactions to the vaccine."</span> [<a href="https://tidsskriftet.no/en/2021/05/originalartikkel/nursing-home-deaths-after-covid-19-vaccination">https://tidsskriftet.no/en/2021/05/originalartikkel/nursing-home-deaths-after-covid-19-vaccination</a>]</p>
+<p>The paper also said: <span class="quote">"The mean age of the patients was 87.7 years (range 61–103 years). Among 100 reported deaths, a causal link to the vaccine was considered probable in 10 cases, possible in 26 and unlikely in 59."</span></p>
+<p>So in other words among approximately the first 35,000 nursing home residents vaccinated, there were only 10 fatal adverse event reports which were considered to be likely to have a causal link to the vaccine.</p>
+<p>The discussion section of the Norwegian paper said:</p>
+<blockquote>
+<p>The spontaneous reporting system for adverse drug reactions is primarily useful for generating hypotheses and is not particularly suitable as a basis for assessing causality. Many of the reports did not contain sufficient clinical information to form an impression of the patient's clinical course and a possible causal link between vaccination and death. Almost half of the reporting parties did not submit additional information. In particular, there was a lack of information about which phase of life the patients were in, and whether their health and general condition were already rapidly or slowly deteriorating before vaccination. All patients were in a complex clinical situation characterised by old age, frailty and multiple chronic diseases, which means that a variety of factors could have contributed to the deaths. It is therefore practically impossible to determine with any certainty how much of a role the vaccine played in the deaths.</p>
+<p>The extremely high mortality rate in nursing homes means that random factors will lead to a certain number of deaths shortly after vaccination anyway. It cannot be ruled out that some of the deaths that were classified as probable are in fact due to such random factors. Nevertheless, we find it reasonable to assume that adverse effects from the vaccine in very frail patients can trigger a cascade of new complications which, in the worst case, end up expediting death.</p>
+<p>The categories <span class="quote">'probable'</span> and <span class="quote">'unlikely'</span> were used in cases where the expert group considered there to be a clear likelihood one way or the other, and the category <span class="quote">'possible'</span> was used where a causal link between vaccination and death was just as likely as unlikely. Many of the cases classified as <span class="quote">'possible'</span> are therefore very uncertain, and some of them could perhaps also have been categorised as unclassifiable. The group considered far more cases to be either probable or unlikely than the Norwegian Institute of Public Health in its initial assessment. This is probably due to access to more information as well as knowledge of typical clinical courses in frail elderly people.</p>
+<p>The adverse reaction reports were submitted within a period of approximately 50 days, during which it can be assumed that 2000–2500 nursing home patients died in Norway (7). Whether 10 or 36 of these deaths were accelerated by the vaccine, the proportion is still low. In the same period, almost 30 000 nursing home patients were vaccinated, which means that there will most likely have been far more than 100 deaths in nursing homes in a close temporal relationship to vaccination in the relevant time period. Our findings cannot therefore be used to estimate the incidence of vaccine-related deaths.</p>
+<p>It is important to emphasise that the vast majority of long-term patients in nursing homes have a short remaining life expectancy. They are definitely in the final stage of life. This is reflected in the expert group's scoring of 48 out of 79 classifiable patients in CFS category 8 or 9, which indicates an expected lifespan of less than six months.</p>
+</blockquote>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
