@@ -1542,8 +1542,8 @@ year   vax asmr # ASMR per 100,000 person-years in May of each year
 <a href=#Comparison_to_English_ONS_data id=Comparison_to_English_ONS_data>Comparison to English ONS data</a>
 </h3>
 <p>In the English ONS data, the ratio between unvaccinated and vaccinated mortality is elevated during the COVID wave that peaks in August 2021 and the wave that peaks in December 2021 to January 2022. There is a small dent in the ratio during the months in between, but it's not too big because unvaccinated people also have fairly high COVID mortality between the two peaks:</p>
-<div class="maxwidth">
-<img src=i/rootclaim-czechrate-5.png width=600><img src=i/rootclaim-czechrate-6.png width=600>
+<div class="width6">
+<img src="i/rootclaim-czechrate-5.png">
 </div>
 <div class="spoiler">
 <button>
@@ -1607,6 +1607,71 @@ ggsave(&quot;1.png&quot;,width=5.47,height=4.3,dpi=300*4)
 
 sub=&quot;The values for individual age groups are crude mortality rates per 100,000 person-years, and the values for all ages are age-standardized mortality rates per 100,000 person-years. The data was taken from Tables 1 and 2 of the ONS dataset \&quot;Deaths involving COVID-19 by vaccination status, England\&quot;. Data for the first three months of 2021 was taken from the July 2022 edition and data for other months was taken from the August 2023 edition. People are counted as vaccinated on the day of the first dose. COVID deaths are deaths where COVID was mentioned anywhere on the death certificate.&quot;
 system(paste0(&quot;mogrify -trim 1.png;magick 1.png \\( -size `identify -format %w 1.png`x -font Arial -interline-spacing -3 -pointsize $[43*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -splice x80 \\) -append -resize 25% -bordercolor white -border 24 -colors 256 1.png&quot;))</pre>
+</div>
+<div class="width6">
+<img src="i/rootclaim-czechrate-6.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>library(data.table);library(ggplot2)
+
+t=fread(&quot;http://sars2.net/f/ons.csv&quot;)
+t=rbind(t[ed==7&amp;month&lt;=&quot;2021-03&quot;],t[ed==9])[cause!=&quot;Deaths involving COVID-19&quot;]
+
+t[,x:=as.Date(paste0(month,&quot;-15&quot;))]
+t[,vax:=factor(status!=&quot;Unvaccinated&quot;,,c(&quot;Unvaccinated&quot;,&quot;Vaccinated&quot;))]
+a=t[age!=&quot;Total&quot;,.(cmr=sum(dead)/sum(pop)),.(age,vax,x,cause)]
+
+p=a[,.(y=cmr[1]/cmr[2]),.(age,x,cause)]
+p=rbind(p,t[age==&quot;Total&quot;&amp;status%like%&quot;accin&quot;,.(y=asmr[1]/asmr[2],age=&quot;All ages&quot;),.(x,cause)])
+
+xstart=as.Date(&quot;2021-1-1&quot;);xend=as.Date(&quot;2023-6-1&quot;);xbreak=seq(xstart,xend,&quot;year&quot;);yend=max(p$y)
+
+ggplot(p)+
+facet_wrap(~age,dir=&quot;v&quot;,ncol=2)+
+geom_hline(yintercept=2:8,color=&quot;gray91&quot;,linewidth=.4)+
+geom_hline(yintercept=1,color=&quot;gray60&quot;,linewidth=.4)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray60&quot;,linewidth=.4)+
+geom_rect(data=p[,max(y),age],aes(xmin=xstart,xmax=xend,ymin=0,ymax=yend),linewidth=.4,fill=NA,color=&quot;black&quot;,lineend=&quot;square&quot;)+
+geom_line(aes(x,y,linetype=cause),linewidth=.6)+
+geom_point(aes(x,y,alpha=cause),stroke=0,size=1.2)+
+geom_text(data=p[,max(y),age],aes(x=as.Date(&quot;2022-7-1&quot;),y=yend,label=age),hjust=.5,fontface=2,vjust=1.5,size=3.8)+
+labs(x=NULL,y=NULL,title=&quot;Ratio between unvaccinated and vaccinated mortality rate\nin English ONS data&quot;)+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=xbreak,labels=year(xbreak))+
+scale_y_continuous(breaks=seq(1,7,2))+
+scale_linetype_manual(values=c(&quot;solid&quot;,&quot;11&quot;))+
+scale_alpha_manual(values=c(1,0),guide=&quot;none&quot;)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(color=guide_legend(order=1),linetype=guide_legend(order=2))+
+theme(axis.text=element_text(hjust=0,size=11,color=&quot;black&quot;),
+  axis.title=element_text(size=11,face=2),
+  axis.text.x=element_text(margin=margin(3)),
+  axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(4,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;horizontal&quot;,
+  legend.justification=&quot;right&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(21,&quot;pt&quot;),
+  legend.margin=margin(,,5),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.spacing=unit(2,&quot;pt&quot;),
+  plot.margin=margin(5,5,5,5),
+  plot.title=element_text(size=11,face=2,margin=margin(2,,4)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=4.8,height=4.1,dpi=300*4)
+system(paste0(&quot;magick 1.png -trim -resize 25% -bordercolor white -border 24 -colors 256 1.png&quot;))</pre>
 </div>
 <h3>
 <a href=#Comparison_to_Dutch_CBS_data id=Comparison_to_Dutch_CBS_data>Comparison to Dutch CBS data</a>
