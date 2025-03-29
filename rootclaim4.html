@@ -215,7 +215,6 @@ system(paste0(&quot;mogrify -trim 1.png;magick 1.png \\( -size `identify -format
 <p>I also pointed out that there was high COVID mortality in both January and February 2021. In January 2021 COVID ASMR accounted for about half of total ASMR in both unvaccinated and vaccinated people, but in February COVID ASMR now accounted for about 41% of total ASMR in unvaccinated people but only about 20% of total ASMR in vaccinated people, so vaccinated people had a much bigger drop in the percentage between January and February. I think it's because in Janury 2021 many vaccinated people had been vaccinated so recently that there had not yet been enough time for the immune response to build up after vaccination. But in February 2021 a larger part of vaccinated people had been vaccinated at least 2 or 3 weeks ago so the vaccines were now more effective. So the COVID deaths increased the ratio between unvaccinated and vaccinated ASMR more in February than January:</p>
 <pre>ons=fread(&quot;https://sars2.net/f/ons.csv&quot;)[ed==7&amp;age==&quot;Total&quot;]
 o=ons[status%like%&quot;accin&quot;,asmr[cause==&quot;Deaths involving COVID-19&quot;]/asmr[cause==&quot;All causes&quot;]*100,.(month,status)]
-o[status==&quot;Ever vaccinated&quot;,status:=&quot;Vaccinated&quot;]
 o[,.(unvaccinated=V1[1],vaccinated=V1[2]),month][,ratio:=unvaccinated/vaccinated]|&gt;mutate_if(is.double,round,1)|&gt;print(r=F)
 #   month unvaccinated vaccinated ratio
 # 2021-01         47.3       53.7   0.9
@@ -240,6 +239,135 @@ o[,.(unvaccinated=V1[1],vaccinated=V1[2]),month][,ratio:=unvaccinated/vaccinated
 <div class="width6">
 <img src="i/rootclaim-cbs.png">
 </div>
+<p>From the light blue line in the next plot, you can see that in the Czech record-level datasets the ratio between unvaccinated and vaccinated non-COVID ASMR follows a fairly smooth downward curve like in the English and Dutch data. But the bright blue line shows that the ratio between unvaccinated and vaccinated all-cause ASMR is elevated in the Czech Republic in the winter of 2021-2022:</p>
+<p>In the Substack I linked previously, Kirsch also wrote:</p>
+<blockquote>
+<p>I did it by 10 year age groups (using a pivot on Table 2) just to make sure and here's what it looks like for 60-69:</p>
+<p><img src=i/rootclaim-onsrate-2.png class=width6></p>
+<p>As you can see, the ASMR jumps instantly with Omicron at a time when the unvaccinated are decreasing their mortality.</p>
+<p>That's hard to explain how the vaccine is helping with such a huge disparity where the vaccinated start dying in droves exactly when Omicron rolls out. Coincidence?</p>
+<p>So you'd have to argue that the data is invalid.</p>
+</blockquote>
+<p>The healthy vaccinee effect explains why the ASMR of people with two but not more doses shoots up when the third dose was rolled out, because the healthy vaccinees moved under the third dose and people with elevated mortality risk remained under the second dose:</p>
+<div class="width6">
+<img src="i/rootclaim-onsrate-3.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>t=fread(&quot;http://sars2.net/f/ons.csv&quot;)[cause==&quot;All causes&quot;&amp;age==&quot;60-69&quot;]
+t=rbind(t[ed==7&amp;month&lt;=&quot;2021-03&quot;],t[ed==9])
+
+p=t[,.(dead=sum(dead),pop=sum(pop)),.(date=as.Date(paste0(month,&quot;-1&quot;)),status=sub(&quot;(,| or).*&quot;,&quot;&quot;,status))]
+p=rbind(p,a[status!=&quot;Unvaccinated&quot;,.(dead=sum(dead),pop=sum(pop),status=&quot;Ever vaccinated&quot;),date])
+p[,status:=factor(status,unique(status))]
+p[,cmr:=dead/pop*1e5]
+
+ybreak=pretty(p$cmr,6);ystart=0;yend=max(ybreak);xstart=min(p$date);xend=max(p$date)
+
+pal=c(hcl(c(21,11,6,0,30)*10+15,90,70),&quot;black&quot;)
+
+frac=p[status!=&quot;Ever vaccinated&quot;,.(frac=pop/sum(pop),status),date]
+
+ggplot(p,aes(date,cmr,color=status))+
+geom_area(data=frac,aes(y=frac*yend*.9999,fill=status),linewidth=.15,show.legend=F,alpha=.3)+
+annotate(&quot;rect&quot;,xmin=xstart,xmax=xend,ymin=ystart,ymax=yend,linewidth=.4,lineend=&quot;square&quot;,fill=NA,color=&quot;black&quot;)+
+geom_line(linewidth=.4)+
+geom_point(size=1.1)+
+scale_x_date(breaks=unique(p$date)[c(T,F)],date_labels=&quot;%b\n%y&quot;)+
+scale_y_continuous(limits=c(ystart,yend),breaks=seq(0,yend,1000),labels=\(i)ifelse(i&lt;1000,i,paste0(i/1e3,&quot;k&quot;)),sec.axis=sec_axis(trans=~./yend*100,name=&quot;Percentage of group&quot;))+
+labs(x=NULL,y=&quot;Crude mortality rate per 100,000 person-years&quot;)+
+ggtitle(&quot;English ONS data, ages 60-69: All-cause CMR per 100,000 person-years&quot;)+
+scale_color_manual(values=pal)+
+scale_fill_manual(values=pal)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(color=guide_legend(ncol=3))+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.ticks=element_line(linewidth=.4),
+  axis.ticks.length=unit(3,&quot;pt&quot;),
+  axis.title=element_text(size=11),
+  legend.background=element_blank(),
+  legend.box.just=&quot;center&quot;,
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.justification=&quot;center&quot;,
+  legend.key=element_rect(fill=&quot;white&quot;),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.margin=margin(,,5),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  plot.title=element_text(size=11,hjust=.5,face=2,margin=margin(,,3)))
+ggsave(&quot;1.png&quot;,width=6,height=3.7,dpi=300*4)
+system(&quot;magick 1.png -trim -resize 25% -bordercolor white -border 24 -dither none -colors 256 1.png&quot;)</pre>
+</div>
+<p>In the previous plot the <span class="quote">"Second dose"</span> category meant people with two but not more doses. But if you look at people with two or more doses instead, their CMR remains stable even after the third dose is rolled out:</p>
+<div class="width6">
+<img src="i/rootclaim-onsrate-4.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>t=fread(&quot;http://sars2.net/f/ons.csv&quot;)[cause==&quot;All causes&quot;&amp;age==&quot;60-69&quot;]
+t=rbind(t[ed==7&amp;month&lt;=&quot;2021-03&quot;],t[ed==9])
+
+t[,status:=sub(&quot;(,| or).*&quot;,&quot;&quot;,status)]
+t[,status:=as.integer(factor(status,unique(status)))]
+t[,date:=as.Date(paste0(month,&quot;-1&quot;))]
+
+p=do.call(rbind,lapply(1:5,\(i)t[if(i==1)status==1 else status&gt;=i,.(dead=sum(dead),pop=sum(pop),status=i),date]))
+p[,status:=factor(status,,c(&quot;Unvaccinated&quot;,paste(c(&quot;One&quot;,&quot;Two&quot;,&quot;Three&quot;,&quot;Four&quot;),&quot;or more doses&quot;)))]
+
+p[,cmr:=dead/pop*1e5]
+
+ybreak=pretty(p$cmr,6);ystart=0;yend=max(ybreak);xstart=min(p$date);xend=max(p$date)
+
+pal=c(hcl(c(21,11,6,0,30)*10+15,90,70),&quot;black&quot;)
+
+ggplot(p,aes(date,cmr,color=status))+
+annotate(&quot;rect&quot;,xmin=xstart,xmax=xend,ymin=ystart,ymax=yend,linewidth=.4,lineend=&quot;square&quot;,fill=NA,color=&quot;black&quot;)+
+geom_line(linewidth=.4)+
+geom_point(size=1.1)+
+scale_x_date(breaks=unique(p$date)[c(T,F)],date_labels=&quot;%b\n%y&quot;)+
+scale_y_continuous(limits=c(ystart,yend),breaks=seq(0,yend,1000),labels=\(i)ifelse(i&lt;1000,i,paste0(i/1e3,&quot;k&quot;)))+
+labs(x=NULL,y=NULL)+
+ggtitle(&quot;English ONS data, ages 60-69: All-cause CMR per 100,000 person-years&quot;)+
+scale_color_manual(values=pal)+
+scale_fill_manual(values=pal)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(color=guide_legend(ncol=3))+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.ticks=element_line(linewidth=.4),
+  axis.ticks.length=unit(3,&quot;pt&quot;),
+  axis.title=element_text(size=11),
+  legend.background=element_blank(),
+  legend.box.just=&quot;center&quot;,
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.justification=&quot;center&quot;,
+  legend.key=element_rect(fill=&quot;white&quot;),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.margin=margin(,,5),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  plot.margin=margin(5,10,5,5),
+  plot.title=element_text(size=11,hjust=.5,face=2,margin=margin(,,3)))
+ggsave(&quot;1.png&quot;,width=6,height=3.7,dpi=300*4)
+system(&quot;magick 1.png -trim -resize 25% -bordercolor white -border 24 -dither none -colors 256 1.png&quot;)</pre>
+</div>
+<p>Fenton et al. have hypothesized that the reason why the mortality rate of people with two but not more doses shot up when the third dose was rolled out was because people who died soon after getting the third dose were misclassified under the second dose. But if that was the case, you'd expect there to also be an increase in the mortality of people with two or more doses.</p>
+<p>In ages 60-69 around January 2022, the ONS dataset has a very low number of deaths in people who got the third dose less than 3 weeks ago. So conversely there is elevated mortality among the people who remained under the second dose when the third dose was rolled out, since the total mortality of people with two or more doses remained stable.</p>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
