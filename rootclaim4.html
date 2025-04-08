@@ -68,6 +68,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <h2 id=Contents><a href=#Contents>Contents</a></h2>
 <ul class=toc>
 <li><a href=#Ratio_between_unvaccinated_and_vaccinated_mortality_in_ONS_data>Ratio between unvaccinated and vaccinated mortality in ONS data</a></li>
+<li><a href=#Excess_deaths_by_state_in_2021_2022_relative_to_July_to_November_2020>Excess deaths by state in 2021-2022 relative to July to November 2020</a></li>
 </ul>
 
 <h2>
@@ -79,9 +80,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 </div>
 <p>However in April to May 2021 there were still many people who had been recently vaccinated, so vaccinated people were still heavily impacted by the temporal healthy vaccinee effect (which is a term coined by Jeffrey Morris for the stronger form of HVE which lasts for the first weeks or months after vaccination, as opposed to the inherent HVE that remains in place even long after vaccination).</p>
 <p>From the plot below you can roughly see the magnitude of the HVE from the dashed line which shows non-COVID ASMR. The plot below also shows that the ratio between unvaccinated and vaccinated ASMR was in fact elevated during the Delta peak in August 2021 and the COVID wave that peaked in December 2021 to January 2022. But in October 2021 when there was a lower number of COVID deaths than in the surrounding months, the ratio between unvaccinated and vaccinated ASMR was also lower than in the surrounding months:</p>
-<div class="width6">
-<img src="i/rootclaim-czechrate-6.png">
-</div>
+<p><img src=i/rootclaim-czechrate-6.png width=550></p>
 <div class="spoiler">
 <button>
 Show code
@@ -243,7 +242,7 @@ o[,.(unvaccinated=V1[1],vaccinated=V1[2]),month][,ratio:=unvaccinated/vaccinated
 <p>In the Substack I linked previously, Kirsch also wrote:</p>
 <blockquote>
 <p>I did it by 10 year age groups (using a pivot on Table 2) just to make sure and here's what it looks like for 60-69:</p>
-<p><img src=i/rootclaim-onsrate-2.png class=width6></p>
+<p><img src=i/rootclaim-onsrate-2.png class=width7></p>
 <p>As you can see, the ASMR jumps instantly with Omicron at a time when the unvaccinated are decreasing their mortality.</p>
 <p>That's hard to explain how the vaccine is helping with such a huge disparity where the vaccinated start dying in droves exactly when Omicron rolls out. Coincidence?</p>
 <p>So you'd have to argue that the data is invalid.</p>
@@ -427,7 +426,103 @@ sub=&quot;\u00a0     Source: ONS datasets \&quot;Deaths by vaccination status, E
 
 system(paste0(&quot;mogrify -trim i[12].png;w=`identify -format %w i1.png`;magick -size $w \\( -pointsize 50 -font Arial-Bold caption:&#39;ONS dataset for mortality by vaccination status, ages 60-69&#39; -splice x10 \\) -pointsize 45 -font Arial \\( caption:&#39;Excess CMR percent relative to CMR the same month among the general population of England&#39; i1.png -splice x24 \\) \\( caption:&#39;Population size in person-years&#39; i2.png -splice x24 \\) \\( -pointsize 42 -font Arial caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -splice x20 \\) -append -trim -bordercolor white -border 32 1.png&quot;))</pre>
 </div>
-<p>So Kirsch was wrong that <span class="quote">"the vaccinated start dying in droves exactly when Omicron rolls out"</span>. The total mortality rate of vaccinated people remained roughly stable even after Omicron emerged, but Kirsch's table only showed that the mortality rate of people with two but not more doses went up in December 2021. But it wasn't because of Omicron but because the third dose was rolled out.</p>
+<p>So Kirsch was wrong when he wrote that <span class="quote">"the vaccinated start dying in droves exactly when Omicron rolls out"</span>. The total mortality rate of vaccinated people remained roughly stable even after Omicron emerged, but Kirsch's table only showed that the mortality rate of people with two but not more doses went up in December 2021. But it wasn't because of Omicron but because the third dose was rolled out.</p>
+<h2>
+<a href=#Excess_deaths_by_state_in_2021_2022_relative_to_July_to_November_2020 id=Excess_deaths_by_state_in_2021_2022_relative_to_July_to_November_2020>Excess deaths by state in 2021-2022 relative to July to November 2020</a>
+</h2>
+<p>In this plot the x-axis shows doses per 100 people in each state, and the y-axis shows average monthly deaths in 2021-2022 divided by the average monthly deaths in July to November 2020:</p>
+<div class="width6">
+<img src="i/rootclaim-2122-1.png">
+</div>
+<p>The reason why Kirsch got a positive correlation between the variables was because many southern states had a COVID wave in summer to fall of 2020 but northern states generally did not, and southern states had a lower percentage of vaccinated people. So the excess deaths due to COVID elevated the baseline more in southern states.</p>
+<p>When I used the average monthly deaths in 2019 as the baseline instead, I got a negative correlation between the percentage of vaccinated people and deaths in 2021-2022:</p>
+<pre># copied from Kirsch&#39;s spreadsheet (doses per 100 in November 2021 CDC data)
+vax=data.table(state=c(state.name,&quot;District of Columbia&quot;))
+vax$vax=c(99,112,114,106,136,129,150,129,129,105,NA,93,126,104,115,116,108,102,147,139,150,112,125,98,107,107,104,117,140,138,134,141,117,99,108,110,131,139,149,108,115,102,115,113,151,134,133,90,121,95,135)
+vax=vax[state!=&quot;Hawaii&quot;]
+
+t=fread(&quot;http://sars2.net/f/wonderstatemonthlydead.csv&quot;)
+
+t1=t[date&gt;=&quot;2021-01&quot;&amp;date&lt;=&quot;2022-12&quot;,.(dead=mean(dead)),state]
+t2=t[date&gt;=&quot;2019-01&quot;&amp;date&lt;=&quot;2019-12&quot;,.(base=mean(dead)),state]
+merge(merge(t1,t2),vax)[,cor(dead/base,vax)]
+# [1] -0.4080108 (baseline is whole 2019)</pre>
+<p>And I also got a negative correlation when I used the whole of 2020 as the baseline:</p>
+<pre>t3=t[date&gt;=&quot;2020-01&quot;&amp;date&lt;=&quot;2020-12&quot;,.(base=mean(dead)),state]
+merge(merge(t1,t3),vax)[,cor(dead/base,vax)]
+# [1] -0.2157941</pre>
+<p>But I only got a negative correlation when I used July to November 2020 as the baseline like Kirsch:</p>
+<pre>t3=t[date&gt;=&quot;2020-07&quot;&amp;date&lt;=&quot;2020-11&quot;,.(base=mean(dead)),state]
+merge(merge(t1,t3),vax)[,cor(dead/base,vax)]
+# [1] 0.5609224</pre>
+<p>In the next plot I calculated deaths each month as a percentage of average monthly deaths in the same state in 2019. Then I picked the 10 states with the highest and lowest number of vaccine doses per hundred people in Kirsch's spreadsheet, and I calculated the average monthly percentage of deaths for both groups. It's easy to see how the least-vaccinated states had higher deaths in July to November 2020 than the most-vaccinated states:</p>
+<div class="width6">
+<img src="i/rootclaim-2122-2.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre># copied from Kirsch&#39;s spreadsheet (doses per 100 in November 2021 CDC data)
+vax=data.table(state=c(state.name,&quot;District of Columbia&quot;))
+vax$vax=c(99,112,114,106,136,129,150,129,129,105,NA,93,126,104,115,116,108,102,147,139,150,112,125,98,107,107,104,117,140,138,134,141,117,99,108,110,131,139,149,108,115,102,115,113,151,134,133,90,121,95,135)
+vax=vax[state!=&quot;Hawaii&quot;]
+
+t=fread(&quot;http://sars2.net/f/wonderstatemonthlydead.csv&quot;)
+a=merge(t,t[date%like%2019,mean(dead),state])[,.(state,date,pct=dead/V1*100)]
+
+states=vax[order(vax),state]
+
+p=a[state%in%states[1:10],.(y=mean(pct),z=1),.(x=date)]
+p=rbind(p,a[state%in%tail(states,10),.(y=mean(pct),z=2),.(x=date)])
+p[,z:=factor(z,,paste(&quot;Ten&quot;,c(&quot;least&quot;,&quot;most&quot;),&quot;vaccinated states&quot;))]
+p[,x:=as.Date(paste0(x,&quot;-15&quot;))]
+
+xstart=as.Date(&quot;2018-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
+xbreak=seq(xstart+182,xend,&quot;year&quot;)
+p=p[x%in%xstart:xend]
+ybreak=pretty(p$y,5)
+
+x1=as.Date(&quot;2020-7-1&quot;);x2=as.Date(&quot;2020-12-1&quot;)
+annoy=p[x%in%x1:x2,range(y)]
+
+ggplot(p)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray50&quot;,linewidth=.4)+
+geom_hline(yintercept=100,linewidth=.4)+
+geom_line(aes(x,y,color=z),linewidth=.6)+
+geom_point(aes(x,y,color=z),stroke=0,size=1.2)+
+annotate(&quot;rect&quot;,xmin=x1,xmax=x2,ymin=annoy[1]-5,ymax=annoy[2]+5,linewidth=.5,color=&quot;black&quot;,fill=NA,lineend=&quot;square&quot;)+
+annotate(&quot;text&quot;,hjust=0,x=x1,y=89,size=4,label=&quot;Kirsch&#39;s baseline period&quot;)+
+labs(x=NULL,y=NULL,title=&quot;Deaths as percentage of average monthly deaths in 2019&quot;)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=year(xbreak))+
+scale_y_continuous(limits=range(ybreak),breaks=ybreak)+
+scale_color_manual(values=c(&quot;#ff6666&quot;,&quot;#6666ff&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.text.x=element_text(margin=margin(3)),
+  axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(4,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;horizontal&quot;,
+  legend.justification=&quot;right&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(24,&quot;pt&quot;),
+  legend.margin=margin(,,4),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(3,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.4),
+  plot.margin=margin(4,5,4,5),
+  plot.title=element_text(size=11,face=2,margin=margin(1,,3)))
+ggsave(&quot;1.png&quot;,width=4.92,height=2.8,dpi=300*4)</pre>
+</div>
+<p>(In order to be consistent with Kirsch's analysis, in my analysis above I excluded Hawaii but I treated District of Columbia as a state.)</p>
 <script>
 let q=document.querySelectorAll('a,code,pre')
 for(let i=0;e=q[i];i++)e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>')
