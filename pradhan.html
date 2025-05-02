@@ -7,7 +7,7 @@ p{max-width:540px}
 ul,ol{max-width:500px}
 .toc{max-width:none}
 h1,h2,h3,h2 a,h3 a,h2 a:visited,h3 a:visited{font-weight:normal;color:white}
-h1{font-size:2.1em;margin-top:.9em}
+h1{font-size:2.1em;margin-top:.8em}
 h2{font-size:1.7em}
 h3{font-size:1.3em}
 h4{font-size:1.1em}
@@ -20,6 +20,7 @@ table{border-collapse:collapse}
 td,th{border:1px solid #555;padding:2px 4px}
 th{background:#444;text-align:left;font-weight:bold}
 img{max-width:100%}
+dt{font-size:1.3em;margin:.3em 0 .2em 0}
 blockquote{margin:0;padding-left:40px;margin-right:0;overflow-x:hidden}
 blockquote p{max-width:480px}
 blockquote p:first-child{margin-top:0}
@@ -60,6 +61,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
   blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(30,45%,50%)}
   blockquote blockquote blockquote,blockquote .quote .quote,.quote .quote .quote{color:hsl(30,70%,60%)}
   .spoiler{display:none}
+  .red,.red .quote{color:hsl(0,50%,60%)!important}
 }
 </style>
 <title>Pradhan et al.'s uncanny HIV inserts</title>
@@ -638,7 +640,7 @@ Sbjct  73  TNGTKR  78
 <p>The authors didn't use Wuhan-Hu-1 as their reference genome but another early sequence from Wuhan. [<a href="https://www.ncbi.nlm.nih.gov/nucleotide/LR757998%2e1">https://www.ncbi.nlm.nih.gov/nucleotide/LR757998%2e1</a>] It's missing the first 25 bases of the 5' UTR relative to Wuhan-Hu-1, so the genome coordinates given by the authors are off by 25 relative to Wuhan-Hu-1 coordinates.</p>
 <p>The authors identified two contiguous regions with a high number of matches to HIV or SIV sequences, which they called <span class="quote">"region A"</span> and <span class="quote">"region B"</span>. The authors indicated that region A was 600 bases long but it matched bases 21072 to 21672 of the reference, which would mean that it would be 601 bases long if both ends of the range would be inclusive. But the end of the range appears to be exclusive and the authors appear to have started genome numbering from zero and not one, so the region actually matches bases 21073 to 21672 in regular one-based numbering where both ends of the range are inclusive:</p>
 <pre>$ emu()(curl -sd &quot;id=$(paste -sd,)&quot; &quot;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=${1:-nuccore}&amp;rettype=${2:-fasta}&amp;retmode=$3&quot;)
-$ emu&lt;&lt;&lt;LR757998&gt;perezref.fa
+$ emu&amp;#x3c;&amp;#x3c;&amp;#x3c;LR757998&gt;perezref.fa
 $ seqkit locate -pAGGGTTTTTTCACTTACATTTGTGGGTTTATACAACAAAAGCTAGCTCTTGGAGGTTCCGTGGCTATAAAGATAACAGAACATTCTTGGAATGCTGATCTTTATAAGCTCATGGGACACTTCGCATGGTGGACAGCCTTTGTTACTAATGTGAATGCGTCATCATCTGAAGCATTTTTAATTGGATGTAATTATCTTGGCAAACCACGCGAACAAATAGATGGTTATGTCATGCATGCAAATTACATATTTTGGAGGAATACAAATCCAATTCAGTTGTCTTCCTATTCTTTATTTGACATGAGTAAATTTCCCCTTAAATTAAGGGGTACTGCTGTTATGTCTTTAAAAGAAGGTCAAATCAATGATATGATTTTATCTCTTCTTAGTAAAGGTAGACTTATAATTAGAGAAAACAACAGAGTTGTTATTTCTAGTGATGTTCTTGTTAACAACTAAACGAACAATGTTTGTTTTTCTTGTTTTATTGCCACTAGTCTCTAGTCAGTGTGTTAATCTTACAACCAGAACTCAATTACCCCCTGCATACACTAATTCTTTCACACGTGGTGTTTATTACCCTGACAAAGTTTTCAGATCC perezref.fa|cut -f5,6|column -t
 start  end
 21073  21672</pre>
@@ -674,7 +676,7 @@ $ fmt=&#39;sseqid evalue nident length pident sstrand qstart qend&#39;
 $ &lt;perezref.fa blastn -db perez.fa -outfmt &quot;6 $fmt&quot;
 $ # no results</pre>
 <p>So therefore in order to use less strict matching criteria, I added the options <code>-word_size 5 -evalue 100</code> which gave me one or more matches for all 15 sequences. At first the starting position of one of my matches wasn't the same as in Perez's table, but I got the starting positions to match when I added the option <code>-task blastn</code> which switches to using more liberal matching criteria (and which is equivalent to choosing the option to optimize for <span class="quote">"somewhat dissimilar sequences"</span> in the web GUI for BLAST):</p>
-<pre>$ &lt;perezref.fa blastn -db perez.fa -outfmt &quot;6 $fmt&quot; -task blastn|awk &#39;$7&gt;=21073&amp;&amp;$8&lt;=22027&#39;|awk &#39;NR==FNR{a[$1]=$2&quot; &quot;$3;pos[$1]=NR;next}{print pos[$1],$0,a[$1]}&#39; perez -|awk &#39;{print$0,$8==$10&amp;&amp;$9==$11?&quot;true&quot;:&quot;false&quot;}&#39;|sort -rk12|sort -sgk3|awk &#39;!a[$1]++&#39;|sort -n|cut -d\  -f2-|(echo $fmt perezstart perezend matchesperez;cat)|column -t
+<pre>$ &amp;lt;perezref.fa blastn -db perez.fa -outfmt &quot;6 $fmt&quot; -task blastn|awk &#39;$7&gt;=21073&amp;&amp;$8&lt;=22027&#39;|awk &#39;NR==FNR{a[$1]=$2&quot; &quot;$3;pos[$1]=NR;next}{print pos[$1],$0,a[$1]}&#39; perez -|awk &#39;{print$0,$8==$10&amp;&amp;$9==$11?&quot;true&quot;:&quot;false&quot;}&#39;|sort -rk12|sort -sgk3|awk &#39;!a[$1]++&#39;|sort -n|cut -d\  -f2-|(echo $fmt perezstart perezend matchesperez;cat)|column -t
 sseqid      evalue  nident  length  pident   sstrand  qstart  qend   perezstart  perezend  matchesperez
 JN230738.1  1.3     16      16      100.000  plus     21138   21153  21138       21153     true
 MF373163.1  0.003   21      21      100.000  minus    21226   21246  21226       21246     true
@@ -870,7 +872,7 @@ false
 <pre>$ printf %s\\n &#39;KM378564.1 8752 8770&#39; &#39;EU184986.1 14341 14378&#39; &#39;AY516986.1 20374 20401&#39; &#39;HQ217329.1 20401 20430&#39;&gt;perez2
 $ cut -d\  -f1 perez2|emu&gt;perez2.fa
 $ fmt=&#39;sseqid evalue nident length pident sstrand sstart send qstart qend&#39;
-$ &lt;perezref.fa blastn -db perez2.fa -outfmt &quot;6 $fmt&quot; -task blastn|awk &#39;NR==FNR{a[$1]=$2&quot; &quot;$3;pos[$1]=NR;next}{print pos[$1],$0,a[$1]}&#39; perez2 -|awk &#39;{print$0,$8==$10&amp;&amp;$9==$11?&quot;true&quot;:&quot;false&quot;}&#39;|sort -rk12|awk &#39;!a[$1]++&#39;|sort -n|cut -d\  -f2-|(echo $fmt perezstart perezend matchesperez;cat)|column -t
+$ &amp;lt;perezref.fa blastn -db perez2.fa -outfmt &quot;6 $fmt&quot; -task blastn|awk &#39;NR==FNR{a[$1]=$2&quot; &quot;$3;pos[$1]=NR;next}{print pos[$1],$0,a[$1]}&#39; perez2 -|awk &#39;{print$0,$8==$10&amp;&amp;$9==$11?&quot;true&quot;:&quot;false&quot;}&#39;|sort -rk12|awk &#39;!a[$1]++&#39;|sort -n|cut -d\  -f2-|(echo $fmt perezstart perezend matchesperez;cat)|column -t
 sseqid      evalue    nident  length  pident  sstrand  qstart  qend   perezstart  perezend  matchesperez
 KM378564.1  3.8       22      27      81.481  minus    4696    4722   8752        8770      false
 EU184986.1  4.95e-05  33      38      86.842  minus    14341   14378  14341       14378     true
@@ -882,8 +884,8 @@ HQ217329.1  4.95e-05  28      30      93.333  minus    20401   20430  20401     
 <img src="i/pradhan-perez-3.jpg">
 </div>
 <p>Perez wrote that in the match to the integration site sequence <span class="quote">"addresses 20373 to 20401 comes from an HIV1 Integrase from a USA virus from 2004"</span>. However he may have confused the term <span class="quote">"integration site"</span> with the HIV integrase enzyme which is contained within the pol gene. The integrase is located around positions 4,236 to 5,086 in HXB2, but the first 69 bases of the integration site sequence are identical to bases 112 to 180 of HXB2 (which is contained within the 5' long terminal repeat):</p>
-<pre>$ emu&lt;&lt;&lt;NC_001802&gt;hiv1.fa
-$ emu&lt;&lt;&lt;AY516986|seqkit subseq -r1:69|seqkit locate -if- hiv1.fa|cut -f4-7|column -t
+<pre>$ emu&lt;&lt;&amp;lt;NC_001802&gt;hiv1.fa
+$ emu&lt;&lt;&amp;lt;AY516986|seqkit subseq -r1:69|seqkit locate -if- hiv1.fa|cut -f4-7|column -t
 strand  start  end  matched
 +       112    180  gtctgttgtgtgactctggtaactagagatccctcagacccttttagtcagtgtggaaaatctctagca</pre>
 <p>Another major fail in Perez's paper was that he thought that one of his matches to HIV was located at the start of the spike protein in RaTG13 but that it spanned both ORF1ab and the spike protein in SARS-CoV-2. But that's because his nonstandard reference genome was missing the first 25 bases of Wuhan-Hu-1, so he should've subtracted 25 from Wuhan-Hu-1 coordinates when he identified the start of the spike protein:</p>
