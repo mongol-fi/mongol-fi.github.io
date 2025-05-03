@@ -124,8 +124,7 @@ GTNGTKR  321    327  GKIGNMR
 GTNGTKR  354    360  GNNKTII
 GTNGTKR  404    410  GSNNTEG
 GTNGTKR  495    501  GVAPTKA
-GTNGTKR  822    828  VAEGTDR
-</pre>
+GTNGTKR  822    828  VAEGTDR</pre>
 <p>Next I tried doing another BLAST search for Pradhan's first insert, but I set the <span class="quote">"Non-redundant protein sequences (nr)"</span> database and I set the organism to HIV-1. There were 3 different spots of the envelope protein which all matched 6/7 aa of the insert so that one aa at either end was cut off:</p>
 <div class="width12">
 <img src="i/origin-pradhan-4.jpg">
@@ -168,8 +167,7 @@ seqID                                start  end  matched
 01_AE.TH.2006.AA042a07R.JX447207     398    403  TNGTKR
 01_AE.TH.2006.AA042a03R.JX447208     399    404  TNGTKR
 01_AE.TH.2006.AA042a06R.JX447209     404    409  TNGTKR
-01_AE.TH.2007.AA042d_ENV24.MZ347079  408    413  TNGTKR
-</pre>
+01_AE.TH.2007.AA042d_ENV24.MZ347079  408    413  TNGTKR</pre>
 <p>So again it's not that unusual that 29 out of over a 100,000 sequences would happen to match 6 out of 7 aa. The reason why all four of Pradhan's inserts happened to match HIV and not some other virus might simply be that BLAST has a very large number of HIV sequences relative to other viruses.</p>
 <p>Pradhan's second so-called insert matches the last 2 aa of the <code>YYHK</code> insert here and the next 4 aa:</p>
 <div class="width3">
@@ -184,25 +182,21 @@ seqID   patternName pattern strand  start   end matched
 seqID   patternName pattern strand  start   end matched
 seqID   patternName pattern strand  start   end matched
 seqID   patternName pattern strand  start   end matched
-G.KE.2006.06KE275457V6.KT022379 HKNNKS  hknnks  +   462 467 hknnks
-</pre>
+G.KE.2006.06KE275457V6.KT022379 HKNNKS  hknnks  +   462 467 hknnks</pre>
 <p>I also tried downloading all protein sequences of influenza A from the NCBI's influenza virus database. I simply kept the default settings here and clicked <span class="quote">"add query"</span>: <a href="https://www.ncbi.nlm.nih.gov/genomes/FLU/Database/nph-select.cgi#mainform">https://www.ncbi.nlm.nih.gov/genomes/FLU/Database/nph-select.cgi#mainform</a>. There were a bit over a million sequences:</p>
 <pre>$ seqkit stat influenzamega.fa
 file              format  type      num_seqs      sum_len  min_len  avg_len  max_len
-influenzamega.fa  FASTA   Protein  1,234,340  497,828,616        1    403.3      775
-</pre>
+influenzamega.fa  FASTA   Protein  1,234,340  497,828,616        1    403.3      775</pre>
 <p>The spike protein of Wuhan-Hu-1 is 1273 aa long so it has 1268 possible 6 aa subsegments. However 269 of them had an exact match to one or more of the protein sequences of influenza A:</p>
 <pre>$ curl &#39;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&amp;rettype=fasta_cds_aa&amp;id=MN908947&#39;|seqkit grep -nrp gene=S&gt;sars2spike.aa
 $ seqkit seq -s sars2spike.aa|awk &#39;{for(i=1;i&lt;length-5;i++)print substr($0,i,6)}&#39;&gt;kmer
 $ grep -f kmer &lt;(seqkit seq -s influenzamega.fa)&gt;temp
 $ for x in `&lt;kmer`;do grep -m1 $l temp;done|wc -l
-269
-</pre>
+269</pre>
 <p>And in a FASTA file with 125,046 gp120 sequences of HIV, 53 out of 1268 6-mers had a perfect match (but the number would've been bigger if I was looking at all proteins of HIV and not just gp120):</p>
 <pre>$ grep -fkmer &lt;(seqkit seq -s HIV-1_env.fasta)&gt;temp2
 $ for x in `&lt;kmer`;do grep -m1 $x temp2;done|wc -l
-53
-</pre>
+53</pre>
 <h2>
 <a href=#First_insert id=First_insert>First insert</a>
 </h2>
@@ -246,37 +240,35 @@ NP_057850.1 RVLAEAMSQVTNSATIMMQRGNFRNQRKIVKCFNCGKEGHTARNCRAPRKKGCWKCGKEG
             ********* *** :*:***.**:. *: *******:*** *:*****************
                     ^^^^^^^^^^^^^^^^^^^^^
                     Pradhan insert 4
-[...]
-</pre>
+[...]</pre>
 <h2>
 <a href=#Shell_code_for_making_colorized_amino_acid_aligments id=Shell_code_for_making_colorized_amino_acid_aligments>Shell code for making colorized amino acid aligments</a>
 </h2>
 <p>Here's code for making amino acid alignments similar to the previous sections of this file:</p>
 <pre># download whole genome sequences of sarbecoviruses
 curl -sL sars2.net/f/sarbe.fa.xz|xz -dc&gt;sarbe.fa
-</pre>
-<pre># efetch multiple sequences with accessions from STDIN
+
+# efetch multiple sequences with accessions from STDIN
 emu()(curl -sd &quot;id=$(paste -sd,)&quot; &quot;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=${1:-nuccore}&amp;rettype=${2:-fasta}&amp;retmode=$3&quot;)
-</pre>
-<pre># download spike protein sequences of sarbecoviruses and rename them to have same the defline as the whole genome sequences
+
+# download spike protein sequences of sarbecoviruses and rename them to have same the defline as the whole genome sequences
 seqkit seq -ni sarbe.fa|emu &#39;&#39; fasta_cds_aa|seqkit grep -nrp gene=S,spike,surface|sed &#39;s/_prot_.*//;s/lcl|//&#39;|seqkit fx2tab|awk -F\\t &#39;NR==FNR{a[$1]=$2;next}{print&quot;&gt;&quot;$1&quot; &quot;a[$1]&quot;\n&quot;$2}&#39; &lt;(seqkit seq -n sarbe.fa|sed $&#39;s/ /\t/&#39;) -&gt;spike.aa
-</pre>
-<pre># make a TSV matrix for percentage identity between spike protein sequences
+
+# make a TSV matrix for percentage identity between spike protein sequences
 aln()(\mafft --thread 3 --quiet &quot;${@--}&quot;)
 curl -Ls sars2.net/f/pid.cpp&gt;pid.cpp;g++ pid.cpp -O3 -o pid
 seqkit replace -isp &#39;[^X]&#39; -r &#39;&#39; spike.aa|seqkit seq -m 5|seqkit seq -ni|seqkit grep -vf- spike.aa|aln|./pid&gt;spike.pid
-</pre>
-<pre># thin out a TSV percentage identity matrix by removing rows with over n% identity to any previous row (default 99%)
+
+# thin out a TSV percentage identity matrix by removing rows with over n% identity to any previous row (default 99%)
 thin()(awk -F\\t &#39;NR&gt;1{for(i=2;i&lt;NR;i++)if($i&gt;x)next;print$1}&#39; x=&quot;${1-99}&quot; &quot;${@:2}&quot;)
-</pre>
-<pre># print color scheme
+
+# print color scheme
 aacolor()(printf %s\\n A:242:121:121 C:242:182:121 D:242:242:121 G:182:242:121 F:121:242:151 E:121:242:222 T:121:182:242 I:121:121:242 K:182:121:242 L:242:121:242 M:255:191:191 N:255:223:191 P:255:255:191 Q:223:255:191 R:191:255:207 S:191:255:244 H:191:223:255 V:191:191:255 W:223:191:255 Y:255:191:255 -:140:140:140 X:255:255:255 \*:255:255:255|tr : \ )
-</pre>
-<pre># display alignment with colorized amino acids
+
+# display alignment with colorized amino acids
 seqcol()(seqkit seq -u|seqkit fx2tab|gawk -F\\t &#39;NR==FNR{a[$1]=$2;next}{name[FNR]=$1;split($2,z,&quot;&quot;);for(i in z)seq[FNR][i]=z[i];if(length($1)&gt;max1)max1=length($1);if(length($2)&gt;max2)max2=length($2)}END{for(i=1;i&lt;=max2;i+=width){printf(&quot;%&quot;(max1+1)&quot;s&quot;,&quot;&quot;);for(pos=i;pos&lt;i+width&amp;&amp;pos&lt;=max2;pos+=10)printf(pos-i&gt;width-10?&quot;%s&quot;:&quot;%-10s&quot;,pos);print&quot;&quot;;for(j in seq){printf(&quot;%&quot;max1&quot;s &quot;,name[j]);for(k=i;k&lt;=max2&amp;&amp;k&lt;i+width;k++)printf(&quot;%s&quot;,&quot;\033[38;2;0;0;0m\033[48;2;&quot;a[seq[j][k]]&quot;m&quot;seq[j][k]&quot;\033[0m&quot;);print&quot;&quot;}}}&#39; &quot;width=${1-60}&quot; &lt;(aacolor|sed $&#39;s/ /\t/;s/ /;/g&#39;) -)
-</pre>
-<pre>thin 92 &lt;spike.pid|cut -d\  -f1|seqkit grep -f- spike.aa|seqkit grep -nrvp &#39;SARS coronavirus&#39;|cat - &lt;(seqkit grep -nrip db159,hu-1,tor2,zc45,rp3\\b,rs7896,banal-20-52,ratg,lyra11,btsy2,shc014,wiv1\\b,gx_p2v,gx-p1e spike.aa)|seqkit rmdup -s|aln --reorder -|cut -d, -f1|sed &#39;s/&gt;[^ ]*/&gt;/;s/ ORF.*//;s/ surface .*//;s/Severe acute respiratory syndrome/SARS/;s/Khosta-2 strain //;s/ isolate / /;s/ strain / /;s/Bat SARS-like coronavirus //;s/Betacoronavirus sp. //;s/ RNA$//&#39;|seqcol
-</pre>
+
+thin 92 &lt;spike.pid|cut -d\  -f1|seqkit grep -f- spike.aa|seqkit grep -nrvp &#39;SARS coronavirus&#39;|cat - &lt;(seqkit grep -nrip db159,hu-1,tor2,zc45,rp3\\b,rs7896,banal-20-52,ratg,lyra11,btsy2,shc014,wiv1\\b,gx_p2v,gx-p1e spike.aa)|seqkit rmdup -s|aln --reorder -|cut -d, -f1|sed &#39;s/&gt;[^ ]*/&gt;/;s/ ORF.*//;s/ surface .*//;s/Severe acute respiratory syndrome/SARS/;s/Khosta-2 strain //;s/ isolate / /;s/ strain / /;s/Bat SARS-like coronavirus //;s/Betacoronavirus sp. //;s/ RNA$//&#39;|seqcol</pre>
 <h2>
 <a href=#Arkmedics_BLAST_searches_for_Pradhan_et_al_s_inserts id=Arkmedics_BLAST_searches_for_Pradhan_et_al_s_inserts>Arkmedic's BLAST searches for Pradhan et al.'s inserts</a>
 </h2>
@@ -295,8 +287,7 @@ $ emu protein fasta_cds_na&lt;&lt;&lt;AVN55366|seqkit translate|seqkit subseq -r
 WENGTKRSNE
 $ emu &#39;&#39; fasta_cds_na&lt;&lt;&lt;JX071072|seqkit translate|seqkit subseq -r 259:266
 &gt;lcl|JX071072.1_cds_AFV81607.1_1 [gene=env] [protein=envelope glycoprotein] [protein_id=AFV81607.1] [location=&lt;1..&gt;1116] [gbkey=CDS]
-NPNGTKIY
-</pre>
+NPNGTKIY</pre>
 <p>The main text of Pradhan's paper doesn't include the accession numbers of the HIV sequences which matched their inserts, but you have to dig them up from the supplementary Excel file which was only posted at bioRxiv but not ResearchGate: <a href="https://www.biorxiv.org/content/10.1101/2020.01.30.927871v1.supplementary-material?versioned=true">https://www.biorxiv.org/content/10.1101/2020.01.30.927871v1.supplementary-material?versioned=true</a>. It shows that the first insert was matched by 10 different sequences from Thailand:</p>
 <table>
 <tr>
@@ -542,8 +533,7 @@ Insert 4
 <pre>$ emu()(curl -sd &quot;id=$(paste -sd,)&quot; &quot;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=${1:-nuccore}&amp;rettype=${2:-fasta}&amp;retmode=$3&quot;)
 $ emu protein fasta_cds_na&lt;&lt;&lt;AFU28737,AFU28711,AFU28717,AFU28733,AFU28693,AFU28721,AFU28699,AFU28729,AFU28705,AFU28725 &gt;insert1.fa
 $ seqkit translate insert1.fa|seqkit locate -p TNGTKR|sed 1d|cut -f1,5|while read l m;do seqkit grep -p $l insert1.fa|seqkit subseq -r $[m*3-2]:$[m*3-2+17];done|seqkit seq -s|sort -u|sed &#39;s/.../&amp; /g&#39;
-ACA AAT GGA ACC AAG AGG
-</pre>
+ACA AAT GGA ACC AAG AGG</pre>
 <p>There were about 3.2 million results at GenBank when I searched for <code>0:2019[dp] viruses[organism]</code>, but about 0.9 million or about 27% of all results were classified under HIV-1. [<a href="https://www.ncbi.nlm.nih.gov/nuccore/?term=0%3A2019%5Bdp%5D+viruses%5Borganism%5D">https://www.ncbi.nlm.nih.gov/nuccore/?term=0%3A2019%5Bdp%5D+viruses%5Borganism%5D</a>] So the reason why many of Arkmedic's top hits at BLAST were sequences of HIV-1 might be because before 2020 HIV-1 was probably the species of virus with the most sequences at GenBank:</p>
 <div class="width6">
 <img src="i/origin-pradhan-11.jpg">
@@ -551,8 +541,7 @@ ACA AAT GGA ACC AAG AGG
 <p>Arkmedic also wrote that he didn't find any 100% match when he searched for the nucleotide sequence of Pradhan's second insert on BLAST, but that's because he again used the nucleotide sequence in Wuhan-Hu-1 (<code>CAC AAA AAC AAC AAA AGT</code>), which is 3 bases different from Pradhan's HIV sequences:</p>
 <pre>$ emu protein fasta_cds_na&lt;&lt;&lt;ALB06757 &gt;insert2.fa
 $ x=$(seqkit translate insert2.fa|seqkit locate -p HKNNKS|sed 1d|cut -f5);seqkit subseq -r $[x*3-2]:$[(x+5)*3] insert2.fa|seqkit seq -s|sed &#39;s/.../&amp; /g&#39;
-CAT AAA AAT AAT AAA AGT
-</pre>
+CAT AAA AAT AAT AAA AGT</pre>
 <p>When I did a BLAST search for the nucleotide sequence in HIV, it had 18/18 matching bases only with Pradhan's Kenyan HIV-1 sequence and with some other random virus where the match was on the minus strand (but in the screenshot below the other results with 100% identity and 100% query coverage were noncontiguous matches where the match was split into two different segments, as you can see from the max score being lower than on the first two rows):</p>
 <div class="width8">
 <img src="i/origin-pradhan-12.jpg">
@@ -560,8 +549,7 @@ CAT AAA AAT AAT AAA AGT
 <p>Arkmedic also pointed out that he found no matches for Pradhan's third insert on BLAST, but that's because he searched for the region around the insert in SARS-CoV-2 and not HIV (<code>RSYLTPGDSSSG</code> and not <code>RTYLFNETRGNSSSG</code>). The nucleotide sequence of the version in HIV is found in all 4 HIV sequences that were listed in Pradhan's supplementary Excel file:</p>
 <pre>$ emu protein fasta_cds_na&lt;&lt;&lt;ACL98861,ACL98864,ACL98860,ACL98859 &gt;insert3.fa
 $ x=RTYLFNETRGNSSSG;seqkit translate insert3.fa|seqkit locate -p $x|sed 1d|cut -f1,5|while read l m;do seqkit grep -p $l insert3.fa|seqkit subseq -r $[m*3-2]:$[(m+${#x})*3];done|seqkit seq -s|sort -u|sed &#39;s/.../&amp; /g&#39;
-AGG ACA TAC CTG TTT AAT GAG ACA AGA GGT AAT TCA AGC TCA GGT AAT
-</pre>
+AGG ACA TAC CTG TTT AAT GAG ACA AGA GGT AAT TCA AGC TCA GGT AAT</pre>
 <div class="width8">
 <img src="i/origin-pradhan-13.jpg">
 </div>
@@ -592,8 +580,7 @@ $ x=TNGTKR;for((i=0;i&lt;=${#x};i++));do seqkit seq -g HIV1_REF_2023_env_PRO.fas
 3 555
 4 555
 5 555
-6 555
-</pre>
+6 555</pre>
 <p>For the second motif <code>HKNNKS</code>, there's zero perfect matches and only sequence with a single mismatch:</p>
 <pre>$ x=HKNNKS;for((i=0;i&lt;=${#x};i++));do seqkit seq -g HIV1_REF_2023_env_PRO.fasta|seqkit replace -sp \# -r X|seqkit locate -iPp $x -m$i|sed 1d|awk &#39;!a[$1]++&#39;|echo &quot;$i `wc -l`&quot;;done
 0 0
@@ -602,8 +589,7 @@ $ x=TNGTKR;for((i=0;i&lt;=${#x};i++));do seqkit seq -g HIV1_REF_2023_env_PRO.fas
 3 551
 4 555
 5 555
-6 555
-</pre>
+6 555</pre>
 <p>All of the matches with one mismatch were located in the first half of gp120:</p>
 <pre>$ seqkit seq -g HIV1_REF_2023_env_PRO.fasta|seqkit replace -sp\# -rX|seqkit locate -ip TNGTKR -m1|cut -f1,3,5-|column -t
 seqID                               pattern  start  end  matched
@@ -611,11 +597,9 @@ Ref.H.GB.00.00GBAC4001.FJ711703     tngtkr   190    195  tngtnr
 Ref.L.CD.01.L_CG_0018a_01.MN271384  tngtkr   132    137  tngttr
 $ seqkit seq -g HIV1_REF_2023_env_PRO.fasta|seqkit replace -sp\# -rX|seqkit locate -ip HKNNKS -m1|cut -f1,3,5-|column -t
 seqID                               pattern  start  end  matched
-Ref.101_01B.CN.13.YNKM250.MK158946  hknnks   366    371  hfnnks
-</pre>
+Ref.101_01B.CN.13.YNKM250.MK158946  hknnks   366    371  hfnnks</pre>
 <p>The two matches to <code>TNGTKR</code> were both located within variable loops but the match to <code>HKNNKS</code> wasn't:</p>
-<pre>seqkit grep -nrp FJ711703,MN271384,YNKM250,HXB2 HIV1_REF_2023_env_PRO.fasta|seqkit replace -p&#39;^Ref\.(.*)\..*?$&#39; -r\$1|mafft --quiet -|seqkit fx2tab|gawk -F\\t &#39;ARGIND==1{a[$1]=$2}ARGIND==2{for(i=$2;i&lt;=$3;i++)loop[i]=$1}ARGIND==3{if($1~/HXB2/){gap=0;split($2,z,&quot;&quot;);for(i in z){if(z[i]==&quot;-&quot;)gap++;gaps[i]=gap}}name[FNR]=$1;split($2,z,&quot;&quot;);for(i in z)seq[FNR][i]=z[i];if(length($1)&gt;max1)max1=length($1);if(length($2)&gt;max2)max2=length($2)}END{width=60;for(i=1;i&lt;=max2;i+=width){print&quot;&quot;;printf(&quot;%*s&quot;,max1+1,&quot;&quot;);for(pos=i;pos&lt;i+width&amp;&amp;pos&lt;=max2;pos+=10)printf(pos-i&gt;width-10?&quot;%s&quot;:&quot;%-10s&quot;,pos-gaps[pos]);print&quot;&quot;;printf(&quot;%*s&quot;,max1+1,&quot;&quot;);for(pos=i;pos&lt;i+width;pos++){l=loop[pos-gaps[pos]];printf&quot;%s&quot;,l?l:&quot; &quot;};print&quot;&quot;;for(j in seq){printf(&quot;%&quot;max1&quot;s &quot;,name[j]);for(k=i;k&lt;=max2&amp;&amp;k&lt;i+width;k++)printf(&quot;%s&quot;,&quot;\033[38;2;0;0;0m\033[48;2;&quot;a[seq[j][k]in a?seq[j][k]:&quot;X&quot;]&quot;m&quot;seq[j][k]&quot;\033[0m&quot;);print&quot;&quot;}}}&#39; &lt;(aacolor|sed $&#39;s/ /\t/;s/ /;/g&#39;) &lt;(printf %s\\n 1:131:157 2:158:196 3:296:331 4:385:418 5:460:469|tr : \\t) -
-</pre>
+<pre>seqkit grep -nrp FJ711703,MN271384,YNKM250,HXB2 HIV1_REF_2023_env_PRO.fasta|seqkit replace -p&#39;^Ref\.(.*)\..*?$&#39; -r\$1|mafft --quiet -|seqkit fx2tab|gawk -F\\t &#39;ARGIND==1{a[$1]=$2}ARGIND==2{for(i=$2;i&lt;=$3;i++)loop[i]=$1}ARGIND==3{if($1~/HXB2/){gap=0;split($2,z,&quot;&quot;);for(i in z){if(z[i]==&quot;-&quot;)gap++;gaps[i]=gap}}name[FNR]=$1;split($2,z,&quot;&quot;);for(i in z)seq[FNR][i]=z[i];if(length($1)&gt;max1)max1=length($1);if(length($2)&gt;max2)max2=length($2)}END{width=60;for(i=1;i&lt;=max2;i+=width){print&quot;&quot;;printf(&quot;%*s&quot;,max1+1,&quot;&quot;);for(pos=i;pos&lt;i+width&amp;&amp;pos&lt;=max2;pos+=10)printf(pos-i&gt;width-10?&quot;%s&quot;:&quot;%-10s&quot;,pos-gaps[pos]);print&quot;&quot;;printf(&quot;%*s&quot;,max1+1,&quot;&quot;);for(pos=i;pos&lt;i+width;pos++){l=loop[pos-gaps[pos]];printf&quot;%s&quot;,l?l:&quot; &quot;};print&quot;&quot;;for(j in seq){printf(&quot;%&quot;max1&quot;s &quot;,name[j]);for(k=i;k&lt;=max2&amp;&amp;k&lt;i+width;k++)printf(&quot;%s&quot;,&quot;\033[38;2;0;0;0m\033[48;2;&quot;a[seq[j][k]in a?seq[j][k]:&quot;X&quot;]&quot;m&quot;seq[j][k]&quot;\033[0m&quot;);print&quot;&quot;}}}&#39; &lt;(aacolor|sed $&#39;s/ /\t/;s/ /;/g&#39;) &lt;(printf %s\\n 1:131:157 2:158:196 3:296:331 4:385:418 5:460:469|tr : \\t) -</pre>
 <div class="width7">
 <img src="i/pradhan-subref.png">
 </div>
@@ -625,8 +609,7 @@ V1   131   157
 V2   158   196
 V3   296   331
 V4   385   418
-V5   460   469
-</pre>
+V5   460   469</pre>
 <h2>
 <a href=#E_values_of_matches_to_Pradhans_first_two_inserts id=E_values_of_matches_to_Pradhans_first_two_inserts>E values of matches to Pradhan's first two inserts</a>
 </h2>
@@ -651,15 +634,14 @@ $ echo $&#39;&gt;a\nTNGTKR&#39;|blastp -db viral.aa -evalue 1000
 [db_xref=GeneID:43740568] [protein=surface glycoprotein]
 [protein_id=YP_009724390.1] [location=21563..25384] [gbkey=CDS]
 Length=1273
-</pre>
-<pre> Score = 16.5 bits (31),  Expect = 289, Method: Composition-based stats.
+
+ Score = 16.5 bits (31),  Expect = 289, Method: Composition-based stats.
  Identities = 6/6 (100%), Positives = 6/6 (100%), Gaps = 0/6 (0%)
-</pre>
-<pre>Query  1   TNGTKR  6
+
+Query  1   TNGTKR  6
            TNGTKR
 Sbjct  73  TNGTKR  78
-[...]
-</pre>
+[...]</pre>
 <h2>
 <a href=#Perez_and_Montagniers_paper_about_BLAST_matches_to_HIV_and_SIV id=Perez_and_Montagniers_paper_about_BLAST_matches_to_HIV_and_SIV>Perez and Montagnier's paper about BLAST matches to HIV and SIV</a>
 </h2>
@@ -677,8 +659,7 @@ Sbjct  73  TNGTKR  78
 $ emu&lt;&lt;&lt;LR757998&gt;perezref.fa
 $ seqkit locate -p AGGGTTTTTTCACTTACATTTGTGGGTTTATACAACAAAAGCTAGCTCTTGGAGGTTCCGTGGCTATAAAGATAACAGAACATTCTTGGAATGCTGATCTTTATAAGCTCATGGGACACTTCGCATGGTGGACAGCCTTTGTTACTAATGTGAATGCGTCATCATCTGAAGCATTTTTAATTGGATGTAATTATCTTGGCAAACCACGCGAACAAATAGATGGTTATGTCATGCATGCAAATTACATATTTTGGAGGAATACAAATCCAATTCAGTTGTCTTCCTATTCTTTATTTGACATGAGTAAATTTCCCCTTAAATTAAGGGGTACTGCTGTTATGTCTTTAAAAGAAGGTCAAATCAATGATATGATTTTATCTCTTCTTAGTAAAGGTAGACTTATAATTAGAGAAAACAACAGAGTTGTTATTTCTAGTGATGTTCTTGTTAACAACTAAACGAACAATGTTTGTTTTTCTTGTTTTATTGCCACTAGTCTCTAGTCAGTGTGTTAATCTTACAACCAGAACTCAATTACCCCCTGCATACACTAATTCTTTCACACGTGGTGTTTATTACCCTGACAAAGTTTTCAGATCC perezref.fa|cut -f5,6|column -t
 start  end
-21073  21672
-</pre>
+21073  21672</pre>
 <p>Regions A and B combined consist of bases 21098 to 22027 of Wuhan-Hu-1. Region A consists of the last 458 bases of ORF1ab, the 7-base intergenic region between ORF1ab and the spike protein, and the first 135 bases of the spike protein. Region B consists of bases 136 to 465 of the spike protein.</p>
 <h3>
 <a href=#Table_of_15_BLAST_matches_to_HIV_and_SIV id=Table_of_15_BLAST_matches_to_HIV_and_SIV>Table of 15 BLAST matches to HIV and SIV</a>
@@ -719,8 +700,7 @@ $ makeblastdb -dbtype nucl -in perez.fa
 [...]
 $ fmt=&#39;sseqid evalue nident length pident sstrand qstart qend&#39;
 $ &lt;perezref.fa blastn -db perez.fa -outfmt &quot;6 $fmt&quot;
-$ # no results
-</pre>
+$ # no results</pre>
 <p>So therefore in order to use less strict matching criteria, I added the options <code>-word_size 5 -evalue 100</code> which gave me one or more matches for all 15 sequences. At first the starting position of one of my matches wasn't the same as in Perez's table, but I got the starting positions to match when I added the option <code>-task blastn</code>:</p>
 <pre>$ &lt;perezref.fa blastn -db perez.fa -outfmt &quot;6 $fmt&quot; -task blastn|awk &#39;$7&gt;=21073&amp;&amp;$8&lt;=22027&#39;|awk &#39;NR==FNR{a[$1]=$2&quot; &quot;$3;pos[$1]=NR;next}{print pos[$1],$0,a[$1]}&#39; perez -|awk &#39;{print$0,$8==$10&amp;&amp;$9==$11?&quot;true&quot;:&quot;false&quot;}&#39;|sort -rk12|sort -sgk3|awk &#39;!a[$1]++&#39;|sort -n|cut -d\  -f2-|(echo $fmt perezstart perezend matchesperez;cat)|column -t
 sseqid      evalue  nident  length  pident   sstrand  qstart  qend   perezstart  perezend  matchesperez
@@ -738,8 +718,7 @@ L07625.1    1.3     22      26      84.615   plus     21804   21829  21804      
 JF811228.1  1.3     16      16      100.000  minus    21851   21866  21851       21866     true
 KC187066.1  0.009   28      32      87.500   minus    21884   21915  21884       21915     true
 GU481454.1  0.009   32      39      82.051   minus    21914   21952  21914       21952     true
-LM999945.1  0.38    25      30      83.333   minus    21941   21970  21941       21970     true
-</pre>
+LM999945.1  0.38    25      30      83.333   minus    21941   21970  21941       21970     true</pre>
 <p>In the table above the E value indicates how many matches are expected to occur by chance for a given query in a given database. A bigger database size means higher E values. But even though in the code above I had a tiny database that consisted of only 15 sequences of HIV and SIV, 4 out of 15 matches above got an E value above 1, which means that more than 1 similar matches are expected to occur by chance. And even the lowest E value was only about 0.003.</p>
 <p>The output above shows that 10 out of 15 matches are on the minus strand, which means that HIV/SIV matched the reverse complement of the segment in SARS-CoV-2, so the matched segment does not even code for the same amino acids in SARS-CoV-2 and HIV/SIV. For example the second sequence matches a Swedish HIV sequence from 2017, but it matches SARS-CoV-2 on the opposite strand so the translation is completely different: [<a href="https://www.ncbi.nlm.nih.gov/nuccore/MF373163">https://www.ncbi.nlm.nih.gov/nuccore/MF373163</a>]</p>
 <pre>SARS-CoV-2:                HIV:
@@ -747,8 +726,7 @@ LM999945.1  0.38    25      30      83.333   minus    21941   21970  21941      
  --------------------&gt;      TACGAAGTCTACTACTGCGTA # reversed version of segment matched in SARS-CoV-2
  ATGCGTCATCATCTGAAGCAT      ATGCTTCAGATGATGACGCAT # reversed version with complemented bases
 AATGCGTCATCATCTGAAGCATTT   TATGCTTCAGATGATGACGCATAT
- N  A  S  S  S  E  A  F     Y  A  S  D  D  D  A  Y
-</pre>
+ N  A  S  S  S  E  A  F     Y  A  S  D  D  D  A  Y</pre>
 <p>So after the 10 matches on the wrong strand are eliminated, only 5 out of 15 matches remain. But 2 out of the 5 matches are in a different frame in SARS-CoV-2 and HIV/SIV, so their amino acid translation is not the same, which means that only 3 out of the 15 matches in Perez's table are both on the right strand and in the right frame:</p>
 <table>
 <tr>
@@ -914,8 +892,7 @@ false
 </h3>
 <p>In order to see how high the E values of Perez's matches were in the full nucleotide database, I copied this sequence which consists of Perez's regions A and B:</p>
 <pre>$ seqkit subseq -r 21073:22027 sars2.fa|seqkit seq -s
-GTTACAAAAGAAAATGACTCTAAAGAGGGTTTTTTCACTTACATTTGTGGGTTTATACAACAAAAGCTAGCTCTTGGAGGTTCCGTGGCTATAAAGATAACAGAACATTCTTGGAATGCTGATCTTTATAAGCTCATGGGACACTTCGCATGGTGGACAGCCTTTGTTACTAATGTGAATGCGTCATCATCTGAAGCATTTTTAATTGGATGTAATTATCTTGGCAAACCACGCGAACAAATAGATGGTTATGTCATGCATGCAAATTACATATTTTGGAGGAATACAAATCCAATTCAGTTGTCTTCCTATTCTTTATTTGACATGAGTAAATTTCCCCTTAAATTAAGGGGTACTGCTGTTATGTCTTTAAAAGAAGGTCAAATCAATGATATGATTTTATCTCTTCTTAGTAAAGGTAGACTTATAATTAGAGAAAACAACAGAGTTGTTATTTCTAGTGATGTTCTTGTTAACAACTAAACGAACAATGTTTGTTTTTCTTGTTTTATTGCCACTAGTCTCTAGTCAGTGTGTTAATCTTACAACCAGAACTCAATTACCCCCTGCATACACTAATTCTTTCACACGTGGTGTTTATTACCCTGACAAAGTTTTCAGATCCTCAGTTTTACATTCAACTCAGGACTTGTTCTTACCTTTCTTTTCCAATGTTACTTGGTTCCATGCTATACATGTCTCTGGGACCAATGGTACTAAGAGGTTTGATAACCCTGTCCTACCATTTAATGATGGTGTTTATTTTGCTTCCACTGAGAAGTCTAACATAATAAGAGGCTGGATTTTTGGTACTACTTTAGATTCGAAGACCCAGTCCCTACTTATTGTTAATAACGCTACTAATGTTGTTATTAAAGTCTGTGAATTTCAATTTTGTAATGATCCATTTTTGGGTGTTTATTACCACAAAAACAACAAAAGTTGGATGGAAAGT
-</pre>
+GTTACAAAAGAAAATGACTCTAAAGAGGGTTTTTTCACTTACATTTGTGGGTTTATACAACAAAAGCTAGCTCTTGGAGGTTCCGTGGCTATAAAGATAACAGAACATTCTTGGAATGCTGATCTTTATAAGCTCATGGGACACTTCGCATGGTGGACAGCCTTTGTTACTAATGTGAATGCGTCATCATCTGAAGCATTTTTAATTGGATGTAATTATCTTGGCAAACCACGCGAACAAATAGATGGTTATGTCATGCATGCAAATTACATATTTTGGAGGAATACAAATCCAATTCAGTTGTCTTCCTATTCTTTATTTGACATGAGTAAATTTCCCCTTAAATTAAGGGGTACTGCTGTTATGTCTTTAAAAGAAGGTCAAATCAATGATATGATTTTATCTCTTCTTAGTAAAGGTAGACTTATAATTAGAGAAAACAACAGAGTTGTTATTTCTAGTGATGTTCTTGTTAACAACTAAACGAACAATGTTTGTTTTTCTTGTTTTATTGCCACTAGTCTCTAGTCAGTGTGTTAATCTTACAACCAGAACTCAATTACCCCCTGCATACACTAATTCTTTCACACGTGGTGTTTATTACCCTGACAAAGTTTTCAGATCCTCAGTTTTACATTCAACTCAGGACTTGTTCTTACCTTTCTTTTCCAATGTTACTTGGTTCCATGCTATACATGTCTCTGGGACCAATGGTACTAAGAGGTTTGATAACCCTGTCCTACCATTTAATGATGGTGTTTATTTTGCTTCCACTGAGAAGTCTAACATAATAAGAGGCTGGATTTTTGGTACTACTTTAGATTCGAAGACCCAGTCCCTACTTATTGTTAATAACGCTACTAATGTTGTTATTAAAGTCTGTGAATTTCAATTTTGTAATGATCCATTTTTGGGTGTTTATTACCACAAAAACAACAAAAGTTGGATGGAAAGT</pre>
 <p>Then I pasted the sequence to the text box here: <a href="https://blast.ncbi.nlm.nih.gov/Blast.cgi?PROGRAM=blastn">https://blast.ncbi.nlm.nih.gov/Blast.cgi?PROGRAM=blastn</a>. I changed the database type to <span class="quote">"Nucleotide collection (nt/nr)"</span>, which used to be the default database back when Perez wrote his paper, and which has more HIV sequences than the new core_nt database. I entered <span class="quote">"Human immundeficiency virus type 1 (taxid:11676)"</span> in the organism field. And then under <span class="quote">"Program selection"</span> change the algorithm from <span class="quote">"megablast"</span> to <span class="quote">"blastn"</span>, because otherwise short matches would not be returned. And under <span class="quote">"Algorithm parameters"</span> I increased <span class="quote">"Expect threshold"</span> from 0.05 to 1000, so that even matches that have more than 5% likelihood to be due to chance will be returned. Then I clicked <span class="quote">"BLAST"</span>.</p>
 <p>There was a single match which had an E value of about 2.0, which was the Swedish HIV sequence that was shown on the second row of Perez's Table 1, and which has 21 out of 21 matching bases. But the next best match had an E value of about 6.9, which means that about 6.9 similarly close matches were expected to occur by chance:</p>
 <div class="width10">
@@ -938,8 +915,7 @@ sseqid      evalue    nident  length  pident  sstrand  qstart  qend   perezstart
 KM378564.1  3.8       22      27      81.481  minus    4696    4722   8752        8770      false
 EU184986.1  4.95e-05  33      38      86.842  minus    14341   14378  14341       14378     true
 AY516986.1  4.95e-05  26      28      92.857  plus     20374   20401  20374       20401     true
-HQ217329.1  4.95e-05  28      30      93.333  minus    20401   20430  20401       20430     true
-</pre>
+HQ217329.1  4.95e-05  28      30      93.333  minus    20401   20430  20401       20430     true</pre>
 <p>The first row of Perez's table is shown to match positions 8751 to 8770 of his reference genome (i.e. positions 8752 to 8770 using one-based indexing and an inclusive end of the range). But that region of his reference genome does not actually match the HIV sequence on the first row even though the region 8736 to 8755 shown in my output above does, so Perez may have accidentally entered the wrong starting and ending positions on the first row.</p>
 <p>Only one out of the 4 matches in Table 2 is on the plus strand, but it doesn't even match HIV, because it matches a part of a human genome that is included in an HIV integration site sequence, where the first 69 bases come from an HIV long terminal repeat but the rest of the sequence comes from a human genome: [<a href="https://www.ncbi.nlm.nih.gov/nuccore/AY516986">https://www.ncbi.nlm.nih.gov/nuccore/AY516986</a>]</p>
 <div class="width5">
@@ -949,8 +925,7 @@ HQ217329.1  4.95e-05  28      30      93.333  minus    20401   20430  20401     
 <pre>$ emu&lt;&lt;&lt;NC_001802&gt;hiv1.fa
 $ emu&lt;&lt;&lt;AY516986|seqkit subseq -r1:69|seqkit locate -if- hiv1.fa|cut -f4-7|column -t
 strand  start  end  matched
-+       112    180  gtctgttgtgtgactctggtaactagagatccctcagacccttttagtcagtgtggaaaatctctagca
-</pre>
++       112    180  gtctgttgtgtgactctggtaactagagatccctcagacccttttagtcagtgtggaaaatctctagca</pre>
 <p>Another major fail in Perez's paper was that he thought that one of his matches to HIV was located at the start of the spike protein in RaTG13 but that it spanned both ORF1ab and the spike protein in SARS-CoV-2. But that's because his nonstandard reference genome was missing the first 25 bases of Wuhan-Hu-1, so he should've subtracted 25 from Wuhan-Hu-1 coordinates when he identified the start of the spike protein:</p>
 <div class="width6">
 <img src="i/pradhan-perez-4.jpg">
@@ -972,8 +947,7 @@ strand  start  end
 $ seqkit locate -pCACAAATCAAACAAATTTACAAAACACAAACCAAAAAAAAAT yoelii.na|cut -f4-6|column -t
 strand  start  end
 +       106    147 # (106-1)%3+1 is frame 1
-+       106    147
-</pre>
++       106    147</pre>
 <p>Next Perez presented a second match to the same rodent parasite which they initially said appeared to be located downstream in the same protein as the first match, even though actually the match was located in a different chromosome and a different protein, and in fact Perez later corrected his own initial impression and wrote that <span class="quote">"it is therefore clear that this second region of Yoelii does not coincide with the extension downstream of the sequence <span class="quote">'Fam a'</span>"</span>. However for some reason Perez still decided to concatenate the two unrelated matches together. The second match to <em>Plasmodium yoelii</em> has two gaps near the start in SARS-CoV-2 which means that the segments before and after the gaps are in different frames:</p>
 <div class="width6">
 <img src="i/pradhan-perez-6.jpg">
@@ -987,8 +961,7 @@ strand  start  end
 +       2367   2412 # (2367-1)%3+1 is frame 3
 $ seqkit locate -pCAAAATAAAACCAATTATATATTTTGATCATATTAATTTTTCAAAA yoelii14.na|cut -f4-6|column -t
 strand  start  end
-+       6903   6948 # (6903-1)%3+1 is frame 3
-</pre>
++       6903   6948 # (6903-1)%3+1 is frame 3</pre>
 <h3>
 <a href=#Histogram_of_matches_per_block_in_LANLs_HIV_subtype_reference id=Histogram_of_matches_per_block_in_LANLs_HIV_subtype_reference>Histogram of matches per block in LANL's HIV subtype reference</a>
 </h3>

@@ -163,51 +163,51 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <button>
 Show code
 </button>
-<pre>library(tempdisagg);library(ggplot2);library(stringr)</pre>
-</div>
-<pre>wonder=\(x){t=readLines(x);t=paste(t[1:(grep(&quot;^\&quot;(---|Total)&quot;,t)[1]-1)],collapse=&quot;\n&quot;);read.table(sep=&quot;\t&quot;,text=t,header=T,na.strings=&quot;Not Applicable&quot;)[-1]}
-</pre>
-<pre>old=wonder(&quot;Multiple Cause of Death, 1999-2020.txt&quot;)
+<pre>library(tempdisagg);library(ggplot2);library(stringr)
+
+wonder=\(x){t=readLines(x);t=paste(t[1:(grep(&quot;^\&quot;(---|Total)&quot;,t)[1]-1)],collapse=&quot;\n&quot;);read.table(sep=&quot;\t&quot;,text=t,header=T,na.strings=&quot;Not Applicable&quot;)[-1]}
+
+old=wonder(&quot;Multiple Cause of Death, 1999-2020.txt&quot;)
 old=td(data.frame(as.Date(paste(old$Month.Code,1),&quot;%Y/%m %d&quot;),old$Deaths)~1,,&quot;daily&quot;,&quot;fast&quot;)$values
-</pre>
-<pre>new=wonder(&quot;Provisional Mortality Statistics, 2018 through Last Week.txt&quot;)
+
+new=wonder(&quot;Provisional Mortality Statistics, 2018 through Last Week.txt&quot;)
 covid=wonder(&quot;wondercovid.txt&quot;)
 mt=match(covid$MMWR.Week.Code,new$MMWR.Week.Code)
 new$Deaths[mt]=new$Deaths[mt]-covid$Deaths
 new=td(data.frame(as.Date(sub(&quot;.*ending &quot;,&quot;&quot;,new$MMWR.Week),&quot;%B %d, %Y&quot;)+3,new$Deaths)~1,,&quot;daily&quot;,&quot;fast&quot;)$values
-</pre>
-<pre>ill=wonder(&quot;ill.txt&quot;)
+
+ill=wonder(&quot;ill.txt&quot;)
 ill=td(data.frame(as.Date(sub(&quot;.*ending &quot;,&quot;&quot;,ill$MMWR.Week),&quot;%B %d, %Y&quot;)+3,ill$Deaths)~1,,&quot;daily&quot;,&quot;fast&quot;)$values
 illold=wonder(&quot;illold.txt&quot;)
 illold=td(data.frame(as.Date(paste(illold$Month.Code,1),&quot;%Y/%m %d&quot;),illold$Deaths)~1,,&quot;daily&quot;,&quot;fast&quot;)$values
-</pre>
-<pre>d=rbind(old[!old$time%in%new$time,],new)|&gt;&quot;colnames&lt;-&quot;(c(&quot;x&quot;,&quot;y&quot;))
+
+d=rbind(old[!old$time%in%new$time,],new)|&gt;&quot;colnames&lt;-&quot;(c(&quot;x&quot;,&quot;y&quot;))
 xy=cbind(d,z=&quot;Actual deaths&quot;)
-</pre>
-<pre>ma=\(x,b=1,f=b)rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T)
-</pre>
-<pre>prediction=d$x&gt;=&quot;2018-1-1&quot;&amp;d$x&lt;=&quot;2019-12-31&quot;
+
+ma=\(x,b=1,f=b)rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T)
+
+prediction=d$x&gt;=&quot;2018-1-1&quot;&amp;d$x&lt;=&quot;2019-12-31&quot;
 linear=predict(lm(y~x,d[prediction,]),d)
 days=substr(d$x,6,10)
 daily=tapply(d$y[prediction]-linear[prediction],days[prediction],mean)
 daily=ma(rep(daily,3),10)[(length(daily)+1):(2*length(daily))]|&gt;setNames(names(daily))
 excess=d$y-(linear+daily[days])
 xy=rbind(xy,data.frame(x=d$x,y=excess,z=&quot;Excess deaths using seasonality-adjusted linear trend fitted against data from 2018-2019&quot;))
-</pre>
-<pre>prediction=d$x&gt;=&quot;2021-01-01&quot;&amp;d$x&lt;=&quot;2022-12-31&quot;
+
+prediction=d$x&gt;=&quot;2021-01-01&quot;&amp;d$x&lt;=&quot;2022-12-31&quot;
 linear=predict(lm(y~x,d[prediction,]),d)
 days=substr(d$x,6,10)
 daily=tapply(d$y[prediction]-linear[prediction],days[prediction],mean)
 daily=ma(rep(daily,3),10)[(length(daily)+1):(2*length(daily))]|&gt;setNames(names(daily))
 excess=d$y-(linear+daily[days])
 xy=rbind(xy,data.frame(x=d$x,y=excess,z=&quot;Excess deaths using seasonality-adjusted linear trend fitted against data from 2021-2022&quot;))
-</pre>
-<pre>xy$z=factor(xy$z,unique(xy$z))
-</pre>
-<pre>xstart=as.Date(&quot;2011-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
+
+xy$z=factor(xy$z,unique(xy$z))
+
+xstart=as.Date(&quot;2011-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
 xy=xy[xy$x&gt;=xstart&amp;xy$x&lt;=xend,]
-</pre>
-<pre>xbreak=seq(xstart,xend,&quot;6 month&quot;)
+
+xbreak=seq(xstart,xend,&quot;6 month&quot;)
 xlab=c(rbind(&quot;&quot;,2011:2023),&quot;&quot;)
 cand=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
 ymax=max(xy$y,na.rm=T);ymin=min(xy$y,na.rm=T)
@@ -216,15 +216,15 @@ ystart=ystep*floor(ymin/ystep)
 yend=ystep*ceiling(ymax/ystep)
 ystart=-120;yend=220
 ybreak=seq(-100,yend,ystep)
-</pre>
-<pre>color=c(&quot;#aa0000&quot;,&quot;#889944&quot;,&quot;#44aa44&quot;)
-</pre>
-<pre>labels=data.frame(x=xstart+.02*(xend-xstart),y=seq(ystart+(yend-ystart)*.72,,-(yend-ystart)/15,nlevels(xy$z)),label=levels(xy$z))
-</pre>
-<pre>sub=str_wrap(&quot;Data from wonder.cdc.gov/mcd.html. Weekly data from 2018-2023 and monthly data from 1999-2017 was interpolated to daily data. Multiple causes of death that potentially involve sudden cardiac death consist of I45 (Other conduction disorders), I46 (Cardiac arrest), I47 (Paroxysmal tachycardia), I48 (Atrial fibrillation and flutter), I49 (Other cardiac arrhythmias), I50 (Heart failure), I51 (Complications and ill-defined descriptions of heart disease), ROO (Abnormalities of heart beat), R01 (Cardiac murmurs and other cardiac sounds), R09.2 (Respiratory arrest), and R09.8 (Other specified symptoms and signs involving the circulatory and respiratory systems).&quot;,95)
+
+color=c(&quot;#aa0000&quot;,&quot;#889944&quot;,&quot;#44aa44&quot;)
+
+labels=data.frame(x=xstart+.02*(xend-xstart),y=seq(ystart+(yend-ystart)*.72,,-(yend-ystart)/15,nlevels(xy$z)),label=levels(xy$z))
+
+sub=str_wrap(&quot;Data from wonder.cdc.gov/mcd.html. Weekly data from 2018-2023 and monthly data from 1999-2017 was interpolated to daily data. Multiple causes of death that potentially involve sudden cardiac death consist of I45 (Other conduction disorders), I46 (Cardiac arrest), I47 (Paroxysmal tachycardia), I48 (Atrial fibrillation and flutter), I49 (Other cardiac arrhythmias), I50 (Heart failure), I51 (Complications and ill-defined descriptions of heart disease), ROO (Abnormalities of heart beat), R01 (Cardiac murmurs and other cardiac sounds), R09.2 (Respiratory arrest), and R09.8 (Other specified symptoms and signs involving the circulatory and respiratory systems).&quot;,95)
 sub=paste0(sub,&quot;\n\n&quot;,str_wrap(&quot;The trend was calculated by first doing linear regression for daily data, then calculating the average difference to the trend for each 365 or 366 days of the year, then taking a 21-day centered moving average of the vector for daily differences, and then adding the difference to the trend on the corresponding day of each year.&quot;,95))
-</pre>
-<pre>ggplot(xy,aes(x=x,y=y,color=z))+
+
+ggplot(xy,aes(x=x,y=y,color=z))+
 geom_hline(yintercept=c(ystart,0,yend),color=&quot;gray65&quot;,linewidth=.25)+
 geom_vline(xintercept=c(xstart,xend),color=&quot;gray65&quot;,linewidth=.25)+
 geom_line(aes(color=z),linewidth=.3)+
@@ -246,8 +246,8 @@ theme(axis.text=element_text(size=6.5,color=&quot;black&quot;),
   plot.margin=margin(.4,.65,.4,.4,&quot;lines&quot;),
   plot.caption=element_text(size=6.7,hjust=0,margin=margin(.6,0,0,0,&quot;lines&quot;)),
   plot.title=element_text(size=7.5))
-ggsave(&quot;1.png&quot;,width=4.6,height=4.5,dpi=450)
-</pre>
+ggsave(&quot;1.png&quot;,width=4.6,height=4.5,dpi=450)</pre>
+</div>
 <h2>
 <a href=#Updated_plot_for_cardiac_deaths_in_ages_0_to_54_with_drug_deaths_included id=Updated_plot_for_cardiac_deaths_in_ages_0_to_54_with_drug_deaths_included>Updated plot for cardiac deaths in ages 0 to 54 with drug deaths included</a>
 </h2>
@@ -264,18 +264,18 @@ ggsave(&quot;1.png&quot;,width=4.6,height=4.5,dpi=450)
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)</pre>
-</div>
-<pre>t=fread(&quot;http://sars2.net/f/wonderskeptic.csv&quot;)
+<pre>library(data.table);library(ggplot2)
+
+t=fread(&quot;http://sars2.net/f/wonderskeptic.csv&quot;)
 p=t[,.(x=date-3,y=as.double(dead),z=factor(cause,unique(cause)))]
-</pre>
-<pre>xstart=as.Date(&quot;2018-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
+
+xstart=as.Date(&quot;2018-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
 xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=c(rbind(&quot;&quot;,2018:2024),&quot;&quot;)
 ystart=0;yend=3500;ystep=500;ybreak=seq(ystart,yend,ystep)
-</pre>
-<pre>color=c(&quot;#bb0000&quot;,hcl(225,100,40),hcl(90,120,50),hcl(280,120,50),hcl(300,40,30),&quot;gray50&quot;)
-</pre>
-<pre>ggplot(p,aes(x,y,color=z))+
+
+color=c(&quot;#bb0000&quot;,hcl(225,100,40),hcl(90,120,50),hcl(280,120,50),hcl(300,40,30),&quot;gray50&quot;)
+
+ggplot(p,aes(x,y,color=z))+
 coord_cartesian(clip=&quot;off&quot;,expand=F)+
 geom_hline(yintercept=seq(ystart,yend,ystep),color=&quot;gray90&quot;,linewidth=.25)+
 geom_vline(xintercept=seq(xstart,xend,&quot;3 month&quot;),color=&quot;gray90&quot;,linewidth=.25)+
@@ -310,8 +310,8 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   plot.subtitle=element_text(size=7),
   plot.title=element_text(size=7.3,face=2))
 ggsave(&quot;1.png&quot;,width=4.3,height=2.7,dpi=400*4)
-system(&quot;magick 1.png -resize 25% 1.png&quot;)
-</pre>
+system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
+</div>
 <p>In the plot above I didn't exclude deaths with MCD COVID. In 2020 to 2023 in ages 0 to 54, only about 0.5% of deaths with MCD X42 to X44 also had MCD COVID, but about 9% of deaths with MCD I45 to I51 also had MCD COVID.</p>
 <p>In the next plot the light red line shows deaths with MCD I45-I51 but not MCD COVID. The light red line is clearly elevated in 2020 to 2023 compared to 2018 and 2019, but the period with elevated deaths already started in the second quarter of 2020 so it's difficult to blame on the vaccines, and the steady elevation in the light red line since 2020 rather seems to coincide with the elevation of drug-related deaths since 2020:</p>
 <div class="width7">
@@ -321,20 +321,20 @@ system(&quot;magick 1.png -resize 25% 1.png&quot;)
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)</pre>
-</div>
-<pre>t=fread(&quot;http://sars2.net/f/wonderskeptic.csv&quot;)
+<pre>library(data.table);library(ggplot2)
+
+t=fread(&quot;http://sars2.net/f/wonderskeptic.csv&quot;)
 t=rbind(t[cause%like%&quot;I45&quot;],merge(t[cause%like%&quot;I45&quot;,.(date,dead)],t[cause%like%&quot;Cardiac&quot;,.(date,dead2=dead)],all=T)[,.(cause=&quot;I45-I51 but not COVID&quot;,dead=dead-dead2,date)],t[!cause%like%&quot;I45|Cardiac|COVID&quot;])
-</pre>
-<pre>p=t[,.(x=date-3,y=as.double(dead),z=factor(cause,unique(cause)))]
-</pre>
-<pre>xstart=as.Date(&quot;2018-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
+
+p=t[,.(x=date-3,y=as.double(dead),z=factor(cause,unique(cause)))]
+
+xstart=as.Date(&quot;2018-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
 xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=c(rbind(&quot;&quot;,2018:2024),&quot;&quot;)
 ystart=0;yend=2000;ystep=200;ybreak=seq(ystart,yend,ystep)
-</pre>
-<pre>color=c(&quot;#bb0000&quot;,&quot;#ff9999&quot;,hcl(225,100,40),hcl(280,120,50),hcl(300,40,30),&quot;gray50&quot;)
-</pre>
-<pre>ggplot(p,aes(x,y,color=z))+
+
+color=c(&quot;#bb0000&quot;,&quot;#ff9999&quot;,hcl(225,100,40),hcl(280,120,50),hcl(300,40,30),&quot;gray50&quot;)
+
+ggplot(p,aes(x,y,color=z))+
 coord_cartesian(clip=&quot;off&quot;,expand=F)+
 geom_hline(yintercept=seq(ystart,yend,ystep),color=&quot;gray90&quot;,linewidth=.25)+
 geom_vline(xintercept=seq(xstart,xend,&quot;3 month&quot;),color=&quot;gray90&quot;,linewidth=.25)+
@@ -368,8 +368,8 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   plot.subtitle=element_text(size=7),
   plot.title=element_text(size=7.3,face=2))
 ggsave(&quot;1.png&quot;,width=4.3,height=2.7,dpi=400*4)
-system(&quot;magick 1.png -resize 25% 1.png&quot;)
-</pre>
+system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
+</div>
 <p>In the next plot which shows deaths by underlying cause instead of multiple cause, there is no longer such a clear increase in deaths under the cardiac ICD codes in 2020:</p>
 <div class="width7">
 <img src="i/debunk-ethical-16.png">
@@ -378,19 +378,19 @@ system(&quot;magick 1.png -resize 25% 1.png&quot;)
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)</pre>
-</div>
-<pre>t=fread(&quot;http://sars2.net/f/wonderskepticucd.csv&quot;)
-</pre>
-<pre>p=t[,.(x=date-3,y=as.double(dead),z=factor(cause,unique(cause)))]
-</pre>
-<pre>xstart=as.Date(&quot;2018-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
+<pre>library(data.table);library(ggplot2)
+
+t=fread(&quot;http://sars2.net/f/wonderskepticucd.csv&quot;)
+
+p=t[,.(x=date-3,y=as.double(dead),z=factor(cause,unique(cause)))]
+
+xstart=as.Date(&quot;2018-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
 xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=c(rbind(&quot;&quot;,2018:2024),&quot;&quot;)
 yend=2000;ystep=500;ybreak=seq(0,yend,ystep)
-</pre>
-<pre>color=c(&quot;#bb0000&quot;,hcl(90,120,50),hcl(280,120,50),hcl(300,40,30),&quot;gray50&quot;)
-</pre>
-<pre>ggplot(p,aes(x,y=pmin(y,yend),color=z))+
+
+color=c(&quot;#bb0000&quot;,hcl(90,120,50),hcl(280,120,50),hcl(300,40,30),&quot;gray50&quot;)
+
+ggplot(p,aes(x,y=pmin(y,yend),color=z))+
 coord_cartesian(clip=&quot;off&quot;,ylim=c(0,yend),expand=F)+
 geom_hline(yintercept=seq(0,yend,ystep),color=&quot;gray90&quot;,linewidth=.25)+
 geom_vline(xintercept=seq(xstart,xend,&quot;3 month&quot;),color=&quot;gray90&quot;,linewidth=.25)+
@@ -425,8 +425,8 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   plot.subtitle=element_text(size=7),
   plot.title=element_text(size=7.3,face=2))
 ggsave(&quot;1.png&quot;,width=4.3,height=2.7,dpi=400*4)
-system(&quot;magick 1.png -resize 25% 1.png&quot;)
-</pre>
+system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
+</div>
 <p>Ethical Skeptic had the chutzpah to say that it would equate to obfuscation if he also added excess drug deaths to his plot in 2020. He wrote: <span class="quote">"It should be noted that an initial mid-2020 surge in excess deaths due to overdoses (X42-44) during the lockdown period has been removed from this data. This is a death-surge which is non-Natural/non-Vaccine in its basis and can be viewed as to its arrival shape and magnitude in Chart 4c above. This 2020 surge is not trend data, hence its removal in favor of the true arrival trend attributable to the mRNA vaccine. There exists a slight elevation in these deaths which remains on the chart, attributable to Covid-19, but the permanent surge in mortality arrived as a result of the Covid vaccine beginning in December (Week 52 - 14 days after the vaccine start) 2020. To conflate that pre-vaccine surge with the vaccine arrival data, would constitute obfuscation."</span> [<a href="https://theethicalskeptic.com/2024/04/04/the-state-of-things-pandemic-week-50-2023/">https://theethicalskeptic.com/2024/04/04/the-state-of-things-pandemic-week-50-2023/</a>] He said that the excess drug deaths in 2020 were not <span class="quote">"trend data"</span> because the trend he was trying to find was a trend of increased deaths after the vaccine rollout. So in order to show there is a trend which fits his preconceptions, he considers data which doesn't conform to his preconceptions to not be <span class="quote">"trend data"</span> so he can freely discard it.</p>
 <p>When someone asked Ethical Skeptic why there was a huge increase in deaths in early 2021 even though only few people in ages 0 to 54 had been vaccinated, he answered the deaths were caused by the vaccines but he didn't even mention that he omitted excess drug deaths from his plot in 2020 but not 2021: [<a href="https://x.com/EthicalSkeptic/status/1775757476085841999">https://x.com/EthicalSkeptic/status/1775757476085841999</a>]</p>
 <div class="width5">
@@ -473,8 +473,7 @@ Second_Booster       NaN   NaN   NaN   NaN   NaN   NaN   NaN   NaN   NaN   NaN  
 Administered_Dose1    85    85    85    86
 Series_Complete       72    72    72    72
 Booster_Doses         43    43    43    43
-Second_Booster       NaN   NaN   NaN   NaN
-</pre>
+Second_Booster       NaN   NaN   NaN   NaN</pre>
 <p>However actually the reason why Ethical Skeptic highlighted mid-2022 as a vaccine uptake period might have been because his plot had a noticeable spike in all-cause deaths around the same time. But in my plots where I split out the number of deaths by cause of death, there wasn't any cause of death which had a clear increase in deaths around mid-2022. But it might be because Ethical Skeptic's plot displayed excess deaths and not raw deaths like my plot, so his increase in mid-2022 might have been an artifact of the way he adjusted his baseline for seasonal variation in mortality.</p>
 <p>Added later: Ethical Skeptic later posted an updated version of his plot which was now more transparent and honest, because he added a second line to his plot where he didn't omit the excess drug deaths in 2020 (even though a lot of people on Twitter still didn't seem to understand what the gray second line meant, and they didn't seem to understand that excess drug deaths were omitted from the blue line in 2020 but not 2021): [<a href="https://x.com/EthicalSkeptic/status/1846690187297919231">https://x.com/EthicalSkeptic/status/1846690187297919231</a>]</p>
 <div class="width8">
@@ -488,22 +487,22 @@ Second_Booster       NaN   NaN   NaN   NaN
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)</pre>
-</div>
-<pre>t=fread(&quot;http://sars2.net/f/ethicalcardiacdrugnew.csv&quot;)
-</pre>
-<pre>t[,date:=as.Date(paste0(date,&quot;-1&quot;))]
+<pre>library(data.table);library(ggplot2)
+
+t=fread(&quot;http://sars2.net/f/ethicalcardiacdrugnew.csv&quot;)
+
+t[,date:=as.Date(paste0(date,&quot;-1&quot;))]
 t[,dead:=dead/lubridate::days_in_month(date)]
-</pre>
-<pre>t=rbind(t,t[type%like%&quot;not&quot;&amp;year(date)%in%2015:2019,.(date=unique(t$date),type=&quot;2015-2019 baseline&quot;,dead=predict(lm(dead~date),.(date=unique(t$date)))),cause])
+
+t=rbind(t,t[type%like%&quot;not&quot;&amp;year(date)%in%2015:2019,.(date=unique(t$date),type=&quot;2015-2019 baseline&quot;,dead=predict(lm(dead~date),.(date=unique(t$date)))),cause])
 t[,cause:=factor(cause,unique(cause))]
 t[,type:=factor(type,unique(type))]
-</pre>
-<pre>xstart=as.Date(&quot;2015-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
+
+xstart=as.Date(&quot;2015-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
 xbreak=seq(xstart+182,xend,&quot;year&quot;);xlab=year(xbreak)
 ybreak=pretty(c(0,t$dead),7);ystart=ybreak[1];yend=max(ybreak)
-</pre>
-<pre>cap=&quot;Includes deaths with any of these multiple cause of death codes:
+
+cap=&quot;Includes deaths with any of these multiple cause of death codes:
 - I45 (Other conduction disorders)
 - I46 (Cardiac arrest)
 - I47 (Paroxysmal tachycardia)
@@ -520,18 +519,18 @@ ybreak=pretty(c(0,t$dead),7);ystart=ybreak[1];yend=max(ybreak)
 - X30 (Exposure to excessive natural heat (hyperthermia))
 - Only for brown line: X44 (Accidental poisoning by and exposure to other and unspecified drugs,
   medicaments and biological substances)
-</pre>
-<pre>The black line does not include deaths which had only MCD X44 but not any of the other codes
+
+The black line does not include deaths which had only MCD X44 but not any of the other codes
 listed above, but it still includes deaths which had MCD X44 in addition to one of the other codes
 listed above. There are also many other ICD codes for drug overdose besides X44. So the black line
 still includes many deaths where a drug overdose led to a cardiac arrest, heart failure, or respiratory
 failure, and it includes drug overdose deaths where the cause has not been resolved (R96 and R99).&quot;
-</pre>
-<pre>thou=\(x)formatC(x,digits=0,format=&quot;f&quot;,big.mark=&quot;,&quot;)
+
+thou=\(x)formatC(x,digits=0,format=&quot;f&quot;,big.mark=&quot;,&quot;)
 note=t[year(date)%in%2020:2023,dcast(.SD,date+cause~type)][,sum(.SD[[3]])-sum(.SD[[4]]),cause]$V1*(365*4+1)/48
 note=paste0(&quot;Total excess deaths in 2020-2023: &quot;,thou(note[1]),&quot; for light brown compared to dashed brown line and &quot;,thou(note[2]),&quot; for light black line compared to dashed black line.&quot;)|&gt;stringr::str_wrap(40)
-</pre>
-<pre>ggplot(t,aes(x=date+14,y=dead))+
+
+ggplot(t,aes(x=date+14,y=dead))+
 geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray83&quot;,linewidth=.25)+
 geom_line(aes(color=cause,alpha=type,linetype=type),linewidth=.3)+
 geom_point(aes(color=cause,alpha=type,size=type),stroke=0,show.legend=F)+
@@ -571,8 +570,8 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   plot.subtitle=element_text(size=7,margin=margin(,,3)),
   plot.title=element_text(size=7.2,face=2,margin=margin(1,,3)))
 ggsave(&quot;1.png&quot;,width=3.93,height=4.7,dpi=400*4)
-system(&quot;magick 1.png -resize 25% PNG8:1.png&quot;)
-</pre>
+system(&quot;magick 1.png -resize 25% PNG8:1.png&quot;)</pre>
+</div>
 <p>I was expecting deaths with MCD drug overdose to explain most of the excess I45-51 cardiac deaths after subtracting deaths with MCD COVID. But actually in the next plot MCD drug deaths explained only a small part of the excess I45-51 deaths since 2020, even though I included 15 different 3-letter ICD codes for drug overdoses and not just the one or two most common codes like Ethical Skeptic. Then I thought other deaths from external causes might explain the excess deaths, since various external causes of death have remained elevated in younger age groups since 2020, but I didn't get rid of the excess deaths by subtracting other deaths from external causes either. So I don't know how to explain the remainder of excess deaths since 2020:</p>
 <div class="width6">
 <img src="i/ethical-heartdrug.png">
@@ -581,29 +580,29 @@ system(&quot;magick 1.png -resize 25% PNG8:1.png&quot;)
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)</pre>
-</div>
-<pre>t=fread(&quot;http://sars2.net/f/wonderheartdrug.csv&quot;)
-</pre>
-<pre>t[,date:=as.Date(paste0(date,&quot;-1&quot;))]
+<pre>library(data.table);library(ggplot2)
+
+t=fread(&quot;http://sars2.net/f/wonderheartdrug.csv&quot;)
+
+t[,date:=as.Date(paste0(date,&quot;-1&quot;))]
 t[,dead:=dead/lubridate::days_in_month(date)]
-</pre>
-<pre>w=dcast(t,date~cause,value.var=&quot;dead&quot;)
+
+w=dcast(t,date~cause,value.var=&quot;dead&quot;)
 w[is.na(w)]=0
-</pre>
-<pre>lab=c(&quot;MCD I45-51 cardiac deaths&quot;,&quot;MCD I45-51 but not MCD drug overdose&quot;,&quot;MCD I45-51 but not MCD drug overdose or COVID&quot;,&quot;MCD I45-51 but not MCD drug overdose, COVID, or external causes&quot;)
+
+lab=c(&quot;MCD I45-51 cardiac deaths&quot;,&quot;MCD I45-51 but not MCD drug overdose&quot;,&quot;MCD I45-51 but not MCD drug overdose or COVID&quot;,&quot;MCD I45-51 but not MCD drug overdose, COVID, or external causes&quot;)
 p=w[,.(x=date,y=c(w[[2]],w[[2]]-w[[3]],w[[2]]-w[[4]],w[[2]]-w[[5]]),z=factor(rep(lab,each=.N),lab),type=1)]
-</pre>
-<pre>p=p[!(z==levels(z)[3]&amp;x&lt;&quot;2020-3-1&quot;)]
-</pre>
-<pre>p=rbind(p,p[z!=lab[3]&amp;year(x)%in%2015:2019,.(x=unique(p$x),type=2,y=predict(lm(y~x),.(x=unique(p$x)))),z])
+
+p=p[!(z==levels(z)[3]&amp;x&lt;&quot;2020-3-1&quot;)]
+
+p=rbind(p,p[z!=lab[3]&amp;year(x)%in%2015:2019,.(x=unique(p$x),type=2,y=predict(lm(y~x),.(x=unique(p$x)))),z])
 p[,type:=factor(type,,c(&quot;Actual deaths&quot;,&quot;2015-2019 linear trend&quot;))]
-</pre>
-<pre>xstart=as.Date(&quot;2015-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
+
+xstart=as.Date(&quot;2015-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
 xbreak=seq(xstart+182,xend,&quot;year&quot;);xlab=year(xbreak)
 ybreak=pretty(c(0,t$dead),7);ystart=ybreak[1];yend=max(p$y)
-</pre>
-<pre>ggplot(p,aes(x=x+14,y))+
+
+ggplot(p,aes(x=x+14,y))+
 geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray83&quot;,linewidth=.4)+
 geom_line(aes(color=z,alpha=type,linetype=type),linewidth=.6)+
 geom_point(aes(color=z,alpha=type,size=type),stroke=0,show.legend=F)+
@@ -640,10 +639,10 @@ theme(axis.text=element_text(size=11,color=&quot;black&quot;),
   plot.subtitle=element_text(size=11,margin=margin(,,4)),
   plot.title=element_text(size=11,face=2,margin=margin(1,,4)))
 ggsave(&quot;1.png&quot;,width=6,height=4,dpi=300*4)
-</pre>
-<pre>sub=&quot;Drug overdose deaths consist of ICD codes X40-44, X60-64, and Y10-14. External causes consist of the ICD codes V01-Y89. I45-51 are cardiac ICD codes included in Ethical Skeptic&#39;s plot (Other conduction disorders; Cardiac arrest; Paroxysmal tachycardia; Atrial fibrillation and flutter; Other cardiac arrhythmias; Heart failure; Complications and ill-defined descriptions of heart disease).&quot;
-system(paste0(&quot;mar=$[24*4];w=`identify -format %w 1.png`;magick \\( 1.png -gravity southwest -chop 0x40 \\) \\( -size $[w-mar*2]x -font Arial -interline-spacing -3 -pointsize $[44*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&#39;&quot;,sub),&quot;&#39; -gravity southwest -splice $[mar]x$[20*4] \\) -append -resize 25% -colors 256 1.png&quot;))
-</pre>
+
+sub=&quot;Drug overdose deaths consist of ICD codes X40-44, X60-64, and Y10-14. External causes consist of the ICD codes V01-Y89. I45-51 are cardiac ICD codes included in Ethical Skeptic&#39;s plot (Other conduction disorders; Cardiac arrest; Paroxysmal tachycardia; Atrial fibrillation and flutter; Other cardiac arrhythmias; Heart failure; Complications and ill-defined descriptions of heart disease).&quot;
+system(paste0(&quot;mar=$[24*4];w=`identify -format %w 1.png`;magick \\( 1.png -gravity southwest -chop 0x40 \\) \\( -size $[w-mar*2]x -font Arial -interline-spacing -3 -pointsize $[44*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&#39;&quot;,sub),&quot;&#39; -gravity southwest -splice $[mar]x$[20*4] \\) -append -resize 25% -colors 256 1.png&quot;))</pre>
+</div>
 <h2>
 <a href=#Plot_for_X44_drug_deaths id=Plot_for_X44_drug_deaths>Plot for X44 drug deaths</a>
 </h2>
@@ -661,27 +660,27 @@ system(paste0(&quot;mar=$[24*4];w=`identify -format %w 1.png`;magick \\( 1.png -
 <button>
 Show code
 </button>
-<pre>library(data.table);library(stringr);library(ggplot2)</pre>
-</div>
-<pre>t=fread(&quot;http://sars2.net/f/ethicalx42x44.csv&quot;)
+<pre>library(data.table);library(stringr);library(ggplot2)
+
+t=fread(&quot;http://sars2.net/f/ethicalx42x44.csv&quot;)
 t[,date:=as.Date(paste0(date,&quot;-1&quot;))]
-</pre>
-<pre>xstart=as.Date(&quot;2015-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
+
+xstart=as.Date(&quot;2015-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
 xbreak=seq(xstart,xend,&quot;6 month&quot;)
 xlab=c(rbind(&quot;&quot;,2015:2023),&quot;&quot;)
-</pre>
-<pre>p=t[date&gt;=xstart&amp;date&lt;=xend]
+
+p=t[date&gt;=xstart&amp;date&lt;=xend]
 ybreak=pretty(p$dead);yend=max(ybreak)
-</pre>
-<pre>dates=unique(p$date)
+
+dates=unique(p$date)
 p$trend=p[year(date)%in%2018:2019,predict(lm(dead~date),.(date=dates)),cause]$V1
 p$trend2=p[year(date)%in%2015:2019,predict(lm(dead~date),.(date=dates)),cause]$V1
-</pre>
-<pre>color=c(hcl(280,110,50),hcl(90,110,50))
-</pre>
-<pre>lab=c(&quot;X42: Accidental poisoning by and exposure to narcotics and psychodysleptics [hallucinogens], not elsewhere classified&quot;|&gt;str_wrap(36),&quot;X44: Accidental poisoning by and exposure to other and unspecified drugs, medicaments and biological substances&quot;|&gt;str_wrap(36))
-</pre>
-<pre>ggplot(p,aes(x=date,y=dead))+
+
+color=c(hcl(280,110,50),hcl(90,110,50))
+
+lab=c(&quot;X42: Accidental poisoning by and exposure to narcotics and psychodysleptics [hallucinogens], not elsewhere classified&quot;|&gt;str_wrap(36),&quot;X44: Accidental poisoning by and exposure to other and unspecified drugs, medicaments and biological substances&quot;|&gt;str_wrap(36))
+
+ggplot(p,aes(x=date,y=dead))+
 geom_vline(xintercept=seq(xstart,xend,&quot;3 month&quot;),color=&quot;gray92&quot;,linewidth=.25)+
 geom_hline(yintercept=seq(ystart,yend,ystep),color=&quot;gray90&quot;,linewidth=.25)+
 geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray60&quot;,linewidth=.25)+
@@ -715,8 +714,8 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   plot.subtitle=element_text(size=6.4,margin=margin(,,3)),
   plot.title=element_text(size=7.3,face=2,margin=margin(1,,3)))
 ggsave(&quot;1.png&quot;,width=4,height=2.8,dpi=380*4)
-system(&quot;magick 1.png -resize 25% 1.png&quot;)
-</pre>
+system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
+</div>
 <p>The plot by Ethical Skeptic started from 2018 and it only included X44 deaths, so it looked like there was an anomalous sustained increase in drug deaths in 2021-2023. But from my plot above which starts from 2015 and where X44 deaths are also included, it looks like 2022 isn't that far off the long-term trend but rather the level of deaths in mid-2021 looks elevated, and there's still probably a lot of deaths missing in 2023 because drug-related deaths have a long registration delay.</p>
 <p>Before COVID the long-term trend in drug deaths seemed to be curved upwards, so the 2015-2019 linear trend in my plot above might be too low, and in the next plot where I used a 2010-2019 quadratic trend instead, the X42 deaths were actually below the trend in 2022 (even though X44 deaths were still above the trend in 2022):</p>
 <div class="width7">
@@ -726,26 +725,26 @@ system(&quot;magick 1.png -resize 25% 1.png&quot;)
 <button>
 Show code
 </button>
-<pre>library(data.table);library(stringr);library(ggplot2)</pre>
-</div>
-<pre>t=fread(&quot;http://sars2.net/f/ethicalx42x44.csv&quot;)
+<pre>library(data.table);library(stringr);library(ggplot2)
+
+t=fread(&quot;http://sars2.net/f/ethicalx42x44.csv&quot;)
 t[,date:=as.Date(paste0(date,&quot;-1&quot;))]
-</pre>
-<pre>xstart=as.Date(&quot;2010-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
+
+xstart=as.Date(&quot;2010-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
 xbreak=seq(xstart,xend,&quot;6 month&quot;)
 xlab=c(rbind(&quot;&quot;,2010:2023),&quot;&quot;)
-</pre>
-<pre>p=t[date&gt;=xstart&amp;date&lt;=xend]
+
+p=t[date&gt;=xstart&amp;date&lt;=xend]
 ybreak=pretty(p$dead);yend=max(ybreak)
-</pre>
-<pre>dates=unique(p$date)
+
+dates=unique(p$date)
 p$trend=p[year(date)&lt;2020,predict(lm(dead~poly(as.numeric(date),2)),.(date=dates)),cause]$V1
-</pre>
-<pre>color=c(hcl(280,110,50),hcl(90,110,50))
-</pre>
-<pre>lab=c(&quot;X42: Accidental poisoning by and exposure to narcotics and psychodysleptics [hallucinogens], not elsewhere classified&quot;|&gt;str_wrap(36),&quot;X44: Accidental poisoning by and exposure to other and unspecified drugs, medicaments and biological substances&quot;|&gt;str_wrap(36))
-</pre>
-<pre>ggplot(p,aes(x=date+15,y=dead))+
+
+color=c(hcl(280,110,50),hcl(90,110,50))
+
+lab=c(&quot;X42: Accidental poisoning by and exposure to narcotics and psychodysleptics [hallucinogens], not elsewhere classified&quot;|&gt;str_wrap(36),&quot;X44: Accidental poisoning by and exposure to other and unspecified drugs, medicaments and biological substances&quot;|&gt;str_wrap(36))
+
+ggplot(p,aes(x=date+15,y=dead))+
 geom_hline(yintercept=seq(ystart,yend,ystep),color=&quot;gray90&quot;,linewidth=.25)+
 geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray90&quot;,linewidth=.25)+
 geom_vline(xintercept=as.Date(&quot;2020-1-1&quot;),linetype=2,linewidth=.25)+
@@ -777,8 +776,8 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   plot.subtitle=element_text(size=6.4,margin=margin(,,3)),
   plot.title=element_text(size=7.3,face=2,margin=margin(1,,3)))
 ggsave(&quot;1.png&quot;,width=4,height=2.8,dpi=380*4)
-system(&quot;magick 1.png -resize 25% 1.png&quot;)
-</pre>
+system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
+</div>
 <h2>
 <a href=#Effect_of_fitting_a_baseline_against_data_from_only_2018_and_2019 id=Effect_of_fitting_a_baseline_against_data_from_only_2018_and_2019>Effect of fitting a baseline against data from only 2018 and 2019</a>
 </h2>
@@ -799,26 +798,26 @@ system(&quot;magick 1.png -resize 25% 1.png&quot;)
 <button>
 Show code
 </button>
-<pre> library(data.table);library(stringr);library(ggplot2)</pre>
-</div>
-<pre>t=fread(&quot;http://sars2.net/f/uspopdeadmonthly.csv&quot;)
+<pre> library(data.table);library(stringr);library(ggplot2)
+
+t=fread(&quot;http://sars2.net/f/uspopdeadmonthly.csv&quot;)
 t[,date:=as.Date(paste0(date,&quot;-1&quot;))]
-</pre>
-<pre>xstart=as.Date(&quot;2011-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
+
+xstart=as.Date(&quot;2011-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
 xbreak=seq(xstart,xend,&quot;6 month&quot;)
 xlab=c(rbind(&quot;&quot;,2011:2023),&quot;&quot;)
-</pre>
-<pre>a=t[date&gt;=xstart&amp;date&lt;=xend,.(y=sum(dead)/sum(persondays)*365e5,z=&quot;Actual deaths&quot;),.(x=date)]
-</pre>
-<pre>dates=unique(p$x)
+
+a=t[date&gt;=xstart&amp;date&lt;=xend,.(y=sum(dead)/sum(persondays)*365e5,z=&quot;Actual deaths&quot;),.(x=date)]
+
+dates=unique(p$x)
 p=rbind(a,a[year(x)%in%2011:2019,.(x=dates,y=predict(lm(y~x),.(x=dates)),z=&quot;2011-2019 linear trend&quot;)])
 p=rbind(p,a[year(x)%in%2018:2019,.(x=dates,y=predict(lm(y~x),.(x=dates)),z=&quot;2018-2019 linear trend&quot;)])
 p[,z:=factor(z,unique(z))]
-</pre>
-<pre>ybreak=pretty(p$y)
+
+ybreak=pretty(p$y)
 color=c(&quot;black&quot;,&quot;black&quot;,&quot;gray60&quot;)
-</pre>
-<pre>ggplot(p,aes(x=x+15,y))+
+
+ggplot(p,aes(x=x+15,y))+
 geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray90&quot;,linewidth=.25)+
 geom_vline(xintercept=c(as.Date(&quot;2018-1-1&quot;),as.Date(&quot;2020-1-1&quot;)),linetype=&quot;11&quot;,linewidth=.25)+
 geom_line(aes(color=z,linetype=z),linewidth=.3)+
@@ -851,8 +850,8 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   plot.margin=margin(5,5,5,5),
   plot.title=element_text(size=7.3,face=2,margin=margin(1,,3)))
 ggsave(&quot;1.png&quot;,width=4,height=2.4,dpi=380*4)
-system(&quot;magick 1.png -resize 25% 1.png&quot;)
-</pre>
+system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
+</div>
 <p>When Ethical Skeptic posted of list errors made by other analysts, this was one of the points on his list: <span class="quote">"Add volatility of peak winter mortality periods into the trend regression, and not index off the summer base. That way a rough flu year will raise the baseline artificially to your advantage."</span> [<a href="https://x.com/EthicalSkeptic/status/1773066903000396096">https://x.com/EthicalSkeptic/status/1773066903000396096</a>] So I don't know if it means that he omits the weeks with high mortality in early 2018 when he calculates the baseline.</p>
 <p>Ethical Skeptic has published three articles in a series called <span class="quote">"Houston We Have a Problem"</span> where he has explained some of his methodology. [<a href="https://theethicalskeptic.com/2024/04/04/the-state-of-things-pandemic-week-50-2023/">https://theethicalskeptic.com/2024/04/04/the-state-of-things-pandemic-week-50-2023/</a>] In the third part he included the image below where he described how he calculates his baseline, but it sounds like he's just doing a regular linear regression and he's not applying any special method to account for the low number of deaths in 2019 or for the high number of deaths in early 2018 (even though he seems to describe how he makes his plots that start from 2014 so it could be that he uses different methodology in the plots that start from 2018, or he may have revised his methodology since he made this image):</p>
 <div class="width6">
@@ -867,15 +866,15 @@ system(&quot;magick 1.png -resize 25% 1.png&quot;)
 <button>
 Show code
 </button>
-<pre>library(ggplot2)</pre>
-</div>
-<pre>isoweek=\(year,week,weekday=1){d=as.Date(paste0(year,&quot;-1-4&quot;));d-(as.integer(format(d,&quot;%w&quot;))+6)%%7-1+7*(week-1)+weekday}
+<pre>library(ggplot2)
+
+isoweek=\(year,week,weekday=1){d=as.Date(paste0(year,&quot;-1-4&quot;));d-(as.integer(format(d,&quot;%w&quot;))+6)%%7-1+7*(week-1)+weekday}
 ma=\(x,b=1,f=b)rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T)
-</pre>
-<pre>t=read.csv(&quot;https://www.mortality.org/File/GetDocument/Public/STMF/Outputs/NZL_NPstmfout.csv&quot;)|&gt;subset(Sex==&quot;b&quot;)
+
+t=read.csv(&quot;https://www.mortality.org/File/GetDocument/Public/STMF/Outputs/NZL_NPstmfout.csv&quot;)|&gt;subset(Sex==&quot;b&quot;)
 t$date=isoweek(t$Year,t$Week,4)
-</pre>
-<pre>xy=do.call(rbind,lapply(c(2011,2012,2014),\(i){
+
+xy=do.call(rbind,lapply(c(2011,2012,2014),\(i){
   pred=t$Year%in%2011:i
   trend=predict(lm(Total~date,t[pred,]),t)
   weekly=tapply(t$Total[pred]-trend[pred],t$Week[pred],mean)
@@ -885,11 +884,11 @@ t$date=isoweek(t$Year,t$Week,4)
   o$y=ma(o$dead-o$trend,1)
   o$sd=sd(o$dead[pred]-o$trend[pred])
   o}))
-</pre>
-<pre>xstart=as.Date(&quot;2011-1-1&quot;);xend=as.Date(&quot;2016-1-1&quot;)
+
+xstart=as.Date(&quot;2011-1-1&quot;);xend=as.Date(&quot;2016-1-1&quot;)
 xy=xy[xy$x&gt;=xstart&amp;xy$x&lt;=xend,]
-</pre>
-<pre>xbreak=seq(xstart,xend,&quot;6 month&quot;)
+
+xbreak=seq(xstart,xend,&quot;6 month&quot;)
 xlab=c(rbind(&quot;&quot;,2011:2015),&quot;&quot;)
 cand=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
 ymax=max(xy$y,na.rm=T);ymin=min(xy$y,na.rm=T)
@@ -897,17 +896,17 @@ ystep=cand[which.min(abs(cand-(ymax-ymin)/5))]
 ystart=ystep*floor(ymin/ystep)
 yend=ystep*ceiling(ymax/ystep)
 ybreak=seq(ystart,yend,ystep)
-</pre>
-<pre>color=c(hcl(c(210,260,310)+15,100,50))
-</pre>
-<pre>sd=sprintf(&quot;%.1f&quot;,tapply(xy$sd,xy$z,unique))
+
+color=c(hcl(c(210,260,310)+15,100,50))
+
+sd=sprintf(&quot;%.1f&quot;,tapply(xy$sd,xy$z,unique))
 sigma=c(&quot;Inf&quot;,sprintf(&quot;%.1f&quot;,tapply(abs(xy$y/xy$sd),xy$z,max))[-1])
 lab=paste0(unique(xy$z),&quot; (SD &quot;,sd,&quot;, max abs sigma &quot;,sigma,&quot;)&quot;)
 xy$z=lab[factor(xy$z)]
-</pre>
-<pre>tit=&quot;Weekly excess deaths in New Zealand. The baseline is a linear regression which was adjusted for seasonality by for example adding the average difference between the actual deaths and the baseline on each week 1 to the baseline for week 1, and similarly for other weeks.&quot;
-</pre>
-<pre>ggplot(xy,aes(x=x,y=y,color=z))+
+
+tit=&quot;Weekly excess deaths in New Zealand. The baseline is a linear regression which was adjusted for seasonality by for example adding the average difference between the actual deaths and the baseline on each week 1 to the baseline for week 1, and similarly for other weeks.&quot;
+
+ggplot(xy,aes(x=x,y=y,color=z))+
 geom_hline(yintercept=c(ystart,0,yend),linewidth=.25)+
 geom_vline(xintercept=c(xstart,xend),linewidth=.25)+
 geom_line(aes(color=z),linewidth=.3)+
@@ -939,8 +938,8 @@ theme(axis.text=element_text(size=6.5,color=&quot;black&quot;),
   plot.margin=margin(.4,.65,.4,.4,&quot;lines&quot;),
   plot.caption=element_text(size=6.7,hjust=0,margin=margin(.6,0,0,0,&quot;lines&quot;)),
   plot.title=element_text(size=7.8))
-ggsave(&quot;1.png&quot;,width=4.6,height=3.4,dpi=450)
-</pre>
+ggsave(&quot;1.png&quot;,width=4.6,height=3.4,dpi=450)</pre>
+</div>
 <h2>
 <a href=#COVID_deaths_per_capita_compared_to_percentage_of_vaccinated_population_in_US_counties id=COVID_deaths_per_capita_compared_to_percentage_of_vaccinated_population_in_US_counties>COVID deaths per capita compared to percentage of vaccinated population in US counties</a>
 </h2>
@@ -960,8 +959,7 @@ ggsave(&quot;1.png&quot;,width=4.6,height=3.4,dpi=450)
 <pre>$ curl https://data.cdc.gov/api/views/rh2h-3yt2/rows.csv&gt;statesvax.csv
 $ csvtk filter2 -f &#39;$Date==&quot;04/03/2021&quot;&amp;&amp;$date_type==&quot;Report&quot;&amp;&amp;$Location==&quot;US&quot;&#39; statesvax.csv|csvtk cut -f Date,Location,Administered_Dose1_Pop_Pct
 Date,Location,Administered_Dose1_Pop_Pct
-04/03/2021,US,31.4
-</pre>
+04/03/2021,US,31.4</pre>
 <p>He also didn't explain how he calculated the curved trend line, and it looks too low near the end of the x-axis, and for some reason he only drew the trend up to the point where the value of the x-axis was about 85%.</p>
 <p>In the plot below I tried plotting the percentage of vaccinated population on March 1st 2022 on the x-axis like Ethical Skeptic, but I compared COVID deaths in 2020 against COVID deaths in 2021-2022 so that I didn't include the first three months of 2021 as part of the pre-vaccination period. When I splitted a spline trend to the data, it was a lot steeper in 2021-2022 than 2020. And even in 2020 the overall trend looks more flat in my plot, because I drew the trend line up to the end of the x-axis and I didn't smooth out the trend line as heavily as Ethical Skeptic. The trend got even flatter when I weighted it by population size, because larger counties have a higher percentage of vaccinated people than smaller counties, and in 2020 there were many large northeastern counties that had a high number of COVID deaths per capita:</p>
 <div class="width8">
@@ -971,50 +969,50 @@ Date,Location,Administered_Dose1_Pop_Pct
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)</pre>
-</div>
-<pre># download.file(&quot;https://github.com/nytimes/covid-19-data/raw/master/us-counties-2020.csv&quot;,&quot;us-counties-2020.csv&quot;)
+<pre>library(data.table);library(ggplot2)
+
+# download.file(&quot;https://github.com/nytimes/covid-19-data/raw/master/us-counties-2020.csv&quot;,&quot;us-counties-2020.csv&quot;)
 # download.file(&quot;https://github.com/nytimes/covid-19-data/raw/master/us-counties-2022.csv&quot;,&quot;us-counties-2022.csv&quot;)
 # download.file(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2020-2022/counties/totals/co-est2022-alldata.csv&quot;,&quot;uscountypop.csv&quot;)
-</pre>
-<pre># download manually:
+
+# download manually:
 # https://data.cdc.gov/Vaccinations/COVID-19-Vaccinations-in-the-United-States-County/8xkx-amqh/about_data
-</pre>
-<pre>t=fread(&quot;COVID-19_Vaccinations_in_the_United_States_County_20240227.csv&quot;)
+
+t=fread(&quot;COVID-19_Vaccinations_in_the_United_States_County_20240227.csv&quot;)
 t=t[Date==&quot;03/01/2022&quot;,c(&quot;FIPS&quot;,&quot;Administered_Dose1_Recip&quot;)]
 names(t)=c(&quot;fips&quot;,&quot;vax&quot;)
 t$fips=as.integer(t$fips)
-</pre>
-<pre>pop=fread(&quot;uscountypop.csv&quot;)[,.(fips=as.integer(sprintf(&quot;%d%03d&quot;,STATE,COUNTY)),pop=POPESTIMATE2022)]
-</pre>
-<pre>nyt=fread(&quot;us-counties-2022.csv&quot;)[date==&quot;2022-12-31&quot;,.(fips,deaths)]
+
+pop=fread(&quot;uscountypop.csv&quot;)[,.(fips=as.integer(sprintf(&quot;%d%03d&quot;,STATE,COUNTY)),pop=POPESTIMATE2022)]
+
+nyt=fread(&quot;us-counties-2022.csv&quot;)[date==&quot;2022-12-31&quot;,.(fips,deaths)]
 nyt2=fread(&quot;us-counties-2020.csv&quot;)[date==&quot;2020-12-31&quot;,.(fips,deaths)]
 nyt=merge(nyt,nyt2,by=&quot;fips&quot;)[,.(fips,deaths=(deaths.x-deaths.y)/2)]|&gt;na.omit()
-</pre>
-<pre>states=read.csv(&quot;https://github.com/cphalpert/census-regions/raw/master/us%20census%20bureau%20regions%20and%20divisions.csv&quot;)[,c(2,3)]
+
+states=read.csv(&quot;https://github.com/cphalpert/census-regions/raw/master/us%20census%20bureau%20regions%20and%20divisions.csv&quot;)[,c(2,3)]
 fips=read.csv(&quot;https://gist.githubusercontent.com/dantonnoriega/bf1acd2290e15b91e6710b6fd3be0a53/raw/11d15233327c8080c9646c7e1f23052659db251d/us-state-ansi-fips.csv&quot;,strip.white=T)[,c(3,2)]
 states=merge(states,fips,by=1)
 states=setNames(states[,2],states[,3])
-</pre>
-<pre>me=merge(merge(t,nyt),pop)[vax&gt;0]|&gt;na.omit()
+
+me=merge(merge(t,nyt),pop)[vax&gt;0]|&gt;na.omit()
 xy=data.frame(x=pmin(100,me$vax/me$pop*100),y=pmin(500,me$deaths/me$pop*1e5),pop=me$pop)
 xy$size=pmax(.3,log(me$pop,20)-2.8)
 xy$region=factor(states[sub(&quot;...$&quot;,&quot;&quot;,me$fips)],c(&quot;Northeast&quot;,&quot;Midwest&quot;,&quot;South&quot;,&quot;West&quot;))
-</pre>
-<pre>xstart=10;xend=100;xstep=10;ystart=0;yend=500;ystep=100
+
+xstart=10;xend=100;xstep=10;ystart=0;yend=500;ystep=100
 xbreak=seq(xstart,xend,xstep)
 ybreak=seq(ystart,yend,ystep)
-</pre>
-<pre>smooth1=as.data.frame(predict(smooth.spline(xy$x,xy$y,spar=.85,w=xy$pop/max(xy$pop)),seq(0,100,.1)))
+
+smooth1=as.data.frame(predict(smooth.spline(xy$x,xy$y,spar=.85,w=xy$pop/max(xy$pop)),seq(0,100,.1)))
 smooth2=as.data.frame(predict(smooth.spline(xy,spar=.85),seq(0,100,.1)))
-</pre>
-<pre>leg1=data.frame(x=11.4,y=seq(yend*.94,,-yend/15,2),label=c(&quot;Smoothed spline (weighted by population size, spar=.85)&quot;,&quot;Smoothed spline (not weighted, spar=.85)&quot;))
+
+leg1=data.frame(x=11.4,y=seq(yend*.94,,-yend/15,2),label=c(&quot;Smoothed spline (weighted by population size, spar=.85)&quot;,&quot;Smoothed spline (not weighted, spar=.85)&quot;))
 leg2=data.frame(x=xend-1.4,y=seq(yend*.94,,-yend/15,4),label=levels(xy$region))
-</pre>
-<pre>pal1=c(&quot;#ee66aa&quot;,&quot;#993377&quot;)
+
+pal1=c(&quot;#ee66aa&quot;,&quot;#993377&quot;)
 pal2=c(hcl(225,100,50),hcl(55,50,50),&quot;black&quot;,hcl(135,100,50))
-</pre>
-<pre>ggplot(xy,aes(x,y))+
+
+ggplot(xy,aes(x,y))+
 geom_label(data=leg1,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.85),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.04,&quot;lines&quot;),label.size=0,size=2.3,hjust=0,color=pal1)+
 geom_label(data=leg2,aes(x=x,y=y,label=label),fill=alpha(&quot;white&quot;,.85),label.r=unit(0,&quot;lines&quot;),label.padding=unit(.04,&quot;lines&quot;),label.size=0,size=2.3,hjust=1,color=pal2)+
 geom_vline(xintercept=c(xstart,xend),linewidth=.25,lineend=&quot;square&quot;)+
@@ -1040,8 +1038,8 @@ theme(axis.text=element_text(size=5.5,color=&quot;black&quot;),
   plot.margin=margin(.4,.8,.4,.4,&quot;lines&quot;),
   plot.caption=element_text(size=6.3,hjust=0),
   plot.title=element_text(size=7.3))
-ggsave(&quot;1.png&quot;,width=5.2,height=3.1,dpi=450)
-</pre>
+ggsave(&quot;1.png&quot;,width=5.2,height=3.1,dpi=450)</pre>
+</div>
 <h2>
 <a href=#Does_the_provisional_dataset_have_different_suppression_behavior_than_the_final_dataset id=Does_the_provisional_dataset_have_different_suppression_behavior_than_the_final_dataset>Does the provisional dataset have different suppression behavior than the final dataset?</a>
 </h2>
@@ -1074,8 +1072,7 @@ $ awk &#39;{if(substr($0,20,1)==4)next;a[substr($0,102,4),substr($0,65,2),substr
 $ sed 1q temp # year, month, age, UCD, deaths
 2020,09,024,W31,1
 $ awk -F, &#39;$4~/^C/{x+=$5}END{print x}&#39; temp
-602350
-</pre>
+602350</pre>
 <h2>
 <a href=#Deaths_associated_with_pregnancy_and_childbirth id=Deaths_associated_with_pregnancy_and_childbirth>Deaths associated with pregnancy and childbirth</a>
 </h2>
@@ -1096,40 +1093,40 @@ $ awk -F, &#39;$4~/^C/{x+=$5}END{print x}&#39; temp
 <button>
 Show code
 </button>
-<pre>library(ggplot2)</pre>
-</div>
-<pre>t=read.csv(&quot;http://sars2.net/f/wonderpregnancymonthly.csv&quot;)
-</pre>
-<pre>x=as.Date(paste0(t$year,&quot;-&quot;,t$month,&quot;-15&quot;))
+<pre>library(ggplot2)
+
+t=read.csv(&quot;http://sars2.net/f/wonderpregnancymonthly.csv&quot;)
+
+x=as.Date(paste0(t$year,&quot;-&quot;,t$month,&quot;-15&quot;))
 xy=data.frame(x,y=t$dead,z=&quot;Actual deaths&quot;)
-</pre>
-<pre>trend1=predict(lm(y~x,xy[data.table::year(xy$x)%in%2018:2019,]),xy)
+
+trend1=predict(lm(y~x,xy[data.table::year(xy$x)%in%2018:2019,]),xy)
 trend2=predict(lm(y~x,xy[data.table::year(xy$x)%in%2013:2019,]),xy)
-</pre>
-<pre>rbd=\(x,...)rbind(x,setNames(data.frame(...),names(x)))
+
+rbd=\(x,...)rbind(x,setNames(data.frame(...),names(x)))
 xy=rbd(xy,x,trend1,&quot;2018-2019 linear regression&quot;)
 xy=rbd(xy,x,trend2,&quot;2013-2019 linear regression&quot;)
 xy=rbd(xy,x,t$dead-trend1,&quot;Excess deaths (2018-2019)&quot;)
 xy=rbd(xy,x,t$dead-trend2,&quot;Excess deaths (2013-2019)&quot;)
-</pre>
-<pre>xy$z=factor(xy$z,unique(xy$z))
-</pre>
-<pre>cand=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
+
+xy$z=factor(xy$z,unique(xy$z))
+
+cand=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
 ymax=max(xy$y,na.rm=T);ymin=min(xy$y,na.rm=T)
 ystep=cand[which.min(abs(cand-(ymax-ymin)/6))]
 yend=ystep*ceiling(ymax/ystep)
 ystart=ystep*floor(ymin/ystep)
 ybreak=seq(ystart,yend,ystep)
-</pre>
-<pre>xstart=as.Date(&quot;1999-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
+
+xstart=as.Date(&quot;1999-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
 xbreak=seq(xstart,xend,&quot;6 month&quot;)
 xlab=c(rbind(&quot;&quot;,seq(1999,2023)),&quot;&quot;)
-</pre>
-<pre>color=c(&quot;black&quot;,hcl(210,60,60),hcl(260,100,40))
-</pre>
-<pre>kim=\(x)ifelse(x&gt;=1e3,ifelse(x&gt;=1e6,paste0(x/1e6,&quot;M&quot;),paste0(x/1e3,&quot;k&quot;)),x)
-</pre>
-<pre>ggplot(xy,aes(x,y))+
+
+color=c(&quot;black&quot;,hcl(210,60,60),hcl(260,100,40))
+
+kim=\(x)ifelse(x&gt;=1e3,ifelse(x&gt;=1e6,paste0(x/1e6,&quot;M&quot;),paste0(x/1e3,&quot;k&quot;)),x)
+
+ggplot(xy,aes(x,y))+
 geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray93&quot;,linewidth=.25,lineend=&quot;square&quot;)+
 geom_vline(xintercept=as.Date(paste0(c(2013,2018,2020),&quot;-1-1&quot;)),color=&quot;gray50&quot;,linetype=2,linewidth=.25,lineend=&quot;square&quot;)+
 geom_hline(yintercept=c(ystart,0,yend),color=&quot;black&quot;,linewidth=.25,lineend=&quot;square&quot;)+
@@ -1164,8 +1161,8 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   panel.background=element_rect(fill=&quot;white&quot;),
   plot.margin=margin(.4,.4,.4,.4,&quot;lines&quot;),
   plot.title=element_text(size=7.7,margin=margin(.1,0,.6,0,&quot;lines&quot;)))
-ggsave(&quot;1.png&quot;,width=4.2,height=2.8,dpi=450)
-</pre>
+ggsave(&quot;1.png&quot;,width=4.2,height=2.8,dpi=450)</pre>
+</div>
 <p>In the previous plot the biggest spike in deaths was in the third quarter of 2021, so it's probably associated with the Delta wave in August-September 2021. Southeastern states had the highest excess mortality from all causes during the Delta wave, but from plot below which shows excess mortality for causes related to childbirth, you can see that in the third quarter of 2021 the excess mortality was by far the highest in southern states. But in northeastern states which had a high percentage of vaccinated people, the excess mortality in 2021 was by far the lowest:</p>
 <div class="width7">
 <img src="i/ethical-pregnancy-3.png">
@@ -1174,36 +1171,36 @@ ggsave(&quot;1.png&quot;,width=4.2,height=2.8,dpi=450)
 <button>
 Show code
 </button>
-<pre>library(colorspace)</pre>
-</div>
-<pre>t=read.csv(&quot;http://sars2.net/f/wonderpregnancyregionquarter.csv&quot;)
+<pre>library(colorspace)
+
+t=read.csv(&quot;http://sars2.net/f/wonderpregnancyregionquarter.csv&quot;)
 y=read.csv(&quot;http://sars2.net/f/wonderpregnancyregionyearly.csv&quot;)|&gt;subset(year%in%2013:2019)
-</pre>
-<pre>dim=data.frame(cause=y$cause,region=factor(y$region,unique(y$region)),date=y$year)
+
+dim=data.frame(cause=y$cause,region=factor(y$region,unique(y$region)),date=y$year)
 dim=rbind(dim,data.frame(cause=t$cause,region=t$region,date=paste0(t$year,&quot;Q&quot;,t$quarter)))
-</pre>
-<pre>a=tapply(c(y$dead,t$dead),dim,sum)
-</pre>
-<pre>for(i in 1:2){
+
+a=tapply(c(y$dead,t$dead),dim,sum)
+
+for(i in 1:2){
   m=a[i,,]
   m[,1:7]=m[,1:7]/4
   ave=rowMeans(m[,1:7])
   disp=round((m/ave-1)*100)
   m=(m-ave)/ifelse(m&gt;ave,ave,m)
-</pre>
-<pre>  maxcolor=2
+
+  maxcolor=2
   pal=hex(HSV(c(210,210,210,210,0,0,0,0,0),c(1,.8,.6,.3,0,.3,.6,.8,1),c(.3,.65,1,1,1,1,1,.65,.3)))
-</pre>
-<pre>  pheatmap::pheatmap(m,filename=paste0(&quot;i&quot;,i,&quot;.png&quot;),display_numbers=disp,
+
+  pheatmap::pheatmap(m,filename=paste0(&quot;i&quot;,i,&quot;.png&quot;),display_numbers=disp,
     cluster_rows=F,cluster_cols=F,legend=F,cellwidth=18,cellheight=18,fontsize=9,fontsize_number=8,
     border_color=NA,na_col=&quot;gray90&quot;,
     number_color=ifelse(abs(m)&gt;maxcolor*.6,&quot;white&quot;,&quot;black&quot;),
     breaks=seq(-maxcolor,maxcolor,,256),
     colorRampPalette(pal)(256))
 }
-</pre>
-<pre>system(&quot;f=i1.png;w=`identify -format %w $f`;convert -interline-spacing -2 -gravity northwest -font Arial -pointsize 38 -size $[w-44]x \\( -splice 22x14 caption:&#39;CDC WONDER: Excess percentage of deaths for cause O00-O99 (Pregnancy, childbirth and the puerperium). The baseline is the average number of deaths per quarter in 2013-2019, and all quarters have the same baseline which is not adjusted for seasonal variation in mortality.&#39; \\) -pointsize 38 -font Arial-Bold \\( -splice 22x14 caption:&#39;Underlying cause of death&#39; \\) i1.png \\( -splice 22x14 caption:&#39;Multiple cause of death&#39; \\) i2.png -append 1.png&quot;)
-</pre>
+
+system(&quot;f=i1.png;w=`identify -format %w $f`;convert -interline-spacing -2 -gravity northwest -font Arial -pointsize 38 -size $[w-44]x \\( -splice 22x14 caption:&#39;CDC WONDER: Excess percentage of deaths for cause O00-O99 (Pregnancy, childbirth and the puerperium). The baseline is the average number of deaths per quarter in 2013-2019, and all quarters have the same baseline which is not adjusted for seasonal variation in mortality.&#39; \\) -pointsize 38 -font Arial-Bold \\( -splice 22x14 caption:&#39;Underlying cause of death&#39; \\) i1.png \\( -splice 22x14 caption:&#39;Multiple cause of death&#39; \\) i2.png -append 1.png&quot;)</pre>
+</div>
 <p>If you look at the bottom half of the plot above which shows excess MCD deaths, for some reason the excess MCD deaths remained far below zero for most of 2020-2023. I don't know why, but there might have been some change to coding practices. I don't think I made any error in my plot either, because I got the similar results when I looked at yearly data in the whole US, where 2018 and 2019 had a much higher number of MCD deaths than 2020:</p>
 <div class="width4">
 <img src="i/ethical-pregnancy-4.jpg">
@@ -1224,47 +1221,46 @@ dim=rbind(dim,data.frame(cause=t$cause,region=t$region,date=paste0(t$year,&quot;
 <button>
 Show code
 </button>
-<pre>t=read.csv(&quot;http://sars2.net/f/wondernatality.csv&quot;)</pre>
-</div>
-<pre>t$date=as.Date(paste0(t$year,&quot;-&quot;,t$month,&quot;-16&quot;))
+<pre>t=read.csv(&quot;http://sars2.net/f/wondernatality.csv&quot;)
+t$date=as.Date(paste0(t$year,&quot;-&quot;,t$month,&quot;-16&quot;))
 t$born=t$born/lubridate::days_in_month(t$date)
-</pre>
-<pre>xstart=as.Date(&quot;2016-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
+
+xstart=as.Date(&quot;2016-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
 xbreak=seq(xstart,xend,&quot;6 month&quot;)
 xlab=c(rbind(NA,2016:2023),NA)
 t=t[t$date&gt;=xstart&amp;t$date&lt;xend,]
 ylim=extendrange(c(t$born,t$trend))
 ybreak=pretty(range(t$born))
-</pre>
-<pre>t$trend=predict(lm(born~date,subset(t,date&gt;=xstart&amp;date&lt;as.Date(&quot;2020-1-1&quot;))),t)
-</pre>
-<pre>yearly=aggregate(t[,c(&quot;born&quot;,&quot;trend&quot;)],t[,1,drop=F],sum)
+
+t$trend=predict(lm(born~date,subset(t,date&gt;=xstart&amp;date&lt;as.Date(&quot;2020-1-1&quot;))),t)
+
+yearly=aggregate(t[,c(&quot;born&quot;,&quot;trend&quot;)],t[,1,drop=F],sum)
 yearly=sprintf(&quot;%.1f%%&quot;,(yearly$born/yearly$trend-1)*100)
-</pre>
-<pre>png(&quot;1.png&quot;,1850,1100,res=300)
+
+png(&quot;1.png&quot;,1850,1100,res=300)
 par(mar=c(4.2,3,2.1,.8),mgp=c(0,.6,0),adj=0,lend=&quot;square&quot;)
-</pre>
-<pre>tit=&quot;CDC WONDER: monthly births divided by number of days in month&quot;
+
+tit=&quot;CDC WONDER: monthly births divided by number of days in month&quot;
 sub=&quot;Source: wonder.cdc.gov/natality.html. The gray numbers show the yearly
 excess percent relative to the baseline.&quot;
 leg=c(&quot;Births per month&quot;,&quot;2016-2019 linear trend&quot;)
-</pre>
-<pre>plot(t$date,t$born,type=&quot;n&quot;,main=tit,xlab=NA,ylab=NA,xaxs=&quot;i&quot;,yaxs=&quot;i&quot;,yaxt=&quot;n&quot;,xaxt=&quot;n&quot;,ylim=ylim,xlim=c(xstart,xend),cex.main=1)
+
+plot(t$date,t$born,type=&quot;n&quot;,main=tit,xlab=NA,ylab=NA,xaxs=&quot;i&quot;,yaxs=&quot;i&quot;,yaxt=&quot;n&quot;,xaxt=&quot;n&quot;,ylim=ylim,xlim=c(xstart,xend),cex.main=1)
 mtext(text=sub,side=1,line=2.7,adj=0)
-</pre>
-<pre>axis(1,at=xbreak,labels=xlab,tck=0,padj=-.6)
+
+axis(1,at=xbreak,labels=xlab,tck=0,padj=-.6)
 axis(2,at=ybreak,labels=paste0(ybreak/1e3,&quot;k&quot;),las=1)
 abline(v=seq(xstart,xend,&quot;year&quot;),col=&quot;gray90&quot;,lwd=1)
-</pre>
-<pre>lines(t$date,t$born,lwd=1.5)
+
+lines(t$date,t$born,lwd=1.5)
 points(t$date,t$born,pch=20,cex=.6)
 lines(t$date,t$trend,type=&quot;l&quot;,lty=2,lwd=1.5)
 text(xbreak[c(F,T)],ylim[1],yearly,col=&quot;gray60&quot;,hjust=.5,offset=.4,pos=3,cex=.9)
 rect(xstart,ylim[1],xend,ylim[2],lwd=1)
 legend(&quot;topright&quot;,legend=leg,lty=c(1,2),lwd=1.5)
-</pre>
-<pre>dev.off()
-</pre>
+
+dev.off()</pre>
+</div>
 <h2>
 <a href=#SV40_cancer_wave_plot_for_cancer_ASMR_since_1950s id=SV40_cancer_wave_plot_for_cancer_ASMR_since_1950s>SV40 cancer wave plot for cancer ASMR since 1950s</a>
 </h2>
@@ -1285,28 +1281,28 @@ legend(&quot;topright&quot;,legend=leg,lty=c(1,2),lwd=1.5)
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)</pre>
-</div>
-<pre>t=fread(&quot;http://sars2.net/f/wondercanceryearly.csv&quot;)[,cause:=sub(&quot;^UCD &quot;,&quot;&quot;,cause)]
+<pre>library(data.table);library(ggplot2)
+
+t=fread(&quot;http://sars2.net/f/wondercanceryearly.csv&quot;)[,cause:=sub(&quot;^UCD &quot;,&quot;&quot;,cause)]
 pop=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)[,dead:=NULL]
 t=merge(t,pop)
 t=merge(pop[year==2020,.(age,std=pop/sum(pop))],t)
-</pre>
-<pre>p=t[year%in%2010:2023,.(asmr=sum(dead/pop*std)*1e5),.(cause,year)]
+
+p=t[year%in%2010:2023,.(asmr=sum(dead/pop*std)*1e5),.(cause,year)]
 p[,cause:=factor(cause,sort(unique(p$cause),T))]
-</pre>
-<pre>cand=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
+
+cand=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
 ymin=min0(p$asmr);ymax=max0(p$asmr)
 ystep=cand[which.min(abs(cand-(ymax-ymin)/6))]
 ystart=ystep*floor(ymin/ystep)
 yend=ystep*ceiling(ymax/ystep)
 ybreak=seq(ystart,yend,ystep)
-</pre>
-<pre>xstart=2010;xend=2023
+
+xstart=2010;xend=2023
 xbreak=seq(xstart-.5,xend+.5,.5)
 xlab=c(rbind(&quot;&quot;,xstart:xend),&quot;&quot;)
-</pre>
-<pre>sub=&quot;The age-standardized mortality rates were calculated by single year of age so that the
+
+sub=&quot;The age-standardized mortality rates were calculated by single year of age so that the
 2020 resident population estimates were used as the standard population. Mid-year
 resident population estimates are from www2.census.gov/programs-surveys/popest/
 datasets/{2010-2020/national/asrh/nc-est2020-agesex-res.csv,2020-2023/national/
@@ -1316,8 +1312,8 @@ estimates were multiplied by a linear slope so that they were equal to the
 2020-2023 estimates in 2020. The data was retrieved from CDC WONDER in October
 2024, when only a small number of deaths were still missing in 2023 because of
 a registration delay.&quot;
-</pre>
-<pre>ggplot(p,aes(x=year,y=asmr,color=cause))+
+
+ggplot(p,aes(x=year,y=asmr,color=cause))+
 geom_vline(xintercept=seq(xstart-.5,xend+.5,5),linewidth=.3,color=&quot;gray80&quot;)+
 geom_vline(xintercept=c(xstart-.5,xend+.5),linewidth=.3,lineend=&quot;square&quot;)+
 geom_hline(yintercept=c(ystart,yend),linewidth=.3,lineend=&quot;square&quot;)+
@@ -1351,8 +1347,8 @@ theme(axis.text=element_text(size=6.5,color=&quot;black&quot;),
   plot.subtitle=element_text(size=6.6,margin=margin(,,4)),
   plot.title=element_text(size=7.4,face=2,margin=margin(2,,4)))
 ggsave(&quot;1.png&quot;,width=4,height=3.4,dpi=400*4)
-system(&quot;magick 1.png -resize 25% 1.png&quot;)
-</pre>
+system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
+</div>
 <p>In the plot above I used population estimates that I downloaded from the website of the US Census Bureau, because CDC WONDER doesn't return population estimates for ages 85 and above and it still uses 2022 population estimates for 2023. I used vintage 2023 estimates for 2020-2023 and vintage 2020 estimates for 2010-2019.</p>
 <p>In the next plot I used population estimates returned by CDC WONDER and I calculated ASMR by 10-year age groups and not by single year of age. CDC WONDER doesn't return population sizes for the oldest age groups when the results are grouped by 5-year age groups or by single year of age, but when the results are grouped by 10-year age groups then the oldest age group is 85+ which does have population sizes available. So therefore Ethical Skeptic might have calculated the ASMR by 10-year age groups in case he simply relied on the population sizes returned by CDC WONDER.</p>
 <p>As of October 2024, CDC WONDER still used 2022 population estimates for 2023. It results in the CMR of elderly age groups being overestimated in 2023, because the population sizes of elderly age groups were higher in 2023 than 2022, and therefore it also results in the total ASMR being overestimated in 2023.</p>
@@ -1364,27 +1360,27 @@ system(&quot;magick 1.png -resize 25% 1.png&quot;)
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)</pre>
-</div>
-<pre>t=fread(&quot;http://sars2.net/f/wondercanceryearlyten.csv&quot;)
-</pre>
-<pre>t=merge(t,t[year==2020&amp;cause==cause[1],.(age,std=pop/sum(pop))])
-</pre>
-<pre>p=t[year%in%2010:2023,.(asmr=sum(dead/pop*std)*1e5),.(cause,year)]
+<pre>library(data.table);library(ggplot2)
+
+t=fread(&quot;http://sars2.net/f/wondercanceryearlyten.csv&quot;)
+
+t=merge(t,t[year==2020&amp;cause==cause[1],.(age,std=pop/sum(pop))])
+
+p=t[year%in%2010:2023,.(asmr=sum(dead/pop*std)*1e5),.(cause,year)]
 p[,cause:=factor(cause,sort(unique(p$cause),T))]
-</pre>
-<pre>cand=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
+
+cand=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
 ymin=min0(p$asmr);ymax=max0(p$asmr)
 ystep=cand[which.min(abs(cand-(ymax-ymin)/6))]
 ystart=ystep*floor(ymin/ystep)
 yend=ystep*ceiling(ymax/ystep)
 ybreak=seq(ystart,yend,ystep)
-</pre>
-<pre>xstart=2010;xend=2023
+
+xstart=2010;xend=2023
 xbreak=seq(xstart-.5,xend+.5,.5)
 xlab=c(rbind(&quot;&quot;,xstart:xend),&quot;&quot;)
-</pre>
-<pre>ggplot(p,aes(x=year,y=asmr,color=cause))+
+
+ggplot(p,aes(x=year,y=asmr,color=cause))+
 geom_vline(xintercept=seq(xstart-.5,xend+.5,5),linewidth=.3,color=&quot;gray80&quot;)+
 geom_vline(xintercept=c(xstart-.5,xend+.5),linewidth=.3,lineend=&quot;square&quot;)+
 geom_hline(yintercept=c(ystart,yend),linewidth=.3,lineend=&quot;square&quot;)+
@@ -1418,8 +1414,8 @@ theme(axis.text=element_text(size=6.5,color=&quot;black&quot;),
   plot.subtitle=element_text(size=7,margin=margin(,,4)),
   plot.title=element_text(size=7.3,face=2,margin=margin(2,,4)))
 ggsave(&quot;1.png&quot;,width=4,height=2.8,dpi=400*4)
-system(&quot;magick 1.png -resize 25% 1.png&quot;)
-</pre>
+system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
+</div>
 <p>In the next plot I calculated ASMR using the same year 2000 US standard population that was used in the Statista dataset. [<a href="https://seer.cancer.gov/stdpopulations/stdpop.19ages.html">https://seer.cancer.gov/stdpopulations/stdpop.19ages.html</a>] In the yellow line where I calculated ASMR by 10-year age groups and I used the population sizes returned by CDC WONDER, I was now able to reproduce the historical ASMR from 1999 up to 2017 exactly or nearly exactly. But my yellow line started to diverge from Ethical Skeptic's plot from 2018 onwards, so I guess he took data up to 2017 from the Statista dataset but he calculated ASMR from 2018 onwards himself using different methodology. In the red line I used a more accurate way to calculate ASMR by single year of age where I took the population estimates from the website of the US Census Bureau and I adjusted the 2010-based estimates to get rid of the jump after the switch to the 2020-based estimates. But again I got lower ASMR in 2023 than 2021 for both the red and yellow lines, and I was still not able to reproduce the increase in ASMR that Ethical Skeptic got from 2021 onwards:</p>
 <div class="width8">
 <img src="i/ethical-historical-cancer-6.png">
@@ -1428,32 +1424,31 @@ system(&quot;magick 1.png -resize 25% 1.png&quot;)
 <button>
 Show code
 </button>
-<pre>cul=\(x,y)y[cut(x,c(y,Inf),,T,F)]</pre>
-</div>
-<pre>std=fread(&quot;http://sars2.net/f/us2000stdpop.csv&quot;)[,.(age,std=std/sum(std))]
-</pre>
-<pre>t=fread(&quot;http://sars2.net/f/wondercanceryearly.csv&quot;)[cause%like%&quot;Mali&quot;][,cause:=sub(&quot;^UCD &quot;,&quot;&quot;,cause)]
+<pre>cul=\(x,y)y[cut(x,c(y,Inf),,T,F)]
+
+std=fread(&quot;http://sars2.net/f/us2000stdpop.csv&quot;)[,.(age,std=std/sum(std))]
+
+t=fread(&quot;http://sars2.net/f/wondercanceryearly.csv&quot;)[cause%like%&quot;Mali&quot;][,cause:=sub(&quot;^UCD &quot;,&quot;&quot;,cause)]
 t=merge(t,fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)[,dead:=NULL])
 t=merge(std,t)
 p=t[year%in%2010:2023,.(asmr1=sum(dead/pop*std)*1e5),year]
-</pre>
-<pre>t2=fread(&quot;http://sars2.net/f/wondercanceryearlyten.csv&quot;)[cause%like%&quot;Mal&quot;]
+
+t2=fread(&quot;http://sars2.net/f/wondercanceryearlyten.csv&quot;)[cause%like%&quot;Mal&quot;]
 t2=merge(t2,std[,.(std=sum(std)),.(age=cul(age,unique(t2$age)))])
-merge(p,t2[,.(asmr10=sum(dead/pop*std)*1e5),year],all=T)
-</pre>
+merge(p,t2[,.(asmr10=sum(dead/pop*std)*1e5),year],all=T)</pre>
+</div>
 <p>In the plot above my yellow line has a fairly large jump up between 2020 and 2021, but it's because CDC WONDER uses population estimates based on the 2010 census for 2020 but population estimates based on the 2020 census for 2021, and the population estimates of elderly age groups were reduced by several percent in the 2020-based population estimates:</p>
 <pre>t=fread(&quot;http://sars2.net/f/wondercanceryearlyten.csv&quot;)
 t[cause%like%&quot;Mal&quot;&amp;year==2020&amp;age==85,pop]
 # 6658420 (population size of ages 85+ in 2020 returned by CDC WONDER)
-</pre>
-<pre>old=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/national/asrh/nc-est2020-agesex-res.csv&quot;)
+
+old=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/national/asrh/nc-est2020-agesex-res.csv&quot;)
 old[SEX==0&amp;AGE%in%85:100,sum(POPESTIMATE2020)]
 # 6658420 (population estimate based on the 2010 census; same as CDC WONDER)
-</pre>
-<pre>new=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/nc-est2023-agesex-res.csv&quot;)
+
+new=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/nc-est2023-agesex-res.csv&quot;)
 new[SEX==0&amp;AGE%in%85:100,sum(POPESTIMATE2020)]
-# 6061016 (estimate based on the 2020 census; about 9% lower than the estimate based on the 2010 census)
-</pre>
+# 6061016 (estimate based on the 2020 census; about 9% lower than the estimate based on the 2010 census)</pre>
 <p>But anyway, the reason why Ethical Skeptic got the increase in ASMR since 2021 might be if applied some of his usual adjustments to his plot, like his <span class="quote">"excess MCD normalization"</span> method where he adds in a gradually increasing proportion of MCD deaths to his plot in addition to UCD deaths. In fact I have only seen him apply the excess MCD normalization method to plots that show deaths with UCD cancer, so it's likely he used it here as well. And he may have also added in deaths that he estimated to be missing because of a registration delay, because he didn't exclude the year 2024 from his plot and he got even higher ASMR in 2024 than 2023. However in his other plots he has only applied excess MCD normalization from week 10 of 2022 onwards, but I was not even able to reproduce his plot in 2018-2021, so I don't know if he also applied some other adjustments to his plot before 2022 or if he just calculated ASMR using different methodology than me. But in either case he should document his methodology better.</p>
 <p>In the next plot I simply used ASMR values returned by CDC WONDER instead of calculating ASMR myself, but the values returned by CDC WONDER were the same as the ASMR values I calculated myself in the yellow line in my previous plot, where I used the 2000 US standard population and I used the population sizes by 10-year age groups returned by CDC WONDER. The ASMR values returned by CDC WONDER match Ethical Skeptic's plot from 1995 up to 2017. But from 2018 onwards he seems to have used his own undocumented methodology to calculate ASMR, even though he could've just plotted the ASMR values returned by CDC WONDER to be consistent with the older data (or he could've included one line for the ASMR values returned by CDC WONDER and another line for his own ASMR values):</p>
 <div class="width7">
@@ -1496,24 +1491,24 @@ new[SEX==0&amp;AGE%in%85:100,sum(POPESTIMATE2020)]
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)</pre>
-</div>
-<pre>t=fread(&quot;http://sars2.net/f/nzcmr.csv&quot;)
+<pre>library(data.table);library(ggplot2)
+
+t=fread(&quot;http://sars2.net/f/nzcmr.csv&quot;)
 p=t[,.(x=year,y=cmr,z=&quot;Actual CMR&quot;)]
 v=t[,.(y=mean(cmr),z=&quot;Average of year and next 4 years&quot;),.(x=(year)%/%5*5)]
 lin1=p[,.(x,y=v[x&gt;=1970,predict(lm(y~x),p)],z=&quot;Linear regression of blocks for 1970-2023&quot;)]
 lin2=p[,.(x,y=v[x&gt;=1970&amp;x&lt;=2015,predict(lm(y~x),p)],z=&quot;Linear regression of blocks for 1970-2019&quot;)]
 p=rbind(p,v,lin1,lin2)
 p$y=100*p$y
-</pre>
-<pre>xstart=1969;xend=2023
+
+xstart=1969;xend=2023
 p=p[x&gt;=xstart&amp;x&lt;=xend]
-</pre>
-<pre>ybreak=pretty(p$y);ystart=min(p$y);yend=max(p$y)
-</pre>
-<pre>color=c(&quot;black&quot;,&quot;blue&quot;,&quot;#77f&quot;,&quot;#ccf&quot;)
-</pre>
-<pre>ggplot(p,aes(x,y))+
+
+ybreak=pretty(p$y);ystart=min(p$y);yend=max(p$y)
+
+color=c(&quot;black&quot;,&quot;blue&quot;,&quot;#77f&quot;,&quot;#ccf&quot;)
+
+ggplot(p,aes(x,y))+
 geom_vline(xintercept=c(xstart-.5,xend+.5),linewidth=.3,lineend=&quot;square&quot;)+
 geom_hline(yintercept=c(ystart,yend),linewidth=.3,lineend=&quot;square&quot;)+
 geom_line(aes(color=z,linetype=z),linewidth=.4)+
@@ -1545,8 +1540,8 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   plot.subtitle=element_text(size=6.7,margin=margin(0,0,4,0)),
   plot.title=element_text(size=7.5,face=&quot;bold&quot;,margin=margin(2,0,4,0)))
 ggsave(&quot;0.png&quot;,width=4.2,height=2.9,dpi=400*4)
-system(&quot;magick 0.png -resize 25% 1.png&quot;)
-</pre>
+system(&quot;magick 0.png -resize 25% 1.png&quot;)</pre>
+</div>
 <p>In Ethical Skeptic's plot the B baseline looks closer to my lighter blue dashed line which was fitted against the 5-year blocks for 1970-2023 than my darker blue dashed line which was fitted against the 5-year blocks for 1970-2019, or maybe the B baseline is somewhere in between my two baselines. I don't know if Ethical Skeptic just drew the B baseline by hand, but it doesn't look steep enough to be fitted against data from 1970-2019 but it looks more like it's fitted against data up to the present in his plot. (Which is not really an important point, but it would be ironic if he was simultaneously guilty of paltering his own baseline while he falsely accused OWID of paltering.)</p>
 <p>But in any case, the age structure of the New Zealand population has completely changed since the 1970s, so it doesn't make any sense to just use a linear baseline for CMR that starts from the 70s, because the actual trend in CMR is curved due to the changing age structure. Here I only had population data that went back to 1992, but the change since the 1970s would've been even more dramatic:</p>
 <div class="width8">
@@ -1556,25 +1551,25 @@ system(&quot;magick 0.png -resize 25% 1.png&quot;)
 <button>
 Show code
 </button>
-<pre>library(data.table)</pre>
-</div>
-<pre>agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
-</pre>
-<pre>t=fread(&quot;http://sars2.net/f/nzpopdead.csv&quot;)
-</pre>
-<pre>m=t[,.(pop=sum(pop,na.rm=T)),.(age=agecut(age,0:9*10),year)][year&gt;=1992,xtabs(pop~age+year)]
+<pre>library(data.table)
+
+agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
+
+t=fread(&quot;http://sars2.net/f/nzpopdead.csv&quot;)
+
+m=t[,.(pop=sum(pop,na.rm=T)),.(age=agecut(age,0:9*10),year)][year&gt;=1992,xtabs(pop~age+year)]
 m=t(t(m)/colSums(m))*100
-</pre>
-<pre>maxcolor=max(m)
-</pre>
-<pre>disp=m;disp[]=sprintf(&quot;%.*f&quot;,ifelse(m&gt;10,0,1),m)
-</pre>
-<pre>pheatmap::pheatmap(m,filename=&quot;1.png&quot;,display_numbers=disp,
+
+maxcolor=max(m)
+
+disp=m;disp[]=sprintf(&quot;%.*f&quot;,ifelse(m&gt;10,0,1),m)
+
+pheatmap::pheatmap(m,filename=&quot;1.png&quot;,display_numbers=disp,
   cluster_rows=F,cluster_cols=F,legend=F,cellwidth=14,cellheight=14,fontsize=9,fontsize_number=8,
   border_color=&quot;#cccccc&quot;,number_color=&quot;black&quot;,&quot;white&quot;)
-</pre>
-<pre>system(&quot;w=`identify -format %w 1.png`;pad=20;magick -pointsize 42 -font Arial \\( -size $[w-pad] caption:&#39;New Zealand resident population estimates: Percentage of each age group&#39; -splice 20x24 \\) 1.png -append 1.png&quot;)
-</pre>
+
+system(&quot;w=`identify -format %w 1.png`;pad=20;magick -pointsize 42 -font Arial \\( -size $[w-pad] caption:&#39;New Zealand resident population estimates: Percentage of each age group&#39; -splice 20x24 \\) 1.png -append 1.png&quot;)</pre>
+</div>
 <p>Ethical Skeptic said that these were signs of a data charlatan, so I don't know if he was speaking about himself: [<a href="https://x.com/EthicalSkeptic/status/1758546649146593711">https://x.com/EthicalSkeptic/status/1758546649146593711</a>]</p>
 <div class="width7">
 <img src="i/ethical-esmalignant-4.png">
@@ -1587,35 +1582,35 @@ m=t(t(m)/colSums(m))*100
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2);library(stringr)</pre>
-</div>
-<pre>t=fread(&quot;http://sars2.net/f/nzpopdead.csv&quot;)
+<pre>library(data.table);library(ggplot2);library(stringr)
+
+t=fread(&quot;http://sars2.net/f/nzpopdead.csv&quot;)
 a=t[,.(dead=sum(dead),pop=sum(pop,na.rm=T)),.(age=pmin(age,95),year)]
-</pre>
-<pre>nzcmr=fread(&quot;http://sars2.net/f/nzcmr.csv&quot;)
+
+nzcmr=fread(&quot;http://sars2.net/f/nzcmr.csv&quot;)
 p=nzcmr[year&gt;=1970,.(x=year,y=cmr,z=&quot;Actual CMR&quot;)]
-</pre>
-<pre>lm=a[year%in%2010:2019,.(year=2010:2023,trend=predict(lm(dead/pop~year),.(year=2010:2023))),age]
+
+lm=a[year%in%2010:2019,.(year=2010:2023,trend=predict(lm(dead/pop~year),.(year=2010:2023))),age]
 p=rbind(p,merge(a,lm)[,.(dead=sum(trend*pop),pop=sum(pop)),year][,.(y=dead/pop*1e5,z=&quot;2010-2019 trend in CMR by single year of age multiplied by population size&quot;),.(x=year)])
-</pre>
-<pre>p=rbind(p,nzcmr[year%in%1970:2019,.(x=1970:2023,y=predict(lm(cmr~year),.(year=1970:2023)),z=&quot;1970-2019 linear trend in CMR (like Ethical Skeptic&#39;s B baseline)&quot;)])
-</pre>
-<pre>owid=a[,.(dead=sum(dead)),year][year%in%2015:2019,.(year=2010:2023,owid=predict(lm(dead~year),.(year=2010:2023)))]
+
+p=rbind(p,nzcmr[year%in%1970:2019,.(x=1970:2023,y=predict(lm(cmr~year),.(year=1970:2023)),z=&quot;1970-2019 linear trend in CMR (like Ethical Skeptic&#39;s B baseline)&quot;)])
+
+owid=a[,.(dead=sum(dead)),year][year%in%2015:2019,.(year=2010:2023,owid=predict(lm(dead~year),.(year=2010:2023)))]
 p=rbind(p,merge(a[,.(pop=sum(pop)),year],owid)[,.(x=year,y=owid/pop*1e5,z=&quot;2015-2019 linear trend in deaths (like OWID)&quot;)])
-</pre>
-<pre>p[,z:=factor(z,unique(z))]
-</pre>
-<pre>xstart=1970;xend=2023
+
+p[,z:=factor(z,unique(z))]
+
+xstart=1970;xend=2023
 p=p[x&gt;=xstart&amp;x&lt;=xend]
 ystart=min(p$y);yend=max(p$y);ybreak=pretty(p$y)
-</pre>
-<pre>color=c(&quot;black&quot;,&quot;#00bb00&quot;,&quot;#0055ff&quot;,&quot;#ee0000&quot;,hsv(30/36,1,.8))
-</pre>
-<pre>cap=&quot;    Source: infoshare.stats.govt.nz.&quot;
+
+color=c(&quot;black&quot;,&quot;#00bb00&quot;,&quot;#0055ff&quot;,&quot;#ee0000&quot;,hsv(30/36,1,.8))
+
+cap=&quot;    Source: infoshare.stats.govt.nz.&quot;
 cap=paste0(cap,&quot;\n    &quot;,&quot;In the green baseline, for example the CMR in 2023 was calculated by first calculating a trend in CMR for each age in 2010-2019, then the trend projected to 2023 was multiplied with the population size of each age in 2023 to get the expected deaths for each age group, and the expected deaths of all age groups were added together and then divided by the population size in 2023.&quot;|&gt;str_wrap(90))
 cap=paste0(cap,&quot;\n    &quot;,&quot;The red line was calculated by doing a linear regression for the raw number of deaths and by then dividing the projected trend with the population size to convert it to CMR.&quot;|&gt;str_wrap(90))
-</pre>
-<pre>ggplot(p,aes(x,y))+
+
+ggplot(p,aes(x,y))+
 geom_vline(xintercept=c(xstart-.5,xend+.5),linewidth=.25,lineend=&quot;square&quot;)+
 geom_hline(yintercept=c(ystart,yend),linewidth=.25,lineend=&quot;square&quot;)+
 geom_line(aes(color=z),linewidth=.35)+
@@ -1644,8 +1639,8 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   plot.subtitle=element_text(size=6.7,margin=margin(,,4)),
   plot.title=element_text(size=7.5,face=&quot;bold&quot;,margin=margin(2,,4)))
 ggsave(&quot;1.png&quot;,width=4.2,height=3.7,dpi=380*4)
-system(&quot;magick 1.png -resize 25% 1.png&quot;)
-</pre>
+system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
+</div>
 <p>And also if you look at ASMR instead of CMR, then there was clearly negative excess mortality in 2020 even relative to a long-term trend like my 1992 to 2019 quadratic trend in this plot:</p>
 <div class="width5">
 <img src="i/ethical-nz-5.png">
@@ -1654,15 +1649,15 @@ system(&quot;magick 1.png -resize 25% 1.png&quot;)
 <button>
 Show code
 </button>
-<pre>library(data.table)</pre>
-</div>
-<pre>t=fread(&quot;http://sars2.net/f/nzpopdead.csv&quot;)
+<pre>library(data.table)
+
+t=fread(&quot;http://sars2.net/f/nzpopdead.csv&quot;)
 a=t[,.(dead=sum(dead),pop=sum(pop,na.rm=T)),.(age=pmin(95,age),year)]
 p=merge(a,a[year==2020,.(age,std=pop/sum(pop))])[year&gt;=1992,.(asmr=sum(dead/pop*std*1e5)),year]
 p$trend=p[year%in%2012:2019,predict(lm(asmr~year),.(year=p$year))]
 p$poly=p[year%in%1992:2019,predict(lm(asmr~poly(year,2)),.(year=p$year))]
-</pre>
-<pre>png(&quot;1.png&quot;,1700,1100,res=300)
+
+png(&quot;1.png&quot;,1700,1100,res=300)
 par(mar=c(3.0,3,1.9,.8),mgp=c(0,.6,0),las=1,adj=0,lend=&quot;square&quot;)
 tit=&quot;Age-standardized mortality rate in New Zealand&quot;
 leg=c(&quot;Actual ASMR&quot;,&quot;2012-2019 linear trend&quot;,&quot;1992-2019 quadratic trend&quot;)
@@ -1674,8 +1669,8 @@ points(p$year,p$asmr,pch=20,cex=.6)
 lines(p$year,p$trend,type=&quot;l&quot;,col=col[2],lwd=1.5)
 lines(p$year,p$poly,type=&quot;l&quot;,col=col[3],lwd=1.5)
 legend(&quot;topright&quot;,legend=leg,col=col,lty=1,lwd=1.5)
-dev.off()
-</pre>
+dev.off()</pre>
+</div>
 <h2>
 <a href=#Deaths_from_malignant_neoplasms_in_ages_0_to_54 id=Deaths_from_malignant_neoplasms_in_ages_0_to_54>Deaths from malignant neoplasms in ages 0 to 54</a>
 </h2>
@@ -1691,37 +1686,37 @@ dev.off()
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2);library(lubridate)</pre>
-</div>
-<pre>cul=\(x,y)y[cut(x,c(y,Inf),,T,F)]
-</pre>
-<pre>t=fread(&quot;http://sars2.net/f/wondermalignant5year.csv&quot;)[cause%like%&quot;Multiple&quot;,.(age,date=month,dead)]
+<pre>library(data.table);library(ggplot2);library(lubridate)
+
+cul=\(x,y)y[cut(x,c(y,Inf),,T,F)]
+
+t=fread(&quot;http://sars2.net/f/wondermalignant5year.csv&quot;)[cause%like%&quot;Multiple&quot;,.(age,date=month,dead)]
 pop=fread(&quot;http://sars2.net/f/uspopdeadmonthly.csv&quot;)
 t=merge(t,pop[,.(persondays=sum(persondays),pop=sum(pop)),.(date,age=cul(age,c(0,1,1:20*5)))],all=T)
-</pre>
-<pre>t=t[,date:=as.Date(paste0(date,&quot;-1&quot;))]
+
+t=t[,date:=as.Date(paste0(date,&quot;-1&quot;))]
 t[,dead:=nafill(dead/days_in_month(date),,0)]
 t=t[year(date)%in%2011:2023&amp;age&lt;55]
-</pre>
-<pre>t$base=t$pop*t[year(date)&lt;2020,predict(lm(dead/pop~date),.(date=unique(t$date))),age]$V1
-</pre>
-<pre>w=t[,.(base=sum(base),dead=sum(dead)),date]
-</pre>
-<pre>and=fread(&quot;http://sars2.net/f/wondermalignantmcdandcovidmcd.csv&quot;)[age==&quot;under55&quot;&amp;date!=&quot;2024-09&quot;]
+
+t$base=t$pop*t[year(date)&lt;2020,predict(lm(dead/pop~date),.(date=unique(t$date))),age]$V1
+
+w=t[,.(base=sum(base),dead=sum(dead)),date]
+
+and=fread(&quot;http://sars2.net/f/wondermalignantmcdandcovidmcd.csv&quot;)[age==&quot;under55&quot;&amp;date!=&quot;2024-09&quot;]
 and=and[,date:=as.Date(paste0(date,&quot;-1&quot;))][,.(date,dead2=dead/days_in_month(date))]
 w=merge(w,and,all.x=T)[,dead2:=dead-nafill(dead2,,0)]
-</pre>
-<pre>w$linear=w[year(date)%in%2011:2019,predict(lm(dead~date),w)]
+
+w$linear=w[year(date)%in%2011:2019,predict(lm(dead~date),w)]
 w$linear2=w[year(date)%in%2018:2019,predict(lm(dead~date),w)]
 lab=c(&quot;MCD C00-C97&quot;,&quot;MCD C00-C97 and not MCD COVID&quot;,&quot;2011-2019 trend in CMR by age&quot;,&quot;2018-2019 linear trend&quot;)
 p=w[,.(x=date,y=c(dead,dead2,base,linear),z=factor(rep(lab,each=.N),lab))]
-</pre>
-<pre>xstart=as.Date(&quot;2011-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
+
+xstart=as.Date(&quot;2011-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
 p=p[x&gt;=xstart&amp;x&lt;=xend]
 xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=ifelse(month(xbreak)==7,year(xbreak),&quot;&quot;)
 ybreak=pretty(p$y,7);ystart=ybreak[1];yend=max(ybreak)
-</pre>
-<pre>ggplot(p,aes(x=x+14,y=y))+
+
+ggplot(p,aes(x=x+14,y=y))+
 geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray90&quot;,linewidth=.3)+
 geom_hline(yintercept=c(ystart,yend),linewidth=.3,lineend=&quot;square&quot;)+
 geom_vline(xintercept=c(xstart,xend),linewidth=.3,lineend=&quot;square&quot;)+
@@ -1757,8 +1752,8 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   plot.subtitle=element_text(size=7,margin=margin(,,3)),
   plot.title=element_text(size=7.4,face=2,margin=margin(1,,3)))
 ggsave(&quot;1.png&quot;,width=4.3,height=2.8,dpi=380*4)
-system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)
-</pre>
+system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
+</div>
 <p>In the plot above I also got a steady increase in excess deaths which started around 2020 or 2021, so the increase in excess deaths doesn't just seem to be an artifact produced by an inappropriate baseline. However the turning point in deaths seems to be around late 2020 or early 2021 so I don't know if it can be blamed on the vaccines, because cancers normally take time to develop and there weren't yet that many young people who had been vaccinated even in early 2021.</p>
 <p>When I looked at all ages instead of only ages 0 to 54, there was not such a clear increase in deaths above the baseline in 2022-2023 (even though I guess Ethical Skeptic might argue it was because I didn't adjust sufficiently for the PFE in my baseline, because my baseline only had a slight downwards adjustment due to the reduction in population size caused by excess deaths since 2020):</p>
 <div class="width7">
@@ -1773,27 +1768,27 @@ system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2);library(lubridate)</pre>
-</div>
-<pre>pop0=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2000-2010/intercensal/national/us-est00int-alldata.csv&quot;)
+<pre>library(data.table);library(ggplot2);library(lubridate)
+
+pop0=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2000-2010/intercensal/national/us-est00int-alldata.csv&quot;)
 pop0=pop0[MONTH==7&amp;AGE!=999&amp;YEAR&lt;2010,.(age=AGE,year=YEAR,pop=TOT_POP)]
 pop=rbind(pop0,fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)[year&gt;=2010,.(age,year,pop)])
-</pre>
-<pre>t=merge(pop,fread(&quot;http://sars2.net/f/wondercanceryearly.csv&quot;)[year&lt;2024])
+
+t=merge(pop,fread(&quot;http://sars2.net/f/wondercanceryearly.csv&quot;)[year&lt;2024])
 t=merge(pop[year==2020,.(age,std=pop/sum(pop))],t)
-</pre>
-<pre>t1=cbind(t[(cause%like%&quot;Neo&quot;&amp;age%in%15:44)],group=&quot;Neoplasms (C00-D48),\nages 15-44 (like Dowd)&quot;)
+
+t1=cbind(t[(cause%like%&quot;Neo&quot;&amp;age%in%15:44)],group=&quot;Neoplasms (C00-D48),\nages 15-44 (like Dowd)&quot;)
 t2=cbind(t[(cause%like%&quot;Malig&quot;&amp;age&lt;55)],group=&quot;Malignant neoplasms (C00-C97),\nages 0-54 (like Ethical Skeptic)&quot;)
 t=rbind(t1,t2)[,group:=factor(group,unique(group))]
-</pre>
-<pre>p=t[,.(y=sum(dead/pop*std*1e5),z=&quot;Actual ASMR&quot;),.(year,group)]
+
+p=t[,.(y=sum(dead/pop*std*1e5),z=&quot;Actual ASMR&quot;),.(year,group)]
 p1=p[year%in%2011:2019,.(year=2000:2023,z=&quot;2011-2019 linear trend&quot;,y=predict(lm(y~year),.(year=2000:2023))),group]
 p2=p[year&lt;2020,.(year=2000:2023,z=&quot;2000-2019 quadratic trend&quot;,y=predict(lm(y~poly(year,2)),.(year=2000:2023))),group]
 p=rbind(p,p1,p2)[,z:=factor(z,unique(z))]
-</pre>
-<pre>xstart=2000;xend=2023;xbreak=seq(xstart-.5,xend+.5,.5);xlab=c(rbind(&quot;&quot;,xstart:xend),&quot;&quot;)
-</pre>
-<pre>ggplot(p,aes(x=year,y=y))+
+
+xstart=2000;xend=2023;xbreak=seq(xstart-.5,xend+.5,.5);xlab=c(rbind(&quot;&quot;,xstart:xend),&quot;&quot;)
+
+ggplot(p,aes(x=year,y=y))+
 facet_wrap(~group,nrow=1,dir=&quot;v&quot;,scales=&quot;free&quot;)+
 geom_text(data=p[,max(y),group],aes(label=group,y=V1),x=xend-(xend-xstart)*.01,vjust=1.4,size=grid::convertUnit(unit(7,&quot;pt&quot;),&quot;mm&quot;),hjust=1,fontface=2)+
 geom_line(aes(color=z),linewidth=.3)+
@@ -1833,8 +1828,8 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   strip.text=element_blank())
 ggsave(&quot;1.png&quot;,width=5.2,height=2.6,dpi=400*4)
 system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)
-system(&quot;qlmanage -p ~/1.png&amp;&gt;/dev/null&quot;)
-</pre>
+system(&quot;qlmanage -p ~/1.png&amp;&gt;/dev/null&quot;)</pre>
+</div>
 <p>Added in December 2024: Ethical Skeptic posted this updated version of his plot: [<a href="https://x.com/EthicalSkeptic/status/1866965795168985428">https://x.com/EthicalSkeptic/status/1866965795168985428</a>]</p>
 <div class="width8">
 <img src="i/ethical-054-1.png">
@@ -1847,36 +1842,36 @@ system(&quot;qlmanage -p ~/1.png&amp;&gt;/dev/null&quot;)
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)</pre>
-</div>
-<pre>ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
-</pre>
-<pre>t=fread(&quot;http://sars2.net/f/wondermalignant054weekly.csv&quot;)[date&lt;=&quot;2024-10-1&quot;]
+<pre>library(data.table);library(ggplot2)
+
+ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
+
+t=fread(&quot;http://sars2.net/f/wondermalignant054weekly.csv&quot;)[date&lt;=&quot;2024-10-1&quot;]
 t=dcast(t,date-3+year+week~cause,value.var=&quot;dead&quot;)
 t=t[,.(date,year,week,dead=c(mcd,mcd-nafill(and,,0)),type=rep(1:2,each=.N))]
 t=t[type==2]
 t[,dead:=ma(dead,3,2)]
-</pre>
-<pre>t=merge(t,t[year&lt;2020,.(base=mean(dead),base2=mean(dead)),week])
+
+t=merge(t,t[year&lt;2020,.(base=mean(dead),base2=mean(dead)),week])
 slope=t[year&lt;2020,mean(dead),year][,predict(lm(V1~year),.(year=2018:2024))]
 slope2=t[year&lt;2020&amp;week%in%15:35,mean(dead),year][,predict(lm(V1~year),.(year=2018:2024))]
 t[,base:=base*(slope/mean(slope[1:2]))[factor(t$year)]]
 t[,base2:=base2*(slope2/mean(slope2[1:2]))[factor(t$year)]]
-</pre>
-<pre>t$base3=t[year&lt;2020,predict(lm(dead~date),t)]
+
+t$base3=t[year&lt;2020,predict(lm(dead~date),t)]
 t$base3=t$base3+t[year&lt;2020,mean(dead-base3),week]$V1[t$week]
-</pre>
-<pre>lab=c(&quot;Actual deaths&quot;,&quot;Baseline with slope determined by total on all weeks&quot;,&quot;Baseline with slope determined by total on weeks 15 to 35&quot;,&quot;Linear regression of weekly data with week number residuals added&quot;)
+
+lab=c(&quot;Actual deaths&quot;,&quot;Baseline with slope determined by total on all weeks&quot;,&quot;Baseline with slope determined by total on weeks 15 to 35&quot;,&quot;Linear regression of weekly data with week number residuals added&quot;)
 p=t[,.(x=date,y=c(dead,base,base2,base3),z=factor(rep(lab,each=.N),lab))]
-</pre>
-<pre>p$facet=&quot;Deaths&quot;
+
+p$facet=&quot;Deaths&quot;
 p=rbind(p,merge(p[z!=z[1]],p[z==z[1],.(x,actual=y)])[,.(x,y=actual-y,z,facet=&quot;Excess deaths&quot;)])
 p[,facet:=factor(facet,unique(facet))]
-</pre>
-<pre>xstart=as.Date(&quot;2018-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
+
+xstart=as.Date(&quot;2018-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
 xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=ifelse(month(xbreak)==7,year(xbreak),&quot;&quot;)
-</pre>
-<pre>ggplot(p,aes(x=x,y))+
+
+ggplot(p,aes(x=x,y))+
 facet_wrap(~facet,dir=&quot;v&quot;,scales=&quot;free&quot;)+
 geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray83&quot;,linewidth=.4)+
 geom_segment(data=tail(p,1),x=xstart,xend=xend,y=0,yend=0,linewidth=.4)+
@@ -1913,14 +1908,14 @@ theme(axis.text=element_text(size=11,color=&quot;black&quot;),
   strip.background=element_blank(),
   strip.text=element_blank())
 ggsave(&quot;1.png&quot;,width=6.3,height=4.8,dpi=300*4)
-</pre>
-<pre>sub=&quot;\u00a0    The deaths are plotted as a moving average where the window extends 3 weeks backwards and 2 weeks forwards. The baselines were also calculated based on the moving average of deaths.
+
+sub=&quot;\u00a0    The deaths are plotted as a moving average where the window extends 3 weeks backwards and 2 weeks forwards. The baselines were also calculated based on the moving average of deaths.
      In the bright blue baseline the average of weekly deaths was calculated in 2018 and 2019, a linear regression of the averages was projected to 2018-2024, and multipliers for each year were calculated by dividing the value of the projection during the year with the average value of the projection in the years 2018 and 2019. And then the baseline for each week 1 was calculated by multiplying the average deaths on weeks 1 of 2018 and 2019 with the yearly multiplier, and similarly for other week numbers. The light blue baseline was calculated in the same way except the yearly averages were calculated based on weeks 15 to 35 only.
      The red line was calculated by first doing a linear regression of weekly data in 2018-2019, and then the average difference between the actual deaths and the linear regression on weeks 1 of 2018 and 2019 was added to the baseline for each week 1, and similarly for other week numbers.
      Deaths without MCD COVID were calculated by subtracting deaths with both MCD COVID and malignant neoplasms from deaths with MCD malignant neoplasms. The number of deaths that had both MCDs was less than 10 on about 6% of weeks in 2021, 8% of weeks in 2022, 79% of weeks in 2023, and 85% of weeks in 2024, so on those weeks no COVID deaths were subtracted because the number of deaths was not returned by CDC WONDER.&quot;
-</pre>
-<pre>system(paste0(&quot;f=1.png;mar=100;w=`identify -format %w $f`;magick \\( $f \\) \\( -size $[w-mar*2]x -font Arial -interline-spacing -3 -pointsize $[42*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -gravity southwest -splice $[mar]x80 \\) -append -resize 25% -colors 256 1.png&quot;))
-</pre>
+
+system(paste0(&quot;f=1.png;mar=100;w=`identify -format %w $f`;magick \\( $f \\) \\( -size $[w-mar*2]x -font Arial -interline-spacing -3 -pointsize $[42*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -gravity southwest -splice $[mar]x80 \\) -append -resize 25% -colors 256 1.png&quot;))</pre>
+</div>
 <p>Then I noticed that the earlier version of his plot had an average of only about 150 excess deaths in 2023. When I tried comparing the earlier version to the new version, I noticed that in the new version the excess deaths were suddenly shifted up around week 9 of 2020 after which the deaths remained permanently elevated compared to the old version. The change is so sudden that it doesn't just seem to be due to a difference in the slope of the baseline, which should result in a more gradual divergence between the new and old versions of the plot:</p>
 <div class="width8">
 <img src="i/ethical-054-3.png">
@@ -1951,34 +1946,34 @@ ggsave(&quot;1.png&quot;,width=6.3,height=4.8,dpi=300*4)
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)</pre>
-</div>
-<pre>t=fread(&quot;http://sars2.net/f/wondermalignantmonthly.csv&quot;)
-</pre>
-<pre>p=t[cause==&quot;MCD malignant neoplasms&quot;,.(date,dead,cause=&quot;COVID not subtracted&quot;)]
-</pre>
-<pre>p=rbind(p,merge(p,t[cause==&quot;MCD malignant neoplasms and MCD COVID&quot;,.(and=dead,date)])[,.(date,dead=dead-nafill(and,,0),cause=&quot;MCD COVID subtracted&quot;)])
-</pre>
-<pre>p=merge(t[cause==&quot;UCD malignant neoplasms&quot;,.(date,under=dead)],p)
-</pre>
-<pre>p=p[date!=&quot;2024-10&quot;]
+<pre>library(data.table);library(ggplot2)
+
+t=fread(&quot;http://sars2.net/f/wondermalignantmonthly.csv&quot;)
+
+p=t[cause==&quot;MCD malignant neoplasms&quot;,.(date,dead,cause=&quot;COVID not subtracted&quot;)]
+
+p=rbind(p,merge(p,t[cause==&quot;MCD malignant neoplasms and MCD COVID&quot;,.(and=dead,date)])[,.(date,dead=dead-nafill(and,,0),cause=&quot;MCD COVID subtracted&quot;)])
+
+p=merge(t[cause==&quot;UCD malignant neoplasms&quot;,.(date,under=dead)],p)
+
+p=p[date!=&quot;2024-10&quot;]
 p=p[,.(x=as.Date(paste0(date,&quot;-1&quot;)),y=dead/under*100,z=cause)]
-</pre>
-<pre>xstart=as.Date(&quot;1999-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
+
+xstart=as.Date(&quot;1999-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
 xbreak=seq(xstart,xend,&quot;6 month&quot;)
 xlab=c(rbind(&quot;&quot;,1999:2024),&quot;&quot;)
 ybreak=pretty(p[z==&quot;COVID not subtracted&quot;,y]);ystart=ybreak[1];yend=max(ybreak)
-</pre>
-<pre>color=c(&quot;black&quot;,&quot;gray60&quot;,&quot;black&quot;)
-</pre>
-<pre>months=seq(xstart,xend,&quot;month&quot;)
+
+color=c(&quot;black&quot;,&quot;gray60&quot;,&quot;black&quot;)
+
+months=seq(xstart,xend,&quot;month&quot;)
 p=rbind(p[,.(x,y,z)],p[z==&quot;COVID not subtracted&quot;&amp;year(x)%in%2016:2019,.(x=months,y=predict(lm(y~x),.(x=months)),z=&quot;2016-2019 linear trend&quot;)])
-</pre>
-<pre>p[,z:=factor(z,unique(z))]
-</pre>
-<pre>seg=p[x==D(&quot;2022-1-1&quot;)&amp;!z%like%&quot;MCD&quot;]
-</pre>
-<pre>ggplot(p,aes(x=x+14,y=y))+
+
+p[,z:=factor(z,unique(z))]
+
+seg=p[x==D(&quot;2022-1-1&quot;)&amp;!z%like%&quot;MCD&quot;]
+
+ggplot(p,aes(x=x+14,y=y))+
 geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray90&quot;,linewidth=.25)+
 geom_hline(yintercept=c(ystart,yend),linewidth=.25,lineend=&quot;square&quot;)+
 geom_vline(xintercept=c(xstart,xend),linewidth=.25,lineend=&quot;square&quot;)+
@@ -2011,8 +2006,8 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   panel.background=element_blank(),
   plot.margin=margin(5,5,5,5),
   plot.title=element_text(size=7.6,margin=margin(2,,4)))
-ggsave(&quot;1.png&quot;,width=4.2,height=2.8,dpi=450)
-</pre>
+ggsave(&quot;1.png&quot;,width=4.2,height=2.8,dpi=450)</pre>
+</div>
 <p>In the plot below if you look at the black line for UCD deaths, it remained near the baseline in 2020 and 2021 but by 2023 it had risen clearly above the baseline. And similarly if you look at the light gray line for MCD deaths with COVID subtracted, it also remained close to the baseline in 2020 and 2021 but it rose clearly above the baseline in 2023. So there seems to be a genuine increase in cancer deaths above the trend in 2023 even if you only look at UCD deaths, even though it's much smaller than the increase Ethical Skeptic gets when he applies his excess MCD normalization and PFE adjustment tricks to the data:</p>
 <div class="width7">
 <img src="i/ethical-malignant-5.png">
@@ -2021,29 +2016,29 @@ ggsave(&quot;1.png&quot;,width=4.2,height=2.8,dpi=450)
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2);library(lubridate)</pre>
-</div>
-<pre>cul=\(x,y)y[cut(x,c(y,Inf),,T,F)]
-</pre>
-<pre>t=fread(&quot;http://sars2.net/f/wondermalignant5year.csv&quot;)
+<pre>library(data.table);library(ggplot2);library(lubridate)
+
+cul=\(x,y)y[cut(x,c(y,Inf),,T,F)]
+
+t=fread(&quot;http://sars2.net/f/wondermalignant5year.csv&quot;)
 pop=fread(&quot;http://sars2.net/f/uspopdeadmonthly.csv&quot;)
 t=merge(t,pop[,.(pop=sum(pop)),.(month=date,age=cul(age,c(0,1,1:20*5)))])
 t=t[,month:=as.Date(paste0(month,&quot;-1&quot;))][,dead:=dead/days_in_month(month)]
-</pre>
-<pre>base=t[!cause%like%&quot;COVID&quot;&amp;year(month)%in%2011:2019][,dead:=nafill(dead,,0)]
+
+base=t[!cause%like%&quot;COVID&quot;&amp;year(month)%in%2011:2019][,dead:=nafill(dead,,0)]
 t=merge(base[,.(month=unique(t$month),base=predict(lm(dead/pop~month),.(month=unique(t$month)))),.(age,cause)],t)
 p=t[,.(base=sum(base*pop),dead=sum(dead)),.(date=month,cause)]
-</pre>
-<pre>and=fread(&quot;http://sars2.net/f/wondermalignantmcdandcovidmcd.csv&quot;)[age==&quot;all&quot;]
+
+and=fread(&quot;http://sars2.net/f/wondermalignantmcdandcovidmcd.csv&quot;)[age==&quot;all&quot;]
 and=and[,date:=as.Date(paste0(date,&quot;-1&quot;))][,.(date,andcovid=dead/days_in_month(date))]
 p=rbind(p,merge(and,p[cause%like%&quot;Multiple&quot;])[,.(date,base=NA,cause=&quot;Multiple cause of death C00-C97 but not COVID&quot;,dead=dead-andcovid)])
-</pre>
-<pre>xstart=as.Date(&quot;2015-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
+
+xstart=as.Date(&quot;2015-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
 p=p[date&gt;=xstart&amp;date&lt;=xend]
 xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=ifelse(month(xbreak)==7,year(xbreak),&quot;&quot;)
 ybreak=pretty(p[,c(dead,base)],7);ystart=ybreak[1];yend=max(ybreak)
-</pre>
-<pre>ggplot(p,aes(x=date+14,y=dead,color=cause))+
+
+ggplot(p,aes(x=date+14,y=dead,color=cause))+
 geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray90&quot;,linewidth=.25)+
 geom_hline(yintercept=c(ystart,yend),linewidth=.25,lineend=&quot;square&quot;)+
 geom_vline(xintercept=c(xstart,xend),linewidth=.25,lineend=&quot;square&quot;)+
@@ -2076,12 +2071,12 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   plot.margin=margin(4,4,4,4),
   plot.title=element_text(size=7.6,face=2,margin=margin(2,,3)))
 ggsave(&quot;1.png&quot;,width=4.3,height=2.8,dpi=400*4)
-</pre>
-<pre>sub=&quot;\u00a0     The dashed line is a baseline for expected deaths, which was calculated by first doing a linear regression for CMR for each 5-year age group in 2011-2019, then multiplying the monthly population estimates of each age group by the value of the projected linear trend, and then adding together the results for each age group. The baseline is not adjusted for seasonal variation in mortality, but the baseline is slightly higher in winter because the population estimates for elderly age groups were higher in winters.
+
+sub=&quot;\u00a0     The dashed line is a baseline for expected deaths, which was calculated by first doing a linear regression for CMR for each 5-year age group in 2011-2019, then multiplying the monthly population estimates of each age group by the value of the projected linear trend, and then adding together the results for each age group. The baseline is not adjusted for seasonal variation in mortality, but the baseline is slightly higher in winter because the population estimates for elderly age groups were higher in winters.
       Monthly resident population estimates by single year of age are from www2.census.gov/
 programs-surveys/popest/datasets/2020-2023/national/asrh/nc-est2023-alldata-r-file0{1..8}.csv, and from the corresponding files in the 2010-2020 directory. In order to get rid of a sudden jump in population size after the switch from the 2010-2020 to 2020-2023 estimates, the 2010-based estimates were multiplied by a slope so that they matched the 2020-based estimates in April 2020 when the estimates were merged.&quot;
-system(paste0(&quot;f=1.png;mar=120;w=`identify -format %w $f`;magick \\( $f -chop 0x40 \\) \\( -size $[w-mar*2]x -font Arial -interline-spacing -3 -pointsize $[38*4] caption:&#39;&quot;,sub,&quot;&#39; -gravity southwest -splice $[mar]x80 \\) -append -resize 25% -colors 256 1.png&quot;))
-</pre>
+system(paste0(&quot;f=1.png;mar=120;w=`identify -format %w $f`;magick \\( $f -chop 0x40 \\) \\( -size $[w-mar*2]x -font Arial -interline-spacing -3 -pointsize $[38*4] caption:&#39;&quot;,sub,&quot;&#39; -gravity southwest -splice $[mar]x80 \\) -append -resize 25% -colors 256 1.png&quot;))</pre>
+</div>
 <p>However I don't think the method of excess MCD normalization is justified, because there was already an increasing trend in the MCD to UCD ratio before COVID, and because deaths with MCD COVID account for basically all of the increase in the MCD to UCD ratio above the prepandemic trend.</p>
 <p>And if there would be some other cause of death which had a reduced MCD to UCD ratio since 2020 compared to the ratio before 2020, should people be applying a <span class="quote">"negative excess MCD normalization"</span> where they subtract a part of deaths when they plot UCD deaths?</p>
 <p>I think Ethical Skeptic hasn't documented what precise calculation he used to determine the magnitude of the excess MCD normalization, or how he picked week 10 of 2022 as the date when he started applying the normalization or week 20 of 2023 as the date when he stopped increasing the amount of added deaths. If he didn't pick the variables programmatically but based on some kind of subjective criteria, it would be difficult for other people to reproduce his work systematically or so that people would be able to apply the same methodology to other causes of death.</p>
@@ -2102,36 +2097,36 @@ system(paste0(&quot;f=1.png;mar=120;w=`identify -format %w $f`;magick \\( $f -ch
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)</pre>
-</div>
-<pre>t=fread(&quot;http://sars2.net/f/wondermalignantmonthly.csv&quot;)
-</pre>
-<pre>p=t[cause==&quot;MCD malignant neoplasms&quot;,.(date,dead,cause=&quot;COVID not subtracted&quot;)]
-</pre>
-<pre>p1=merge(p,t[cause==&quot;MCD malignant neoplasms and MCD COVID&quot;,.(and=dead,date)])[,.(date,dead=dead-nafill(and,,0),cause=&quot;MCD COVID subtracted&quot;)]
+<pre>library(data.table);library(ggplot2)
+
+t=fread(&quot;http://sars2.net/f/wondermalignantmonthly.csv&quot;)
+
+p=t[cause==&quot;MCD malignant neoplasms&quot;,.(date,dead,cause=&quot;COVID not subtracted&quot;)]
+
+p1=merge(p,t[cause==&quot;MCD malignant neoplasms and MCD COVID&quot;,.(and=dead,date)])[,.(date,dead=dead-nafill(and,,0),cause=&quot;MCD COVID subtracted&quot;)]
 p2=merge(p,t[cause==&quot;MCD malignant neoplasms and UCD COVID&quot;,.(and=dead,date)])[,.(date,dead=dead-nafill(and,,0),cause=&quot;UCD COVID subtracted&quot;)]
 p=rbind(p,p1,p2)
-</pre>
-<pre>p=merge(t[cause==&quot;UCD malignant neoplasms&quot;,.(date,under=dead)],p)
-</pre>
-<pre>p=p[date!=&quot;2024-10&quot;]
+
+p=merge(t[cause==&quot;UCD malignant neoplasms&quot;,.(date,under=dead)],p)
+
+p=p[date!=&quot;2024-10&quot;]
 p=p[,.(x=as.Date(paste0(date,&quot;-1&quot;)),y=dead/under*100,z=cause)]
-</pre>
-<pre>xstart=as.Date(&quot;1999-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
+
+xstart=as.Date(&quot;1999-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
 xbreak=seq(xstart,xend,&quot;6 month&quot;)
 xlab=c(rbind(&quot;&quot;,1999:2024),&quot;&quot;)
 ybreak=pretty(p[z==&quot;COVID not subtracted&quot;,y]);ystart=ybreak[1];yend=max(ybreak)
-</pre>
-<pre>color=c(&quot;black&quot;,&quot;gray60&quot;,hsv(22/36,.8,1),&quot;black&quot;)
-</pre>
-<pre>months=seq(xstart,xend,&quot;month&quot;)
+
+color=c(&quot;black&quot;,&quot;gray60&quot;,hsv(22/36,.8,1),&quot;black&quot;)
+
+months=seq(xstart,xend,&quot;month&quot;)
 p=rbind(p[,.(x,y,z)],p[z==&quot;COVID not subtracted&quot;&amp;year(x)%in%2016:2019,.(x=months,y=predict(lm(y~x),.(x=months)),z=&quot;2016-2019 linear trend&quot;)])
-</pre>
-<pre>p[,z:=factor(z,unique(z))]
-</pre>
-<pre>seg=p[x==D(&quot;2022-1-1&quot;)&amp;!z%like%&quot;MCD&quot;]
-</pre>
-<pre>ggplot(p,aes(x=x+14,y=y))+
+
+p[,z:=factor(z,unique(z))]
+
+seg=p[x==D(&quot;2022-1-1&quot;)&amp;!z%like%&quot;MCD&quot;]
+
+ggplot(p,aes(x=x+14,y=y))+
 geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray90&quot;,linewidth=.25)+
 geom_hline(yintercept=c(ystart,yend),linewidth=.25,lineend=&quot;square&quot;)+
 geom_vline(xintercept=c(xstart,xend),linewidth=.25,lineend=&quot;square&quot;)+
@@ -2166,8 +2161,8 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   panel.background=element_blank(),
   plot.margin=margin(5,5,5,5),
   plot.title=element_text(size=7.6,margin=margin(2,,4)))
-ggsave(&quot;1.png&quot;,width=4.2,height=2.8,dpi=450)
-</pre>
+ggsave(&quot;1.png&quot;,width=4.2,height=2.8,dpi=450)</pre>
+</div>
 <p>Added even later: In the plot below I tried reproducing Ethical Skeptic's plot. I took weekly deaths for UCD malignant neoplasms from CDC WONDER from 2018 onwards and from the same dataset Ethical Skeptic used from 2014 until 2017. [<a href="https://catalog.data.gov/dataset/weekly-counts-of-deaths-by-state-and-select-causes-2014-2018">https://catalog.data.gov/dataset/weekly-counts-of-deaths-by-state-and-select-causes-2014-2018</a>]</p>
 <p>Ethical Skeptic's plot uses a moving average where the window extends 3 weeks backwards and 2 weeks forwards, so I applied a similar moving average to my green line. [<a href="https://www.covid-datascience.com/post/evaluating-claims-of-excess-cancer-deaths-in-the-usa-during-the-pandemic">https://www.covid-datascience.com/post/evaluating-claims-of-excess-cancer-deaths-in-the-usa-during-the-pandemic</a>]</p>
 <p>My green line matches Ethical Skeptic's line from 2018 to 2020. But for some reason his line already starts to rise slightly above from my line around the start of 2021 even though he is supposed to have only started applying the excess MCD normalization on week 10 of 2022. So I don't know if he also applied some additional adjustment that already started in 2021.</p>
@@ -2181,26 +2176,26 @@ ggsave(&quot;1.png&quot;,width=4.2,height=2.8,dpi=450)
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)</pre>
-</div>
-<pre>ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
-</pre>
-<pre>t=fread(&quot;http://sars2.net/f/wondermalignantweekly.csv&quot;)
-</pre>
-<pre>old=fread(&quot;https://data.cdc.gov/api/views/3yf8-kanr/rows.csv?accessType=DOWNLOAD&quot;)
+<pre>library(data.table);library(ggplot2)
+
+ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
+
+t=fread(&quot;http://sars2.net/f/wondermalignantweekly.csv&quot;)
+
+old=fread(&quot;https://data.cdc.gov/api/views/3yf8-kanr/rows.csv?accessType=DOWNLOAD&quot;)
 t2=old[`Jurisdiction of Occurrence`==&quot;United States&quot;,.(date=as.IDate(as.Date(`Week Ending Date`,&quot;%m/%d/%Y&quot;)),year=`MMWR Year`,week=`MMWR Week`,dead=`Malignant neoplasms (C00-C97)`)]
-</pre>
-<pre>t=rbind(t2[year(date)&lt;2018],t)
+
+t=rbind(t2[year(date)&lt;2018],t)
 t[,dead:=ma(dead,3,2)]
-</pre>
-<pre>t$base=t[year&lt;2020,predict(lm(dead~date),t)]
+
+t$base=t[year&lt;2020,predict(lm(dead~date),t)]
 p=merge(t,t[,mean(dead-base),week])[,.(date,dead,week,year,base=base+V1)]
-</pre>
-<pre>ystart=11000;yend=12500;ystep=250;ybreak=seq(ystart,yend,ystep)
+
+ystart=11000;yend=12500;ystep=250;ybreak=seq(ystart,yend,ystep)
 xstart=as.Date(&quot;2017-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
 xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=c(rbind(&quot;&quot;,2017:2024),&quot;&quot;)
-</pre>
-<pre>ggplot(p,aes(x=date,y=dead))+
+
+ggplot(p,aes(x=date,y=dead))+
 geom_vline(xintercept=c(xstart),color=&quot;green&quot;,linewidth=.2,lineend=&quot;square&quot;)+
 geom_hline(yintercept=c(ystart),color=&quot;green&quot;,linewidth=.2,lineend=&quot;square&quot;)+
 geom_line(aes(y=base),linewidth=.2,color=&quot;#bbffbb&quot;)+
@@ -2216,8 +2211,8 @@ theme(axis.text=element_text(size=6,color=&quot;green&quot;),
   panel.background=element_blank(),
   panel.grid=element_blank(),
   plot.background=element_rect(fill=&quot;transparent&quot;,color=NA))
-ggsave(&quot;1.png&quot;,width=5.5,height=2.2,dpi=400)
-</pre>
+ggsave(&quot;1.png&quot;,width=5.5,height=2.2,dpi=400)</pre>
+</div>
 <p>Around November 1st 2024 Ethical Skeptic updated his plot for the MCD to UCD ratio so he started the x-axis from 2017 instead of 2018. [<a href="https://x.com/EthicalSkeptic/status/1852385322543219017">https://x.com/EthicalSkeptic/status/1852385322543219017</a>] I was able to reproduce the plot from 2018 onwards as is shown by the magenta crosses below, but I don't even know where to get weekly MCD cancer deaths for 2017. I only found weekly UCD deaths here: <a href="https://catalog.data.gov/dataset/weekly-counts-of-deaths-by-state-and-select-causes-2014-2018">https://catalog.data.gov/dataset/weekly-counts-of-deaths-by-state-and-select-causes-2014-2018</a>. The bottom of his plot only lists CDC WONDER as a source, but CDC WONDER only has weekly data from 2018 onwards. Ethical Skeptic may have added the data for 2017 to his plot in order to address my criticism about how there had been an increasing trend in the MCD to UCD ratio since around 2015 or 2016, because I had pointed it out on Twitter multiple times, and I'm sure he saw it at least once even though he has blocked me because I told about it to Steve Kirsch who relayed my criticism to Ethical Skeptic and posted Ethical Skeptic's response to me on DM. There's even a note in the updated plot which specifically says that the trend in 2017 to 2019 is flat, even though the trend was clearly increasing in my plot for monthly data. However Ethical Deceptic seems to have inserted fake data for 2017, because the shape of his line for 2017 looks too similar to the line for 2018:</p>
 <div class="width7">
 <img src="i/ethical-malignant-14.png">
@@ -2242,21 +2237,21 @@ ggsave(&quot;1.png&quot;,width=5.5,height=2.2,dpi=400)
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2);library(readxl)</pre>
-</div>
-<pre>t4=setDT(read_excel(&quot;finaldata2023v2.xlsx&quot;,sheet=4,skip=5))
+<pre>library(data.table);library(ggplot2);library(readxl)
+
+t4=setDT(read_excel(&quot;finaldata2023v2.xlsx&quot;,sheet=4,skip=5))
 t6=setDT(read_excel(&quot;finaldata2023v2.xlsx&quot;,sheet=6,skip=5))
 t4$type=&quot;ucd&quot;;t6$type=&quot;mcd&quot;
-</pre>
-<pre>p=t4[,.(mcd=sum(rowSums(.SD))),.(date=t4$Death),.SDcols=patterns(&quot;[Mm]alignant&quot;)]
+
+p=t4[,.(mcd=sum(rowSums(.SD))),.(date=t4$Death),.SDcols=patterns(&quot;[Mm]alignant&quot;)]
 p=merge(p,t6[,.(ucd=sum(rowSums(.SD))),.(date=t6$Death),.SDcols=patterns(&quot;[Mm]alignant&quot;)])
 p[,ratio:=mcd/ucd]
 p[,x:=.I]
 p[,date:=sub(&quot;\\S+ (...).*? (....) - (...).*? (.*)&quot;,&quot;\\1 \\2 - \\3 \\4&quot;,date)]
-</pre>
-<pre>ystart=0;yend=1.4;ybreak=seq(ystart,yend,.1)
-</pre>
-<pre>ggplot(p,aes(x=x,y=ratio))+
+
+ystart=0;yend=1.4;ybreak=seq(ystart,yend,.1)
+
+ggplot(p,aes(x=x,y=ratio))+
 geom_line(linewidth=.5)+
 labs(title=&quot;ONS user response 2325: MCD to UCD ratio for malignant neoplasms&quot;,subtitle=&quot;Includes England only. Deaths are by date of registration and not occurrence. Source: ONS user response titled \&quot;Deaths involving or due to selected causes between September 2003 and December 2023 by week and year of birth, by countries England and Wales seperately\&quot;.&quot;|&gt;stringr::str_wrap(83),x=NULL,y=NULL)+
 scale_x_continuous(limits=c(.5,max(p$x)+.5),breaks=p$x,labels=p$date)+
@@ -2275,8 +2270,8 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   strip.background=element_blank(),
   strip.text=element_blank())
 ggsave(&quot;1.png&quot;,width=4.2,height=3,dpi=400*4)
-system(&quot;magick 1.png -resize 25% -colorspace gray -dither none -colors 16 1.png&quot;)
-</pre>
+system(&quot;magick 1.png -resize 25% -colorspace gray -dither none -colors 16 1.png&quot;)</pre>
+</div>
 <p>Added on December 11th 2024 UTC: Ethical Skeptic now posted an updated version of the plot for the MCD to UCD ratio which included a note that said <span class="quote">"Because Wonder does not offer 2017 weekly data, 2017 weekly data reflects the correct total for the year but is a week-by-week apportionment by combined 2018/19 arrival forms"</span>: [<a href="https://x.com/EthicalSkeptic/status/1866674708239855796">https://x.com/EthicalSkeptic/status/1866674708239855796</a>]</p>
 <div class="width8">
 <img src="i/ethical-excessmcdnote.png">
@@ -2295,8 +2290,7 @@ system(&quot;magick 1.png -resize 25% -colorspace gray -dither none -colors 16 1
  2021 717005 605206 1.184729
  2022 723433 608366 1.189141
  2023 705468 613361 1.150168
- 2024 498951 460627 1.083200
-</pre>
+ 2024 498951 460627 1.083200</pre>
 <p>From this plot where I imposed real monthly data for 2017 on top of Ethical Skeptic's fake weekly data for 2017, you can also see that his ratio is too high in 2017:</p>
 <div class="width8">
 <img src="i/ethical-excessmcdnote-2.png">
@@ -2305,18 +2299,18 @@ system(&quot;magick 1.png -resize 25% -colorspace gray -dither none -colors 16 1
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)</pre>
-</div>
-<pre>t=fread(&quot;http://sars2.net/f/wondermalignantmonthly.csv&quot;)
+<pre>library(data.table);library(ggplot2)
+
+t=fread(&quot;http://sars2.net/f/wondermalignantmonthly.csv&quot;)
 t=dcast(t,date~cause)
 lab=c(&quot;MCD COVID not subtracted&quot;,&quot;MCD COVID subtracted&quot;)
 p=t[,.(x=as.Date(paste0(date,&quot;-1&quot;)),y=100*c(t[[2]]/t[[5]],(t[[2]]-t[[3]])/t[[5]]),z=factor(rep(lab,each=.N),lab))]
-</pre>
-<pre>ystart=108;yend=117;ybreak=ystart:yend
+
+ystart=108;yend=117;ybreak=ystart:yend
 xstart=as.Date(&quot;2017-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
 xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=ifelse(month(xbreak)==7,year(xbreak),&quot;&quot;)
-</pre>
-<pre>ggplot(p,aes(x+15,y))+
+
+ggplot(p,aes(x+15,y))+
 geom_vline(xintercept=c(xstart),color=&quot;magenta&quot;,linewidth=.2,lineend=&quot;square&quot;)+
 geom_hline(yintercept=c(ystart),color=&quot;magenta&quot;,linewidth=.2,lineend=&quot;square&quot;)+
 geom_point(aes(color=z),shape=3,stroke=.3,size=1)+
@@ -2332,8 +2326,8 @@ theme(axis.text=element_blank(),
   panel.background=element_blank(),
   panel.grid=element_blank(),
   plot.background=element_rect(fill=&quot;transparent&quot;,color=NA))
-ggsave(&quot;1.png&quot;,width=5.5,height=2.2,dpi=400)
-</pre>
+ggsave(&quot;1.png&quot;,width=5.5,height=2.2,dpi=400)</pre>
+</div>
 <p>Added in February 2025: The Twitter user yukatapangolin posted these tweets: [<a href="https://x.com/yukatapangolin/status/1891685788615680344">https://x.com/yukatapangolin/status/1891685788615680344</a>]</p>
 <blockquote>
 <p>ES applies his <span class="quote">"excess MCOD normalization"</span> starting in '22 because he believes that's when the CDC began switching the underlying cause of death in cancer cases to COVID. He posted this chart showing an increase in MCoD Cancer as a percentage of UCoD COVID <a href="https://theethicalskeptic.com/2022/10/24/houston-the-cdc-has-a-problem-part-2-of-3/">https://theethicalskeptic.com/2022/10/24/houston-the-cdc-has-a-problem-part-2-of-3/</a></p>
@@ -2362,8 +2356,7 @@ print(o[,mcdtoucdratio:=round(mcd/ucd,2)][],r=F)
 # 2023       1  20648  32039          1.55
 # 2023       2   6832  11472          1.68
 # 2023       3   8394  12615          1.50
-# 2023       4  14058  21138          1.50
-</pre>
+# 2023       4  14058  21138          1.50</pre>
 <p>However there was in fact also a big increase in the ratio of <span class="quote">"(MCD cancer and UCD COVID) / UCD COVID"</span> in 2022. But I think the increase in the ratio was due to Omicron, because the shape of the curve for the ratio closely follows the curve of the MCD to UCD COVID ratio:</p>
 <div class="width7">
 <img src="i/ethical-yukata-3.png">
@@ -2372,19 +2365,19 @@ print(o[,mcdtoucdratio:=round(mcd/ucd,2)][],r=F)
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2);library(lubridate)</pre>
-</div>
-<pre>t=fread(&quot;http://sars2.net/f/wondermcdcanceranducdcovid.csv&quot;)
+<pre>library(data.table);library(ggplot2);library(lubridate)
+
+t=fread(&quot;http://sars2.net/f/wondermcdcanceranducdcovid.csv&quot;)
 t=dcast(t,date~type)
-</pre>
-<pre>lab=c(&quot;(MCD cancer and UCD COVID) / UCD COVID&quot;,&quot;(MCD cancer and MCD COVID) / UCD COVID&quot;,&quot;MCD COVID / UCD COVID&quot;)
+
+lab=c(&quot;(MCD cancer and UCD COVID) / UCD COVID&quot;,&quot;(MCD cancer and MCD COVID) / UCD COVID&quot;,&quot;MCD COVID / UCD COVID&quot;)
 p=t[,.(x=date-3,y=c(mcd_cancer_and_ucd_covid,mcd_cancer_and_mcd_covid,mcd_covid)/ucd_covid,z=factor(rep(lab,each=.N),lab))]
 p=na.omit(p)
-</pre>
-<pre>xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
+
+xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
 xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=ifelse(month(xbreak)==7,year(xbreak),&quot;&quot;)
-</pre>
-<pre>ggplot(p,aes(x,y))+
+
+ggplot(p,aes(x,y))+
 facet_wrap(~z,dir=&quot;v&quot;,scales=&quot;free&quot;)+
 geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray83&quot;,linewidth=.4)+
 geom_text(data=p[,max(y),z],aes(label=z,y=V1),x=xstart+30,hjust=0,vjust=1.4,size=3.6)+
@@ -2406,8 +2399,8 @@ theme(axis.text=element_text(size=11,color=&quot;black&quot;),
   strip.background=element_blank(),
   strip.text=element_blank())
 ggsave(&quot;1.png&quot;,width=5.8,height=4.4,dpi=300*4)
-system(&quot;magick 1.png -resize 25% -colorspace gray -colors 64 1.png&quot;)
-</pre>
+system(&quot;magick 1.png -resize 25% -colorspace gray -colors 64 1.png&quot;)</pre>
+</div>
 <p>The Twitter user yukatapangolin also posted the plot below and wrote <span class="quote">"You could probably use a similar argument to the one ES uses to prove that the vaccine gives you AIDS"</span>: [<a href="https://x.com/yukatapangolin/status/1891955439996141658">https://x.com/yukatapangolin/status/1891955439996141658</a>]</p>
 <div class="width8">
 <img src="i/ethical-yukata-4.png">
@@ -2426,54 +2419,52 @@ system(&quot;magick 1.png -resize 25% -colorspace gray -colors 64 1.png&quot;)
 <p>In order to get rid of a sudden jump in the population estimates at the point when the new and old estimates are merged, the old estimates are multiplied by a linear slope so that they are the same in 2020 as the new estimates. For example for the age 80, the vintage 2023 population estimate for 2020 is 1,450,396 and the vintage 2020 estimate for 2020 is 1,526,957, so their ratio is about 0.9499, so I'm multiplying the old estimate by about <code>.9+.1*0.9499</code> for 2011, by about <code>.8+.2*0.9499</code> for 2012, and so on. (However a slight problem with my approach is that the mid-year population estimates for 2020 had already been reduced by COVID deaths, so COVID deaths in the first half of 2020 are reflected in the slope by which the population estimates for 2011 to 2019 are multiplied.)</p>
 <pre>old=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/national/asrh/nc-est2020-agesex-res.csv&quot;)
 new=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/nc-est2023-agesex-res.csv&quot;)
-</pre>
-<pre>old=old[SEX==0&amp;AGE!=999,.(age=AGE,pop=unlist(.SD[,-(1:4)]),year=rep(2010:2020,each=.N))]
+
+old=old[SEX==0&amp;AGE!=999,.(age=AGE,pop=unlist(.SD[,-(1:4)]),year=rep(2010:2020,each=.N))]
 new=new[SEX==0&amp;AGE!=999,.(age=AGE,pop=unlist(.SD[,-(1:3)]),year=rep(2020:2023,each=.N))]
-</pre>
-<pre># determine the ratio between new and old population estimates for 2020
+
+# determine the ratio between new and old population estimates for 2020
 o=merge(merge(old[year==2020,.(age,old=pop)],new[year==2020,.(age,new=pop)])[,.(age,ratio=new/old)],old)
-</pre>
-<pre># multiply old population estimates by a linear slope so they match new estimates in 2020
+
+# multiply old population estimates by a linear slope so they match new estimates in 2020
 o=rbind(o[year!=2020,.(year,age,pop=round(pop*(1-(((year-2010)/10))*(1-ratio))))],new)
-</pre>
-<pre># include population projections for 2024-2030 adjusted to match 2023 resident population estimatess in 2023
+
+# include population projections for 2024-2030 adjusted to match 2023 resident population estimatess in 2023
 proj=fread(&quot;https://www2.census.gov/programs-surveys/popproj/datasets/2023/2023-popproj/np2023_d1_mid.csv&quot;)
 proj=proj[SEX==0&amp;ORIGIN==0&amp;RACE==0&amp;YEAR&gt;=2023,.(year=YEAR,age=rep(0:100,each=.N),pop=unlist(.SD[,-(1:5)]))]
 mult=o[year==2023,pop]/proj[year==2023]$pop
 o=rbind(o,proj[,pop:=pop*mult][year&gt;2023])
-</pre>
-<pre># add a column for yearly deaths from CDC WONDER for convenience (downloaded in February 2025)
+
+# add a column for yearly deaths from CDC WONDER for convenience (downloaded in February 2025)
 o=merge(o,na.omit(fread(&quot;http://sars2.net/f/usyearlydead.csv&quot;)),all=T)
-</pre>
-<pre>fwrite(o[order(year,age)],&quot;uspopdead.csv&quot;,na=&quot;&quot;)
-</pre>
+
+fwrite(o[order(year,age)],&quot;uspopdead.csv&quot;,na=&quot;&quot;)</pre>
 <p>I uploaded the output here: <a href=f/uspopdead.csv>f/uspopdead.csv</a>.</p>
 <p>The next script generates a similar file for monthly data. The script also includes population projections for 2024 and 2025, which were calculated by doing a spline interpolation of the population estimate on December 2023 and the Census Bureau's mid-year population projections for 2024 to 2026. I uploaded the output here: <a href=f/uspopdeadmonthly.csv>f/uspopdeadmonthly.csv</a>.</p>
 <pre>url=&quot;https://www2.census.gov/programs-surveys/popest/datasets/&quot;
 new=do.call(rbind,lapply(paste0(url,&quot;2020-2023/national/asrh/nc-est2023-alldata-r-file0&quot;,1:8,&quot;.csv&quot;),\(x)fread(x)))
 old=do.call(rbind,lapply(paste0(url,&quot;2010-2020/national/asrh/NC-EST2020-ALLDATA-R-File&quot;,sprintf(&quot;%02d&quot;,1:24),&quot;.csv&quot;),\(x)fread(x)))
-</pre>
-<pre>mult=new[YEAR==2020&amp;MONTH==4.2,.(age=AGE,new=TOT_POP)]
+
+mult=new[YEAR==2020&amp;MONTH==4.2,.(age=AGE,new=TOT_POP)]
 mult=merge(mult,old[YEAR==2020&amp;MONTH==4,.(age=AGE,old=TOT_POP)])[,.(mult=new/old,age)]
-</pre>
-<pre>oldpop=old[YEAR!=2021&amp;MONTH!=4.2&amp;AGE!=999,.(year=YEAR,month=floor(MONTH),pop=TOT_POP,age=AGE)]
+
+oldpop=old[YEAR!=2021&amp;MONTH!=4.2&amp;AGE!=999,.(year=YEAR,month=floor(MONTH),pop=TOT_POP,age=AGE)]
 newpop=new[AGE!=999,.(year=YEAR,month=floor(MONTH),pop=TOT_POP,age=AGE)]
-</pre>
-<pre>oldmod=oldpop[!(year==2020&amp;month&gt;4)]
+
+oldmod=oldpop[!(year==2020&amp;month&gt;4)]
 oldmod=merge(mult,oldmod[,.(year,month,pop,slope=seq(0,1,,.N)),age])
 oldmod=oldmod[,.(age,year,month,pop=pop*(slope*mult+(1-slope)*1))]
-</pre>
-<pre>proj=fread(&quot;https://www2.census.gov/programs-surveys/popproj/datasets/2023/2023-popproj/np2023_d1_mid.csv&quot;)
+
+proj=fread(&quot;https://www2.census.gov/programs-surveys/popproj/datasets/2023/2023-popproj/np2023_d1_mid.csv&quot;)
 proj=proj[SEX==0&amp;ORIGIN==0&amp;RACE==0&amp;YEAR%in%2024:2026,.(x=seq(7,,12,3),age=rep(0:100,each=.N),pop=unlist(.SD[,-(1:5)]))]
 proj=rbind(newpop[year==2023&amp;month==12,.(x=0,pop,age)],proj)
 proj=proj[,spline(x,pop,xout=1:24),age][,.(age,year=rep(2024:2025,each=12),month=1:12,pop=round(y))]
-</pre>
-<pre>pop=rbind(oldmod[!(year==2020&amp;month==4)],newpop,proj)
+
+pop=rbind(oldmod[!(year==2020&amp;month==4)],newpop,proj)
 dead=fread(&quot;http://sars2.net/f/usdeadmonthly.csv&quot;) # downloaded from CDC WONDER in November 2024
 o=merge(dead,pop,all=T)[,date:=sprintf(&quot;%d-%02d&quot;,year,month)][,.(age,year,month,date,dead,pop)]
 o[,persondays:=pop*lubridate::days_in_month(as.Date(paste0(date,&quot;-1&quot;)))]
-fwrite(o,&quot;uspopdeadmonthly.csv&quot;,na=&quot;&quot;)
-</pre>
+fwrite(o,&quot;uspopdeadmonthly.csv&quot;,na=&quot;&quot;)</pre>
 <p>This shows that particularly ages 90+ have a huge jump in population size between the switch from the estimates based on the 2010 census to the estimates based on the 2020 census:</p>
 <div class="width7">
 <img src="i/ethical-popmerge.png">
@@ -2482,33 +2473,33 @@ fwrite(o,&quot;uspopdeadmonthly.csv&quot;,na=&quot;&quot;)
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)</pre>
-</div>
-<pre>agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
-</pre>
-<pre>kim=\(x)ifelse(x&gt;=1e3,ifelse(x&gt;=1e6,paste0(x/1e6,&quot;M&quot;),paste0(x/1e3,&quot;k&quot;)),x)
-</pre>
-<pre>new=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/nc-est2023-agesex-res.csv&quot;)
+<pre>library(data.table);library(ggplot2)
+
+agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
+
+kim=\(x)ifelse(x&gt;=1e3,ifelse(x&gt;=1e6,paste0(x/1e6,&quot;M&quot;),paste0(x/1e3,&quot;k&quot;)),x)
+
+new=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/nc-est2023-agesex-res.csv&quot;)
 old=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/national/asrh/nc-est2020-agesex-res.csv&quot;)
-</pre>
-<pre>old=old[SEX==0&amp;AGE!=999,.(age=AGE,pop=unlist(.SD[,-(1:4)]),year=rep(2010:2020,each=.N))]
+
+old=old[SEX==0&amp;AGE!=999,.(age=AGE,pop=unlist(.SD[,-(1:4)]),year=rep(2010:2020,each=.N))]
 new=new[SEX==0&amp;AGE!=999,.(age=AGE,pop=unlist(.SD[,-(1:3)]),year=rep(2020:2023,each=.N))]
-</pre>
-<pre>me=merge(merge(old[year==2020,.(age,old=pop)],new[year==2020,.(age,new=pop)])[,.(age,ratio=new/old)],old)
+
+me=merge(merge(old[year==2020,.(age,old=pop)],new[year==2020,.(age,new=pop)])[,.(age,ratio=new/old)],old)
 p=rbind(me[year!=2020,.(year,age,pop=round(pop*(1-(((year-2010)/10))*(1-ratio))))],new)
 p$group=&quot;2011-2019 estimates multiplied by a linear slope&quot;
-</pre>
-<pre>p=rbind(p,rbind(old[year!=2020],new)[,group:=&quot;Unadjusted&quot;])
+
+p=rbind(p,rbind(old[year!=2020],new)[,group:=&quot;Unadjusted&quot;])
 p[,group:=factor(group,unique(group))]
-</pre>
-<pre>p=p[,.(pop=sum(pop)),.(group,year,age=agecut(age,0:9*10))]
-</pre>
-<pre>xstart=2010;xend=2023
+
+p=p[,.(pop=sum(pop)),.(group,year,age=agecut(age,0:9*10))]
+
+xstart=2010;xend=2023
 p=p[year%in%xstart:xend]
-</pre>
-<pre>levels(p$age)=p[year==2019,sprintf(&quot;%s (%.1f%%)&quot;,age,(pop[group!=&quot;Unadjusted&quot;]/pop[group==&quot;Unadjusted&quot;]-1)*100)]
-</pre>
-<pre>ggplot(p,aes(x=year,y=pop,color=group))+
+
+levels(p$age)=p[year==2019,sprintf(&quot;%s (%.1f%%)&quot;,age,(pop[group!=&quot;Unadjusted&quot;]/pop[group==&quot;Unadjusted&quot;]-1)*100)]
+
+ggplot(p,aes(x=year,y=pop,color=group))+
 coord_cartesian(clip=&quot;off&quot;,expand=F)+
 facet_wrap(~age,ncol=2,dir=&quot;v&quot;,scales=&quot;free_y&quot;)+
 geom_vline(xintercept=c(2014.5,2019.5),color=&quot;gray80&quot;,linewidth=.23)+
@@ -2544,26 +2535,26 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   strip.background=element_blank(),
   strip.text=element_text(size=7,vjust=-.3))
 ggsave(&quot;1.png&quot;,width=4.4,height=4.4,dpi=350*4)
-system(&quot;magick 1.png -resize 25% 1.png&quot;)
-</pre>
+system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
+</div>
 <p>The reason why the population size of ages 90+ decreased by over 10% in the new population estimates might partially be due to COVID deaths in case COVID deaths are accounted for in the mid-year population estimates for 2020. But COVID deaths would probably only explain a small part of the decrease, because in the first half of 2020 CDC WONDER returned 21,600 deaths with UCD COVID in ages 90+, which is only about 0.9% of the total population size of ages 90+ based on the vintage 2023 resident population estimates for the year 2020. However in case the population estimates are calculated based on yearly data for deaths, it might also be that the mid-year population estimates for 2020 are affected by COVID deaths in the second half of 2020, but even in the whole of 2020 the number of COVID deaths in ages 90+ was only about 2.5% of the resident population estimate for ages 90+ in 2020.</p>
 <p>There's often fairly large changes to old population estimates in newer vintages. For example the resident population estimate of ages 80-84 in 2021 was increased by about 1.9% between the 2021 and 2022 vintages, but it was again reduced by about 1.8% between the 2022 and 2023 vintages:</p>
 <pre>r=do.call(rbind,lapply(2020:2023,\(x){
   t=fread(paste0(&quot;https://www2.census.gov/programs-surveys/popest/datasets/&quot;,ifelse(x==2020,2010,2020),&quot;-&quot;,x,&quot;/national/asrh/nc-est&quot;,x,&quot;-agesex-res.csv&quot;))
   t[SEX==0&amp;AGE!=999,.(vintage=x,year=rep(as.integer(sub(&quot;\\D+&quot;,&quot;&quot;,names(.SD))),each=.N),age=AGE,pop=unlist(.SD,,F)),.SDcols=patterns(&quot;POPESTIMATE&quot;)]}))
-</pre>
-<pre>r[year&gt;=2020&amp;age%in%80:84,xtabs(pop~year+vintage)]
+
+r[year&gt;=2020&amp;age%in%80:84,xtabs(pop~year+vintage)]
 #       vintage
 # year      2020    2021    2022    2023
 #   2020 6464714 6155000 6288784 6160937
 #   2021       0 6301306 6422252 6308178
 #   2022       0       0 6659545 6557159
 #   2023       0       0       0 6980680
-</pre>
-<pre>t2=fread(&quot;http://sars2.net/f/wondercanceryearlysingle.csv&quot;)
+
+
+t2=fread(&quot;http://sars2.net/f/wondercanceryearlysingle.csv&quot;)
 t2[age%in%80:84&amp;year==2021,sum(pop)]
-# 6301306 (CDC WONDER still uses vintage 2021 estimates for 2021)
-</pre>
+# 6301306 (CDC WONDER still uses vintage 2021 estimates for 2021)</pre>
 <p>The next plot shows how the 2000-2010 intercensal estimates have been adjusted to get rid of the jump between the 2000-based and 2010-based population estimates. The 2010-2020 intercensal estimates are only scheduled to be published in 2025, but they will probably look similar to my gray line below where I used the same method as in the code above to adjust the population estimates:</p>
 <div class="width7">
 <img src="i/ethical-popest.png">
@@ -2572,49 +2563,49 @@ t2[age%in%80:84&amp;year==2021,sum(pop)]
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)</pre>
-</div>
-<pre>agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
-</pre>
-<pre>kim=\(x)ifelse(x&gt;=1e3,ifelse(x&gt;=1e6,paste0(x/1e6,&quot;M&quot;),paste0(x/1e3,&quot;k&quot;)),x)
-</pre>
-<pre>new=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/nc-est2023-agesex-res.csv&quot;)
+<pre>library(data.table);library(ggplot2)
+
+agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
+
+kim=\(x)ifelse(x&gt;=1e3,ifelse(x&gt;=1e6,paste0(x/1e6,&quot;M&quot;),paste0(x/1e3,&quot;k&quot;)),x)
+
+new=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/nc-est2023-agesex-res.csv&quot;)
 old=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/national/asrh/nc-est2020-agesex-res.csv&quot;)
-</pre>
-<pre>old=old[SEX==0&amp;AGE!=999,.(age=AGE,pop=unlist(.SD[,-(1:4)]),year=rep(2010:2020,each=.N))]
+
+old=old[SEX==0&amp;AGE!=999,.(age=AGE,pop=unlist(.SD[,-(1:4)]),year=rep(2010:2020,each=.N))]
 new=new[SEX==0&amp;AGE!=999,.(age=AGE,pop=unlist(.SD[,-(1:3)]),year=rep(2020:2023,each=.N))]
-</pre>
-<pre>older=fread(&quot;https://www2.census.gov/programs-surveys/popest/tables/2000-2010/intercensal/national/us-est00int-01.csv&quot;)
+
+older=fread(&quot;https://www2.census.gov/programs-surveys/popest/tables/2000-2010/intercensal/national/us-est00int-01.csv&quot;)
 older=older[6:26,c(1,3:12,14)][,.(age=as.numeric(sub(&quot;\\D*(\\d+).*&quot;,&quot;\\1&quot;,sub(&quot;Under 5&quot;,0,V1))),pop=as.numeric(gsub(&quot;,&quot;,&quot;&quot;,unlist(.SD[,-1]))),year=rep(2000:2010,each=.N))]
-</pre>
-<pre>oldest=fread(&quot;https://www2.census.gov/programs-surveys/popest/tables/2000-2009/national/asrh/nc-est2009-01.csv&quot;)
+
+oldest=fread(&quot;https://www2.census.gov/programs-surveys/popest/tables/2000-2009/national/asrh/nc-est2009-01.csv&quot;)
 oldest=oldest[6:26,c(1,2:11)][,.(age=as.numeric(sub(&quot;\\D*(\\d+).*&quot;,&quot;\\1&quot;,sub(&quot;Under 5&quot;,0,V1))),pop=as.numeric(gsub(&quot;,&quot;,&quot;&quot;,unlist(.SD[,-1]))),year=rep(2009:2000,each=.N))]
-</pre>
-<pre>mult=merge(old[year==2020],new[year==2020,.(age,new=pop)])[,.(ratio=new/pop,age)]
+
+mult=merge(old[year==2020],new[year==2020,.(age,new=pop)])[,.(ratio=new/pop,age)]
 mult=merge(old,mult)[,mult:=(year-2010)/10]
 mult=mult[,.(age,year,pop=((1-mult)*1+mult*ratio)*pop)]
-</pre>
-<pre>won=fread(&quot;http://sars2.net/f/wondercanceryearlysingle.csv&quot;)[age&lt;85,.(year,pop,age)]
+
+won=fread(&quot;http://sars2.net/f/wondercanceryearlysingle.csv&quot;)[age&lt;85,.(year,pop,age)]
 won=rbind(won,fread(&quot;http://sars2.net/f/wondercanceryearlyten.csv&quot;)[cause==cause[1]&amp;age==85,.(year,pop,age)])
-</pre>
-<pre>p=cbind(oldest,z=&quot;2000-2009&quot;)
+
+p=cbind(oldest,z=&quot;2000-2009&quot;)
 p=rbind(p,cbind(older,z=&quot;2000-2010 intercensal&quot;))
 p=rbind(p,cbind(old,z=&quot;2010-2020&quot;))
 p=rbind(p,cbind(mult,z=&quot;2010-2020 multiplied by linear slope&quot;))
 p=rbind(p,cbind(new,z=&quot;2020-2023&quot;))
 p=rbind(p,cbind(won,z=&quot;CDC WONDER&quot;))
-</pre>
-<pre>p[,z:=factor(z,unique(z))]
-</pre>
-<pre>ages=0:4*20
+
+p[,z:=factor(z,unique(z))]
+
+ages=0:4*20
 ages=c(0,25,45,65,75,85)
-</pre>
-<pre>p=p[,.(pop=sum(pop)),.(z,year,age=agecut(age,ages))]
-</pre>
-<pre>xstart=2000;xend=2023
+
+p=p[,.(pop=sum(pop)),.(z,year,age=agecut(age,ages))]
+
+xstart=2000;xend=2023
 p=p[year%in%xstart:xend]
-</pre>
-<pre>ggplot(p,aes(x=year,y=pop))+
+
+ggplot(p,aes(x=year,y=pop))+
 coord_cartesian(clip=&quot;off&quot;)+
 facet_wrap(~age,ncol=2,dir=&quot;v&quot;,scales=&quot;free_y&quot;)+
 geom_vline(xintercept=c(2009.5,2019.5),color=&quot;gray80&quot;,linewidth=.23)+
@@ -2656,17 +2647,16 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   strip.background=element_blank(),
   strip.text=element_blank())
 ggsave(&quot;1.png&quot;,width=4,height=3,dpi=350*4)
-system(&quot;magick 1.png -resize 25% 1.png&quot;)
-</pre>
+system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
+</div>
 <p>So if you need to combine my files for the modified population estimates with older population estimates for 2000-2009, you can just use the 2000-2010 intercensal estimates. This file has population estimates by single year of age up to ages 85+: <a href="https://www2.census.gov/programs-surveys/popest/datasets/2000-2010/intercensal/national/us-est00int-alldata.csv">https://www2.census.gov/programs-surveys/popest/datasets/2000-2010/intercensal/national/us-est00int-alldata.csv</a>. This file has population estimates by 5-year age groups up to ages 100+: <a href="https://www2.census.gov/programs-surveys/popest/tables/2000-2010/intercensal/national/us-est00int-01.csv">https://www2.census.gov/programs-surveys/popest/tables/2000-2010/intercensal/national/us-est00int-01.csv</a>. Both files are identical to the population sizes used by CDC WONDER:</p>
 <pre>inter1=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2000-2010/intercensal/national/us-est00int-alldata.csv&quot;)
 inter5=fread(&quot;https://www2.census.gov/programs-surveys/popest/tables/2000-2010/intercensal/national/us-est00int-01.csv&quot;)
 wonder=fread(&quot;http://sars2.net/f/wondercanceryearlysingle.csv&quot;)
-</pre>
-<pre>inter1[YEAR==2009&amp;MONTH==7&amp;AGE%in%70:74,sum(TOT_POP)] # 9140722
+
+inter1[YEAR==2009&amp;MONTH==7&amp;AGE%in%70:74,sum(TOT_POP)] # 9140722
 inter5[which(inter5[[1]]==&quot;.70 to 74 years&quot;)[1],unlist(.SD),.SDcols=which(inter5[4]==2009)] # &quot;9,140,722&quot;
-wonder[year==2009&amp;age%in%70:74,sum(pop)] # 9140722
-</pre>
+wonder[year==2009&amp;age%in%70:74,sum(pop)] # 9140722</pre>
 <p>Added later: Apparently SEER has also published their own intercensal population estimates for 2010-2019: <a href="https://seer.cancer.gov/endofdecade-pops/">https://seer.cancer.gov/endofdecade-pops/</a>. They look similar to my DIY intercensal estimates:</p>
 <div class="width6">
 <img src="i/ethical-seerintercensal.png">
@@ -2691,41 +2681,41 @@ wonder[year==2009&amp;age%in%70:74,sum(pop)] # 9140722
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)</pre>
-</div>
-<pre>agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
-</pre>
-<pre>kim=\(x)ifelse(x&gt;=1e3,ifelse(x&gt;=1e6,paste0(x/1e6,&quot;M&quot;),paste0(x/1e3,&quot;k&quot;)),x)
-</pre>
-<pre>t=fread(&quot;http://sars2.net/f/wondermalignantyearly.csv&quot;)
+<pre>library(data.table);library(ggplot2)
+
+agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
+
+kim=\(x)ifelse(x&gt;=1e3,ifelse(x&gt;=1e6,paste0(x/1e6,&quot;M&quot;),paste0(x/1e3,&quot;k&quot;)),x)
+
+t=fread(&quot;http://sars2.net/f/wondermalignantyearly.csv&quot;)
 t=t[year%in%2010:2023&amp;cause%like%&quot;MCD&quot;]
 t=merge(t[!cause%like%&quot;COVID&quot;],t[cause%like%&quot;COVID&quot;,.(year,age,and=dead)],all=T)
-</pre>
-<pre># Some ages below 45 have less than 10 deaths with both MCD cancer and
+
+# Some ages below 45 have less than 10 deaths with both MCD cancer and
 # MCD COVID per year, so the deaths are suppressed when the results
 # are grouped by single year of age, but here I retrieved deaths for
 # ages 0-44 aggregated together to avoid the supression.
 t[age&lt;45,and:=0][age==0&amp;year&gt;=2020,and:=c(311,495,477,130)]
-</pre>
-<pre>t=t[,.(year,age,dead=dead-nafill(and,,0))]
-</pre>
-<pre>t=merge(t,fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)[,dead:=NULL])
-</pre>
-<pre>t=merge(t,t[year%in%2010:2019,.(year=2010:2023,trend=predict(lm(dead/pop~year),.(year=2010:2023))),age])
-</pre>
-<pre>p=t[,.(dead=sum(dead),base=sum(trend*pop)),.(year,group=agecut(age,c(0,45,55,65,75,85)))]
-</pre>
-<pre>p=p[p[year%in%2018:2019,.(year=2010:2023,linear=predict(lm(dead~year),.(year=2010:2023))),group],on=c(&quot;group&quot;,&quot;year&quot;)]
-</pre>
-<pre>minmax=p[,.(min=min(dead,base,linear),max=max(dead,base,linear)),group]
+
+t=t[,.(year,age,dead=dead-nafill(and,,0))]
+
+t=merge(t,fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)[,dead:=NULL])
+
+t=merge(t,t[year%in%2010:2019,.(year=2010:2023,trend=predict(lm(dead/pop~year),.(year=2010:2023))),age])
+
+p=t[,.(dead=sum(dead),base=sum(trend*pop)),.(year,group=agecut(age,c(0,45,55,65,75,85)))]
+
+p=p[p[year%in%2018:2019,.(year=2010:2023,linear=predict(lm(dead~year),.(year=2010:2023))),group],on=c(&quot;group&quot;,&quot;year&quot;)]
+
+minmax=p[,.(min=min(dead,base,linear),max=max(dead,base,linear)),group]
 p=merge(minmax[,.(group,min=max/minmax[,max(max/min)])],p)
-</pre>
-<pre>xstart=2010;xend=2023
-</pre>
-<pre>p=p[,.(group,year,min,y=c(dead,base,linear),z=rep(c(&quot;Actual deaths&quot;,&quot;2010-2019 trend in CMR by age&quot;,&quot;2018-2019 linear trend for raw deaths&quot;),each=.N))]
+
+xstart=2010;xend=2023
+
+p=p[,.(group,year,min,y=c(dead,base,linear),z=rep(c(&quot;Actual deaths&quot;,&quot;2010-2019 trend in CMR by age&quot;,&quot;2018-2019 linear trend for raw deaths&quot;),each=.N))]
 p[,z:=factor(z,unique(z))]
-</pre>
-<pre>ggplot(p,aes(year,y))+
+
+ggplot(p,aes(year,y))+
 facet_wrap(~group,ncol=2,dir=&quot;v&quot;,scales=&quot;free_y&quot;,strip.position=&quot;top&quot;)+
 geom_vline(xintercept=c(2014.5,2019.5),color=&quot;gray85&quot;,linewidth=.25)+
 geom_line(aes(color=z,linetype=z),linewidth=.3)+
@@ -2763,8 +2753,8 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   strip.background=element_blank(),
   strip.text=element_text(size=7))
 ggsave(&quot;1.png&quot;,width=5,height=4.1,dpi=380*4)
-system(&quot;magick 1.png -resize 25% 1.png&quot;)
-</pre>
+system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
+</div>
 <p>My method of calculating the baseline implements a weak adjustment for the pull-forward effect in elderly age groups, because when I'm multiplying the trend in CMR with the population size, the baseline deaths are reduced from 2020 onwards because the population size has been lowered by COVID deaths. But my adjustment is usually not nearly as strong as Ethical Skeptic's PFE adjustment. And my adjustment doesn't have much effect in young age groups, because it would have little effect on their population size even if they had double the normal number of deaths.</p>
 <p>In the next plot where I plotted ASMR instead of raw deaths and I used the 2010-2019 linear trend in ASMR as the baseline, ages 85+ got positive excess ASMR each year from 2020 to 2023:</p>
 <div class="width8">
@@ -2774,28 +2764,28 @@ system(&quot;magick 1.png -resize 25% 1.png&quot;)
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)</pre>
-</div>
-<pre>agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
-</pre>
-<pre>t=fread(&quot;http://sars2.net/f/wondermalignantyearly.csv&quot;)
+<pre>library(data.table);library(ggplot2)
+
+agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
+
+t=fread(&quot;http://sars2.net/f/wondermalignantyearly.csv&quot;)
 t=t[cause%like%&quot;MCD&quot;&amp;year%in%2010:2023]
 t=merge(t[!cause%like%&quot;COVID&quot;],t[cause%like%&quot;COVID&quot;,.(year,age,and=dead)],all=T)
 t[age&lt;45,and:=0][age==0&amp;year&gt;=2020,and:=c(311,495,477,130)]
 t=t[,.(dead=sum(dead-nafill(and,,0))),.(year,age)]
-</pre>
-<pre>pop=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)[,dead:=NULL]
+
+pop=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)[,dead:=NULL]
 t=merge(pop[year==2020,.(age,std=pop/sum(pop))],merge(t,pop))
-</pre>
-<pre>p=t[,.(asmr=sum(dead/pop*std*1e5)),.(year,group=agecut(age,c(0,45,55,65,75,85)))]
+
+p=t[,.(asmr=sum(dead/pop*std*1e5)),.(year,group=agecut(age,c(0,45,55,65,75,85)))]
 p=merge(p,p[year%in%2010:2019,.(year=2010:2023,trend=predict(lm(asmr~year),.(year=2010:2023))),group])
-</pre>
-<pre>minmax=p[,.(max=max(asmr,trend),min=min(asmr,trend)),group]
+
+minmax=p[,.(max=max(asmr,trend),min=min(asmr,trend)),group]
 p=merge(minmax[,.(group,max,min=max/minmax[,max(max/min)])],p)
-</pre>
-<pre>xstart=2010;xend=2023
-</pre>
-<pre>ggplot(p,aes(x=year,y=asmr))+
+
+xstart=2010;xend=2023
+
+ggplot(p,aes(x=year,y=asmr))+
 facet_wrap(~group,ncol=2,dir=&quot;v&quot;,scales=&quot;free_y&quot;)+
 geom_vline(xintercept=c(2014.5,2019.5),color=&quot;gray80&quot;,linewidth=.25)+
 geom_line(linewidth=.3)+
@@ -2825,8 +2815,8 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   strip.background=element_blank(),
   strip.text=element_blank())
 ggsave(&quot;1.png&quot;,width=4.9,height=3.6,dpi=380*4)
-system(&quot;magick 1.png -resize 25% 1.png&quot;)
-</pre>
+system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
+</div>
 <p>So basically my plots show that if you calculate the baseline in a way that accounts for the changing population size of age groups, then you don't necessarily even need to adjust for the pull-forward effect.</p>
 <h2>
 <a href=#Non_COVID_deaths_from_natural_causes_in_ages_0_to_24 id=Non_COVID_deaths_from_natural_causes_in_ages_0_to_24>Non-COVID deaths from natural causes in ages 0 to 24</a>
@@ -2848,42 +2838,42 @@ system(&quot;magick 1.png -resize 25% 1.png&quot;)
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2);library(lubridate)</pre>
-</div>
-<pre>cul=\(x,y)y[cut(x,c(y,Inf),,T,F)]
-</pre>
-<pre>t=fread(&quot;http://sars2.net/f/wondernatural.csv&quot;)[age&lt;25]
-</pre>
-<pre>pop=fread(&quot;http://sars2.net/f/uspopdeadmonthly.csv&quot;)
+<pre>library(data.table);library(ggplot2);library(lubridate)
+
+cul=\(x,y)y[cut(x,c(y,Inf),,T,F)]
+
+t=fread(&quot;http://sars2.net/f/wondernatural.csv&quot;)[age&lt;25]
+
+pop=fread(&quot;http://sars2.net/f/uspopdeadmonthly.csv&quot;)
 t=merge(t,pop[,.(pop=sum(pop)),.(date,age=cul(age,c(0,1,5,15,25)))])
-</pre>
-<pre>t=t[,date:=as.Date(paste0(date,&quot;-1&quot;))]
+
+t=t[,date:=as.Date(paste0(date,&quot;-1&quot;))]
 t[,dead:=dead/days_in_month(date)]
-</pre>
-<pre>months=sort(unique(t$date))
+
+months=sort(unique(t$date))
 base=t[cause==&quot;A-Q&quot;&amp;year(date)%in%2011:2019][,dead:=nafill(dead,,0)]
 t=merge(base[,.(date=months,base=predict(lm(dead/pop~date),.(date=months))),.(age,cause)],t,all=T)
 t[,base:=base*pop]
-</pre>
-<pre>p=t[,.(base=sum(base),dead=sum(dead)),.(date,cause)]
+
+p=t[,.(base=sum(base),dead=sum(dead)),.(date,cause)]
 p[,cause:=factor(cause,unique(cause))]
 levels(p$cause)=c(&quot;A-Q (natural causes)&quot;,&quot;R (unresolved cause; symptoms and signs; abnormal findings)&quot;)
-</pre>
-<pre>xstart=as.Date(&quot;2015-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
+
+xstart=as.Date(&quot;2015-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
 p=p[date&gt;=xstart&amp;date&lt;=xend]
 xbreak=seq(xstart,xend,&quot;6 month&quot;)
 xlab=c(rbind(&quot;&quot;,2015:2024),&quot;&quot;)
-</pre>
-<pre>cand=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
+
+cand=c(sapply(c(1,2,5),\(x)x*10^c(-10:10)))
 ymax=p[,max(base,dead,na.rm=T)]
 ystep=cand[which.min(abs(cand-ymax/7))]
 ystart=0
 yend=ystep*ceiling(ymax/ystep)
 ybreak=seq(ystart,yend,ystep)
-</pre>
-<pre>color=c(&quot;black&quot;,&quot;gray60&quot;)
-</pre>
-<pre>ggplot(p,aes(x=date+14,y=dead,color=cause))+
+
+color=c(&quot;black&quot;,&quot;gray60&quot;)
+
+ggplot(p,aes(x=date+14,y=dead,color=cause))+
 geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray90&quot;,linewidth=.25)+
 geom_hline(yintercept=c(ystart,yend),linewidth=.25,lineend=&quot;square&quot;)+
 geom_vline(xintercept=c(xstart,xend),linewidth=.25,lineend=&quot;square&quot;)+
@@ -2915,14 +2905,14 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   plot.margin=margin(5,5,5,5),
   plot.title=element_text(size=7.6,face=2,margin=margin(2,,4)))
 ggsave(&quot;1.png&quot;,width=4.3,height=2.8,dpi=450)
-</pre>
-<pre>sub=&quot;\u00a0     This plot does not include deaths with underlying cause V01-Y89 (external causes of morbidity and mortality) or U00-U99 (codes for special purposes; includes COVID).
+
+sub=&quot;\u00a0     This plot does not include deaths with underlying cause V01-Y89 (external causes of morbidity and mortality) or U00-U99 (codes for special purposes; includes COVID).
       The dashed line is a baseline for expected deaths, which was calculated by first doing a linear regression for CMR for each age group in 2011-2019, then multiplying the monthly population estimates of each age group by the value of the projected linear trend, and then adding together the results for each age group.
       Monthly resident population estimates by age are from www2.census.gov/
 programs-surveys/popest/datasets/2020-2022/national/asrh/nc-est2022-alldata-r-file0{1..8}.csv, and from the corresponding files in the 2010-2020 directory. In order to get rid of a sudden jump in population size after the switch from the 2010-2020 to 2020-2022 estimates, the 2010-2020 estimates were multiplied by a slope so that they matched the 2020-2022 estimates at the point where the estimates were merged. The population estimates for 2024 are probably not accurate because they were derived by a linear extrapolation of past population estimates.&quot;
-</pre>
-<pre>system(paste0(&quot;f=1.png;mar=30;w=`identify -format %w $f`;magick \\( $f -chop 0x10 \\) \\( -size $[w-mar*2]x -font Arial -interline-spacing -3 -pointsize 42 caption:&#39;&quot;,sub,&quot;&#39; -gravity southwest -splice $[mar]x20 \\) -append 1.png&quot;))
-</pre>
+
+system(paste0(&quot;f=1.png;mar=30;w=`identify -format %w $f`;magick \\( $f -chop 0x10 \\) \\( -size $[w-mar*2]x -font Arial -interline-spacing -3 -pointsize 42 caption:&#39;&quot;,sub,&quot;&#39; -gravity southwest -splice $[mar]x20 \\) -append 1.png&quot;))</pre>
+</div>
 <p>I think Ethical Skeptic's heavy adjustment for the pull forward effect is not warranted in young age groups, because do ages 0 to 24 really have that many people who were on the verge of death so they would've died soon anyway if they hadn't died of COVID? There weren't even that many COVID deaths in ages 0 to 24.</p>
 <p>In my plot above where I didn't use a PFE-adjusted baseline, there seems to have been a reduced number of deaths in late 2020, but after that deaths from natural causes remained close to the baseline until June 2022 after which they remained consistently above the baseline. So I would say the inflection rather occurred in 2022 and not in early 2021, even though I don't know how to explain the inflection.</p>
 <p>But anyway, the increase above the baseline doesn't seem that impressive impressive in my plot where the monthly number of excess deaths peaks at only about 15% above the baseline.</p>
@@ -2958,37 +2948,37 @@ programs-surveys/popest/datasets/2020-2022/national/asrh/nc-est2022-alldata-r-fi
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)</pre>
-</div>
-<pre>kim=\(x)ifelse(x&gt;=1e3,ifelse(x&gt;=1e6,paste0(x/1e6,&quot;M&quot;),paste0(x/1e3,&quot;k&quot;)),x)
-</pre>
-<pre>years=2011:2023
-</pre>
-<pre>t=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)[,country:=&quot;United States&quot;]
+<pre>library(data.table);library(ggplot2)
+
+kim=\(x)ifelse(x&gt;=1e3,ifelse(x&gt;=1e6,paste0(x/1e6,&quot;M&quot;),paste0(x/1e3,&quot;k&quot;)),x)
+
+years=2011:2023
+
+t=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)[,country:=&quot;United States&quot;]
 t=rbind(t,fread(&quot;http://sars2.net/f/swedenpopdead.csv&quot;)[,country:=&quot;Sweden&quot;])
 t[,country:=factor(country,unique(country))]
-</pre>
-<pre>t=t[year%in%years,.(dead=sum(dead),pop=sum(pop)),.(year,age,country)]
-</pre>
-<pre>t=merge(t,t[year&lt;2020,.(year=years,base=predict(lm(dead/pop~year),.(year=years))),.(age,country)])
+
+t=t[year%in%years,.(dead=sum(dead),pop=sum(pop)),.(year,age,country)]
+
+t=merge(t,t[year&lt;2020,.(year=years,base=predict(lm(dead/pop~year),.(year=years))),.(age,country)])
 t=t[,.(dead=sum(dead),base=sum(base*pop)),.(year,country)]
 t=merge(t,t[year%in%2013:2019,.(year=years,base2=predict(lm(dead~year),.(year=years))),country])
-</pre>
-<pre>p=t[,.(x=year,country,y=unlist(.SD[,-(1:2)]),z=rep(names(.SD)[-(1:2)],each=.N))]
-</pre>
-<pre>lv=c(&quot;Actual deaths&quot;,&quot;2011-2019 linear baseline based on CMR by age&quot;,&quot;2013-2019 linear baseline for raw deaths&quot;)
+
+p=t[,.(x=year,country,y=unlist(.SD[,-(1:2)]),z=rep(names(.SD)[-(1:2)],each=.N))]
+
+lv=c(&quot;Actual deaths&quot;,&quot;2011-2019 linear baseline based on CMR by age&quot;,&quot;2013-2019 linear baseline for raw deaths&quot;)
 p[,z:=`levels&lt;-`(factor(z,unique(z)),lv)]
-</pre>
-<pre>xstart=min(p$x);xend=max(p$x)
+
+xstart=min(p$x);xend=max(p$x)
 ybreak=pretty(p$y);ystart=ybreak[1];yend=max(ybreak)
-</pre>
-<pre>color=c(&quot;black&quot;,&quot;#00aa00&quot;,hsv(21/36,1,.8))
-</pre>
-<pre>minpoint=p[,.(min=min(y),max=max(y)),country]
+
+color=c(&quot;black&quot;,&quot;#00aa00&quot;,hsv(21/36,1,.8))
+
+minpoint=p[,.(min=min(y),max=max(y)),country]
 yratio=minpoint[,max(max/min)]
 minpoint=minpoint[,.(country,y=max/yratio)]
-</pre>
-<pre>ggplot(p,aes(x,y))+
+
+ggplot(p,aes(x,y))+
 facet_wrap(~country,ncol=2,scales=&quot;free&quot;)+
 geom_line(linewidth=.3,aes(color=z))+
 geom_point(aes(alpha=z),size=.5)+
@@ -3028,8 +3018,8 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   strip.background=element_blank(),
   strip.text=element_blank())
 ggsave(&quot;1.png&quot;,width=4.6,height=2.9,dpi=400*4)
-system(&quot;mogrify -resize 25% 1.png&quot;)
-</pre>
+system(&quot;mogrify -resize 25% 1.png&quot;)</pre>
+</div>
 <p>Ethical Skeptic's unadjusted baseline is similar to my blue baseline in the plot above and his PFE-adjusted baseline is a much more extreme version of my green baseline. By 2023 my green baseline has risen close to the blue baseline, but Ethical Skeptic's PFE-adjusted baseline is so low in 2023 that it's about as low as his unadjusted baseline was in 2018. I think his adjustment for mortality displacement is too heavy, and in addition to the PFE adjustment he should also adjust his baseline upwards because of the changing age structure.</p>
 <p>If Ethical Skeptic would plot ASMR instead of raw deaths, then he wouldn't even need to adjust for PFE to account for the reduction in population size due to COVID deaths. In the next plot which shows ASMR from natural causes, I got only about -0.1% total excess ASMR in 2023:</p>
 <div class="width7">
@@ -3039,39 +3029,39 @@ system(&quot;mogrify -resize 25% 1.png&quot;)
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2);library(lubridate)</pre>
-</div>
-<pre>t=fread(&quot;http://sars2.net/f/wondernaturalsingle.csv&quot;)
+<pre>library(data.table);library(ggplot2);library(lubridate)
+
+t=fread(&quot;http://sars2.net/f/wondernaturalsingle.csv&quot;)
 pop=fread(&quot;http://sars2.net/f/uspopdeadmonthly.csv&quot;)
 t=merge(t,pop[,.(date,age,pop=persondays)])[,date:=as.Date(paste0(date,&quot;-1&quot;))]
 t=merge(t,fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)[year==2020,.(age,std=pop/sum(pop))])
 t=t[year(date)%in%2011:2023]
-</pre>
-<pre>a=t[,.(y=sum(dead/pop*std*365e5),z=&quot;Actual ASMR&quot;),.(x=date)]
+
+a=t[,.(y=sum(dead/pop*std*365e5),z=&quot;Actual ASMR&quot;),.(x=date)]
 p=copy(a)
 dates=unique(a$x)
-</pre>
-<pre>a[,month:=month(x)]
+
+a[,month:=month(x)]
 a=merge(a,a[year(x)&lt;2020,.(x=dates,base=predict(lm(y~x),a))])
 a=merge(a[year(x)&lt;2020,.(monthly=mean(y-base)),.(month)],a)
-</pre>
-<pre>p=a[,.(x,y,base=base+monthly,group=&quot;ASMR&quot;)]
+
+p=a[,.(x,y,base=base+monthly,group=&quot;ASMR&quot;)]
 p=rbind(p,p[,.(y=(y/base-1)*100,x,base=NA,group=&quot;Excess ASMR percent&quot;)])
-</pre>
-<pre>p[,group:=factor(group,unique(group))]
-</pre>
-<pre>xstart=min(dates);xend=as.Date(&quot;2024-1-1&quot;);xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=c(rbind(&quot;&quot;,2011:2023),&quot;&quot;)
-</pre>
-<pre>color=c(&quot;black&quot;,&quot;gray60&quot;)
-</pre>
-<pre>sub=&quot;\u00a0    Chapter R is excluded (symptoms, signs, and unresolved cause).
+
+p[,group:=factor(group,unique(group))]
+
+xstart=min(dates);xend=as.Date(&quot;2024-1-1&quot;);xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=c(rbind(&quot;&quot;,2011:2023),&quot;&quot;)
+
+color=c(&quot;black&quot;,&quot;gray60&quot;)
+
+sub=&quot;\u00a0    Chapter R is excluded (symptoms, signs, and unresolved cause).
      ASMR was calculated by single year of age up to ages 100+ so that the vintage 2023 resident population estimates for the year 2020 were used as the standard population. Population estimates were downloaded from www2.census.gov/programs-surveys/popest/tables. Vintage 2020 resident population estimates are used for 2011 to 2019 and vintage 2023 resident population estimates are used for 2020 to 2023. In order to get rid of a sudden jump in the population estimates between 2019 and 2020, the population estimates for each age in 2011 to 2019 were multiplied by a linear slope.
      The gray baseline was calculated by doing a linear regression against the monthly ASMR values in 2011 to 2019, and then the average difference between the actual ASMR and the baseline on each January of 2011 to 2019 was added to the baseline for each January, and similarly for other months. The gray number above the year shows the yearly total excess mortality percent.&quot;
-</pre>
-<pre>yearly=p[group==&quot;ASMR&quot;,.(label=sprintf(&quot;%.1f%%&quot;,(sum(y)/sum(base)-1)*100)),.(x=year(x))]
+
+yearly=p[group==&quot;ASMR&quot;,.(label=sprintf(&quot;%.1f%%&quot;,(sum(y)/sum(base)-1)*100)),.(x=year(x))]
 yearly=cbind(yearly,p[group==&quot;Excess ASMR percent&quot;,.(y=min(y)),group])
-</pre>
-<pre>ggplot(p,aes(x+15,y))+
+
+ggplot(p,aes(x+15,y))+
 facet_wrap(~group,ncol=1,scales=&quot;free&quot;)+
 geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray88&quot;,linewidth=.2)+
 geom_vline(xintercept=as.Date(&quot;2020-1-1&quot;),linetype=5,linewidth=.25)+
@@ -3113,8 +3103,8 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
 ggsave(&quot;1.png&quot;,width=4.4,height=3.4,dpi=400*4)
 system(&quot;magick 1.png -resize 25% 1.png&quot;)
 system(paste0(&quot;f=1.png;mar=30;w=`identify -format %w $f`;magick $f \\( -size $[w-mar*2]x -font Arial -interline-spacing -3 -pointsize 36 caption:&#39;&quot;,sub,&quot;&#39; -gravity southwest -splice $[mar]x14 \\) -append 1.png&quot;))
-system(&quot;qlmanage -p ~/1.png&amp;&gt;/dev/null&quot;)
-</pre>
+system(&quot;qlmanage -p ~/1.png&amp;&gt;/dev/null&quot;)</pre>
+</div>
 <h2>
 <a href=#Deaths_from_pneunomia_with_unspecified_organism id=Deaths_from_pneunomia_with_unspecified_organism>Deaths from pneunomia with unspecified organism</a>
 </h2>
@@ -3271,30 +3261,30 @@ MCD J18 (Pneumonia, organism unspecified) but not MCD COVID (U07)
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2);library(lubridate)</pre>
-</div>
-<pre>cul=\(x,y)y[cut(x,c(y,Inf),,T,F)]
-</pre>
-<pre>t=fread(&quot;http://sars2.net/f/wonderj18u54.csv&quot;)[year!=2024]
+<pre>library(data.table);library(ggplot2);library(lubridate)
+
+cul=\(x,y)y[cut(x,c(y,Inf),,T,F)]
+
+t=fread(&quot;http://sars2.net/f/wonderj18u54.csv&quot;)[year!=2024]
 and=merge(t[cause==&quot;MCD J18&quot;],t[cause%like%&quot;and&quot;,.(year,and=dead)],all=T)
 p=rbind(t[!cause%like%&quot;and&quot;],and[,.(year,dead=dead-nafill(and,,0),cause=&quot;MCD J18 and not MCD COVID&quot;)])
-</pre>
-<pre>p$base=p[year%in%2010:2019,predict(lm(dead~year),.(year=1999:2023)),cause]$V1
+
+p$base=p[year%in%2010:2019,predict(lm(dead~year),.(year=1999:2023)),cause]$V1
 p$base2=p[year%in%2018:2019,predict(lm(dead~year),.(year=1999:2023)),cause]$V1
-</pre>
-<pre>p[,cause:=factor(cause,unique(cause))]
-</pre>
-<pre>xstart=1999;xend=2023;xbreak=seq(xstart-.5,xend+.5,.5);xlab=c(rbind(&quot;&quot;,substr(xstart:xend,3,4)),&quot;&quot;)
-</pre>
-<pre>pct=p[,.(cause,year,pct=round((dead/base-1)*100))]
+
+p[,cause:=factor(cause,unique(cause))]
+
+xstart=1999;xend=2023;xbreak=seq(xstart-.5,xend+.5,.5);xlab=c(rbind(&quot;&quot;,substr(xstart:xend,3,4)),&quot;&quot;)
+
+pct=p[,.(cause,year,pct=round((dead/base-1)*100))]
 mima=p[,.(min=min(dead,base,base2),max=max(dead)),cause][,min:=min-(max-min)*.15][,max:=max+(max-min)*.05]
 pct=merge(pct,mima)
 p=merge(p,mima)
-</pre>
-<pre>lab=c(&quot;Actual deaths&quot;,&quot;2010-2019 linear trend&quot;,&quot;2018-2019 linear trend&quot;)
+
+lab=c(&quot;Actual deaths&quot;,&quot;2010-2019 linear trend&quot;,&quot;2018-2019 linear trend&quot;)
 lab=factor(lab,unique(lab))
-</pre>
-<pre>ggplot(p,aes(x=year,y=dead))+
+
+ggplot(p,aes(x=year,y=dead))+
 facet_wrap(~cause,ncol=1,scales=&quot;free&quot;)+
 geom_vline(xintercept=c(2010,2018,2020)-.5,linewidth=.3,color=&quot;gray70&quot;,linetype=&quot;11&quot;)+
 geom_line(aes(color=lab[1],linetype=lab[1]),linewidth=.3)+
@@ -3341,8 +3331,8 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   strip.text=element_blank())
 ggsave(&quot;1.png&quot;,width=4.2,height=3.7,dpi=400*4)
 system(&quot;magick 1.png -resize 25% 1.png&quot;)
-system(&quot;qlmanage -p ~/1.png&amp;&gt;/dev/null&quot;)
-</pre>
+system(&quot;qlmanage -p ~/1.png&amp;&gt;/dev/null&quot;)</pre>
+</div>
 <p>I suspect some of the excess deaths with MCD J18 and not MCD COVID may have been due to deaths that included COVID as an undiagnosed cause of death, because the number of MCD J18 deaths was about 5 times the baseline level in 2021 but nearly all excess MCD J18 deaths in 2021 also had MCD COVID. So if a diagnosis for COVID was missing for even a small part of deaths that should've had MCD COVID, it might explain a large part of excess deaths in my bottom panel that shows deaths with MCD J18 but not MCD COVID.</p>
 <p>And in any case I don't know if the increase in J18 deaths can be attributed to vaccines, because the period with elevated J18 deaths seems to have already started in 2020. In my plot above the percentage of excess deaths for UCD J18 is about 15% in 2020 but close to zero in 2021, 2022, and 2023.</p>
 <p>Ethical Skeptic said that he got about 40% excess deaths relative to his PFE-adjusted baseline, but in the bottom panel of my plot above which shows deaths with MCD J18 but not MCD COVID, I got only about 20% excess deaths in 2023 even relative to the light gray baseline that was fitted against deaths from 2018-2019. However Ethical Skeptic fitted his baseline against weekly data which might cause it to be steeper than my baseline fitted against yearly data, because there was a high number of deaths in early 2018.</p>
@@ -3354,34 +3344,34 @@ system(&quot;qlmanage -p ~/1.png&amp;&gt;/dev/null&quot;)
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)</pre>
-</div>
-<pre>ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
-</pre>
-<pre>t=fread(&quot;http://sars2.net/f/wonderj18weekly.csv&quot;)[,date:=date-3]
-</pre>
-<pre>t=merge(t[cause==&quot;MCD J18&quot;],t[cause%like%&quot;and&quot;,.(date,and=dead)],all=T)
+<pre>library(data.table);library(ggplot2)
+
+ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
+
+t=fread(&quot;http://sars2.net/f/wonderj18weekly.csv&quot;)[,date:=date-3]
+
+t=merge(t[cause==&quot;MCD J18&quot;],t[cause%like%&quot;and&quot;,.(date,and=dead)],all=T)
 p=t[,.(date,year,week,dead=dead-nafill(and,,0))]
 p[,dead:=ma(dead,3,2)]
 p$base=p[year&lt;2020,predict(lm(dead~date),p)]
-</pre>
-<pre>z=c(&quot;Actual deaths&quot;,&quot;2018-2019 seasonality-adjusted linear baseline&quot;,&quot;2018-2019 linear baseline&quot;)
+
+z=c(&quot;Actual deaths&quot;,&quot;2018-2019 seasonality-adjusted linear baseline&quot;,&quot;2018-2019 linear baseline&quot;)
 facet=c(&quot;Moving average of weekly deaths&quot;,&quot;Excess deaths relative to seasonality-adjusted baseline&quot;)
 p=merge(p[year&lt;2020,mean(dead-base),week],p)[,.(x=date,y=c(dead,base+V1,base,dead-(base+V1)),z=rep(z[c(1:3,1)],each=.N),facet=rep(facet,c(.N*3,.N)))]
 p[,z:=factor(z,unique(z))][,facet:=factor(facet,unique(facet))]
-</pre>
-<pre>ybreak=pretty(p$y)
+
+ybreak=pretty(p$y)
 xstart=as.Date(&quot;2018-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
 xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=c(rbind(&quot;&quot;,2018:2024),&quot;&quot;)
-</pre>
-<pre>lab=p[,.(x=xstart+(xend-xstart)/2,y=max(pretty(y,8))),facet]
-</pre>
-<pre>x1=t[year==2021&amp;week==14,date]
+
+lab=p[,.(x=xstart+(xend-xstart)/2,y=max(pretty(y,8))),facet]
+
+x1=t[year==2021&amp;week==14,date]
 xy2=p[facet==tail(facet,1)][y==max(y)]
 x2=xy2$x;y2=xy2$y;y1=0
 sigma=y2/p[year(x)&lt;2020&amp;facet==tail(facet,1),sd(y)]
-</pre>
-<pre>ggplot(p,aes(x,y))+
+
+ggplot(p,aes(x,y))+
 coord_cartesian(clip=&quot;off&quot;,expand=F)+
 facet_wrap(~facet,ncol=1,scales=&quot;free&quot;)+
 geom_vline(xintercept=seq(xstart,xend,&quot;month&quot;),color=&quot;gray92&quot;,linewidth=.23)+
@@ -3426,8 +3416,8 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   strip.background=element_blank(),
   strip.text=element_blank())
 ggsave(&quot;1.png&quot;,width=5.5,height=3.5,dpi=400*4)
-system(&quot;magick 1.png -resize 25% 1.png&quot;)
-</pre>
+system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
+</div>
 <p>Even though deaths with MCD COVID were excluded from the plot above, there's still a clear spike in excess deaths during the COVID wave in spring 2020. So even after spring 2020 a part of the excess deaths are probably explained by COVID (but most excess deaths are of course explained by the incorrect slope of the baseline).</p>
 <p>On a list of crimes committed by other analysts, Ethical Skeptic included this point: <span class="quote">"Add volatility of peak winter mortality periods into the trend regression, and not index off the summer base. That way a rough flu year will raise the baseline artificially to your advantage."</span> [<a href="https://x.com/EthicalSkeptic/status/1773066903000396096">https://x.com/EthicalSkeptic/status/1773066903000396096</a>] I don't know what method he uses to exclude winter peaks from the regression or to <span class="quote">"index off the summer base"</span>, or if he applied the methods in his plot for J18 deaths. But in the next plot I determined the slope of the baseline by doing a regression for only weeks 15 to 35 of 2018 and 2019, which gave me a more realistic slope of the baseline than in the previous plot, even though my number of excess deaths in the early weeks of 2018 was still much lower than in Ethical Skeptic's plot:</p>
 <div class="width9">

@@ -120,19 +120,18 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <pre>download.file(&quot;https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Publications/NVSR/70-19/Table01.xlsx&quot;,&quot;Table01.xlsx&quot;)
 t=data.table(readxl::read_excel(&quot;Table01.xlsx&quot;,skip=2))
 t=t[,.(age=as.numeric(sub(&quot;\\D.*&quot;,&quot;&quot;,t[[1]])),expectancy=ex)][1:101]
-</pre>
-<pre># deaths where county of residence was one of 5 counties of NYC at CDC WONDER
+
+# deaths where county of residence was one of 5 counties of NYC at CDC WONDER
 dead=fread(&quot;http://sars2.net/f/nycyearlydead.csv&quot;)[age&gt;=16]
-</pre>
-<pre>base=dead[year%in%2010:2019,.(year=2020,base=predict(lm(dead~year),.(year=2020))),age]
+
+base=dead[year%in%2010:2019,.(year=2020,base=predict(lm(dead~year),.(year=2020))),age]
 me=merge(t,merge(base,dead)[,.(excess=dead-base,age)])
-</pre>
-<pre>me[,weighted.mean(age,excess)] # 73.04446 (average age of excess deaths)
-</pre>
-<pre>me[,weighted.mean(expectancy,excess)] # 15.1019 (life expectancy for ages 16 and above)
-</pre>
-<pre>me[age&gt;=50,weighted.mean(expectancy,excess)] # 12.98951 (life expectancy for ages 50 and above)
-</pre>
+
+me[,weighted.mean(age,excess)] # 73.04446 (average age of excess deaths)
+
+me[,weighted.mean(expectancy,excess)] # 15.1019 (life expectancy for ages 16 and above)
+
+me[age&gt;=50,weighted.mean(expectancy,excess)] # 12.98951 (life expectancy for ages 50 and above)</pre>
 <p>Ethical Skeptic wrote: <span class="quote">"The <a href=https://theethicalskeptic.com/wp-content/uploads/2024/02/PFE-Arrival-Function-2.png>function we currently use for PFE</a> is described by 6.6 years (345 weeks - April 2021 - Oct 2027) of Chi-squared arrival, with an anticipated <em>x_mode</em> (function peak) of mid-late 2023 at 6.02% of Excess Non-Covid Natural Cause Mortality."</span> [<a href="https://theethicalskeptic.com/2024/11/20/the-state-of-things-pandemic/">https://theethicalskeptic.com/2024/11/20/the-state-of-things-pandemic/</a>] And he linked this image:</p>
 <div class="width4">
 <img src="i/np-bergamo-pfe-arrival.png">
@@ -146,29 +145,27 @@ me=merge(t,merge(base,dead)[,.(excess=dead-base,age)])
 <pre># 2019 life expectancy table for both sexes combined
 download.file(&quot;https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Publications/NVSR/70-19/Table01.xlsx&quot;,&quot;Table01.xlsx&quot;)
 ex=read_excel(&quot;Table01.xlsx&quot;,skip=2,n_max=101)$ex
-</pre>
-<pre># UCD COVID deaths by single year of age from CDC WONDER (last value is age 100 and above)
+
+# UCD COVID deaths by single year of age from CDC WONDER (last value is age 100 and above)
 coviddead=c(363,116,46,41,39,30,38,32,33,47,40,35,41,56,51,97,88,130,162,210,255,288,367,407,499,530,620,707,819,979,1112,1255,1329,1441,1607,1703,1850,2066,2237,2502,2713,2987,3253,3486,3942,4197,4610,4912,5686,6278,7075,7365,8017,8227,8942,9822,11084,11748,12866,14070,15174,16061,17259,18347,19229,20037,20443,20874,22012,22623,23586,24446,25783,27417,27760,26024,26237,27531,28188,27690,27437,27093,27200,27223,26753,26849,26190,25121,24827,24104,22756,21336,19309,17787,15069,12656,10416,8337,6321,4626,8773)
-</pre>
-<pre>weighted.mean(ex,coviddead) # 14.50457
-</pre>
+
+weighted.mean(ex,coviddead) # 14.50457</pre>
 <p>The following code shows the average life expectancy by month for deaths with UCD COVID. I now calculated the life expectancy separately for males and females even though it didn't make much difference. CDC WONDER suppresses the number of deaths on rows with less than 10 deaths, so I got the number of COVID deaths from the fixed-width files for the NVSS data instead: <a href=stat.html#Download_fixed_width_and_CSV_files_for_the_NVSS_data_used_at_CDC_WONDER>stat.html#Download_fixed_width_and_CSV_files_for_the_NVSS_data_used_at_CDC_WONDER</a>. The life expectancy was unsurprisingly much higher in 2021 than 2020 (which is because the percentage of COVID deaths in 2021 relative to 2020 is much higher in working-age people than in elderly people, which might be because in 2021 working-age people were less likely to be vaccinated than elderly people):</p>
 <pre>dlf=\(x,y=sub(&quot;.*/&quot;,&quot;&quot;,x),...)for(i in 1:length(x))download.file(x[i],y[i],quiet=T,...)
 dlf(paste0(&quot;https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Publications/NVSR/70-19/Table0&quot;,2:3,&quot;.xlsx&quot;))
-</pre>
-<pre>ex=data.table(age=0:100,sex=rep(c(&quot;M&quot;,&quot;F&quot;),each=101))
+
+ex=data.table(age=0:100,sex=rep(c(&quot;M&quot;,&quot;F&quot;),each=101))
 ex$ex=c(sapply(2:3,\(i)read_excel(paste0(&quot;Table0&quot;,i,&quot;.xlsx&quot;),skip=2,n_max=101)$ex))
-</pre>
-<pre>t=do.call(rbind,lapply(2020:2022,\(x)fread(paste0(x,&quot;.csv.gz&quot;))))
+
+t=do.call(rbind,lapply(2020:2022,\(x)fread(paste0(x,&quot;.csv.gz&quot;))))
 a=t[age!=9999&amp;ucod==&quot;U071&quot;,.N,.(year,month=monthdth,sex,age=pmin(100,ifelse(age&lt;2000,age-1000,0)))]
-</pre>
-<pre>merge(ex,a)[,weighted.mean(ex,N),.(year,month)][,xtabs(round(V1)~year+month)]
+
+merge(ex,a)[,weighted.mean(ex,N),.(year,month)][,xtabs(round(V1)~year+month)]
 #       month
 # year    1  2  3  4  5  6  7  8  9 10 11 12
 #   2020 18 19 15 13 12 14 15 14 13 12 12 12
 #   2021 13 14 15 17 18 18 19 19 19 18 17 17
-#   2022 15 14 14 14 12 12 12 12 11 11 11 11
-</pre>
+#   2022 15 14 14 14 12 12 12 12 11 11 11 11</pre>
 <p>Next I made the simulation below using data from ISTAT and Eurostat: <a href="http://dati.istat.it/Index.aspx?QueryId=42869&lang=en">http://dati.istat.it/Index.aspx?QueryId=42869&amp;lang=en</a>, <a href="https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/demo_r_mwk3_t?format=TSV">https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/demo_r_mwk3_t?format=TSV</a>. At first I also tried simulating different people having different levels of health, but I didn't find an accurate way to do it so I left it out of the simulation. When I simply assigned a fixed health multiplier to each person, the people with poor health tended to die at the start of the simulation which artificially elevated deaths at the start of the simulation compared to the end of the simulation. So I should've also modeled the health status of people getting worse over time so that over time new people would've gradually entered the verge of death, but it seemed too difficult to model realistically. But anyway, here in the red scenario where I simulated a spike in excess deaths in spring 2020, I got only about 3.4% less deaths in 2021-2024 than in the black scenario without the spike:</p>
 <div class="width6">
 <img src="i/np-bergamo-sim-1.png">
@@ -177,54 +174,54 @@ a=t[age!=9999&amp;ucod==&quot;U071&quot;,.N,.(year,month=monthdth,sex,age=pmin(1
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)</pre>
-</div>
-<pre>euro=fread(&quot;https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/demo_r_mwk3_t?format=TSV&quot;)
+<pre>library(data.table);library(ggplot2)
+
+euro=fread(&quot;https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/demo_r_mwk3_t?format=TSV&quot;)
 x=unlist(euro[euro[[1]]%like%&quot;ITC46&quot;])[-1];x=x[x!=&quot;:&quot;]
 d=data.table(year=as.integer(substr(names(x),1,4)),week=as.integer(substr(names(x),7,8)))[,x:=.I]
 d$dead=as.integer(sub(&quot; .*&quot;,&quot;&quot;,x))
 d$trend=d[year%in%2013:2019,predict(lm(dead~x),d)]
 d=merge(d,d[year%in%2013:2019,.(weekly=mean(dead-trend)),week])
 mult=d[year==2020&amp;week%in%9:19,dead/(trend+weekly)]
-</pre>
-<pre>pop=c(7406,7625,7880,7909,8570,8867,9439,9725,9850,10350,10545,10991,11427,11617,11950,11864,11816,11905,11706,11809,11864,11769,11942,12225,11878,12078,12004,11527,11715,11477,11525,11993,11984,12231,12064,12631,12406,12205,12752,13256,13417,13627,14005,14351,14612,15773,16026,16577,17824,18126,18084,18163,17907,18161,18285,18240,18270,18805,18653,18690,17266,16377,15528,15325,14804,14145,13294,13184,12725,12372,12000,11680,11546,12114,11851,11748,10684,10850,8014,8288,7876,7855,7494,7977,7060,6379,5353,4372,4140,3445,2908,2471,2016,1701,1185,908,660,456,294,229,281)
-</pre>
-<pre>life=fread(&quot;http://sars2.net/f/bergamolifetable.csv&quot;)
+
+pop=c(7406,7625,7880,7909,8570,8867,9439,9725,9850,10350,10545,10991,11427,11617,11950,11864,11816,11905,11706,11809,11864,11769,11942,12225,11878,12078,12004,11527,11715,11477,11525,11993,11984,12231,12064,12631,12406,12205,12752,13256,13417,13627,14005,14351,14612,15773,16026,16577,17824,18126,18084,18163,17907,18161,18285,18240,18270,18805,18653,18690,17266,16377,15528,15325,14804,14145,13294,13184,12725,12372,12000,11680,11546,12114,11851,11748,10684,10850,8014,8288,7876,7855,7494,7977,7060,6379,5353,4372,4140,3445,2908,2471,2016,1701,1185,908,660,456,294,229,281)
+
+life=fread(&quot;http://sars2.net/f/bergamolifetable.csv&quot;)
 cmr=life[,sum(deaths)/(sum(deaths)+sum(survivors)),.(age=pmin(age,100))]$V1/52
-</pre>
-<pre>simweeks=52*7
+
+simweeks=52*7
 weekmult=rep(1,simweeks);weekmult[113:123]=mult
-</pre>
-<pre>people=data.table(age=rep(0:100,pop))[,age:=age+runif(.N)]
+
+people=data.table(age=rep(0:100,pop))[,age:=age+runif(.N)]
 people2=copy(people)
 sim=data.table(week=1:simweeks,dead=0,dead2=0)
-</pre>
-<pre>set.seed(0)
+
+set.seed(0)
 for(i in 1:simweeks){
   died=people[,rbinom(.N,1,pmin(1,cmr[age+1]*weekmult[i]))]
   people=people[died!=1][,age:=pmin(100,age+1/52)]
   sim$dead[i]=sum(died)
 }
-</pre>
-<pre>set.seed(0)
+
+set.seed(0)
 for(i in 1:simweeks){
   died=people2[,rbinom(.N,1,pmin(1,cmr[age+1]))]
   people2=people2[died!=1][,age:=pmin(100,age+1/52)]
   sim$dead2[i]=sum(died)
 }
-</pre>
-<pre>sim$base=sim[week&lt;105,predict(lm(dead~week),sim)]
+
+sim$base=sim[week&lt;105,predict(lm(dead~week),sim)]
 lab=c(&quot;High-mortality event in 2020&quot;,&quot;No high-mortality event&quot;,&quot;2018-2019 linear trend&quot;)
 p=sim[,.(x=week,y=unlist(.SD[,-1]),z=factor(rep(lab,each=.N),lab))]
-</pre>
-<pre>sum=sim[week%in%105:156,colSums(.SD)]
+
+sum=sim[week%in%105:156,colSums(.SD)]
 sum2=sim[week&gt;156,colSums(.SD)]
 note=stringr::str_wrap(sprintf(&quot;The scenario with the high-mortality event has %.1f%% more deaths in 2020 and %.1f%% less deaths in 2021 to 2024.&quot;,(sum[2]/sum[3]-1)*100,(sum2[3]/sum2[2]-1)*100),32)
-</pre>
-<pre>xstart=1;xend=simweeks+1;xbreak=seq(xstart,xend,26);xlab=c(rbind(&quot;&quot;,2018:2024),&quot;&quot;)
+
+xstart=1;xend=simweeks+1;xbreak=seq(xstart,xend,26);xlab=c(rbind(&quot;&quot;,2018:2024),&quot;&quot;)
 ybreak=pretty(c(0,p$y),8);ystart=0;yend=max(p$y)
-</pre>
-<pre>ggplot(p,aes(x,y))+
+
+ggplot(p,aes(x,y))+
 geom_rect(xmin=113,xmax=123,ymin=0,ymax=yend,fill=&quot;#ffe5e5&quot;)+
 geom_vline(xintercept=seq(xstart,xend,52),linewidth=.25,color=&quot;gray85&quot;,lineend=&quot;square&quot;)+
 geom_hline(yintercept=c(ystart,yend),linewidth=.3,lineend=&quot;square&quot;)+
@@ -260,8 +257,8 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
 ggsave(&quot;1.png&quot;,width=3.7,height=2,dpi=380*4)
 sub=paste0(&quot;Resident population estimates for Bergamo in 2019 were used as the intial population size for each age (from dati.istat.it/Index.aspx?QueryId=42869). The total initial population size was 1,111,228. Mortality rates from the 2019 life table for Bergamo at ISTAT are used throughout the simulation, except in the high-mortality scenario the mortality rates during weeks 9 to 19 of 2020 were multiplied by actual deaths in Bergamo on the same weeks of 2020 divided by a seasonality-adjusted 2013-2019 baseline (from Eurostat dataset demo_r_mwk3_t).&quot;)
 sub=paste0(sub,&quot; Each year is exactly 52 weeks long. Births were not simulated. Seasonal variation in mortality or differences in the health of people were not simulated. The same seed was used for both scenarios so the scenarios are identical in 2018 and 2019.&quot;)
-system(paste0(&quot;mar=120;w=`identify -format %w 1.png`;magick 1.png \\( -size $[w-mar*2]x -font Arial -interline-spacing -4 -pointsize 146 caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\&#39;&quot;,sub),&quot;&#39; -gravity southwest -splice $[mar]x70 \\) -append -resize 25% -colors 256 1.png&quot;))
-</pre>
+system(paste0(&quot;mar=120;w=`identify -format %w 1.png`;magick 1.png \\( -size $[w-mar*2]x -font Arial -interline-spacing -4 -pointsize 146 caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\&#39;&quot;,sub),&quot;&#39; -gravity southwest -splice $[mar]x70 \\) -append -resize 25% -colors 256 1.png&quot;))</pre>
+</div>
 <p>The difference between my simulated scenarios is easier to see in the next plot where I truncated the y-axis and I plotted the deaths as moving averages. But in the case of Bergamo the excess deaths were concentrated to such a brief period of time that the <span class="quote">"PFE arrival function"</span> is more like a square wave than a sine wave, and the depth of the PFE adjustment is more shallow than in plots by ES (or actually my red line is about 3.4% lower on average than the black line in 2021-2024, so it's not much lower than the average depth of Ethical Skeptic's PFE arrival function in 2021-2024, but the depth is still shallower relative to the percentage of excess deaths which was higher in Bergamo than the United States):</p>
 <div class="width6">
 <img src="i/np-bergamo-sim-2.png">
@@ -274,31 +271,31 @@ system(paste0(&quot;mar=120;w=`identify -format %w 1.png`;magick 1.png \\( -size
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)</pre>
-</div>
-<pre>agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
-</pre>
-<pre>ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
-</pre>
-<pre>dead=fread(&quot;comuni_giornaliero_31agosto24.csv.gz&quot;,na=&quot;n.d.&quot;)[NOME_PROVINCIA==&quot;Bergamo&quot;]
+<pre>library(data.table);library(ggplot2)
+
+agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
+
+ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
+
+dead=fread(&quot;comuni_giornaliero_31agosto24.csv.gz&quot;,na=&quot;n.d.&quot;)[NOME_PROVINCIA==&quot;Bergamo&quot;]
 dead=dead[,.(age=c(0,1,1:20*5)[CL_ETA+1],year=rep(2011:2024,each=.N),month=GE%/%100,day=GE%%100,dead=unlist(.SD[,38:51]))]
 ages=c(0,40,60,80,90)
-</pre>
-<pre>a=dead[,.(dead=sum(dead,na.rm=T)),.(age=agecut(age,ages),year,month,day)]
+
+a=dead[,.(dead=sum(dead,na.rm=T)),.(age=agecut(age,ages),year,month,day)]
 a=a[,.(age,y=dead,x=as.Date(paste(year,month,day,sep=&quot;-&quot;)))]
 p=rbind(a,a[,.(y=sum(y),age=&quot;Total&quot;),x])[year(x)&gt;=2013][,yday:=yday(x)]
-</pre>
-<pre>p=merge(p[year(x)&lt;2020,{i=unique(p$x);.(x=i,trend=predict(lm(y~x),.(x=i)))},age],p)
+
+p=merge(p[year(x)&lt;2020,{i=unique(p$x);.(x=i,trend=predict(lm(y~x),.(x=i)))},age],p)
 p=merge(p[year(x)&lt;2020,mean(y-trend),.(yday,age)],p)
 lab=c(&quot;Actual deaths&quot;,&quot;2013-2019 linear trend&quot;)
 p=p[,.(x,y=c(y,trend+V1),age,z=factor(rep(lab,each=.N),lab))][order(x)]
 p[,y:=ma(y,10),.(z,age)]
-</pre>
-<pre>xstart=as.Date(&quot;2018-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
+
+xstart=as.Date(&quot;2018-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
 p=p[x&gt;=xstart&amp;x&lt;=xend]
 xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=ifelse(month(xbreak)==7,year(xbreak),&quot;&quot;)
-</pre>
-<pre>ggplot(p,aes(x,y))+
+
+ggplot(p,aes(x,y))+
 facet_wrap(~age,scales=&quot;free&quot;,dir=&quot;v&quot;,ncol=2)+
 geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),linewidth=.25,color=&quot;gray85&quot;,lineend=&quot;square&quot;)+
 geom_line(aes(color=z),linewidth=.35)+
@@ -336,8 +333,8 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   strip.background=element_blank(),
   strip.text=element_blank())
 ggsave(&quot;1.png&quot;,width=5.8,height=4,dpi=380*4)
-system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)
-</pre>
+system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
+</div>
 <p>Here when I divided the number of excess deaths on weeks 9 to 19 of 2020 with the resident population estimate on January 1st 2020, it was about 7% in ages 90+ but only about 5% in ages 85-89 and 3% in ages 80-84:</p>
 <pre>euro=fread(&quot;estat_demo_r_mweek3.tsv.gz&quot;,na=&quot;:&quot;)
 meta=fread(text=euro[[1]],header=F)
@@ -345,14 +342,14 @@ euro=cbind(meta[,.(age=V4)],euro[,-1])[meta[,V3==&quot;T&quot;&amp;V5==&quot;ITC
 euro[,age:=ifelse(age==&quot;Y_LT5&quot;,0,as.integer(sub(&quot;\\D+(\\d+).*&quot;,&quot;\\1&quot;,age)))]
 euro=euro[,.(age,date=rep(names(.SD)[-1],each=.N),dead=as.integer(sub(&quot; .*&quot;,&quot;&quot;,unlist(.SD[,-1],,F))))]
 euro[,year:=as.integer(substr(date,1,4))][,week:=as.integer(substr(date,7,8))]
-</pre>
-<pre>a=euro[week%in%9:19,.(dead=sum(dead)),.(age,year)][year&gt;=2013]
+
+a=euro[week%in%9:19,.(dead=sum(dead)),.(age,year)][year&gt;=2013]
 ex=merge(a[year==2020],a[,predict(lm(dead~year),.(year=2020)),age])[,.(age,excess=dead-V1)]
-</pre>
-<pre># resident population estimate on January 1st 2020 from dati.istat.it/Index.aspx?QueryId=42869
+
+# resident population estimate on January 1st 2020 from dati.istat.it/Index.aspx?QueryId=42869
 pop=data.table(age=0:18*5,pop=c(35349,51917,58050,57058,57116,55881,59096,65303,76378,89485,91969,87414,72505,63069,61768,45496,40271,24711,15290))
-</pre>
-<pre>merge(ex,pop)[,.(age,excess=round(excess),pop,poppct=round(excess/pop*100,2))]|&gt;print(r=F)
+
+merge(ex,pop)[,.(age,excess=round(excess),pop,poppct=round(excess/pop*100,2))]|&gt;print(r=F)
 # age excess   pop poppct
 #   0     -2 35349  -0.01
 #   5      0 51917   0.00
@@ -372,8 +369,7 @@ pop=data.table(age=0:18*5,pop=c(35349,51917,58050,57058,57116,55881,59096,65303,
 #  75    857 45496   1.88
 #  80   1185 40271   2.94
 #  85   1137 24711   4.60
-#  90   1095 15290   7.16
-</pre>
+#  90   1095 15290   7.16</pre>
 <p>In the next plot I did a similar simulation for NYC as the earlier simulation for Bergamo. Now the number of deaths in the red scenario where I simulated the COVID event was only about 3.1% lower in 2021-2024 than in the black scenario without the COVID event. I don't know why the reduction was so much smaller than in the simulation for Bergamo, even though the total percentage of excess deaths in the first half of 2020 was only slightly higher in Bergamo than NYC:</p>
 <div class="width6">
 <img src="i/np-bergamo-nycsim.png">
@@ -382,51 +378,51 @@ pop=data.table(age=0:18*5,pop=c(35349,51917,58050,57058,57116,55881,59096,65303,
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)</pre>
-</div>
-<pre>simmonths=12*7
+<pre>library(data.table);library(ggplot2)
+
+simmonths=12*7
 monthmult=rep(1,simmonths)
-</pre>
-<pre>nyc=fread(&quot;http://sars2.net/f/nycmonthlydead.csv&quot;)
+
+nyc=fread(&quot;http://sars2.net/f/nycmonthlydead.csv&quot;)
 monthmult[25:30]=merge(nyc[year&lt;2020,mean(dead),month],nyc)[year==2020,dead/V1][1:6]
-</pre>
-<pre>pop=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)[year==2018]
+
+pop=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)[year==2018]
 cmr=pop[,dead/pop]/12
-</pre>
-<pre>popfrac=pop[,sum(pop)/8.8e6]
+
+popfrac=pop[,sum(pop)/8.8e6]
 people=data.table(age=pop[,rep(age,pop/popfrac)])[,age:=age+runif(.N)]
 people$health=1 # don&#39;t model health of people
 # sd=1;people[,health:=2^rnorm(.N,log(2)*sd^2/-2,sd)] # include health multipliers in model
-</pre>
-<pre>sim=data.table(month=1:simmonths,dead=0,dead2=0)
+
+sim=data.table(month=1:simmonths,dead=0,dead2=0)
 people2=copy(people)
-</pre>
-<pre>set.seed(0)
+
+set.seed(0)
 for(i in 1:simmonths){
   died=people[,rbinom(.N,1,pmin(1,cmr[age+1]*health*monthmult[i]))]
   people=people[died!=1][,age:=pmin(100,age+1/12)]
   sim$dead[i]=sum(died)
 }
-</pre>
-<pre>set.seed(0)
+
+set.seed(0)
 for(i in 1:simmonths){
   died=people2[,rbinom(.N,1,pmin(1,cmr[age+1]*health))]
   people2=people2[died!=1][,age:=pmin(100,age+1/12)]
   sim$dead2[i]=sum(died)
 }
-</pre>
-<pre>sim$base=sim[month&lt;25,predict(lm(dead~month),sim)]
+
+sim$base=sim[month&lt;25,predict(lm(dead~month),sim)]
 lab=c(&quot;With high-mortality event&quot;,&quot;No high-mortality event&quot;,&quot;2018-2019 linear trend&quot;)
 p=sim[,.(x=month,y=unlist(.SD[,-1]),z=factor(rep(lab,each=.N),lab))]
-</pre>
-<pre>sum=sim[month%in%25:36,colSums(.SD)]
+
+sum=sim[month%in%25:36,colSums(.SD)]
 sum2=sim[month&gt;36,colSums(.SD)]
 note=stringr::str_wrap(sprintf(&quot;The scenario with the high-mortality event has %.1f%% more deaths in 2020 and %.1f%% less deaths in 2021 to 2024.&quot;,(sum[2]/sum[3]-1)*100,(sum2[3]/sum2[2]-1)*100),32)
-</pre>
-<pre>xstart=1;xend=simmonths+1;xbreak=seq(xstart,xend,6);xlab=c(rbind(&quot;&quot;,2018:2024),&quot;&quot;)
+
+xstart=1;xend=simmonths+1;xbreak=seq(xstart,xend,6);xlab=c(rbind(&quot;&quot;,2018:2024),&quot;&quot;)
 ybreak=pretty(c(0,p$y),8);ystart=0;yend=max(p$y)+.02
-</pre>
-<pre>ggplot(p,aes(x+.5,y))+
+
+ggplot(p,aes(x+.5,y))+
 geom_vline(xintercept=seq(xstart,xend,12),linewidth=.3,color=&quot;gray83&quot;,lineend=&quot;square&quot;)+
 geom_hline(yintercept=c(ystart,yend),linewidth=.3,lineend=&quot;square&quot;)+
 geom_vline(xintercept=c(xstart,xend),linewidth=.3,lineend=&quot;square&quot;)+
@@ -460,25 +456,24 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   plot.margin=margin(4,4,2,4),
   plot.title=element_text(size=7.5,face=&quot;bold&quot;,margin=margin(1,,3)))
 ggsave(&quot;1.png&quot;,width=3.7,height=2,dpi=380*4)
-</pre>
-<pre>sub=paste0(&quot;The initial population size was 8.8 million so that the size of each age in the mid-2018 US resident population estimates was divided by about 37.3 (because population estimates for NYC by single year of age were not available). US mortality rates in the year 2018 are used for each single year of age throughout the simulation, except in the high-mortality scenario the monthly mortality rates in the first half of 2020 were multiplied by the number of deaths during the month in NYC divided by the average number of deaths during the same month in NYC in 2018 and 2019.&quot;)
+
+sub=paste0(&quot;The initial population size was 8.8 million so that the size of each age in the mid-2018 US resident population estimates was divided by about 37.3 (because population estimates for NYC by single year of age were not available). US mortality rates in the year 2018 are used for each single year of age throughout the simulation, except in the high-mortality scenario the monthly mortality rates in the first half of 2020 were multiplied by the number of deaths during the month in NYC divided by the average number of deaths during the same month in NYC in 2018 and 2019.&quot;)
 sub=paste0(sub,&quot; The length of each month is 1/12 years. Births are not simulated. Seasonal variation in mortality or differences in the health of people were not simulated. The same seed was used for both scenarios so the scenarios are identical in 2018 and 2019.&quot;)
-system(paste0(&quot;mar=120;w=`identify -format %w 1.png`;magick 1.png \\( -size $[w-mar*2]x -font Arial -interline-spacing -4 -pointsize 146 caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\&#39;&quot;,sub),&quot;&#39; -gravity southwest -splice $[mar]x70 \\) -append -resize 25% -colors 256 1.png&quot;))
-</pre>
+system(paste0(&quot;mar=120;w=`identify -format %w 1.png`;magick 1.png \\( -size $[w-mar*2]x -font Arial -interline-spacing -4 -pointsize 146 caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\&#39;&quot;,sub),&quot;&#39; -gravity southwest -splice $[mar]x70 \\) -append -resize 25% -colors 256 1.png&quot;))</pre>
+</div>
 <p>In Ethical Skeptic's plots which display weekly excess deaths from 2018 onwards, he fits a linear baseline against deaths from only 2018 and 2019. However his baseline is often too low especially in 2023 and 2024, because the long-term trend in deaths is curved upwards due to the aging population, so in addition to adjusting his baseline downwards to account for the PFE, he should also adjust his baseline upwards to account for the aging population. In my simulation above between the second half of 2020 and 2024, the difference between the black line and gray 2018-2019 baseline was about twice as big than the difference between the black and red lines. But basically Ethical Skeptic should also adjust his linear baseline so it would be slightly curved upwards like the black line in my simulation above.</p>
 <p>Jean Fisch pointed out to Jessica Hockett that <span class="quote">"the average age of a covid death was 80"</span> and <span class="quote">"80yo Italians have only an annual probabilitty of 4% of dying in each of the 3 subsequent years"</span>. [<a href="https://x.com/Jean%5f%5fFisch/status/1861413598343663657">https://x.com/Jean%5f%5fFisch/status/1861413598343663657</a>] However it might be more accurate to calculate the weighted average of the probability of dying over the next year where the weight is the number of COVID deaths for each age. I didn't find deaths in Bergamo by single year of age. But when I multiplied the likelihood of dying over the next year from the 2019 US life table with the number of excess deaths for each age in NYC in 2020, the overall probability of dying over the next year was about 6.3%:</p>
 <pre># 2019 US life table for both sexes combined
 download.file(&quot;https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Publications/NVSR/70-19/Table01.xlsx&quot;,&quot;Table01.xlsx&quot;)
 qx=setDT(readxl::read_excel(&quot;Table01.xlsx&quot;,skip=2,n_max=101))[,.(age=0:100,ex)]
-</pre>
-<pre># yearly deaths from CDC WONDER where the county of occurrence is one of 5 counties of NYC
+
+# yearly deaths from CDC WONDER where the county of occurrence is one of 5 counties of NYC
 # ages below 16 are excluded because they had years where the number of deaths was suppressed
 dead=fread(&quot;http://sars2.net/f/nycyearlydead.csv&quot;)[age&gt;=16]
 base=dead[year%in%2010:2019,.(year=2020,base=predict(lm(dead~year),.(year=2020))),age]
-</pre>
-<pre>me=merge(qx,merge(base,dead)[,.(excess=dead-base),age])
-me[,weighted.mean(qx,excess)] # 0.06320128 (about 6.3% probability of dying over the next year)
-</pre>
+
+me=merge(qx,merge(base,dead)[,.(excess=dead-base),age])
+me[,weighted.mean(qx,excess)] # 0.06320128 (about 6.3% probability of dying over the next year)</pre>
 <p>In the next code for Bergamo I used 5-year age groups up to 90+ because I didn't find data for deaths by single year of age. But when I took a weighted average of 2019 mortality rates where the weight was the number of excess deaths for each age group on weeks 9 to 19 of 2020, the resulting likelihood of dying over the next year was about 7.0%:</p>
 <pre>euro=fread(&quot;estat_demo_r_mweek3.tsv.gz&quot;,na=&quot;:&quot;)
 meta=fread(text=euro[[1]],header=F)
@@ -486,15 +481,14 @@ euro=cbind(meta[,.(age=V4)],euro[,-1])[meta[,V3==&quot;T&quot;&amp;V5==&quot;ITC
 euro[,age:=ifelse(age==&quot;Y_LT5&quot;,0,as.integer(sub(&quot;\\D+(\\d+).*&quot;,&quot;\\1&quot;,age)))]
 euro=euro[,.(age,date=rep(names(.SD)[-1],each=.N),dead=as.integer(sub(&quot; .*&quot;,&quot;&quot;,unlist(.SD[,-1],,F))))]
 euro[,year:=as.integer(substr(date,1,4))][,week:=as.integer(substr(date,7,8))]
-</pre>
-<pre>a=euro[week%in%9:19,.(dead=sum(dead)),.(age,year)][year&gt;=2013]
+
+a=euro[week%in%9:19,.(dead=sum(dead)),.(age,year)][year&gt;=2013]
 ex=merge(a[year==2020],a[,predict(lm(dead~year),.(year=2020)),age])[,.(age,excess=dead-V1)]
-</pre>
-<pre># from dati.istat.it/Index.aspx?QueryId=42869
+
+# from dati.istat.it/Index.aspx?QueryId=42869
 pop=data.table(age=0:18*5,pop=c(39390,48231,56530,59100,59678,58801,59797,63250,70012,84326,90600,92658,79300,65720,59191,49584,38262,23689,13109))
 cmr=merge(pop,eu[year==2019,sum(dead),age])[,V1/pop]
-weighted.mean(cmr,ex$excess) # 0.07036192
-</pre>
+weighted.mean(cmr,ex$excess) # 0.07036192</pre>
 <h2>
 <a href=#Denis_Rancourt_Did_over_half_of_death_certificates_for_COVID_refer_to_bacterial_pneumonia id=Denis_Rancourt_Did_over_half_of_death_certificates_for_COVID_refer_to_bacterial_pneumonia>Denis Rancourt: Did over half of death certificates for COVID refer to bacterial pneumonia?</a>
 </h2>
@@ -506,22 +500,21 @@ weighted.mean(cmr,ex$excess) # 0.07036192
 <p>The figures included various forms of pneumonia and not only bacterial pneumonia, even though the paper didn't seem to specify which ICD codes were included under the label of pneumonia.</p>
 <p>The death record data used at CDC WONDER can be downloaded from here: <a href="https://cdc.gov/nchs/nvss/mortality_public_use_data.htm">https://cdc.gov/nchs/nvss/mortality_public_use_data.htm</a>. In the files for 2020-2022, about 51% of deaths with UCD U07.1 have MCD J18.9 (pneumonia, unspecified), which is by far the most common MCD for deaths with UCD COVID. The most common MCD for specifically bacterial pneumonia is J15.9 (Bacterial pneumonia, unspecified), which is only included for about 1.2% deaths with UCD COVID, followed by J15.2 (Pneumonia due to staphylococcus, 0.5%), J15.1 (Pneumonia due to Pseudomonas, 0.3%), and J15.0 (Pneumonia due to Klebsiella pneumoniae, 0.1%):</p>
 <pre>system(&quot;wget https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/mortality/mort202{0..2}us.zip;unzip mort202?us.zip&quot;)
-</pre>
-<pre>library(readr);library(data.table)
-</pre>
-<pre>t=do.call(rbind,lapply(Sys.glob(paste0(&quot;VS&quot;,20:22,&quot;MORT.*&quot;)),\(i)setDT(read_fwf(i,fwf_cols(restatus=c(20,20),age=c(70,73),ucod=c(146,149),enicon_1=c(167,170),enicon_2=c(174,177),enicon_3=c(181,184),enicon_4=c(188,191),enicon_5=c(195,198),enicon_6=c(202,205),enicon_7=c(209,212),enicon_8=c(216,219),enicon_9=c(223,226),enicon_10=c(230,233),enicon_11=c(237,240),enicon_12=c(244,247),enicon_13=c(251,254),enicon_14=c(258,261),enicon_15=c(265,268),enicon_16=c(272,275),enicon_17=c(279,282),enicon_18=c(286,289),enicon_19=c(293,296),enicon_20=c(300,303))))))
-</pre>
-<pre>t[age==9999,age:=NA][,age:=ifelse(age&lt;2000,age%%1000,0)]
+
+library(readr);library(data.table)
+
+t=do.call(rbind,lapply(Sys.glob(paste0(&quot;VS&quot;,20:22,&quot;MORT.*&quot;)),\(i)setDT(read_fwf(i,fwf_cols(restatus=c(20,20),age=c(70,73),ucod=c(146,149),enicon_1=c(167,170),enicon_2=c(174,177),enicon_3=c(181,184),enicon_4=c(188,191),enicon_5=c(195,198),enicon_6=c(202,205),enicon_7=c(209,212),enicon_8=c(216,219),enicon_9=c(223,226),enicon_10=c(230,233),enicon_11=c(237,240),enicon_12=c(244,247),enicon_13=c(251,254),enicon_14=c(258,261),enicon_15=c(265,268),enicon_16=c(272,275),enicon_17=c(279,282),enicon_18=c(286,289),enicon_19=c(293,296),enicon_20=c(300,303))))))
+
+t[age==9999,age:=NA][,age:=ifelse(age&lt;2000,age%%1000,0)]
 sub=t[restatus!=4&amp;ucod==&quot;U071&quot;]
-</pre>
-<pre>icd=setkey(fread(&quot;http://sars2.net/f/wonderbyicd.csv.gz&quot;)[rowid(code)==1][,code:=sub(&quot;.&quot;,&quot;&quot;,code,fixed=T)],&quot;code&quot;)
-</pre>
-<pre>mcd=na.omit(sub[,.(id=.I,age,pos=rep(1:20,each=.N),code=unlist(.SD[,-(1:3)],,F))])
+
+icd=setkey(fread(&quot;http://sars2.net/f/wonderbyicd.csv.gz&quot;)[rowid(code)==1][,code:=sub(&quot;.&quot;,&quot;&quot;,code,fixed=T)],&quot;code&quot;)
+
+mcd=na.omit(sub[,.(id=.I,age,pos=rep(1:20,each=.N),code=unlist(.SD[,-(1:3)],,F))])
 mcd$cause=icd[mcd$code,cause]
 o=merge(mcd[rowid(id,code)==1,.(pct=.N/sub[,.N]*100,age=mean(age)),code],icd)
-</pre>
-<pre>o[order(-pct)][1:200,writeLines(sprintf(&quot;%5.1f %4.1f %4-s %s&quot;,pct,age,code,cause))]
-</pre>
+
+o[order(-pct)][1:200,writeLines(sprintf(&quot;%5.1f %4.1f %4-s %s&quot;,pct,age,code,cause))]</pre>
 <!-- -->
 <pre>100.0 73.5 U071 COVID-19
  50.7 72.7 J189 Pneumonia, unspecified
@@ -551,8 +544,7 @@ o=merge(mcd[rowid(id,code)==1,.(pct=.N/sub[,.N]*100,age=mean(age)),code],icd)
 [...]
   0.1 64.7 J150 Pneumonia due to Klebsiella pneumoniae
 [...]
-  0.1 72.8 J128 Other viral pneumonia
-</pre>
+  0.1 72.8 J128 Other viral pneumonia</pre>
 <p>There's a total of 954,269 records with UCD COVID but only 21,350 records had any of the ICD codes that specifically designate bacterial pneumonia (J13-J15). There's of course a lot of people who had the MCD for unspecified pneumonia even though they actually had bacterial pneumonia or pneumonia that was due to a bacterial coinfection along with SARS-CoV-2.</p>
 <p>But in any case pneumonia is a symptom of COVID itself, so the looking at the prevalence of any form of pneumonia among people who died from COVID is not a reasonable way to estimate the prevalence of bacterial pneumonia among people who died from COVID.</p>
 <p>Here's the causes of death listed for 5 random people with UCD COVID, where you can see that all 5 people had some additional respiratory-related MCD besides COVID:</p>
@@ -565,15 +557,15 @@ MCD 3: U071 COVID-19
 MCD 4: A419 Septicaemia, unspecified
 MCD 5: N19 Unspecified renal failure
 MCD 6: K567 Ileus, unspecified
-</pre>
-<pre>age 73:
+
+age 73:
 MCD 1: J189 Pneumonia, unspecified
 MCD 2: U071 COVID-19
 MCD 3: I10 Essential (primary) hypertension
 MCD 4: R568 Other and unspecified convulsions
 MCD 5: I64 Stroke, not specified as haemorrhage or infarction
-</pre>
-<pre>age 38:
+
+age 38:
 MCD 1: J80 Adult respiratory distress syndrome
 MCD 2: U071 COVID-19
 MCD 3: J189 Pneumonia, unspecified
@@ -583,8 +575,8 @@ MCD 6: D689 Coagulation defect, unspecified
 MCD 7: I802 Phlebitis and thrombophlebitis of other deep vessels of lower extremities
 MCD 8: J939 Pneumothorax, unspecified
 MCD 9: I319 Disease of pericardium, unspecified
-</pre>
-<pre>age 80:
+
+age 80:
 MCD 1: U071 COVID-19
 MCD 2: J189 Pneumonia, unspecified
 MCD 3: U071 COVID-19
@@ -594,8 +586,8 @@ MCD 6: C300 Nasal cavity - Malignant neoplasms
 MCD 7: I251 Atherosclerotic heart disease
 MCD 8: I739 Peripheral vascular disease, unspecified
 MCD 9: M069 Rheumatoid arthritis, unspecified
-</pre>
-<pre>age 61:
+
+age 61:
 MCD 1: I469 Cardiac arrest, unspecified
 MCD 2: U071 COVID-19
 MCD 3: J189 Pneumonia, unspecified
@@ -603,8 +595,7 @@ MCD 4: J80 Adult respiratory distress syndrome
 MCD 5: N179 Acute renal failure, unspecified
 MCD 6: J189 Pneumonia, unspecified
 MCD 7: D696 Thrombocytopenia, unspecified
-MCD 8: I739 Peripheral vascular disease, unspecified
-</pre>
+MCD 8: I739 Peripheral vascular disease, unspecified</pre>
 <p>CDC's guidelines for filling a COVID death certificate say: <span class="quote">"Intermediate causes are those conditions that typically have multiple possible underlying etiologies and thus, a UCOD must be specified on a line below in Part I. For example, pneumonia is an intermediate cause of death since it can be caused by a variety of infectious agents or by inhaling a liquid or chemical. Pneumonia is important to report in a cause-of-death statement but, generally, it is not the UCOD. The cause of pneumonia, such as COVID-19, needs to be stated on the lowest line used in Part I."</span> [<a href="https://www.cdc.gov/nchs/data/nvss/vsrg/vsrg03-508.pdf">https://www.cdc.gov/nchs/data/nvss/vsrg/vsrg03-508.pdf</a>] The same CDC document also says: <span class="quote">"If COVID-19 played a role in the death, this condition should be specified on the death certificate. In many cases, it is likely that it will be the UCOD, as it can lead to various life-threatening conditions, such as pneumonia and acute respiratory distress syndrome (ARDS). In these cases, COVID-19 should be reported on the lowest line used in Part I with the other conditions to which it gave rise listed on the lines above it."</span></p>
 <h2>
 <a href=#USMortality_Why_did_the_spike_in_excess_deaths_only_occur_in_spring_2020_if_the_virus_was_released_in_2019 id=USMortality_Why_did_the_spike_in_excess_deaths_only_occur_in_spring_2020_if_the_virus_was_released_in_2019>USMortality: Why did the spike in excess deaths only occur in spring 2020 if the virus was released in 2019?</a>
@@ -622,9 +613,9 @@ MCD 8: I739 Peripheral vascular disease, unspecified
 <button>
 Show code
 </button>
-<pre>library(deSolve);library(ggplot2)</pre>
-</div>
-<pre>seir=\(time,state,parameters){
+<pre>library(deSolve);library(ggplot2)
+
+seir=\(time,state,parameters){
   with(as.list(c(state,parameters)),{
     dS&lt;--beta*S*I/N
     dE=beta*S*I/N-sigma*E
@@ -634,21 +625,21 @@ Show code
     list(c(dS,dE,dI,dR,dD))
   })
 }
-</pre>
-<pre>N=8e9 # population size
+
+N=8e9 # population size
 beta=0.3 # transmission rate
 sigma=1/5 # incubation period 5 days
 gamma=1/8 # infectious period 8 days
 death_rate=.0001 # infection fatality rate 0.01%
-</pre>
-<pre>xstart=0;xend=400;xstep=20;days=0:xend
-</pre>
-<pre>init=c(S=N-1,E=0,I=1,R=0,D=0)
+
+xstart=0;xend=400;xstep=20;days=0:xend
+
+init=c(S=N-1,E=0,I=1,R=0,D=0)
 par=c(beta=beta,sigma=sigma,gamma=gamma,death_rate=death_rate,N=N)
 p=as.data.frame(ode(y=init,times=days,func=seir,parms=par))
 p$dead=diff(c(0,p$D))
-</pre>
-<pre>sub=paste0(&quot;A single infection was introduced
+
+sub=paste0(&quot;A single infection was introduced
 on the first day of the simulation.
 Population size is 8 billion,
 transmission rate beta is 0.3,
@@ -656,10 +647,10 @@ incubation rate sigma is 1/5 days,
 recovery rate gamma is 1/8 days,
 infection fatality rate is 0.01%.
 Total deaths &quot;,formatC(sum(p$dead),digits=0,format=&quot;f&quot;,big.mark=&quot;,&quot;),&quot;.&quot;)
-</pre>
-<pre>ybreak=pretty(p$dead);ystart=0;yend=max(p$dead)*1.04
-</pre>
-<pre>ggplot(p,aes(x=time,y=dead))+
+
+ybreak=pretty(p$dead);ystart=0;yend=max(p$dead)*1.04
+
+ggplot(p,aes(x=time,y=dead))+
 geom_vline(xintercept=c(xstart,xend),lineend=&quot;square&quot;,linewidth=.3)+
 geom_hline(yintercept=c(ystart,yend),lineend=&quot;square&quot;,linewidth=.3)+
 geom_line(color=&quot;red&quot;,linewidth=.8)+
@@ -677,8 +668,8 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   plot.margin=margin(4,10,4,4,&quot;pt&quot;),
   plot.title=element_text(face=2,size=8.4,margin=margin(1,,4)))
 ggsave(&quot;1.png&quot;,width=4,height=2.3,dpi=400*4)
-system(&quot;magick 1.png -resize 25% PNG8:1.png&quot;)
-</pre>
+system(&quot;magick 1.png -resize 25% PNG8:1.png&quot;)</pre>
+</div>
 <p>Some people from the no-pandemic crowd have made claims like that there were no excess deaths anywhere in the world before the day of the WHO pandemic declaration. USMortality probably knows better because he has done a lot of work aggregating worldwide mortality data. But I pointed out to him anyway that in Bergamo the deaths had already reached about halfway up to the peak on the day of the WHO pandemic declaration:</p>
 <div class="width6">
 <img src="i/np-marchpeak-3.png">
@@ -687,24 +678,24 @@ system(&quot;magick 1.png -resize 25% PNG8:1.png&quot;)
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)</pre>
-</div>
-<pre>agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
-</pre>
-<pre>ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
-</pre>
-<pre>dead=fread(&quot;comuni_giornaliero_31agosto24.csv.gz&quot;,na=&quot;n.d.&quot;)[NOME_PROVINCIA==&quot;Bergamo&quot;]
+<pre>library(data.table);library(ggplot2)
+
+agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
+
+ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
+
+dead=fread(&quot;comuni_giornaliero_31agosto24.csv.gz&quot;,na=&quot;n.d.&quot;)[NOME_PROVINCIA==&quot;Bergamo&quot;]
 dead=dead[,.(age=c(0,1,1:20*5)[CL_ETA+1],year=rep(2011:2024,each=.N),month=GE%/%100,day=GE%%100,dead=unlist(.SD[,38:51]))]
-</pre>
-<pre>p=dead[,.(y=sum(dead)),.(x=yea(year,month,day))]
-</pre>
-<pre>xstart=as.Date(&quot;2019-1-1&quot;);xend=as.Date(&quot;2022-1-1&quot;)
+
+p=dead[,.(y=sum(dead)),.(x=yea(year,month,day))]
+
+xstart=as.Date(&quot;2019-1-1&quot;);xend=as.Date(&quot;2022-1-1&quot;)
 p=p[x&gt;=xstart&amp;x&lt;=xend]
 xbreak=seq(xstart+182,xend,&quot;year&quot;);xlab=year(xbreak)
-</pre>
-<pre>annox=as.Date(&quot;2020-3-11&quot;);annoy=p[x==annox,y]
-</pre>
-<pre>ggplot(p,aes(x,y))+
+
+annox=as.Date(&quot;2020-3-11&quot;);annoy=p[x==annox,y]
+
+ggplot(p,aes(x,y))+
 geom_vline(xintercept=as.Date(&quot;2020-3-11&quot;),color=&quot;blue&quot;,linewidth=.3,linetype=&quot;42&quot;,lineend=&quot;square&quot;)+
 geom_vline(xintercept=seq(xstart,xend,&quot;month&quot;),linewidth=.25,color=&quot;gray85&quot;,lineend=&quot;square&quot;)+
 geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),linewidth=.3,color=&quot;black&quot;,lineend=&quot;square&quot;)+
@@ -741,8 +732,8 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   plot.subtitle=element_text(size=7,margin=margin(,,3)),
   plot.title=element_text(size=7.5,face=&quot;bold&quot;,margin=margin(,,3)))
 ggsave(&quot;1.png&quot;,width=4,height=2.5,dpi=380*4)
-system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)
-</pre>
+system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
+</div>
 <p>USMortality told me: <span class="quote">"It's almost impossible for a single point emergence to cause peaks in the exact same week all over the world!"</span> But I pointed out that the peak in deaths was not even close to the same week all over the world, and I posted this plot of countries with at least 80% monthly excess deaths at OWID in 2020:</p>
 <div class="width5">
 <img src="i/np-marchpeak-4.png">
@@ -751,42 +742,41 @@ system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)
 <button>
 Show code
 </button>
-<pre>download.file(&quot;https://covid.ourworldindata.org/data/owid-covid-data.csv&quot;,&quot;owid-covid-data.csv&quot;)</pre>
-</div>
-<pre>download.file(&quot;https://gist.githubusercontent.com/tadast/8827699/raw/61b2107766d6fd51e2bd02d9f78f6be081340efc/countries_codes_and_coordinates.csv&quot;,&quot;latlongiso3.csv&quot;)
-</pre>
-<pre>library(data.table)
-</pre>
-<pre>yemo=\(x){u=unique(x);format(u,&quot;%Y-%m&quot;)[match(x,u)]}
-</pre>
-<pre>t=fread(&quot;owid-covid-data.csv&quot;)
-</pre>
-<pre>lat=r(&quot;f/countrylatlongiso3&quot;)[,.(iso_code=`Alpha-3 code`,lat=`Latitude (average)`,long=`Longitude (average)`)]
+<pre>download.file(&quot;https://covid.ourworldindata.org/data/owid-covid-data.csv&quot;,&quot;owid-covid-data.csv&quot;)
+download.file(&quot;https://gist.githubusercontent.com/tadast/8827699/raw/61b2107766d6fd51e2bd02d9f78f6be081340efc/countries_codes_and_coordinates.csv&quot;,&quot;latlongiso3.csv&quot;)
+
+library(data.table)
+
+yemo=\(x){u=unique(x);format(u,&quot;%Y-%m&quot;)[match(x,u)]}
+
+t=fread(&quot;owid-covid-data.csv&quot;)
+
+lat=r(&quot;f/countrylatlongiso3&quot;)[,.(iso_code=`Alpha-3 code`,lat=`Latitude (average)`,long=`Longitude (average)`)]
 t=merge(t,lat)
-</pre>
-<pre>o[,continent:=factor(continent,c(&quot;North America&quot;,&quot;South America&quot;,&quot;Europe&quot;,&quot;Africa&quot;,&quot;Asia&quot;))]
-</pre>
-<pre>a=o[date&lt;=&quot;2020-12-31&quot;,.(excess=mean(excess_mortality,na.rm=T)),.(location,month=yemo(date),lat,long,continent)]
+
+o[,continent:=factor(continent,c(&quot;North America&quot;,&quot;South America&quot;,&quot;Europe&quot;,&quot;Africa&quot;,&quot;Asia&quot;))]
+
+a=o[date&lt;=&quot;2020-12-31&quot;,.(excess=mean(excess_mortality,na.rm=T)),.(location,month=yemo(date),lat,long,continent)]
 a=a[location%in%a[excess&gt;=80,location]]
-</pre>
-<pre>a[,location:=factor(location,a[rowid(location)==1,location[order(continent,-lat+long)]])]
-</pre>
-<pre>m=a[,xtabs(excess~location+month)]
-</pre>
-<pre>disp=round(m)
+
+a[,location:=factor(location,a[rowid(location)==1,location[order(continent,-lat+long)]])]
+
+m=a[,xtabs(excess~location+month)]
+
+disp=round(m)
 maxcolor=max0(m)
 pal=colorRampPalette(hex(HSV(c(210,210,210,210,0,0,0,0,0),c(.9,.75,.6,.3,0,.3,.6,.75,.9),c(.4,.65,1,1,1,1,1,.65,.4))))(256)
-</pre>
-<pre>pheatmap::pheatmap(m,filename=&quot;0.png&quot;,display_numbers=disp,
+
+pheatmap::pheatmap(m,filename=&quot;0.png&quot;,display_numbers=disp,
   cluster_rows=F,cluster_cols=F,legend=F,cellwidth=16,cellheight=16,fontsize=9,fontsize_number=8,
   border_color=NA,na_col=&quot;gray90&quot;,
   number_color=ifelse(abs(m)&gt;maxcolor*.6,&quot;white&quot;,&quot;black&quot;),
   breaks=seq(-maxcolor,maxcolor,,256),
   pal)
-</pre>
-<pre>sub=&quot;Monthly excess percentage of deaths at OWID. Weekly data for excess deaths was converted to monthly by taking the average of weeks which ended during the month. The excess deaths are based on raw deaths and not CMR or ASMR, and they have a 2015-2019 linear trend that was adjusted for seasonal variation in mortality. Source: covid.ourworldindata.org/data/owid-covid-data.csv.&quot;
-system(paste0(&quot;mar=22;w=`identify -format %w 0.png`;convert \\( -size $[w-mar*2]x -font Arial -interline-spacing -3 -pointsize 38 caption:&#39;&quot;,sub,&quot;&#39; -splice $[mar]x10 \\) 0.png -append 1.png&quot;))
-</pre>
+
+sub=&quot;Monthly excess percentage of deaths at OWID. Weekly data for excess deaths was converted to monthly by taking the average of weeks which ended during the month. The excess deaths are based on raw deaths and not CMR or ASMR, and they have a 2015-2019 linear trend that was adjusted for seasonal variation in mortality. Source: covid.ourworldindata.org/data/owid-covid-data.csv.&quot;
+system(paste0(&quot;mar=22;w=`identify -format %w 0.png`;convert \\( -size $[w-mar*2]x -font Arial -interline-spacing -3 -pointsize 38 caption:&#39;&quot;,sub,&quot;&#39; -splice $[mar]x10 \\) 0.png -append 1.png&quot;))</pre>
+</div>
 <p>In China reported COVID deaths already peaked around mid-February:</p>
 <div class="width10">
 <img src="i/np-marchpeak-5.png">
@@ -795,28 +785,27 @@ system(paste0(&quot;mar=22;w=`identify -format %w 0.png`;convert \\( -size $[w-m
 <button>
 Show code
 </button>
-<pre>cases=fread(&quot;https://github.com/cheongsa/Coronavirus-COVID-19-statistics-in-China/raw/master/China_daily_new_infections.csv&quot;,header=T)</pre>
-</div>
-<pre>dead=fread(&quot;https://github.com/cheongsa/Coronavirus-COVID-19-statistics-in-China/raw/master/China_daily_new_deaths.csv&quot;,header=T)
-</pre>
-<pre>m=as.matrix(rowsum(cases[,-(1:4)],cases[[2]]))
+<pre>cases=fread(&quot;https://github.com/cheongsa/Coronavirus-COVID-19-statistics-in-China/raw/master/China_daily_new_infections.csv&quot;,header=T)
+dead=fread(&quot;https://github.com/cheongsa/Coronavirus-COVID-19-statistics-in-China/raw/master/China_daily_new_deaths.csv&quot;,header=T)
+
+m=as.matrix(rowsum(cases[,-(1:4)],cases[[2]]))
 m[is.na(m)]=0
 colnames(m)=sub(&quot; .*&quot;,&quot;&quot;,colnames(m))
 rownames(m)=sub(&quot; (Uygur |Zhuang |Hui )?(Autonomous Region|Special Administrative Region|Municipality)&quot;,&quot;&quot;,rownames(m))
 m=rbind(m,&quot;Total cases&quot;=colSums(m),&quot;Deaths (Hubei)&quot;=colSums(dead[dead$Pro==&quot;Hubei&quot;,-(1:4)],na.rm=T),&quot;Total deaths&quot;=colSums(dead[,-(1:4)],na.rm=T))
-</pre>
-<pre>disp=ifelse(m&gt;=1e4,sprintf(&quot;%.0fk&quot;,m/1e3),ifelse(m&gt;=1e3,sprintf(&quot;%.1fk&quot;,m/1e3),m))
+
+disp=ifelse(m&gt;=1e4,sprintf(&quot;%.0fk&quot;,m/1e3),ifelse(m&gt;=1e3,sprintf(&quot;%.1fk&quot;,m/1e3),m))
 max=apply(m,1,max,na.rm=T)
 max[is.infinite(max)]=NA
 m=m/max
-</pre>
-<pre>pheatmap::pheatmap(m,filename=&quot;1.png&quot;,display_numbers=disp,gaps_row=nrow(m)-3,
+
+pheatmap::pheatmap(m,filename=&quot;1.png&quot;,display_numbers=disp,gaps_row=nrow(m)-3,
   cluster_rows=F,cluster_cols=F,legend=F,cellwidth=16,cellheight=13,fontsize=9,fontsize_number=8,
   border_color=NA,na_col=&quot;gray90&quot;,number_color=ifelse(!is.na(m)&amp;m&gt;.45,&quot;white&quot;,&quot;black&quot;),
   breaks=seq(0,1,,256),sapply(255:0/255,\(i)rgb(i,i,i)))
-</pre>
-<pre>system(&quot;w=`identify -format %w 1.png`;convert \\( -size $[w-44]x -pointsize 40 -font Arial caption:&#39;COVID cases in China (github.com/cheongsa/Coronavirus-COVID-19-statistics-in-China). Each row has its own color scale where the maximum value is shown in black. On February 12th Hubei health authorities began including clinically diagnosed cases, such as cases with a chest CT scan showing signs of pneumonia even if a positive PCR test was not available, so many cases and deaths were added retroactively.&#39; -splice 22x20 \\) 1.png -append 1.png&quot;)
-</pre>
+
+system(&quot;w=`identify -format %w 1.png`;convert \\( -size $[w-44]x -pointsize 40 -font Arial caption:&#39;COVID cases in China (github.com/cheongsa/Coronavirus-COVID-19-statistics-in-China). Each row has its own color scale where the maximum value is shown in black. On February 12th Hubei health authorities began including clinically diagnosed cases, such as cases with a chest CT scan showing signs of pneumonia even if a positive PCR test was not available, so many cases and deaths were added retroactively.&#39; -splice 22x20 \\) 1.png -append 1.png&quot;)</pre>
+</div>
 <h2>
 <a href=#Lombardy_had_a_lower_peak_in_weekly_excess_deaths_than_two_NUTS2_regions_of_Spain id=Lombardy_had_a_lower_peak_in_weekly_excess_deaths_than_two_NUTS2_regions_of_Spain>Lombardy had a lower peak in weekly excess deaths than two NUTS2 regions of Spain</a>
 </h2>
@@ -828,39 +817,38 @@ m=m/max
 <button>
 Show code
 </button>
-<pre>download.file(&quot;https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/demo_r_mwk3_t?format=TSV&quot;,&quot;demo_r_mwk3_t.tsv&quot;)</pre>
-</div>
-<pre>download.file(&quot;https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/demo_r_mwk2_ts?format=TSV&quot;,&quot;estat_demo_r_mwk2_ts.tsv&quot;)
+<pre>download.file(&quot;https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/demo_r_mwk3_t?format=TSV&quot;,&quot;demo_r_mwk3_t.tsv&quot;)
+download.file(&quot;https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/demo_r_mwk2_ts?format=TSV&quot;,&quot;estat_demo_r_mwk2_ts.tsv&quot;)
 download.file(&quot;https://ec.europa.eu/eurostat/documents/345175/629341/NUTS2021.xlsx&quot;,&quot;NUTS2021.xlsx&quot;)
-</pre>
-<pre>library(data.table);library(ggplot2)
-</pre>
-<pre>ua=\(x,y,...){u=unique(x);y(u,...)[match(x,u)]}
+
+library(data.table);library(ggplot2)
+
+ua=\(x,y,...){u=unique(x);y(u,...)[match(x,u)]}
 isoweek=\(year,week,weekday=7){d=as.Date(paste0(year,&quot;-1-4&quot;));d-(as.integer(format(d,&quot;%w&quot;))+6)%%7-1+7*(week-1)+weekday}
-</pre>
-<pre>nuts=setDT(readxl::read_excel(&quot;NUTS2021.xlsx&quot;,sheet=2))
+
+nuts=setDT(readxl::read_excel(&quot;NUTS2021.xlsx&quot;,sheet=2))
 nuts=na.omit(nuts[,.(name=unlist(.SD[,2:4],,F),nuts=.SD[[1]])])[!name%like%&quot;Extra-Regio&quot;]
-</pre>
-<pre>euro=fread(&quot;estat_demo_r_mwk2_ts.tsv&quot;,na=&quot;:&quot;)
+
+euro=fread(&quot;estat_demo_r_mwk2_ts.tsv&quot;,na=&quot;:&quot;)
 euro=euro[euro[[1]]%like%&quot;^W,T&quot;]
 eu=melt(euro,id=1,,&quot;week&quot;,&quot;dead&quot;)
 eu[,week:=ua(week,\(x)isoweek(as.integer(substr(x,1,4)),as.integer(substr(x,7,8)),4))]
 eu=eu[,.(nuts=sub(&quot;.*,&quot;,&quot;&quot;,eu[[1]]),dead=as.integer(sub(&quot; .*&quot;,&quot;&quot;,dead)),week)]
 eu=merge(eu[year(week)==2019,.(base=mean(dead)),nuts],eu)
 eu=merge(nuts,eu)
-</pre>
-<pre>eu[,name:=paste0(nuts,&quot;: &quot;,sub(&quot;/.*&quot;,&quot;&quot;,name))]
+
+eu[,name:=paste0(nuts,&quot;: &quot;,sub(&quot;/.*&quot;,&quot;&quot;,name))]
 eu=eu[!nuts%like%&quot;LI00|ES64&quot;&amp;nchar(nuts)==4]
 pick=eu[year(week)==2020,max(dead/base),nuts][order(-V1)][1:24,nuts]
 p=eu[nuts%in%pick][,nuts:=factor(nuts,pick)]
 p[,pct:=dead/base*100]
-</pre>
-<pre>xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2021-1-1&quot;);xbreak=seq(xstart,xend,&quot;month&quot;)
+
+xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2021-1-1&quot;);xbreak=seq(xstart,xend,&quot;month&quot;)
 ybreak=p[,pretty(c(0,dead))]
-</pre>
-<pre>p=p[week&gt;=xstart&amp;week&lt;=xend]
-</pre>
-<pre>colors=read.csv(text=&quot;country,color
+
+p=p[week&gt;=xstart&amp;week&lt;=xend]
+
+colors=read.csv(text=&quot;country,color
 ES,c6111a
 IT,009246
 FR,0055a4
@@ -872,12 +860,12 @@ BG,005000
 NL,ff9b00
 SK,cc44cc
 LI,8888ff&quot;)
-</pre>
-<pre>p[,country:=factor(substr(nuts,1,2),colors$country)]
-</pre>
-<pre>label=p[,.(pct=max(pct),hjust=as.integer(week[which.max(dead/base)]&lt;=as.Date(&quot;2020-7-1&quot;))),.(nuts,name,country)]
-</pre>
-<pre>ggplot(p,aes(x=week,y=pct))+
+
+p[,country:=factor(substr(nuts,1,2),colors$country)]
+
+label=p[,.(pct=max(pct),hjust=as.integer(week[which.max(dead/base)]&lt;=as.Date(&quot;2020-7-1&quot;))),.(nuts,name,country)]
+
+ggplot(p,aes(x=week,y=pct))+
 facet_wrap(~nuts,ncol=4,strip.position=&quot;top&quot;,scales=&quot;free&quot;)+
 geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),linewidth=.25,color=&quot;gray85&quot;,lineend=&quot;square&quot;)+
 geom_hline(yintercept=100,linetype=&quot;22&quot;,linewidth=.3,color=&quot;gray50&quot;)+
@@ -904,8 +892,8 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   strip.background=element_blank(),
   strip.text=element_blank())
 ggsave(&quot;1.png&quot;,width=7.4,height=6,dpi=380*4)
-system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)
-</pre>
+system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
+</div>
 <h2>
 <a href=#Hugh_Akston_Pre_vaccine_mortality_waves_with_NYC_metropolitan_area_excluded id=Hugh_Akston_Pre_vaccine_mortality_waves_with_NYC_metropolitan_area_excluded>Hugh Akston: Pre-vaccine mortality waves with NYC metropolitan area excluded</a>
 </h2>
@@ -932,34 +920,34 @@ system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)</pre>
-</div>
-<pre>lifex=\(mx){qx=mx/(1+mx/2)
+<pre>library(data.table);library(ggplot2)
+
+lifex=\(mx){qx=mx/(1+mx/2)
   n=length(mx);pop=rep(1,n);dead=rep(0,n)
   for(i in 1:(n-1)){dead[i]=pop[i]*qx[i];pop[i+1]=max(0,pop[i]-dead[i])}
   dead[n]=pop[n]*qx[n]
   weighted.mean(0:(length(mx)-1)+.5,dead)}
-</pre>
-<pre>pop=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)[year%in%2010:2022]
-</pre>
-<pre>v=fread(&quot;curl -Ls sars2.net/f/vital.csv.xz|xz -dc&quot;)[year&gt;=2010]
-</pre>
-<pre>v[,age:=pmin(age,100)]
+
+pop=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)[year%in%2010:2022]
+
+v=fread(&quot;curl -Ls sars2.net/f/vital.csv.xz|xz -dc&quot;)[year&gt;=2010]
+
+v[,age:=pmin(age,100)]
 a=v[,.(dead=sum(ucd)),.(year,cause)]
 drug=v[cause%like%&quot;X4[0-4]|X6[0-4]|Y1[0-4]&quot;,.(dead=sum(ucd)),.(age,year)]
-</pre>
-<pre>extra=merge(drug,drug[year==2019,.(age,base=dead)],all=T)
+
+extra=merge(drug,drug[year==2019,.(age,base=dead)],all=T)
 extra2=merge(drug,drug[year==2010,.(age,base=dead)],all=T)
 pop=merge(pop,extra[,.(age,year,extra=dead-nafill(base,,0),extra2=dead-nafill(extra2$base,,0))],all=T)
 pop[,extra:=nafill(extra,,0)][,extra2:=nafill(extra2,,0)]
-</pre>
-<pre>lab=c(&quot;Actual life expectancy&quot;,paste(&quot;With same number of drug deaths for each age as in&quot;,c(2019,2010)))
+
+lab=c(&quot;Actual life expectancy&quot;,paste(&quot;With same number of drug deaths for each age as in&quot;,c(2019,2010)))
 p=pop[,.(y=c(lifex(dead/pop),lifex((dead-extra)/pop),lifex((dead-extra2)/pop)),z=lab),.(x=year)]
 p[,z:=factor(z,lab)]
-</pre>
-<pre>xstart=min(p$x);xend=max(p$x);ybreak=pretty(p$y)
-</pre>
-<pre>ggplot(p,aes(x,y))+
+
+xstart=min(p$x);xend=max(p$x);ybreak=pretty(p$y)
+
+ggplot(p,aes(x,y))+
 geom_line(aes(color=z),linewidth=.5)+
 geom_point(aes(color=z),size=1)+
 labs(title=&quot;Life expectancy in United States&quot;,x=NULL,y=NULL)+
@@ -989,8 +977,8 @@ theme(axis.text=element_text(size=11,color=&quot;black&quot;),
   plot.title=element_text(size=11.5,face=&quot;bold&quot;,margin=margin(,,4)))
 ggsave(&quot;1.png&quot;,width=4.9,height=3,dpi=300*4)
 sub=&quot;Source: cdc.gov/nchs/nvss/mortality_public_use_data.htm (yearly deaths by underlying cause and single year of age) and www2.census.gov/programs-surveys/popest/datasets (mid-year resident population estimates). Drug deaths are deaths with underlying cause X40-44, X60-64, or Y10-14. Ages 100 and above were aggregated together. Vintage 2023 population estimates were used for 2020-2022 and vintage 2020 estimates were used for 2010-2019. In order to get rid of a sudden jump after the switch from 2010-based to 2020-based population estimates, the 2010-based estimates were multiplied by a linear slope so that they were equal to the 2020-based estimates in 2020.&quot;
-system(paste0(&quot;mogrify -trim 1.png;w=`identify -format %w 1.png`;magick 1.png \\( -size $[w]x -font Arial -interline-spacing -3 -pointsize $[44*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -splice x90 \\) -append -trim -resize 25% -bordercolor white -border 30 -colors 256 1.png&quot;))
-</pre>
+system(paste0(&quot;mogrify -trim 1.png;w=`identify -format %w 1.png`;magick 1.png \\( -size $[w]x -font Arial -interline-spacing -3 -pointsize $[44*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -splice x90 \\) -append -trim -resize 25% -bordercolor white -border 30 -colors 256 1.png&quot;))</pre>
+</div>
 <h2>
 <a href=#If_excess_deaths_in_2020_were_due_to_hospital_protocols_or_treatments_then_why_did_deaths_at_home_also_increase id=If_excess_deaths_in_2020_were_due_to_hospital_protocols_or_treatments_then_why_did_deaths_at_home_also_increase>If excess deaths in 2020 were due to hospital protocols or treatments then why did deaths at home also increase?</a>
 </h2>
@@ -1004,24 +992,24 @@ system(paste0(&quot;mogrify -trim 1.png;w=`identify -format %w 1.png`;magick 1.p
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)</pre>
-</div>
-<pre>t=fread(&quot;http://sars2.net/f/wonderplacedeath.csv&quot;)[year&lt;2025&amp;!place%like%&quot;unknown|Other&quot;]
+<pre>library(data.table);library(ggplot2)
+
+t=fread(&quot;http://sars2.net/f/wonderplacedeath.csv&quot;)[year&lt;2025&amp;!place%like%&quot;unknown|Other&quot;]
 t=t[place%in%place[year==2019]]
 t[,place:=factor(place,t[rowid(place)==1,place[order(placecode)]])]
-</pre>
-<pre>p=merge(t[year%in%2019,.(mean=mean(dead)),place],t)
-</pre>
-<pre>levels(p$place)=p[rowid(place)==1,sprintf(&quot;%s (%.0fk)&quot;,place,mean/1e3)]
+
+p=merge(t[year%in%2019,.(mean=mean(dead)),place],t)
+
+levels(p$place)=p[rowid(place)==1,sprintf(&quot;%s (%.0fk)&quot;,place,mean/1e3)]
 p=p[,.(x=year,y=dead/mean*100,z=place,type=1)]
 p=rbind(p,p[x%in%2013:2019,.(x=unique(p$x),y=predict(lm(y~x),.(x=unique(p$x))),type=2),z])
 p[,type:=factor(type,,c(&quot;Deaths&quot;,&quot;2013-2019 linear trend&quot;))]
-</pre>
-<pre>xstart=2010;xend=2024;xbreak=seq(xstart,xend,2)
+
+xstart=2010;xend=2024;xbreak=seq(xstart,xend,2)
 p=p[x%in%xstart:xend]
 ylim=extendrange(p$y,,.03);ybreak=pretty(ylim,7)
-</pre>
-<pre>ggplot(p,aes(x,y))+
+
+ggplot(p,aes(x,y))+
 geom_hline(yintercept=100,linewidth=.4)+
 geom_line(aes(color=z,linetype=type),linewidth=.6)+
 geom_point(aes(color=z,alpha=type),size=1.1)+
@@ -1058,8 +1046,8 @@ theme(axis.text=element_text(size=11,color=&quot;black&quot;),
   plot.subtitle=element_text(size=11,margin=margin(,,5)),
   plot.title=element_text(size=11.3,face=2,margin=margin(2,,4)))
 ggsave(&quot;1.png&quot;,width=5.8,height=3.9,dpi=300*4)
-system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)
-</pre>
+system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
+</div>
 <script>
 document.querySelectorAll('a,code,pre').forEach(x=>x.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>'))
 

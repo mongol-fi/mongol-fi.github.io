@@ -186,25 +186,25 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)</pre>
-</div>
-<pre>t=fread(&quot;Rates_of_COVID-19_Cases_or_Deaths_by_Age_Group_and_Updated__Bivalent__Booster_Status_20241231.csv&quot;)
-</pre>
-<pre>p=t[outcome==&quot;case&quot;&amp;age_group!=&quot;all_ages&quot;&amp;vaccination_status==&quot;vaccinated&quot;]
+<pre>library(data.table);library(ggplot2)
+
+t=fread(&quot;Rates_of_COVID-19_Cases_or_Deaths_by_Age_Group_and_Updated__Bivalent__Booster_Status_20241231.csv&quot;)
+
+p=t[outcome==&quot;case&quot;&amp;age_group!=&quot;all_ages&quot;&amp;vaccination_status==&quot;vaccinated&quot;]
 p[,x:=isoweek(mmwr_week%/%100,mmwr_week%%100,4)]
 p[,vaxpct:=vaccinated_population/(vaccinated_population+unvaccinated_population)*100]
 lab=c(&quot;Unvaccinated&quot;,&quot;Fully vaccinated&quot;,&quot;Vaccinated percent (panel top is 100%)&quot;)
 p=p[,.(x,y=c(c(crude_unvax_ir,crude_vax_ir)/7*365,vaxpct),z=factor(rep(lab,each=.N),lab),group=age_group)]
 age=unique(p$group);p[,group:=factor(group,age[order(as.integer(sub(&quot;[-+].*&quot;,&quot;&quot;,age)))])]
-</pre>
-<pre>p=merge(p,p[z!=levels(z)[3],.(maxy=max(y)),group])
-</pre>
-<pre>p[z==levels(z)[3],y:=y/100*maxy]
-</pre>
-<pre>xstart=as.Date(&quot;2021-7-1&quot;);xend=as.Date(&quot;2023-7-1&quot;)
+
+p=merge(p,p[z!=levels(z)[3],.(maxy=max(y)),group])
+
+p[z==levels(z)[3],y:=y/100*maxy]
+
+xstart=as.Date(&quot;2021-7-1&quot;);xend=as.Date(&quot;2023-7-1&quot;)
 xbreak=as.Date(c(&quot;2021-10-1&quot;,&quot;2022-7-1&quot;,&quot;2023-4-1&quot;));xlab=year(xbreak)
-</pre>
-<pre>ggplot(p,aes(x,y))+
+
+ggplot(p,aes(x,y))+
 facet_wrap(~group,ncol=2,dir=&quot;v&quot;,scales=&quot;free_y&quot;)+
 geom_vline(xintercept=seq(as.Date(&quot;2022-1-1&quot;),xend,&quot;year&quot;),color=&quot;gray80&quot;,linewidth=.5)+
 geom_line(aes(color=z,linetype=z),linewidth=.6)+
@@ -242,8 +242,8 @@ theme(axis.text=element_text(size=11,color=&quot;black&quot;),
   strip.background=element_blank(),
   strip.text=element_blank())
 ggsave(&quot;1.png&quot;,width=6.4,height=5.5,dpi=300*4)
-system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)
-</pre>
+system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
+</div>
 <h3>
 <a href=#Plot_by_Jikkyleaks_for_COVID_cases_in_four_Israeli_studies_1c id=Plot_by_Jikkyleaks_for_COVID_cases_in_four_Israeli_studies_1c>Plot by Jikkyleaks for COVID cases in four Israeli studies (1c)</a>
 </h3>
@@ -261,28 +261,26 @@ system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)
 </div>
 <p>However the four studies were performed at different time periods when Israel had different rates of daily new COVID cases. When I divided the incidence values calculated by canceledmouse with the average daily new cases in Israel during the period of each study, I got a higher ratio for unvaccinated people in the first study than for people with three doses in the last two studies:</p>
 <pre>owid=fread(&quot;https://covid.ourworldindata.org/data/owid-covid-data.csv&quot;)
-</pre>
-<pre>studies=fread(text=&quot;name,start,end,incidence
+
+studies=fread(text=&quot;name,start,end,incidence
 Dagan 2021 (unvaccinated),2020-12-20,2021-02-01,66.7
 Bar-On 2021 (2 doses),2021-07-30,2021-08-31,85.46
 Bar-On 2022 (3 doses),2022-01-10,2022-03-02,361
 Magen 2022 (3 doses),2022-01-03,2022-02-18,348&quot;)
-</pre>
-<pre># OWID only had weekly new cases so here they are interpolated to daily cases so that weekly sums are preserved
+
+# OWID only had weekly new cases so here they are interpolated to daily cases so that weekly sums are preserved
 cases=owid[location==&quot;Israel&quot;&amp;new_cases&gt;0,.(x=as.Date(date)-6,y=new_cases)]
 daily=tempdisagg::td(cases~1,,&quot;daily&quot;,&quot;fast&quot;)$values
-</pre>
-<pre>studies[,meancases:=daily[time%in%start:end,mean(value)],name]
+
+studies[,meancases:=daily[time%in%start:end,mean(value)],name]
 studies[,ratio:=incidence/meancases]
-print(studies,r=F)
-</pre>
+print(studies,r=F)</pre>
 <!-- -->
 <pre>                      name      start        end incidence meancases     ratio
  Dagan 2021 (unvaccinated) 2020-12-20 2021-02-01     66.70    6297.8 0.0105911
      Bar-On 2021 (2 doses) 2021-07-30 2021-08-31     85.46    6068.9 0.0140815
      Bar-On 2022 (3 doses) 2022-01-10 2022-03-02    361.00   41151.9 0.0087724
-      Magen 2022 (3 doses) 2022-01-03 2022-02-18    348.00   45093.5 0.0077173
-</pre>
+      Magen 2022 (3 doses) 2022-01-03 2022-02-18    348.00   45093.5 0.0077173</pre>
 <p>The last two studies were done in early 2022 when there was a huge number of new cases due to Omicron:</p>
 <div class="width6">
 <img src="i/rootclaim-israel-4.png">
@@ -291,29 +289,29 @@ print(studies,r=F)
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)</pre>
-</div>
-<pre>owid=fread(&quot;https://covid.ourworldindata.org/data/owid-covid-data.csv&quot;)
-</pre>
-<pre>studies=fread(text=&quot;name,start,end,incidence
+<pre>library(data.table);library(ggplot2)
+
+owid=fread(&quot;https://covid.ourworldindata.org/data/owid-covid-data.csv&quot;)
+
+studies=fread(text=&quot;name,start,end,incidence
 Dagan 2021 (unvaccinated),2020-12-20,2021-02-01,66.7
 Bar-On 2021 (2 doses),2021-07-30,2021-08-31,85.46
 Bar-On 2022 (3 doses),2022-01-10,2022-03-02,361
 Magen 2022 (3 doses),2022-01-03,2022-02-18,348&quot;)
-</pre>
-<pre>cases=owid[location==&quot;Israel&quot;&amp;new_cases&gt;0,.(x=as.Date(date)-6,y=new_cases)]
+
+cases=owid[location==&quot;Israel&quot;&amp;new_cases&gt;0,.(x=as.Date(date)-6,y=new_cases)]
 daily=tempdisagg::td(cases~1,,&quot;daily&quot;,&quot;fast&quot;)$values
 studies[,meancases:=daily[time%in%start:end,mean(value)],name]
 studies[,ratio:=incidence/meancases]
-</pre>
-<pre>p=daily[,.(x=time,y=value)]
-</pre>
-<pre>yend=max(p$y);xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
+
+p=daily[,.(x=time,y=value)]
+
+yend=max(p$y);xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
 xbreak=seq(xstart+182,xend,&quot;year&quot;);xlab=year(xbreak)
-</pre>
-<pre>hue=c(0,12,21,30)/36;color=hsv(hue,1,.8);fill=hsv(hue,.5,1)
-</pre>
-<pre>ggplot(p)+
+
+hue=c(0,12,21,30)/36;color=hsv(hue,1,.8);fill=hsv(hue,.5,1)
+
+ggplot(p)+
 geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray80&quot;,linewidth=.5)+
 geom_rect(data=studies,aes(xmin=start,xmax=end,ymin=0,ymax=meancases,color=name,fill=name),linewidth=.2,alpha=.5)+
 geom_text(data=studies,aes(x=pmean(start,end),y=meancases,label=name,color=name),vjust=c(-2.3,-4,.5,.5),hjust=c(.5,.7,-.12,-.12),size=4)+
@@ -339,8 +337,8 @@ theme(axis.text=element_text(size=11,color=&quot;black&quot;),
   plot.subtitle=element_text(size=11,margin=margin(,,5)),
   plot.title=element_text(size=11.5,face=2,margin=margin(1,,5)))
 ggsave(&quot;1.png&quot;,width=6.4,height=4.2,dpi=300*4)
-system(&quot;magick 1.png -resize 25% -dither none -colors 256 1.png&quot;)
-</pre>
+system(&quot;magick 1.png -resize 25% -dither none -colors 256 1.png&quot;)</pre>
+</div>
 <p>Other confounders might also explain part of the difference in results between the studies. For example the median age was 45 in the first study (Dagan et al. 2021), but the other three studies only included people aged 60 and above, and the median age was 72 years in the last study.</p>
 <h3>
 <a href=#Why_do_higher_vaccinated_countries_have_more_cases_per_capita_at_OWID_1d id=Why_do_higher_vaccinated_countries_have_more_cases_per_capita_at_OWID_1d>Why do higher-vaccinated countries have more cases per capita at OWID? (1d)</a>
@@ -354,20 +352,20 @@ system(&quot;magick 1.png -resize 25% -dither none -colors 256 1.png&quot;)
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)</pre>
-</div>
-<pre>download.file(&quot;https://covid.ourworldindata.org/data/owid-covid-data.csv&quot;,&quot;owid-covid-data.csv&quot;)
+<pre>library(data.table);library(ggplot2)
+
+download.file(&quot;https://covid.ourworldindata.org/data/owid-covid-data.csv&quot;,&quot;owid-covid-data.csv&quot;)
 owid=fread(&quot;owid-covid-data.csv&quot;)
 p=na.omit(owid[,.(y=total_cases_per_million,x=total_tests_per_thousand,location,continent)])
 p=p[,.(x=max(x),y=max(y)),.(location,continent)]
 p=p[x!=0&amp;y!=0]
-</pre>
-<pre>set.seed(0)
+
+set.seed(0)
 hue=c(0,60,120,210,300)+15
 color=c(&quot;black&quot;,hcl(hue,110,50))
 fill=c(&quot;black&quot;,hcl(hue,110,60))
-</pre>
-<pre>ggplot(p,aes(x,y))+
+
+ggplot(p,aes(x,y))+
 ggforce::geom_mark_hull(aes(color=continent,fill=continent),concavity=1000,radius=unit(3,&quot;pt&quot;),expand=unit(4,&quot;pt&quot;),alpha=.2,size=.2)+
 geom_smooth(method=&quot;lm&quot;,formula=y~x,size=.5,se=F,color=&quot;black&quot;,linetype=2)+
 geom_point(aes(color=continent),size=1)+
@@ -392,8 +390,8 @@ theme(axis.text=element_text(size=11,color=&quot;black&quot;),
   plot.subtitle=element_text(size=11),
   plot.title=element_text(size=11.5,face=2))
 ggsave(&quot;1.png&quot;,width=7,height=6,dpi=300*4)
-system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)
-</pre>
+system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
+</div>
 <p>OWID doesn't have data for the number of tests performed in Singapore, but in both Hong Kong and China as a whole the number of tests performed per capita is about 2.4 times as high as in the United States:</p>
 <pre>&gt; owid=fread(&quot;https://covid.ourworldindata.org/data/owid-covid-data.csv&quot;)
 &gt; owid[,max(total_tests_per_thousand,na.rm=T),location][V1!=-Inf][order(-V1)][1:40,.(location,tests_per_thousand=V1)]
@@ -438,14 +436,12 @@ system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)
 38:            Switzerland           2448.135
 39:          Liechtenstein           2321.576
 40:               Mongolia           2213.041
-                  location tests_per_thousand
-</pre>
+                  location tests_per_thousand</pre>
 <p>But the number of cases per million is only about 1.8 times higher in Singapore than United States, so if the number of tests per capita in Singapore is similar to Hong Kong and China, then Singapore might have a lower rate of cases per tests than the United States:</p>
 <pre>&gt; owid[location%in%c(&quot;Singapore&quot;,&quot;United States&quot;),.(total_cases_per_million=max(total_cases_per_million,na.rm=T)),location]
         location total_cases_per_million
 1:     Singapore                532073.6
-2: United States                302859.5
-</pre>
+2: United States                302859.5</pre>
 <h3>
 <a href=#Estimate_of_COVID_deaths_averted_based_on_the_Pfizer_phase_3_trial_2b id=Estimate_of_COVID_deaths_averted_based_on_the_Pfizer_phase_3_trial_2b>Estimate of COVID deaths averted based on the Pfizer phase 3 trial (2b)</a>
 </h3>
@@ -477,23 +473,23 @@ system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)
 <button>
 Show code
 </button>
-<pre>t=fread(&quot;Rates_of_COVID-19_Cases_or_Deaths_by_Age_Group_and_Updated__Bivalent__Booster_Status_20241231.csv&quot;)</pre>
-</div>
-<pre>p=t[outcome==&quot;death&quot;&amp;age_group!=&quot;all_ages&quot;&amp;vaccination_status==&quot;vaccinated&quot;]
+<pre>t=fread(&quot;Rates_of_COVID-19_Cases_or_Deaths_by_Age_Group_and_Updated__Bivalent__Booster_Status_20241231.csv&quot;)
+
+p=t[outcome==&quot;death&quot;&amp;age_group!=&quot;all_ages&quot;&amp;vaccination_status==&quot;vaccinated&quot;]
 p[,x:=isoweek(mmwr_week%/%100,mmwr_week%%100,4)]
 p[,vaxpct:=vaccinated_population/(vaccinated_population+unvaccinated_population)*100]
 lab=c(&quot;Unvaccinated&quot;,&quot;Fully vaccinated&quot;,&quot;Vaccinated percent (panel top is 100%)&quot;)
 p=p[,.(x,y=c(c(crude_unvax_ir,crude_vax_ir)/7*365,vaxpct),z=factor(rep(lab,each=.N),lab),group=age_group)]
 age=unique(p$group);p[,group:=factor(group,age[order(as.integer(sub(&quot;[-+].*&quot;,&quot;&quot;,age)))])]
-</pre>
-<pre>p=merge(p,p[z!=levels(z)[3],.(maxy=max(y)),group])
-</pre>
-<pre>p[z==levels(z)[3],y:=y/100*maxy]
-</pre>
-<pre>xstart=as.Date(&quot;2021-7-1&quot;);xend=as.Date(&quot;2023-7-1&quot;)
+
+p=merge(p,p[z!=levels(z)[3],.(maxy=max(y)),group])
+
+p[z==levels(z)[3],y:=y/100*maxy]
+
+xstart=as.Date(&quot;2021-7-1&quot;);xend=as.Date(&quot;2023-7-1&quot;)
 xbreak=as.Date(c(&quot;2021-10-1&quot;,&quot;2022-7-1&quot;,&quot;2023-4-1&quot;));xlab=year(xbreak)
-</pre>
-<pre>ggplot(p,aes(x,y))+
+
+ggplot(p,aes(x,y))+
 facet_wrap(~group,ncol=2,dir=&quot;v&quot;,scales=&quot;free_y&quot;)+
 geom_vline(xintercept=seq(as.Date(&quot;2022-1-1&quot;),xend,&quot;year&quot;),color=&quot;gray80&quot;,linewidth=.5)+
 geom_line(aes(color=z,linetype=z),linewidth=.6)+
@@ -531,8 +527,8 @@ theme(axis.text=element_text(size=11,color=&quot;black&quot;),
   strip.background=element_blank(),
   strip.text=element_blank())
 ggsave(&quot;1.png&quot;,width=6.4,height=5.5,dpi=300*4)
-system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)
-</pre>
+system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
+</div>
 <p>However the difference between unvaccinated and vaccinated people isn't as big for cases as for deaths, so the difference in CFR is also not as big as the difference in deaths. Unvaccinated people still have clearly higher CFR within age groups, even though the ratio between unvaccinated and vaccinated CFR also gets lower over time, which might be if unvaccinated people acquire natural immunity over time or the effect of vaccination wears out:</p>
 <div class="width7">
 <img src="i/rootclaim-cfr-4.png">
@@ -541,23 +537,23 @@ system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)</pre>
-</div>
-<pre>t=fread(&quot;Rates_of_COVID-19_Cases_or_Deaths_by_Age_Group_and_Updated__Bivalent__Booster_Status_20241231.csv&quot;)
-</pre>
-<pre>p=t[age_group!=&quot;all_ages&quot;&amp;vaccination_status==&quot;vaccinated&quot;]
+<pre>library(data.table);library(ggplot2)
+
+t=fread(&quot;Rates_of_COVID-19_Cases_or_Deaths_by_Age_Group_and_Updated__Bivalent__Booster_Status_20241231.csv&quot;)
+
+p=t[age_group!=&quot;all_ages&quot;&amp;vaccination_status==&quot;vaccinated&quot;]
 p[,x:=isoweek(mmwr_week%/%100,mmwr_week%%100,4)]
 p[,vaxpct:=vaccinated_population/(vaccinated_population+unvaccinated_population)*100]
 lab=c(&quot;Unvaccinated&quot;,&quot;Fully vaccinated&quot;)
 a=p[,.(x,y=c(crude_unvax_ir,crude_vax_ir)/7*365,z=factor(rep(lab,each=.N),lab),group=age_group,outcome)]
 p=dcast(a,x+z+group~outcome,value.var=&quot;y&quot;)[,.(x,y=ma(nafill(death,,0),5)/ma(nafill(case,,0),5)),.(group,z)]
-</pre>
-<pre>age=unique(p$group);p[,group:=factor(group,age[order(as.integer(sub(&quot;[-+].*&quot;,&quot;&quot;,age)))])]
-</pre>
-<pre>xstart=as.Date(&quot;2021-7-1&quot;);xend=as.Date(&quot;2023-7-1&quot;)
+
+age=unique(p$group);p[,group:=factor(group,age[order(as.integer(sub(&quot;[-+].*&quot;,&quot;&quot;,age)))])]
+
+xstart=as.Date(&quot;2021-7-1&quot;);xend=as.Date(&quot;2023-7-1&quot;)
 xbreak=as.Date(c(&quot;2021-10-1&quot;,&quot;2022-7-1&quot;,&quot;2023-4-1&quot;));xlab=year(xbreak)
-</pre>
-<pre>ggplot(p,aes(x,y))+
+
+ggplot(p,aes(x,y))+
 facet_wrap(~group,ncol=2,dir=&quot;v&quot;,scales=&quot;free_y&quot;)+
 geom_vline(xintercept=seq(as.Date(&quot;2022-1-1&quot;),xend,&quot;year&quot;),color=&quot;gray80&quot;,linewidth=.5)+
 geom_line(aes(color=z,linetype=z),linewidth=.6)+
@@ -595,8 +591,8 @@ theme(axis.text=element_text(size=11,color=&quot;black&quot;),
   strip.background=element_blank(),
   strip.text=element_blank())
 ggsave(&quot;1.png&quot;,width=6.4,height=5.5,dpi=300*4)
-system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)
-</pre>
+system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
+</div>
 <p>Unfortunately the CDC dataset only starts in October 2021 so I wasn't able to compare the CFR before and after the vaccine rollout.</p>
 <p>In observational data like the CDC dataset, the percentage of infections diagnosed as cases out of all infections might be lower for unvaccinated people than vaccinated people, which might cause unvaccinated people to have high CFR relative to IFR. Unvaccinated people might be less likely to get tested than vaccinated people if for example unvaccinated people are less likely to interact with medical services. For example I have never gotten vaccinated or tested, because I have not even interacted with medical services in any way in the past 5 years, but my neighbor grandma who frequently visits a hospital has been vaccinated about 9 times and tested even more times.</p>
 <h3>
@@ -619,15 +615,14 @@ system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)
 <p>The study took place in Ohio State University Hospital. In the following code I took a weighted average of daily percentage of vaccinated people in Ohio where the weight was the number of COVID deaths the same day. I included the period from December 14th 2020 when the first vaccine dose in the United States was administered until October 31st 2022 when the observation period of the Ohio study ended. The resulting weighted percentage of vaccinated people was about 42%, but it includes people of all ages so the percentage would've been much higher if I would've looked at only older age groups that account for most COVID hospitalizations:</p>
 <pre>download.file(&quot;https://data.cdc.gov/api/views/pwn4-m3yp/rows.csv&quot;,&quot;statescases.csv&quot;)
 download.file(&quot;https://data.cdc.gov/api/views/rh2h-3yt2/rows.csv&quot;,&quot;statesvax.csv&quot;)
-</pre>
-<pre>vax=fread(&quot;statesvax.csv&quot;)
+
+vax=fread(&quot;statesvax.csv&quot;)
 vax=vax[Location==&quot;OH&quot;][,.(x=as.Date(Date,&quot;%m/%d/%Y&quot;),vax=Administered_Dose1_Pop_Pct)]
-</pre>
-<pre>dead=fread(&quot;statescases.csv&quot;)
+
+dead=fread(&quot;statescases.csv&quot;)
 dead=dead[state==&quot;OH&quot;,.(date=as.Date(start_date,&quot;%m/%d/%Y&quot;),dead=new_deaths)]
 a=merge(vax,dead[,spline(date,dead/7,xout=min(date):max(date))][,.(x,dead=y)])
-a[x&gt;=&quot;2020-12-14&quot;&amp;x&lt;=&quot;2022-10-31&quot;,weighted.mean(vax,dead)] # 42.24037
-</pre>
+a[x&gt;=&quot;2020-12-14&quot;&amp;x&lt;=&quot;2022-10-31&quot;,weighted.mean(vax,dead)] # 42.24037</pre>
 <p>Kirsch seems to have also overlooked that the study included 23 people hospitalized for COVID in ages 19-49, but only one of them was vaccinated, and 7 out the 22 unvaccinated people ended up dying (even though the study only included patients hospitalized for acute respiratory failure, so they were more likely to die than average people hospitalized for COVID):</p>
 <div class="width10">
 <img src="i/rootclaim-adikhari-2.png">
@@ -659,11 +654,9 @@ a[x&gt;=&quot;2020-12-14&quot;&amp;x&lt;=&quot;2022-10-31&quot;,weighted.mean(va
 </h3>
 <p>Kirsch wrote that <span class="quote">"this Henjin-produced graph is seriously flawed as explained in great detail <a href=https://openvaet.substack.com/p/dunning-kruger-illustrated-asmr-explained>here</a>"</span>, where he linked to a Substack post by canceledmouse who claimed that I was calculating ASMR incorrectly. I addressed the post in detail here: <a href=czech3.html#Reply_to_Substack_article_by_canceledmouse>czech3.html#Reply_to_Substack_article_by_canceledmouse</a>.</p>
 <p>The reason why canceledmouse was not able to reproduce my ASMR calculation was because he had 4 bugs in his Perl code. I was able to fix all bugs by changing this line:</p>
-<pre>$deaths_per_100k_ASMR = $deaths_per_100k * $standard_percent / $age_group_percent_of_total;
-</pre>
+<pre>$deaths_per_100k_ASMR = $deaths_per_100k * $standard_percent / $age_group_percent_of_total;</pre>
 <p>To this:</p>
-<pre>$deaths_per_100k_ASMR = $deaths_per_100k * $standard_percent / 100 * 365 / ($rolling_days + 1);
-</pre>
+<pre>$deaths_per_100k_ASMR = $deaths_per_100k * $standard_percent / 100 * 365 / ($rolling_days + 1);</pre>
 <p>When he calculated an 11-day moving average of deaths, he added together the deaths on 11 days but he forgot to divide them by 11. And the percentage of each age group in the standard population should've been divided by 100 to get the fraction of the age group. And the deaths per person-days should've been multiplied by 365 to get deaths per person-years. And a division by <span class="quote">"age group percent of total"</span> is not part of the formula for calculating ASMR.</p>
 <p>He fixed the bugs after I pointed them out to him, and after that his code produced mostly similar results to my code. The remaining differences to my code were for two reasons. First I used the Czech 2021 census population as my standard population, but he used the WHO standard population which has a low percentage of people in elderly age groups so it's a very poor match to the Czech population structure. And second I applied a moving average where the window extended 10 days backwards and 10 days forwards to both deaths and population size, but canceledmouse didn't apply a moving average to population size but he only applied a moving average that extended 10 days backwards to deaths, so his deaths were lagging 5 days behind the population size which underestimated the ASMR of vaccinated people in early 2021 when the vaccinated population size was increasing rapidly.</p>
 <p>canceledmouse also claimed that my bucket analysis was done poorly, but the only reason he gave was that I assigned a random birthday to each person so he claimed my analysis was not reproducible. However he didn't notice that I assigned a seed in my code before I generated the random birthdays, and he corrected his error after I pointed it out to him.</p>
@@ -708,8 +701,7 @@ a[x&gt;=&quot;2020-12-14&quot;&amp;x&lt;=&quot;2022-10-31&quot;,weighted.mean(va
 &gt; o[location==&quot;Czechia&quot;&amp;date==&quot;2022-7-4&quot;,total_vaccinations]
 [1] 17681431
 &gt; 6719/17681431
-[1] 0.0003800032
-</pre>
+[1] 0.0003800032</pre>
 <h3>
 <a href=#ASMR_within_21_days_from_first_and_second_doses_in_England_3q id=ASMR_within_21_days_from_first_and_second_doses_in_England_3q>ASMR within 21 days from first and second doses in England (3q)</a>
 </h3>
@@ -818,40 +810,40 @@ a[x&gt;=&quot;2020-12-14&quot;&amp;x&lt;=&quot;2022-10-31&quot;,weighted.mean(va
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)</pre>
-</div>
-<pre>cul=\(x,y)y[cut(x,c(y,Inf),,T,F)]
+<pre>library(data.table);library(ggplot2)
+
+cul=\(x,y)y[cut(x,c(y,Inf),,T,F)]
 agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
-</pre>
-<pre>t=fread(&quot;http://sars2.net/f/swedencancercases.csv&quot;)
+
+t=fread(&quot;http://sars2.net/f/swedencancercases.csv&quot;)
 t=t[age!=&quot;Total&quot;,.(cases=sum(cases)),.(year,age=as.integer(age))]
-</pre>
-<pre>t=t[year%in%2010:2023]
-</pre>
-<pre>pop=fread(&quot;http://sars2.net/f/swedenpopdead.csv&quot;)[,dead:=NULL]
+
+t=t[year%in%2010:2023]
+
+pop=fread(&quot;http://sars2.net/f/swedenpopdead.csv&quot;)[,dead:=NULL]
 pop=pop[,.(pop=sum(pop)),.(year,age=cul(age,unique(t$age)))]
 t=merge(pop[year==2020,.(age,std=pop/sum(pop))],merge(t,pop))
-</pre>
-<pre>ages=0:10*10
+
+ages=0:10*10
 ages=c(0,30,50,70,85)
-</pre>
-<pre>p=t[,.(y=sum(cases/pop*std*1e5)),.(x=year,group=agecut(age,ages))]
+
+p=t[,.(y=sum(cases/pop*std*1e5)),.(x=year,group=agecut(age,ages))]
 p=rbind(p,t[,.(y=sum(cases/pop*std*1e5),group=&quot;Total&quot;),.(x=year)])
-</pre>
-<pre>years=2010:2023
+
+years=2010:2023
 base=p[x%in%2010:2019,.(x=years,y=predict(lm(y~x),.(x=years))),.(group)]
 p$z=&quot;Age-standardized new cases&quot;
 p=rbind(p,base[x&lt;=2019][,z:=&quot;2010-2019 linear trend&quot;])
 p=rbind(p,base[x&gt;=2019][,z:=&quot;Trend projection&quot;])
 p[,z:=factor(z,unique(z))]
-</pre>
-<pre>xstart=2010;xend=2023
-</pre>
-<pre>expand=p[,.(min=min(y),max=max(y)),group]
+
+xstart=2010;xend=2023
+
+expand=p[,.(min=min(y),max=max(y)),group]
 rat=expand[,max(max/min)]*1.02
 expand=expand[,{x=(rat*min-max)/(1+rat);.(y=c(min-x,max+x),group)}]
-</pre>
-<pre>ggplot(p,aes(x,y))+
+
+ggplot(p,aes(x,y))+
 facet_wrap(~group,ncol=2,dir=&quot;v&quot;,scales=&quot;free_y&quot;)+
 geom_line(aes(linetype=z,color=z),linewidth=.6)+
 geom_point(aes(alpha=z),stroke=0,size=1.2)+
@@ -895,8 +887,8 @@ theme(axis.text=element_text(size=11,color=&quot;black&quot;),
   strip.background=element_blank(),
   strip.text=element_blank())
 ggsave(&quot;1.png&quot;,width=7,height=6,dpi=300*4)
-system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)
-</pre>
+system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
+</div>
 <p>And cancer ASMR in Sweden has been below the 2010-2019 linear trend each year since 2020: [<a href="https://sdb.socialstyrelsen.se/if_dor">https://sdb.socialstyrelsen.se/if_dor</a>]</p>
 <div class="width7">
 <img src="i/rootclaim-turbo-6.png">
@@ -905,38 +897,38 @@ system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)</pre>
-</div>
-<pre>agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
-</pre>
-<pre>t=fread(&quot;d/cd/swedencancerdead.csv&quot;)[age!=&quot;Total&quot;]
+<pre>library(data.table);library(ggplot2)
+
+agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
+
+t=fread(&quot;d/cd/swedencancerdead.csv&quot;)[age!=&quot;Total&quot;]
 t=t[age!=&quot;Total&quot;,.(dead=sum(dead)),.(year,age=as.integer(sub(&quot;[-+].*&quot;,&quot;&quot;,age)))]
-</pre>
-<pre>t=t[year%in%2010:2023]
-</pre>
-<pre>pop=fread(&quot;http://sars2.net/f/swedenpopdead.csv&quot;)[,dead:=NULL]
+
+t=t[year%in%2010:2023]
+
+pop=fread(&quot;http://sars2.net/f/swedenpopdead.csv&quot;)[,dead:=NULL]
 pop=pop[,.(pop=sum(pop)),.(year,age=cul(age,unique(t$age)))]
 t=merge(pop[year==2020,.(age,std=pop/sum(pop))],merge(t,pop))
-</pre>
-<pre>ages=0:10*10
+
+ages=0:10*10
 ages=c(0,30,50,70,85)
-</pre>
-<pre>p=t[,.(y=sum(dead/pop*std*1e5)),.(x=year,group=agecut(age,ages))]
+
+p=t[,.(y=sum(dead/pop*std*1e5)),.(x=year,group=agecut(age,ages))]
 p=rbind(p,t[,.(y=sum(dead/pop*std*1e5),group=&quot;Total&quot;),.(x=year)])
-</pre>
-<pre>years=2010:2023
+
+years=2010:2023
 base=p[x%in%2010:2019,.(x=years,y=predict(lm(y~x),.(x=years))),.(group)]
 p$z=&quot;Actual ASMR&quot;
 p=rbind(p,base[x&lt;=2020][,z:=&quot;2010-2019 linear trend&quot;])
 p=rbind(p,base[x&gt;=2020][,z:=&quot;Trend projection&quot;])
 p[,z:=factor(z,unique(z))]
-</pre>
-<pre>xstart=2010;xend=2023
-</pre>
-<pre>rat=(max(p[,max(y)/min(y),group]$V1)-1)/2
+
+xstart=2010;xend=2023
+
+rat=(max(p[,max(y)/min(y),group]$V1)-1)/2
 expand=p[,.(mean(range(y))),group][,.(y=c(V1-V1*rat,V1+V1*rat),group)]
-</pre>
-<pre>ggplot(p,aes(x,y))+
+
+ggplot(p,aes(x,y))+
 facet_wrap(~group,ncol=2,dir=&quot;v&quot;,scales=&quot;free_y&quot;)+
 geom_vline(xintercept=2019.5,color=&quot;gray80&quot;,linewidth=.4)+
 geom_line(aes(linetype=z,color=z),linewidth=.6)+
@@ -982,8 +974,8 @@ theme(axis.text=element_text(size=11,color=&quot;black&quot;),
   strip.background=element_blank(),
   strip.text=element_blank())
 ggsave(&quot;1.png&quot;,width=7,height=6,dpi=300*4)
-system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)
-</pre>
+system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
+</div>
 <p>In the next plot of cancer ASMR in the US, the total ASMR for all ages combined gone down each year since 2020, even though the decrease since 2020 seems to have been slightly less steep than the decrease in 2015-2019. The age group 0-29 has had a slight increase in cancer ASMR since 2020, but even in 2022 when the ASMR peaked in ages 0-29, it was still around the same level as the ASMR in 2017:</p>
 <div class="width7">
 <img src="i/rootclaim-turbo-8.png">
@@ -992,37 +984,37 @@ system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)</pre>
-</div>
-<pre>agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
-</pre>
-<pre>t=fread(&quot;http://sars2.net/f/wondermalignantyearly.csv&quot;)[cause%like%&quot;UCD&quot;]
+<pre>library(data.table);library(ggplot2)
+
+agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
+
+t=fread(&quot;http://sars2.net/f/wondermalignantyearly.csv&quot;)[cause%like%&quot;UCD&quot;]
 t=t[year%in%2010:2023]
 t=t[,.(dead=sum(dead)),.(year,age,cause)]
-</pre>
-<pre>pop=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)[,dead:=NULL]
+
+pop=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)[,dead:=NULL]
 t=merge(pop[year==2020,.(age,std=pop/sum(pop))],merge(t,pop))
-</pre>
-<pre>ages=0:10*10
+
+ages=0:10*10
 ages=c(0,30,50,70,85)
-</pre>
-<pre>p=t[,.(y=sum(dead/pop*std*1e5)),.(x=year,group=agecut(age,ages))]
+
+p=t[,.(y=sum(dead/pop*std*1e5)),.(x=year,group=agecut(age,ages))]
 p=rbind(p,t[,.(y=sum(dead/pop*std*1e5),group=&quot;Total&quot;),.(x=year)])
-</pre>
-<pre>years=sort(c(2010:2023,2019.5))
+
+years=sort(c(2010:2023,2019.5))
 base=p[x%in%2010:2019,.(x=years,y=predict(lm(y~x),.(x=years))),group]
 p$z=&quot;Actual ASMR&quot;
 p=rbind(p,base[x&lt;=2019.5][,z:=&quot;2010-2019 linear trend&quot;])
 p=rbind(p,base[x&gt;=2019.5][,z:=&quot;Trend projection&quot;])
 p[,z:=factor(z,unique(z))]
-</pre>
-<pre>xstart=2010;xend=2023
-</pre>
-<pre>expand=p[,.(min=min(y),max=max(y)),group]
+
+xstart=2010;xend=2023
+
+expand=p[,.(min=min(y),max=max(y)),group]
 rat=expand[,max(max/min)]
 expand=expand[,{x=(rat*min-max)/(1+rat);.(y=c(min-x,max+x),group)}]
-</pre>
-<pre>ggplot(p,aes(x,y))+
+
+ggplot(p,aes(x,y))+
 facet_wrap(~group,ncol=2,dir=&quot;v&quot;,scales=&quot;free_y&quot;)+
 geom_vline(xintercept=c(2014.5,2019.5),color=&quot;gray80&quot;,linewidth=.4)+
 geom_line(aes(linetype=z,color=z),linewidth=.6)+
@@ -1064,8 +1056,8 @@ theme(axis.text=element_text(size=11,color=&quot;black&quot;),
   strip.background=element_blank(),
   strip.text=element_blank())
 ggsave(&quot;1.png&quot;,width=7,height=6,dpi=300*4)
-system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)
-</pre>
+system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
+</div>
 <p>The Twitter user Ethical Skeptic has published many fraudulent plots of cancer mortality in the US. In the next plot he got the lowest cancer ASMR in 2021 but after that his ASMR went up three years in a row. However I was not able to reproduce his plot even though I tried many different ways to calculate ASMR, and I always got lower ASMR in 2022 and 2023 than 2021, like what's shown by the red line I overlaid on top of his plot here: [<a href=ethical.html#SV40_cancer_wave_plot_for_cancer_ASMR_since_1950s>ethical.html#SV40_cancer_wave_plot_for_cancer_ASMR_since_1950s</a>]</p>
 <div class="width8">
 <img src="i/ethical-historical-cancer-10.png">
@@ -1183,24 +1175,21 @@ system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)
  2020 437852
  2021 495284
  2022 395982
- 2023 368472
-</pre>
+ 2023 368472</pre>
 <p>In July to December of 2021, ages 18-64 had 87,677 deaths with UCD COVID and 97,630 deaths with MCD COVID. So deaths with UCD COVID account for about 61% of the difference between 2021 and 2019 (from <code>87677/(495284-351102)</code>): [<a href=stat.html#Download_fixed_width_and_CSV_files_for_the_NVSS_data_used_at_CDC_WONDER>stat.html#Download_fixed_width_and_CSV_files_for_the_NVSS_data_used_at_CDC_WONDER</a>]</p>
 <pre>&gt; v=fread(&quot;curl -Ls sars2.net/f/vital.csv.xz|xz -dc&quot;)
 &gt; v[month&gt;=7&amp;age%in%18:64][cause==&quot;U071&quot;,.(ucd=sum(ucd),mcd=sum(mcd)),year]
    year    ucd   mcd
 1: 2020 188108 50124
 2: 2021 366851 97630
-3: 2022  29630 10500
-</pre>
+3: 2022  29630 10500</pre>
 <p>The number of deaths with UCD related to recreational drug use also increased from 34,240 in the second half of 2019 to 49,196 in the second half of 2021, so it accounts for about 10% of the increase in total deaths between 2019 and 2021:</p>
 <pre>&gt; v[month&gt;=7&amp;age%in%18:64][cause%like%&quot;X4[0-4]|X6[0-4]|Y1[0-4]&quot;,.(ucd=sum(ucd),mcd=sum(mcd)),year][year&gt;2018]
    year    ucd   mcd
 1: 2019 173405 36643
 2: 2020 218918 45790
 3: 2021 249916 52141
-4: 2022 254351 53202
-</pre>
+4: 2022 254351 53202</pre>
 <p>On CDC WONDER if you calculate a ratio of deaths with UCD COVID in 2021 divided by 2020, it's about 2.02 in ages 18-64 but about 1.05 in ages 65 and above:</p>
 <pre>&gt; v[cause==&quot;U071&quot;&amp;age%in%18:64,.(ucd=sum(ucd)),year]
    year    ucd
@@ -1211,8 +1200,7 @@ system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)
    year     ucd
 1: 2020 1156756
 2: 2021 1210465
-3: 2022  656996
-</pre>
+3: 2022  656996</pre>
 <p>So why did working-age people have such a high percentage of COVID deaths in 2021 relative to 2020? I think it's because in 2021 working-age people were less likely to be vaccinated than elderly people.</p>
 <p>In the winter of 2020-2021 the Czech Republic had a pattern of mortality with three distinct humps, where in ages 80+ the first hump was the highest and the third hump was the lowest, but ages 40-59 followed an opposite pattern. I think it's because by the time of the third hump, the percentage of vaccinated people was over 50% in ages 80+ but less than 10% in ages 40-59: [<a href=czech.html#Daily_deaths_and_vaccine_doses_by_age_group>czech.html#Daily_deaths_and_vaccine_doses_by_age_group</a>]</p>
 <div class="width5">
@@ -1289,8 +1277,7 @@ system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)
    CountryCode excesspct
 1:         AUS      17.2
 2:         AUT       9.9
-3:         BEL       4.8
-</pre>
+3:         BEL       4.8</pre>
 <p>However most countries included in Fenton's plot were European, but a prepandemic average baseline exaggerates excess deaths in Western European countries relative to Eastern European countries, because before COVID Western European countries had a more steep increase in the yearly number of deaths on average, and in 2020-2021 the population size was reduced more by excess deaths in Eastern European countries on average.</p>
 <p>In the next plot the green baseline addresses both shortcomings of a prepandemic average baseline. From the last two panels, you can see how in 2022 the prepandemic average baseline is too low compared to the green baseline in Western European countries but too high in Eastern European countries: [<a href=statistic2.html#Excess_mortality_in_European_countries_compared_to_percentage_of_vaccinated_people>statistic2.html#Excess_mortality_in_European_countries_compared_to_percentage_of_vaccinated_people</a>]</p>
 <div class="width7">
@@ -1304,38 +1291,38 @@ system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)</pre>
-</div>
-<pre>download.file(&quot;https://covid.ourworldindata.org/data/owid-covid-data.csv&quot;,&quot;owid-covid-data.csv&quot;)
+<pre>library(data.table);library(ggplot2)
+
+download.file(&quot;https://covid.ourworldindata.org/data/owid-covid-data.csv&quot;,&quot;owid-covid-data.csv&quot;)
 download.file(&quot;https://s3.mortality.watch/data/mortality/world_yearly.csv&quot;,&quot;world_yearly.csv&quot;)
 download.file(&quot;https://mortality.org/File/GetDocument/Public/STMF/Outputs/stmf.csv&quot;,&quot;stmf.csv&quot;)
-</pre>
-<pre>owid=fread(&quot;owid-covid-data.csv&quot;)
+
+owid=fread(&quot;owid-covid-data.csv&quot;)
 mort=fread(&quot;world_yearly.csv&quot;)
 stmf=fread(&quot;stmf.csv&quot;)[Sex==&quot;b&quot;]
-</pre>
-<pre>ave=merge(stmf,stmf[Year%in%2017:2019,.(base=mean(DTotal)),.(Week,CountryCode)])
+
+ave=merge(stmf,stmf[Year%in%2017:2019,.(base=mean(DTotal)),.(Week,CountryCode)])
 ave=ave[Year==2022,.(ave=(sum(DTotal)/sum(base)-1)*100),.(iso=CountryCode)]
-</pre>
-<pre>d=owid[!is.na(people_fully_vaccinated_per_hundred)&amp;year(date)==2022,.(vax=max(people_fully_vaccinated_per_hundred),owid=mean(excess_mortality,na.rm=T)),.(continent,location,iso=iso_code)]
+
+d=owid[!is.na(people_fully_vaccinated_per_hundred)&amp;year(date)==2022,.(vax=max(people_fully_vaccinated_per_hundred),owid=mean(excess_mortality,na.rm=T)),.(continent,location,iso=iso_code)]
 d=merge(d,na.omit(mort[date==2022,.(iso=iso3c,asmr=(asmr_esp/asmr_esp_baseline-1)*100)]),all=T)
 d=merge(d,ave,all=T)
-</pre>
-<pre>lab=c(&quot;Excess raw deaths at STMF with 2017-2019 average baseline (like Fenton)&quot;,&quot;Excess raw deaths at OWID with 2015-2019 linear baseline&quot;,&quot;Excess ASMR at Mortality Watch&quot;)
+
+lab=c(&quot;Excess raw deaths at STMF with 2017-2019 average baseline (like Fenton)&quot;,&quot;Excess raw deaths at OWID with 2015-2019 linear baseline&quot;,&quot;Excess ASMR at Mortality Watch&quot;)
 p=na.omit(d[,.(x=vax,y=c(ave,owid,asmr),iso,continent,z=factor(rep(lab,each=.N),lab))])
 p=p[!(iso==&quot;BOL&quot;&amp;z%like%&quot;OWID&quot;)] # Bolivia had 115.7% average monthly excess deaths at OWID because only one month was available
-</pre>
-<pre>p=p[iso%in%p[,.N,iso][N==3,iso]]
-</pre>
-<pre>levels(p$z)=p[,cor(x,y),z][,sprintf(&quot;%s (r ≈ %.02f)&quot;,z,V1)]
-</pre>
-<pre>xbreak=p[,pretty(x)];ybreak=p[,pretty(y)];ylim=extendrange(p$y);xstart=xbreak[1];xend=max(p$x)*1.01
-</pre>
-<pre>conti=owid[,.(name=setdiff(sort(unique(continent)),&quot;&quot;))]
+
+p=p[iso%in%p[,.N,iso][N==3,iso]]
+
+levels(p$z)=p[,cor(x,y),z][,sprintf(&quot;%s (r ≈ %.02f)&quot;,z,V1)]
+
+xbreak=p[,pretty(x)];ybreak=p[,pretty(y)];ylim=extendrange(p$y);xstart=xbreak[1];xend=max(p$x)*1.01
+
+conti=owid[,.(name=setdiff(sort(unique(continent)),&quot;&quot;))]
 conti$color=c(&quot;#444444&quot;,&quot;#ff5555&quot;,&quot;#4444ff&quot;,&quot;#00bb00&quot;,&quot;#bb22bb&quot;,&quot;#bbbb22&quot;)
 conti=conti[name%in%p$continent]
-</pre>
-<pre>ggplot(p,aes(x,y))+
+
+ggplot(p,aes(x,y))+
 facet_wrap(~z,dir=&quot;v&quot;,scales=&quot;free_x&quot;)+
 coord_cartesian(clip=&quot;off&quot;,expand=F)+
 geom_smooth(method=&quot;lm&quot;,formula=y~x,linewidth=.5,se=F,color=&quot;black&quot;,linetype=&quot;42&quot;)+
@@ -1375,8 +1362,8 @@ theme(axis.text=element_text(size=11,color=&quot;black&quot;),
   strip.background=element_blank(),
   strip.text=element_text(hjust=0,size=11,margin=margin(,,3)))
 ggsave(&quot;1.png&quot;,width=7,height=,dpi=300*4)
-system(&quot;mogrify 1.png -trim -resize 25% -bordercolor white -border 30 -colors 256 1.png&quot;)
-</pre>
+system(&quot;mogrify 1.png -trim -resize 25% -bordercolor white -border 30 -colors 256 1.png&quot;)</pre>
+</div>
 <p>In the previous plot I took the excess ASMR percentages from this file: <a href="https://s3.mortality.watch/data/mortality/world_yearly.csv">https://s3.mortality.watch/data/mortality/world_yearly.csv</a>. The baseline for ASMR in the file is a linear regression in the range of 2010-2019 to 2015-2019 where the duration of the fitting period is selected so that the error between the baseline and actual ASMR is minimized. [<a href="https://www.mortality.watch/about">https://www.mortality.watch/about</a>] In the middle panel I took the average value of the <code>excess_mortality</code> column for each country at OWID during months in 2022 or weeks that ended in 2022.</p>
 <p>In the previous plot I only included countries that had excess mortality data available using all three methods in my plot. But when I included all available countries for each panel instead, the correlation dropped to 0.09 in the middle panel and -0.06 in the bottom panel:</p>
 <div class="width7">
@@ -1387,14 +1374,12 @@ system(&quot;mogrify 1.png -trim -resize 25% -bordercolor white -border 30 -colo
 wei=stmf[,.(iso=CountryCode,Year,Week,dead=unlist(stmf[,5:9],,F),rate=unlist(stmf[,11:15],,F),age=rep(c(0,15,65,75,85),each=.N))]
 wei=wei[,.(rate=mean(rate),dead=sum(dead)),.(Year,iso,age)]
 base=wei[Year%in%2017:2019,.(base=mean(rate)),.(age,iso)]
-merge(base,wei[Year==2022])[,.(excesspct=weighted.mean((rate/base-1)*100,dead)),iso][1:3]
-</pre>
+merge(base,wei[Year==2022])[,.(excesspct=weighted.mean((rate/base-1)*100,dead)),iso][1:3]</pre>
 <!-- -->
 <pre>   iso excesspct
 1: AUS    4.8447
 2: AUT    9.3524
-3: BEL    0.9138
-</pre>
+3: BEL    0.9138</pre>
 <p>My new method gave me a correlation of about 0.11 between the percentage of vaccinated people and excess deaths in 2022:</p>
 <div class="width7">
 <img src="i/rootclaim-advocate-4.png">
@@ -1403,35 +1388,35 @@ merge(base,wei[Year==2022])[,.(excesspct=weighted.mean((rate/base-1)*100,dead)),
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)</pre>
-</div>
-<pre>owid=fread(&quot;owid-covid-data.csv&quot;)
+<pre>library(data.table);library(ggplot2)
+
+owid=fread(&quot;owid-covid-data.csv&quot;)
 stmf=fread(&quot;stmf.csv&quot;)[Sex==&quot;b&quot;]
-</pre>
-<pre>wei=stmf[,.(iso=CountryCode,Year,Week,dead=unlist(stmf[,5:9],,F),rate=unlist(stmf[,11:15],,F),age=rep(c(0,15,65,75,85),each=.N))]
+
+wei=stmf[,.(iso=CountryCode,Year,Week,dead=unlist(stmf[,5:9],,F),rate=unlist(stmf[,11:15],,F),age=rep(c(0,15,65,75,85),each=.N))]
 wei=wei[,.(rate=mean(rate),dead=sum(dead)),.(Year,iso,age)]
 base=wei[Year%in%2017:2019,.(base=mean(rate)),.(age,iso)]
 wei=merge(base,wei[Year==2022])[,.(wei=weighted.mean((rate/base-1)*100,dead)),iso]
-</pre>
-<pre>ave=merge(stmf,stmf[Year%in%2017:2019,.(base=mean(DTotal)),.(Week,CountryCode)])
+
+ave=merge(stmf,stmf[Year%in%2017:2019,.(base=mean(DTotal)),.(Week,CountryCode)])
 ave=ave[Year==2022,.(ave=(sum(DTotal)/sum(base)-1)*100),.(iso=CountryCode)]
-</pre>
-<pre>d=owid[!is.na(people_fully_vaccinated_per_hundred)&amp;year(date)==2022,.(vax=max(people_fully_vaccinated_per_hundred)),.(continent,iso=iso_code)]
+
+d=owid[!is.na(people_fully_vaccinated_per_hundred)&amp;year(date)==2022,.(vax=max(people_fully_vaccinated_per_hundred)),.(continent,iso=iso_code)]
 d=merge(d,ave,all=T)
 d=merge(d,wei,all=T)
-</pre>
-<pre>lab=c(&quot;Excess raw deaths at STMF with 2017-2019 average baseline (like Fenton)&quot;,&quot;Excess age-specific CMR at STMF weighted by total deaths for age&quot;)
+
+lab=c(&quot;Excess raw deaths at STMF with 2017-2019 average baseline (like Fenton)&quot;,&quot;Excess age-specific CMR at STMF weighted by total deaths for age&quot;)
 p=na.omit(d[,.(x=vax,y=c(ave,wei),iso,continent,z=factor(rep(lab,each=.N),lab))])
-</pre>
-<pre>levels(p$z)=p[,cor(x,y),z][,sprintf(&quot;%s (r\u00a0≈\u00a0%.02f)&quot;,z,V1)]
-</pre>
-<pre>xbreak=p[,pretty(x)];ybreak=p[,pretty(y)];ylim=extendrange(p$y);xstart=xbreak[1];xend=max(p$x)*1.01
-</pre>
-<pre>conti=owid[,.(name=setdiff(sort(unique(continent)),&quot;&quot;))]
+
+levels(p$z)=p[,cor(x,y),z][,sprintf(&quot;%s (r\u00a0≈\u00a0%.02f)&quot;,z,V1)]
+
+xbreak=p[,pretty(x)];ybreak=p[,pretty(y)];ylim=extendrange(p$y);xstart=xbreak[1];xend=max(p$x)*1.01
+
+conti=owid[,.(name=setdiff(sort(unique(continent)),&quot;&quot;))]
 conti$color=c(&quot;#444444&quot;,&quot;#ff5555&quot;,&quot;#4444ff&quot;,&quot;#00bb00&quot;,&quot;#bb22bb&quot;,&quot;#bbbb22&quot;)
 conti=conti[name%in%p$continent]
-</pre>
-<pre>ggplot(p,aes(x,y))+
+
+ggplot(p,aes(x,y))+
 facet_wrap(~z,dir=&quot;v&quot;,scales=&quot;free_x&quot;)+
 coord_cartesian(clip=&quot;off&quot;,expand=F)+
 geom_smooth(method=&quot;lm&quot;,formula=y~x,linewidth=.5,se=F,color=&quot;black&quot;,linetype=&quot;42&quot;)+
@@ -1471,39 +1456,38 @@ theme(axis.text=element_text(size=11,color=&quot;black&quot;),
   strip.background=element_blank(),
   strip.text=element_text(hjust=0,size=11,margin=margin(,,3)))
 ggsave(&quot;1.png&quot;,width=7,height=6,dpi=300*4)
-system(&quot;mogrify 1.png -trim -resize 25% -bordercolor white -border 30 -colors 256 1.png&quot;)
-</pre>
+system(&quot;mogrify 1.png -trim -resize 25% -bordercolor white -border 30 -colors 256 1.png&quot;)</pre>
+</div>
 <p>However next I realized that I can also use the age-specific mortality rates at STMF to calculate ASMR without having to know the population size of the age groups. When I calculated excess ASMR in 2022 relative to a 2015-2019 linear regression, I got a correlation of about 0.07 with the percentage of fully vaccinated people at OWID:</p>
 <pre>download.file(&quot;https://mortality.org/File/GetDocument/Public/STMF/Outputs/stmf.csv&quot;,&quot;stmf.csv&quot;)
 download.file(&quot;https://covid.ourworldindata.org/data/owid-covid-data.csv&quot;,&quot;owid-covid-data.csv&quot;)
-</pre>
-<pre>stmf=fread(&quot;stmf.csv&quot;)[Sex==&quot;b&quot;]
+
+stmf=fread(&quot;stmf.csv&quot;)[Sex==&quot;b&quot;]
 names(stmf)=tolower(names(stmf))
-</pre>
-<pre># population size of STMF age groups in 2013 European Standard Population
+
+# population size of STMF age groups in 2013 European Standard Population
 esp=c(160,645,105,65,25)*100
-</pre>
-<pre># multiply age-specific mortality rates by standard population in ESP2013
+
+# multiply age-specific mortality rates by standard population in ESP2013
 a=stmf[,.(iso=countrycode,year,week,asmr=unlist(stmf[,11:15],,F)*rep(esp,each=.N))]
-</pre>
-<pre># exclude countries with data missing during any week in 2015-2022
+
+# exclude countries with data missing during any week in 2015-2022
 a=a[iso%in%a[year%in%2015:2022,.N,iso][N==max(N),iso]]
-</pre>
-<pre># convert weekly ASMR to yearly ASMR by taking yearly average
+
+# convert weekly ASMR to yearly ASMR by taking yearly average
 a=a[,.(asmr=sum(asmr)),.(iso,year,week)][,.(asmr=mean(asmr)),.(iso,year)]
-</pre>
-<pre># make a dataframe for the actual and projected ASMR for each country in 2022
+
+# make a dataframe for the actual and projected ASMR for each country in 2022
 d=a[year==2022]
 d$base=a[year%in%2015:2019,predict(lm(asmr~year),.(year=2022)),iso]$V1
-</pre>
-<pre># get the last reported value in 2022 for the percentage of fully vaccinated people at OWID
+
+# get the last reported value in 2022 for the percentage of fully vaccinated people at OWID
 owid=fread(&quot;owid-covid-data.csv&quot;)
 owid[,vax:=people_fully_vaccinated_per_hundred]
 vax=owid[!is.na(vax)&amp;year(date)==2022,.(vax=tail(vax,1)),.(iso=iso_code)]
-</pre>
-<pre># calculate correlation between fully vaccinated percent and excess ASMR in 2022
-merge(d,vax)[,cor(asmr/base,vax)] # 0.0689673
-</pre>
+
+# calculate correlation between fully vaccinated percent and excess ASMR in 2022
+merge(d,vax)[,cor(asmr/base,vax)] # 0.0689673</pre>
 <h3>
 <a href=#Unanswered_submissions_in_an_Australian_excess_mortality_inquiry_5f id=Unanswered_submissions_in_an_Australian_excess_mortality_inquiry_5f>Unanswered submissions in an Australian excess mortality inquiry (5f)</a>
 </h3>
@@ -1639,49 +1623,49 @@ merge(d,vax)[,cor(asmr/base,vax)] # 0.0689673
 <button>
 Show code
 </button>
-<pre>download.file(&quot;https://covid.ourworldindata.org/data/owid-covid-data.csv&quot;,&quot;owid-covid-data.csv&quot;)</pre>
-</div>
-<pre>library(data.table);library(ggplot2)
-</pre>
-<pre>ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
-</pre>
-<pre>t=fread(&quot;owid-covid-data.csv&quot;)
-</pre>
-<pre>pick=sort(c(&quot;Hong Kong&quot;,&quot;Singapore&quot;,&quot;South Korea&quot;,&quot;Australia&quot;))
+<pre>download.file(&quot;https://covid.ourworldindata.org/data/owid-covid-data.csv&quot;,&quot;owid-covid-data.csv&quot;)
+
+library(data.table);library(ggplot2)
+
+ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
+
+t=fread(&quot;owid-covid-data.csv&quot;)
+
+pick=sort(c(&quot;Hong Kong&quot;,&quot;Singapore&quot;,&quot;South Korea&quot;,&quot;Australia&quot;))
 a=t[location%in%pick,.(location,date,excess_mortality,new_vaccinations,positive_rate)]
 a[,positive_rate:=positive_rate*100]
-</pre>
-<pre>shil=\(x,y=1)c(tail(x,-y),rep(NA,y))
+
+shil=\(x,y=1)c(tail(x,-y),rep(NA,y))
 wemo=\(x){rle=rle(is.na(x));len=table(rle$lengths[rle$values]);if(sum(len[&quot;29&quot;],len[&quot;30&quot;],na.rm=T)&gt;2)x=shil(x,15);if(!is.na(len[&quot;6&quot;]&gt;3))x=shil(x,3);x}
 a[,excess_mortality:=wemo(excess_mortality),location]
-</pre>
-<pre>var=setkey(fread(text=&quot;z,name,h,s,b
+
+var=setkey(fread(text=&quot;z,name,h,s,b
 excess_mortality,Excess deaths,0,0,0
 new_vaccinations,New vaccine doses,30,.5,1
 positive_rate,PCR positivity rate,12,1,.65&quot;),z)
 var[,color:=hsv(h/36,s,b)]
 var[,color:=hsv(h/36,s,b)]
-</pre>
-<pre>ispct=c(&quot;excess_mortality&quot;,&quot;positive_rate&quot;)
-</pre>
-<pre>p=a[,.(group=factor(location,pick),x=date,z=rep(names(.SD)[-(1:2)],each=.N),y=unlist(.SD[,-(1:2)]))]
+
+ispct=c(&quot;excess_mortality&quot;,&quot;positive_rate&quot;)
+
+p=a[,.(group=factor(location,pick),x=date,z=rep(names(.SD)[-(1:2)],each=.N),y=unlist(.SD[,-(1:2)]))]
 p[,y:=zoo::na.approx(y,na.rm=F),.(group,z)]
 p[,z:=factor(z,intersect(p$z,var$z))]
-</pre>
-<pre>lab=merge(p[,.(min=min(y,na.rm=T),max=max(y,na.rm=T)),.(group,z)],var)[is.finite(max)]
+
+lab=merge(p[,.(min=min(y,na.rm=T),max=max(y,na.rm=T)),.(group,z)],var)[is.finite(max)]
 lab=lab[,.(group,z,color,label=paste0(name,&quot; (&quot;,pmin(0,round(min)),&quot;-&quot;,round(max),ifelse(z%in%ispct,&quot;%&quot;,&quot;&quot;),&quot;)&quot;))]
-</pre>
-<pre>p[,y:=ma(y,7),.(group,z)][,y:=y/max(y,na.rm=T),.(group,z)]
-</pre>
-<pre>lab=merge(p[,.(ymin=min(y,na.rm=T)),group],lab)
+
+p[,y:=ma(y,7),.(group,z)][,y:=y/max(y,na.rm=T),.(group,z)]
+
+lab=merge(p[,.(ymin=min(y,na.rm=T)),group],lab)
 lab[,y:=seq(1-.08*(1-ymin[1]),,-1/11*(1-ymin[1]),.N),group]
 lab[,hjust:=c(0,0,0,0)[group]]
-</pre>
-<pre>xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
+
+xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
 xbreak=seq(xstart,xend,&quot;6 month&quot;)
 xlab=ifelse(month(xbreak)==7,year(xbreak),&quot;&quot;)
-</pre>
-<pre>ggplot(p,aes(x,y))+
+
+ggplot(p,aes(x,y))+
 facet_wrap(~group,ncol=2,strip.position=&quot;top&quot;,scales=&quot;free&quot;)+
 geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),linewidth=.3,color=&quot;gray70&quot;,lineend=&quot;square&quot;)+
 geom_hline(yintercept=0:1,linewidth=.3,color=&quot;gray70&quot;,lineend=&quot;square&quot;)+
@@ -1707,8 +1691,8 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   strip.background=element_blank(),
   strip.text=element_text(face=2,margin=margin(,,3),size=7))
 ggsave(&quot;1.png&quot;,width=5,height=4,dpi=380*4)
-system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)
-</pre>
+system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
+</div>
 <p>The plot above also shows that in Hong Kong, South Korea, and Australia, the PCR positivity rate remained close to 0% until 2022, but in 2022 there was a sharp spike in excess deaths which coincided with a sharp spike in the PCR positivity rate. Why would vaccines not result in excess deaths in 2021 but they would only result in a sharp spike in deaths much later in 2022? In South Korea the spike did not even coincide with the booster rollout because the booster rollout had peaked about 3 months earlier.</p>
 <p>Even in the second half of 2022 and in 2023, the spikes in deaths in Singapore coincided with COVID waves:</p>
 <div class="width7">
@@ -1731,39 +1715,35 @@ system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)
 <pre>v=fread(&quot;curl -Ls sars2.net/f/vital.csv.xz|xz -dc&quot;) # NVSS data used by CDC WONDER
 a=v[,.(dead=sum(ucd)),.(year,cause)]
 drug=a[cause%like%&quot;X4[0-4]|X6[0-4]|Y1[0-4]&quot;,.(dead=sum(dead)),year]
-</pre>
-<pre>d=drug[year&gt;=2020]
+
+d=drug[year&gt;=2020]
 d$ave=drug[year%in%2015:2019,mean(dead)]
 d$trend=drug[year%in%2013:2019,predict(lm(dead~year),d)]
-round(d[,excessave:=dead-ave][,excesstrend:=dead-trend][])
-</pre>
+round(d[,excessave:=dead-ave][,excesstrend:=dead-trend][])</pre>
 <!-- -->
 <pre>   year   dead   ave trend excessave excesstrend
 1: 2020  91631 64734 78951     26897       12680
 2: 2021 106485 64734 83883     41751       22602
-3: 2022 107734 64734 88816     43000       18918
-</pre>
+3: 2022 107734 64734 88816     43000       18918</pre>
 <p>When I similarly used a 2013-2019 linear trend to calculate excess deaths from traffic accidents and firearm use, they were also much lower than in Wilf's table. My remainder of unexplained deaths was much higher than in Wilf's table, even though it seems to be mostly because I looked at UCD instead of MCD COVID deaths:</p>
 <pre>a=v[,.(dead=sum(ucd)),.(year,cause)]
 d=a[cause==&quot;U071&quot;,.(year,cdcexcess=c(453810,530876,327658),covid=dead)]
-</pre>
-<pre>a$group=NA
+
+a$group=NA
 a$group[a$cause%like%&quot;X4[0-4]|X6[0-4]|Y1[0-4]&quot;]=&quot;drug&quot;
 a$group[a$cause%like%&quot;V&quot;]=&quot;traffic&quot;
 a$group[a$cause%like%&quot;X7[2-4]|X9[3-5]|W3[2-4]|Y2[2-4]&quot;]=&quot;gun&quot;
-</pre>
-<pre>a=a[!is.na(group),.(dead=sum(dead)),.(year,group)]
+
+a=a[!is.na(group),.(dead=sum(dead)),.(year,group)]
 a=merge(a[year%in%2013:2019,.(year=d$year,base=predict(lm(dead~year),d)),group],a)
 d=merge(d,dcast(a[,value:=dead-base],year~group))
 d$remainder=d$cdcexcess-rowSums(d[,-(1:2)])
-print(round(d),r=F)
-</pre>
+print(round(d),r=F)</pre>
 <!-- -->
 <pre> year cdcexcess  covid  drug  gun traffic remainder
  2020    453810 350831 12680 2983    1047     86269
  2021    530876 416893 22602 5467    4850     81065
- 2022    327658 186552 18918 3535    3088    115565
-</pre>
+ 2022    327658 186552 18918 3535    3088    115565</pre>
 <p>Wilf took the number of COVID deaths from OWID which in turn took it from a dataset published by WHO. [<a href="https://ourworldindata.org/explorers/covid?tab=table&time=earliest%2e%2e2022-12-31&country=%7eUSA&pickerSort=desc&pickerMetric=total_deaths&Metric=Confirmed+deaths&Interval=Cumulative&Relative+to+population=false">https://ourworldindata.org/explorers/covid?tab=table&amp;time=earliest%2e%2e2022-12-31&amp;country=%7eUSA&amp;pickerSort=desc&amp;pickerMetric=total_deaths&amp;Metric=Confirmed+deaths&amp;Interval=Cumulative&amp;Relative+to+population=false</a>, <a href="https://data.who.int/dashboards/covid19/data?n=c&m49=840">https://data.who.int/dashboards/covid19/data?n=c&amp;m49=840</a>] The number of deaths in the WHO dataset doesn't match either MCD or UCD COVID deaths at CDC WONDER, but it might be because the deaths in the WHO dataset are by <span class="quote">"date reported to WHO"</span> but deaths at CDC WONDER are by date of occurrence. The numbers in the WHO dataset are also slightly off from the numbers listed at OWID, but I think it's because OWID interpolated WHO's weekly data to daily data. Here I converted the weekly deaths to yearly deaths based on the year of the Thursday:</p>
 <pre>&gt; who=fread(&quot;https://srhdpeuwpubsa.blob.core.windows.net/whdh/COVID/WHO-COVID-19-global-data.csv&quot;)
 &gt; who[Country_code==&quot;US&quot;,.(dead=sum(New_deaths,na.rm=T)),.(year=year(Date_reported-3))]|&gt;print(r=F)
@@ -1772,15 +1752,13 @@ year   dead
 2021 459163 # 470402
 2022 260723 # 263401
 2023  82031
-2024  45580
-</pre>
+2024  45580</pre>
 <p>The WHO dataset appears to correspond to MCD rather than UCD deaths at CDC WONDER, except the deaths in the WHO dataset seem to be reported with a delay so that there's less deaths in 2020 and 2021 but more deaths in 2022:</p>
 <pre>&gt; v[cause==&quot;U071&quot;,.(ucd=sum(ucd),mcd=sum(mcd)),year]
    year    ucd    mcd # deaths at CDC WONDER and NVSS
 1: 2020 350831 397566
 2: 2021 416893 478402
-3: 2022 186552 254355
-</pre>
+3: 2022 186552 254355</pre>
 <p>But anyway Wilf might have underestimated his remainder of unexplained deaths because he looked at MCD rather than UCD COVID deaths (even though UCD COVID seems to fall short of excess deaths during COVID waves).</p>
 <p>However CDC's estimate for excess deaths seems to be accurate, or at least it's close to my estimate here where I multiplied the 2013-2019 trend in CMR for each age by the mid-year resident population estimate for the age:</p>
 <pre>d=data.table(year=2020:2022,cdcexcess=c(453810,530876,327658))
@@ -1788,14 +1766,12 @@ years=2011:2023
 t=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)[year%in%years]
 t=merge(t,t[year&lt;2020,.(year=years,base=predict(lm(dead/pop~year),.(year=years))),age])
 t=t[,.(dead=sum(dead),base=sum(base*pop)),year]
-merge(d,t[,.(year,myexcess=dead-base)])|&gt;print(r=F)
-</pre>
+merge(d,t[,.(year,myexcess=dead-base)])|&gt;print(r=F)</pre>
 <!-- -->
 <pre>year cdcexcess myexcess
 2020    453810 468885.1
 2021    530876 515125.3
-2022    327658 285018.6
-</pre>
+2022    327658 285018.6</pre>
 <h2>
 <a href=#Substack_post_by_USMortality id=Substack_post_by_USMortality>Substack post by USMortality</a>
 </h2>
@@ -1832,26 +1808,26 @@ merge(d,t[,.(year,myexcess=dead-base)])|&gt;print(r=F)
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)</pre>
-</div>
-<pre>t=fread(&quot;http://sars2.net/f/ons.csv&quot;)
+<pre>library(data.table);library(ggplot2)
+
+t=fread(&quot;http://sars2.net/f/ons.csv&quot;)
 t=rbind(t[ed==7&amp;month&lt;=&quot;2021-03&quot;],t[ed==9])
 t=t[cause==&quot;Deaths involving COVID-19&quot;&amp;age==&quot;80-89&quot;]
-</pre>
-<pre>p=t[status==&quot;Unvaccinated&quot;,.(y=dead/pop,month,z=status)]
+
+p=t[status==&quot;Unvaccinated&quot;,.(y=dead/pop,month,z=status)]
 p=rbind(p,t[status!=&quot;Unvaccinated&quot;,.(y=sum(dead)/sum(pop),z=&quot;Vaccinated&quot;),month])
 p=rbind(p,t[status%like%&quot;Unvaccinated|First|Second dose, less&quot;,.(y=sum(dead)/sum(pop),z=&quot;Not fully vaccinated&quot;),month])
 p=rbind(p,t[status%like%&quot;Second dose, at|Third|Fourth&quot;,.(y=sum(dead)/sum(pop),z=&quot;Fully vaccinated&quot;),month])
-</pre>
-<pre>p[,y:=y*1e5]
+
+p[,y:=y*1e5]
 p[,z:=factor(z,unique(z))]
 p[,month:=as.Date(paste0(month,&quot;-1&quot;))]
-</pre>
-<pre>xstart=as.Date(&quot;2021-1-1&quot;);xend=as.Date(&quot;2023-6-1&quot;)
+
+xstart=as.Date(&quot;2021-1-1&quot;);xend=as.Date(&quot;2023-6-1&quot;)
 xbreak=seq(as.Date(&quot;2021-1-1&quot;),xend,&quot;year&quot;);xlab=year(xbreak)
 ybreak=pretty(p$y,7);ystart=0;yend=max(p$y,na.rm=T)
-</pre>
-<pre>ggplot(p,aes(x=month+15,y))+
+
+ggplot(p,aes(x=month+15,y))+
 geom_vline(xintercept=seq(as.Date(&quot;2021-1-1&quot;),as.Date(&quot;2023-1-1&quot;),&quot;year&quot;),color=&quot;gray75&quot;,linewidth=.5)+
 geom_vline(xintercept=c(xstart,xend),linewidth=.5,lineend=&quot;square&quot;)+
 geom_hline(yintercept=c(ystart,yend),linewidth=.5,lineend=&quot;square&quot;)+
@@ -1887,10 +1863,10 @@ theme(axis.text=element_text(size=11,color=&quot;black&quot;),
   plot.margin=margin(7,7,5,7),
   plot.title=element_text(size=11.5,face=&quot;bold&quot;,margin=margin(,,5)))
 ggsave(&quot;1.png&quot;,width=6,height=2.7,dpi=300*4)
-</pre>
-<pre>sub=&quot;Fully vaccinated means that at least 21 days have passed from the second dose. Source: ONS dataset \&quot;Deaths involving COVID-19 by vaccination status, England\&quot;. Data for the first three months is taken from the July 2022 release which was linked against the 2011 census, and data for the other months is taken from the August 2023 release which was linked against the 2021 census.&quot;
-system(paste0(&quot;mogrify -trim 1.png;w=`identify -format %w 1.png`;magick 1.png \\( -size $[w]x -font Arial -interline-spacing -3 -pointsize $[43*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -splice x100 \\) -append -resize 25% -bordercolor white -border 26 -colors 256 1.png&quot;))
-</pre>
+
+sub=&quot;Fully vaccinated means that at least 21 days have passed from the second dose. Source: ONS dataset \&quot;Deaths involving COVID-19 by vaccination status, England\&quot;. Data for the first three months is taken from the July 2022 release which was linked against the 2011 census, and data for the other months is taken from the August 2023 release which was linked against the 2021 census.&quot;
+system(paste0(&quot;mogrify -trim 1.png;w=`identify -format %w 1.png`;magick 1.png \\( -size $[w]x -font Arial -interline-spacing -3 -pointsize $[43*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -splice x100 \\) -append -resize 25% -bordercolor white -border 26 -colors 256 1.png&quot;))</pre>
+</div>
 <h3>
 <a href=#Excess_mortality_in_New_Zealand id=Excess_mortality_in_New_Zealand>Excess mortality in New Zealand</a>
 </h3>
@@ -1903,22 +1879,20 @@ system(paste0(&quot;mogrify -trim 1.png;w=`identify -format %w 1.png`;magick 1.p
 <p>The plot above also doesn't match Barry Young's dataset, where in 2022 vaccinated people had lower CMR than the general NZ population in all age groups shown above (even though unvaccinated people are overrepresented at the lower end of the age groups which reduces unvaccinated CMR relative to vaccinated CMR):</p>
 <pre>agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
 ages=c(0,21,41,61,81)
-</pre>
-<pre>t=fread(&quot;http://sars2.net/f/buckets.gz&quot;)
+
+t=fread(&quot;http://sars2.net/f/buckets.gz&quot;)
 pop=fread(&quot;http://sars2.net/f/nzpopdead.csv&quot;)
-</pre>
-<pre>nz=pop[year==2022,.(nz=sum(dead)/sum(pop,na.rm=T)*1e5),.(age=agecut(age,ages))]
+
+nz=pop[year==2022,.(nz=sum(dead)/sum(pop,na.rm=T)*1e5),.(age=agecut(age,ages))]
 barry=t[year(date)==2022,.(barry=sum(dead)/sum(alive)*365e5),.(age=agecut(age,ages))]
-print(mutate_if(merge(nz,barry),is.double,round),r=F)
-</pre>
+print(mutate_if(merge(nz,barry),is.double,round),r=F)</pre>
 <!-- -->
 <pre>   age    nz barry # deaths per 100,000 person-years
   0-20    33    30 # the `nz` column includes both vaccinated and unvaccinated people
  21-40    67    62 # the `barry` column includes only vaccinated people
  41-60   297   295
  61-80  1562  1519
-   81+ 10944  9914
-</pre>
+   81+ 10944  9914</pre>
 <p>However there weren't very many people who only got their first vaccine dose after January 2022. So one way the FOIA response can be employed to estimate if the vaccines were effective or not is to look at the percentage increase in deaths in March 2022 when New Zealand was first hit by COVID. But for example in ages 81-100 between February and March 2022, the number of deaths divided by days in month increased by about 57% in unvaccinated people but only by about 16% in vaccinated people: [<a href=moar.html#Deaths_in_ages_81_in_Chris_Johnstons_OIA_response>moar.html#Deaths_in_ages_81_in_Chris_Johnstons_OIA_response</a>]</p>
 <div class="width6">
 <img src="i/moar-canceled-3.png">
@@ -1949,38 +1923,38 @@ print(mutate_if(merge(nz,barry),is.double,round),r=F)
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)</pre>
-</div>
-<pre>ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
-</pre>
-<pre>f=&quot;http://sars2.net/f/COVID_vax_jan_feb_mar_2021_plus_ALL_deaths_in_medicare_per_day.xlsx&quot;
-</pre>
-<pre>s8=setDT(readxl::read_excel(f,sheet=8))
+<pre>library(data.table);library(ggplot2)
+
+ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
+
+f=&quot;http://sars2.net/f/COVID_vax_jan_feb_mar_2021_plus_ALL_deaths_in_medicare_per_day.xlsx&quot;
+
+s8=setDT(readxl::read_excel(f,sheet=8))
 p=s8[,.(x=as.Date(BENE_DEATH_DT),y=num_benes,z=&quot;Unvaccinated&quot;)]
-</pre>
-<pre>s5=setDT(readxl::read_excel(f,sheet=5))
+
+s5=setDT(readxl::read_excel(f,sheet=5))
 p=rbind(s5[,.(x=as.Date(BENE_DEATH_DT),y=NUM_BENES,z=&quot;All people&quot;)],p)
-</pre>
-<pre>minus=dcast(p,x~z,value.var=&quot;y&quot;)
+
+minus=dcast(p,x~z,value.var=&quot;y&quot;)
 p=rbind(p,minus[,.(x,y=`All people`-`Unvaccinated`,z=&quot;All people minus unvaccinated&quot;)])
-</pre>
-<pre>d=do.call(rbind,lapply(1:3,\(i)setDT(readxl::read_excel(f,sheet=i))[,.(days=died_days_after,dead=`# deaths`)][,date:=i]))
+
+d=do.call(rbind,lapply(1:3,\(i)setDT(readxl::read_excel(f,sheet=i))[,.(days=died_days_after,dead=`# deaths`)][,date:=i]))
 d[,date:=as.Date(paste(2021,date,15,sep=&quot;-&quot;))]
 p=rbind(p,d[,.(y=sum(dead),z=&quot;Vaccinated January to March 2021&quot;),.(x=date+days)])
-</pre>
-<pre>p[,z:=factor(z,unique(z))]
-</pre>
-<pre>x1=as.Date(&quot;2022-7-1&quot;);x2=as.Date(&quot;2023-9-30&quot;)
+
+p[,z:=factor(z,unique(z))]
+
+x1=as.Date(&quot;2022-7-1&quot;);x2=as.Date(&quot;2023-9-30&quot;)
 p=merge(p,p[x%in%x1:x2,mean(y),z])[,.(x,y=y/V1*100,z)]
-</pre>
-<pre>p[,y:=ma(y,3),z]
-</pre>
-<pre>xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
+
+p[,y:=ma(y,3),z]
+
+xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
 xbreak=seq(xstart+182,xend,&quot;year&quot;)
 p=p[x%in%xstart:xend]
 ybreak=pretty(p$y,7)
-</pre>
-<pre>ggplot(p,aes(x,y,z))+
+
+ggplot(p,aes(x,y,z))+
 geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),linewidth=.4,color=&quot;gray60&quot;)+
 annotate(&quot;rect&quot;,xmin=x1,xmax=x2,ymin=0,ymax=max(ybreak),fill=&quot;gray80&quot;,alpha=.5)+
 geom_vline(xintercept=c(x1,x2),linetype=&quot;42&quot;,linewidth=.4)+
@@ -2022,10 +1996,10 @@ theme(axis.text=element_text(size=11,color=&quot;black&quot;),
   plot.subtitle=element_text(margin=margin(,,5)),
   plot.title=element_text(size=11,face=2,margin=margin(2,,3)))
 ggsave(&quot;1.png&quot;,width=5.7,height=3.7,dpi=300*4)
-</pre>
-<pre>sub=&quot;Source: kirschsubstack.com/p/data-from-us-medicare-and-the-new, spreadsheet \&quot;data-transparency/USA/Medicare/COVID vax jan feb mar 2021 plus ALL deaths in medicare per day.xlsx\&quot;. All lines are moving averages where the window extends 3 days backwards and 3 days forwards. People vaccinated in January to March 2021 only had data for month of vaccination and days between vaccination and death, so an approximate date of death was calculated by assuming that people got vaccinated on the 15th day of the month, which is off by at most 16 days from the actual date of death. However the exact date of death was available for unvaccinated people and for a set of all people which includes both unvaccinated and vaccinated people.&quot;
-system(paste0(&quot;mogrify -trim 1.png;magick 1.png \\( -size `identify -format %w 1.png`x -font Arial -interline-spacing -3 -pointsize $[44*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -splice x80 \\) -append -resize 25% -bordercolor white -border 24 -colors 256 1.png&quot;))
-</pre>
+
+sub=&quot;Source: kirschsubstack.com/p/data-from-us-medicare-and-the-new, spreadsheet \&quot;data-transparency/USA/Medicare/COVID vax jan feb mar 2021 plus ALL deaths in medicare per day.xlsx\&quot;. All lines are moving averages where the window extends 3 days backwards and 3 days forwards. People vaccinated in January to March 2021 only had data for month of vaccination and days between vaccination and death, so an approximate date of death was calculated by assuming that people got vaccinated on the 15th day of the month, which is off by at most 16 days from the actual date of death. However the exact date of death was available for unvaccinated people and for a set of all people which includes both unvaccinated and vaccinated people.&quot;
+system(paste0(&quot;mogrify -trim 1.png;magick 1.png \\( -size `identify -format %w 1.png`x -font Arial -interline-spacing -3 -pointsize $[44*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -splice x80 \\) -append -resize 25% -bordercolor white -border 24 -colors 256 1.png&quot;))</pre>
+</div>
 <p>In the plot above there's no new vaccinated people added to the dark red line after April 15th 2021, so after that the dark red line increases less steeply than the light red line, because the light red line includes people vaccinated at any time so it even includes people who only got the first dose in 2022, or who got the first booster dose in 2022 but who didn't have records of primary course doses in the Medicare database.</p>
 <p>In the Medicare datasets Kirsch has published, there are many people who are actually vaccinated but who are listed as unvaccinated because they had no vaccine dose listed in the Medicare ddatabase. There are also many people who were listed as unvaccinated until they got a booster dose:</p>
 <div class="width10">

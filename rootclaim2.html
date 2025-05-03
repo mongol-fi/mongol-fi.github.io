@@ -115,26 +115,25 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <pre>download.file(&quot;https://healthdata.gov/api/views/j8mb-icvb/rows.csv&quot;,&quot;statespcr.csv&quot;)
 download.file(&quot;https://data.cdc.gov/api/views/rh2h-3yt2/rows.csv&quot;,&quot;statesvax.csv&quot;)
 download.file(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/state/totals/NST-EST2023-ALLDATA.csv&quot;,&quot;NST-EST2023-ALLDATA.csv&quot;)
-</pre>
-<pre>test=fread(&quot;statespcr.csv&quot;)
+
+test=fread(&quot;statespcr.csv&quot;)
 test[,year:=year(as.Date(date,&quot;%Y/%m/%d&quot;))]
 test=test[,.(tests=sum(new_results_reported),positive=sum(new_results_reported[overall_outcome==&quot;Positive&quot;])),.(state=state_name,code=state,year)]
-</pre>
-<pre>pop=fread(&quot;NST-EST2023-ALLDATA.csv&quot;)
-</pre>
-<pre>a=merge(test[year==2021],pop[,.(state=NAME,pop=POPESTIMATE2021)])
+
+pop=fread(&quot;NST-EST2023-ALLDATA.csv&quot;)
+
+a=merge(test[year==2021],pop[,.(state=NAME,pop=POPESTIMATE2021)])
 vax=fread(&quot;statesvax.csv&quot;)
 a=merge(vax[Date==&quot;12/31/2021&quot;&amp;date_type==&quot;Report&quot;,.(code=Location,vax=Admin_Dose_1_Cumulative)],a)
 a[,.(state,tests,positive,pop,vaxpct=vax/pop*100,testsperpop=tests/pop,positivepct=positive/tests*100)][order(-testsperpop)]
-</pre>
-<pre># tests is tests performed in 2021
+
+# tests is tests performed in 2021
 # positive is tests with positive result in 2021
 # pop is mid-2021 resident population estimate
 # vaxpct is people with one or more dose at end of 2021 divided by mid-2021 resident population estimate
 # testsperpop is tests performed in 2021 divided by mid-2021 resident population estimate
 # positivepct is positive/tests*100
-a[,.(state,tests,pop,vaxpct=vax/pop*100,testsperpop=tests/pop)][order(-testsperpop)]
-</pre>
+a[,.(state,tests,pop,vaxpct=vax/pop*100,testsperpop=tests/pop)][order(-testsperpop)]</pre>
 <!-- -->
 <pre>                   state    tests positive      pop vaxpct testsperpop positivepct
  1: District of Columbia  2741963   111520   669037   93.6       4.098        4.07
@@ -189,20 +188,16 @@ a[,.(state,tests,pop,vaxpct=vax/pop*100,testsperpop=tests/pop)][order(-testsperp
 50:         South Dakota   498453    68883   896299   70.1       0.556       13.82
 51:             Oklahoma  1830585   300680  3991634   65.6       0.459       16.43
 52:          Mississippi  1222841   165735  2949582   55.8       0.415       13.55
-                   state    tests positive      pop vaxpct testsperpop positivepct
-</pre>
+                   state    tests positive      pop vaxpct testsperpop positivepct</pre>
 <p>My correlation between the percentage of vaccinated people in 2021 and tests per capita in 2021 was about 0.61:</p>
 <pre>&gt; a[,cor(vax/pop,tests/pop)]
-[1] 0.61051
-</pre>
+[1] 0.61051</pre>
 <p>But my correlation between the percentage of vaccinated people in 2021 and the proportion of positive tests in 2021 was about -0.60:</p>
 <pre>&gt; a[,cor(vax/pop,positive/tests)]
-[1] -0.59976
-</pre>
+[1] -0.59976</pre>
 <p>So since the two previous correlations partially cancel each other out, my correlation between the percentage of vaccinated people in 2021 and positive tests per capita in 2021 was fairly close to zero (where positive tests per capita is similar to the metric of COVID cases per capita that was used by Kirsch):</p>
 <pre>&gt; a[,cor(positive/pop,vax/pop)]
-[1] 0.20839
-</pre>
+[1] 0.20839</pre>
 <h3>
 <a href=#Japanese_survey_for_self_reported_occurrence_of_COVID id=Japanese_survey_for_self_reported_occurrence_of_COVID>Japanese survey for self-reported occurrence of COVID</a>
 </h3>
@@ -256,16 +251,15 @@ a[,.(state,tests,pop,vaxpct=vax/pop*100,testsperpop=tests/pop)][order(-testsperp
 <p>Ages 6 months to 4 years have such a low percentage of vaccinated people that children from various vulnerable subgroups might be overrepresented among vaccinated people.</p>
 <p>However if you look at the data for ages 0.5-4 in the CDC dataset for COVID cases and deaths by vaccination status, there's a total of 64 COVID deaths in unvaccinated people but only one death in fully vaccinated people, even though vaccinated people account for only about 3.2% of total person-weeks: [<a href="https://data.cdc.gov/Public-Health-Surveillance/Rates-of-COVID-19-Cases-or-Deaths-by-Age-Group-and/54ys-qyzm/about_data">https://data.cdc.gov/Public-Health-Surveillance/Rates-of-COVID-19-Cases-or-Deaths-by-Age-Group-and/54ys-qyzm/about_data</a>]</p>
 <pre>t=fread(&quot;Rates_of_COVID-19_Cases_or_Deaths_by_Age_Group_and_Updated__Bivalent__Booster_Status_20241231.csv&quot;)
-</pre>
-<pre>ages=unique(t$age_group)
+
+ages=unique(t$age_group)
 t[,age:=factor(age_group,ages[order(as.integer(sub(&quot;[-+].*&quot;,&quot;&quot;,ages)))])]
-</pre>
-<pre>t[,unvaxpop:=nafill(unvaccinated_population,,0)]
+
+t[,unvaxpop:=nafill(unvaccinated_population,,0)]
 t[,vaxpop:=nafill(vaccinated_population,,0)]
-</pre>
-<pre>o=t[outcome==&quot;death&quot;,.(vaxdead=sum(vaccinated_with_outcome,na.rm=T),unvaxdead=sum(unvaccinated_with_outcome,na.rm=T),vaxpoppct=sum(vaxpop,na.rm=T)/(sum(vaxpop,na.rm=T)+sum(unvaxpop,na.rm=T))*100),,age]
-o[,.(age,vaxdead,unvaxdead,vaxdeadpct=vaxdead/(vaxdead+unvaxdead)*100,vaxpoppct)]|&gt;print(r=F)
-</pre>
+
+o=t[outcome==&quot;death&quot;,.(vaxdead=sum(vaccinated_with_outcome,na.rm=T),unvaxdead=sum(unvaccinated_with_outcome,na.rm=T),vaxpoppct=sum(vaxpop,na.rm=T)/(sum(vaxpop,na.rm=T)+sum(unvaxpop,na.rm=T))*100),,age]
+o[,.(age,vaxdead,unvaxdead,vaxdeadpct=vaxdead/(vaxdead+unvaxdead)*100,vaxpoppct)]|&gt;print(r=F)</pre>
 <!-- -->
 <pre>      age vaxdead unvaxdead vaxdeadpct vaxpoppct
     0.5-4       1        64        1.5       3.2
@@ -276,8 +270,7 @@ o[,.(age,vaxdead,unvaxdead,vaxdeadpct=vaxdead/(vaxdead+unvaxdead)*100,vaxpoppct)
     50-64    6837     33360       17.0      70.3
     65-79   20630     56616       26.7      85.3
       80+   29296     48852       37.5      77.9
- all_ages   58374    152238       27.7      62.6
-</pre>
+ all_ages   58374    152238       27.7      62.6</pre>
 <p>The CDC dataset excluded partially vaccinated people with one dose or a second dose less than 2 weeks ago, so they are also not included in my code above.</p>
 <h3>
 <a href=#Correlation_across_countries_between_COVID_cases_and_vaccinated_percent id=Correlation_across_countries_between_COVID_cases_and_vaccinated_percent>Correlation across countries between COVID cases and vaccinated percent</a>
@@ -328,34 +321,31 @@ o[,.(age,vaxdead,unvaxdead,vaxdeadpct=vaxdead/(vaxdead+unvaxdead)*100,vaxpoppct)
 </div>
 <p>There were 152 vaccinated people who reported a COVID case, but they included 42 people who reported a case before vaccination and 20 people who reported a case both before and after vaccination:</p>
 <pre>download.file(&quot;https://github.com/skirsch/covid/raw/refs/heads/main/debate/US%20infection%20survey%20by%20PureProfile.xlsx&quot;,&quot;US infection survey by PureProfile.xlsx&quot;)
-</pre>
-<pre>t=setDT(readxl::read_excel(&quot;US infection survey by PureProfile.xlsx&quot;,sheet=2))
-</pre>
-<pre>t[,covid:=`Have you EVER tested positive for, and/or been diagnosed with, COVID-19?`]
+
+t=setDT(readxl::read_excel(&quot;US infection survey by PureProfile.xlsx&quot;,sheet=2))
+
+t[,covid:=`Have you EVER tested positive for, and/or been diagnosed with, COVID-19?`]
 t[,time:=`When were you diagnosed with COVID-19?`]
-</pre>
-<pre>t[,.(vax=`num shots`&gt;0,time,covid)]
-</pre>
-<pre>t[`num shots`&gt;0&amp;covid==&quot;Yes&quot;,.(people=N),time]|&gt;print(r=F)
+
+t[,.(vax=`num shots`&gt;0,time,covid)]
+
+t[`num shots`&gt;0&amp;covid==&quot;Yes&quot;,.(people=N),time]|&gt;print(r=F)
 #                                                   time people
 #                 After receiving a COVID-19 vaccination     87
 #                Before receiving a COVID-19 vaccination     42
 # Both before and after receiving a COVID-19 vaccination     20
-#                                                 Unsure      3
-</pre>
+#                                                 Unsure      3</pre>
 <p>There were 107 people who reported a COVID case when they were vaccinated but 109 people who reported a COVID case when they were not vaccinated:</p>
 <pre>t[`num shots`&gt;0&amp;time%like%&quot;After|Both&quot;&amp;covid==&quot;Yes&quot;,.N]
 # 107 (vaccinated cases)
-</pre>
-<pre>t[(`num shots`==0|(`num shots`&gt;0&amp;time%like%&quot;Before|Both&quot;))&amp;covid==&quot;Yes&quot;,.N]
-# 109 (unvaccinated cases)
-</pre>
+
+t[(`num shots`==0|(`num shots`&gt;0&amp;time%like%&quot;Before|Both&quot;))&amp;covid==&quot;Yes&quot;,.N]
+# 109 (unvaccinated cases)</pre>
 <p>About 62% of all people reported being vaccinated:</p>
 <pre>t[,.(people=.N),.(vaccinated=`num shots`&gt;1)]|&gt;print(r=F)
 # vaccinated people
 #       TRUE    312
-#      FALSE    188
-</pre>
+#      FALSE    188</pre>
 <p>The percentage of vaccinated observation time out of total observation time is of course going to be lower than the percentage of vaccinated people. I didn't find any information when the survey was conducted. If for example the survey was conducted in mid-2021 then the rate of COVID cases per observation time would be higher for vaccinated people, but if the survey was conducted in 2024 then the rate would be higher for unvaccinated people. (Even though observation time during the period with low COVID cases after early 2022 would not be very relevant to determining COVID infection risk, so it might be better to do a time-series analysis that compares cases per person-weeks over time, but that is not possible based on Kirsch's survey because it doesn't show the dates of when people were vaccinated or got COVID.)</p>
 <p>However I consider it plausible that the entire survey was fake, because Kirsch has a history of publishing fake data like the data from the anonymous military doctor he published in August 2024. [<a href=rootclaim.html#Ten_fold_increase_in_deaths_seen_by_NYC_fireman_5g>rootclaim.html#Ten_fold_increase_in_deaths_seen_by_NYC_fireman_5g</a>] Kirsch's PureProfile survey is also similar to the Japanese survey by Eiji Nakatani et al. which appears to be fake.</p>
 <p>Kirsch's spreadsheet for the PureProfile survey indicates that the data was sent to him by someone called Leonard Murphy:</p>
@@ -401,28 +391,28 @@ t[,time:=`When were you diagnosed with COVID-19?`]
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)</pre>
-</div>
-<pre>system(&quot;wget https://data.cms.gov/sites/default/files/dataset_zips/ea365a77467a04182b55114c5791c2e3/COVID-19%20Nursing%20Home%20Data.zip;unzip &#39;COVID-19 Nursing Home Data.zip&#39;&quot;)
-</pre>
-<pre>t=fread(&quot;COVID-19 Nursing Home Data/2025-01-05/COVID-19 Nursing Home Data 01.05.2025.csv&quot;)
+<pre>library(data.table);library(ggplot2)
+
+system(&quot;wget https://data.cms.gov/sites/default/files/dataset_zips/ea365a77467a04182b55114c5791c2e3/COVID-19%20Nursing%20Home%20Data.zip;unzip &#39;COVID-19 Nursing Home Data.zip&#39;&quot;)
+
+t=fread(&quot;COVID-19 Nursing Home Data/2025-01-05/COVID-19 Nursing Home Data 01.05.2025.csv&quot;)
 d=rbind(t[,group:=&quot;Entire United States&quot;],t[`Provider State`==&quot;CA&quot;][,group:=&quot;California only&quot;])
 d[,dead:=`Residents Weekly COVID-19 Deaths`]
 d[,case:=`Residents Weekly Confirmed COVID-19`]
 d[,date:=as.Date(`Week Ending`,&quot;%m/%d/%y&quot;)-3]
 a=d[,.(dead=sum(dead,na.rm=T),case=sum(case,na.rm=T)),.(group,date)]
 a[,shifted:=c(rep(0,4),head(case,-4)),group]
-</pre>
-<pre>lab=c(&quot;Unadjusted&quot;,&quot;Cases shifted forwards by 4 weeks&quot;)
+
+lab=c(&quot;Unadjusted&quot;,&quot;Cases shifted forwards by 4 weeks&quot;)
 p=a[,.(x=rep(date,2),y=rep(cumsum(dead),2)/c(cumsum(case),cumsum(shifted))*100,z=factor(rep(lab,each=.N),lab)),group]
 p=p[is.finite(y)]
-</pre>
-<pre>xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
+
+xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
 xbreak=seq(xstart+182,xend,&quot;year&quot;)
 p=p[x%in%xstart:xend]
 yend=max(p$y,na.rm=T)
-</pre>
-<pre>ggplot(p,aes(x,y))+
+
+ggplot(p,aes(x,y))+
 facet_wrap(~group,dir=&quot;v&quot;,scales=&quot;free_x&quot;)+
 geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),linewidth=.4,color=&quot;gray88&quot;,lineend=&quot;square&quot;)+
 geom_line(aes(color=z),linewidth=.6)+
@@ -463,8 +453,8 @@ theme(axis.text=element_text(size=11,color=&quot;black&quot;),
   strip.background=element_blank(),
   strip.text=element_blank())
 ggsave(&quot;1.png&quot;,width=5.5,height=4.5,dpi=300*4)
-system(&quot;magick 1.png -trim -resize 25% -bordercolor white -border 22 -colors 256 1.png&quot;)
-</pre>
+system(&quot;magick 1.png -trim -resize 25% -bordercolor white -border 22 -colors 256 1.png&quot;)</pre>
+</div>
 <p>In the black line where I didn't shift the cases and in the plot on CDPH's website, there's a dip in CFR during the COVID wave around December 2020 to February 2021, because the CFR went down during the earlier part of the COVID wave because the deaths had not yet caught up to cases, but during the later part of the COVID wave the CFR went up because there was now a surplus of deaths relative to new cases. In the plot below cases peaked on the week ending December 20th 2020 but deaths peaked three weeks later on the week ending January 10th 2021, and the CFR was the lowest in the two weeks in between. There's another similar dip in CFR during the COVID wave in the summer of 2020: [<a href="https://www.cdph.ca.gov/Programs/CID/DCDC/Pages/COVID-19/SNFsCOVID_19.aspx">https://www.cdph.ca.gov/Programs/CID/DCDC/Pages/COVID-19/SNFsCOVID_19.aspx</a>]</p>
 <div class="width8">
 <img src="i/rootclaim-nursingcfr.png">
@@ -479,30 +469,29 @@ system(&quot;magick 1.png -trim -resize 25% -bordercolor white -border 22 -color
 <p>Kirsch wrote: <span class="quote">"<a href=https://kirschsubstack.com/p/official-czech-republic-record-level>Czech Republic record level data</a>: Moderna recipients had an average &gt;1.3X higher 1 yr mortality than Pfizer during non-COVID months. Setting DCCI=0 for both vaccines didn't change the results so wasn't comorbidity bias. Since Moderna was 40% of US vaccines, a 30% increase in ACM is an annual 12% increase in mortality which is consistent with Skidmore."</span></p>
 <p>In the code below I used the same Czech data to calculate a normalized excess mortality percent within the first 52 weeks from the first vaccine dose. When I calculated the expected baseline number of deaths by multiplying the population size for each age with the mortality rate for the same age among all people included in the Czech dataset, Moderna got only 18 points higher excess mortality percent than Pfizer. But the difference fell to 13 percentage points when I also normalized the baseline mortality rate by comorbidity index in addition to age: [<a href=czech4.html#Mortality_rate_within_year_from_vaccination_normalized_by_comorbidity_index_in_new_UZIS_data>czech4.html#Mortality_rate_within_year_from_vaccination_normalized_by_comorbidity_index_in_new_UZIS_data</a>, <a href="https://www.nzip.cz/data/2135-covid-19-prehled-populace">https://www.nzip.cz/data/2135-covid-19-prehled-populace</a>]</p>
 <pre>t=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv&quot;)
-</pre>
-<pre>codes=rep(&quot;Other&quot;,25)
+
+codes=rep(&quot;Other&quot;,25)
 codes[c(1,8,9,16,20,21,23)]=&quot;Pfizer&quot;
 codes[c(2,15)]=&quot;Moderna&quot;
 codes[3]=&quot;AstraZeneca&quot;
 codes[4]=&quot;Janssen&quot;
 codes[c(7,22)]=&quot;Novavax&quot;
 names(codes)=sprintf(&quot;CO%02d&quot;,1:25)
-</pre>
-<pre>weeks=unique(format(seq(as.Date(&quot;2020-1-1&quot;),as.Date(&quot;2024-12-31&quot;),1),&quot;%Y-%V&quot;))
-</pre>
-<pre>d=t[Infekce==1]
+
+weeks=unique(format(seq(as.Date(&quot;2020-1-1&quot;),as.Date(&quot;2024-12-31&quot;),1),&quot;%Y-%V&quot;))
+
+d=t[Infekce==1]
 d[,case:=match(DatumPozitivity,weeks)]
 d[,first:=match(Datum_Prvni_davka,weeks)]
 d[,dead:=match(ifelse(DatumUmrtiLPZ==&quot;&quot;,Umrti,DatumUmrtiLPZ),weeks)]
 d=d[,.(case,first,dead,dcci=DCCI,code=OckovaciLatkaKod_Prvni_davka,born=RokNarozeni)]
 d=d[born!=&quot;-&quot;&amp;!born%like%&quot;19(05|10)&quot;]
-</pre>
-<pre>a=d[,.(dead=sum((dead-first)%in%0:51),pop=.N),.(first,name=codes[code],born,dcci)]
+
+a=d[,.(dead=sum((dead-first)%in%0:51),pop=.N),.(first,name=codes[code],born,dcci)]
 a=merge(a,a[,.(base=sum(dead)/sum(pop)),.(first,born,dcci)])
 a=merge(a,a[,.(base2=sum(dead)/sum(pop)),.(first,born)])
 o=a[,.(dead=sum(dead),pop=sum(pop),`by_age_and_dcci`=(sum(dead)/sum(base*pop)-1)*100,by_age=(sum(dead)/sum(base2*pop)-1)*100),name]
-print(mutate_if(o[order(-pop)],is.double,round,1),r=F)
-</pre>
+print(mutate_if(o[order(-pop)],is.double,round,1),r=F)</pre>
 <!-- -->
 <pre>        name  dead     pop by_age_and_dcci by_age
       Pfizer 14857 2184868            -5.6   -6.4
@@ -510,8 +499,7 @@ print(mutate_if(o[order(-pop)],is.double,round,1),r=F)
      Janssen  1395  152824            13.6   11.8
  AstraZeneca  3474  123531            17.7   20.6
      Novavax     9    3103           -18.0  -40.8
-       Other     1     131            -0.1   -1.3
-</pre>
+       Other     1     131            -0.1   -1.3</pre>
 <p>So comorbidities might in fact partially explain why Kirsch got a higher mortality rate for Moderna than Pfizer. In most age groups the percentage of people with the highest value of the comorbidity index was higher for Moderna than Pfizer: [<a href=czech4.html#Comorbidity_index_by_age_group_and_vaccine_type_in_new_UZIS_data>czech4.html#Comorbidity_index_by_age_group_and_vaccine_type_in_new_UZIS_data</a>]</p>
 <div class="width7">
 <img src="i/czech-dcci-modpfi.png">
@@ -638,8 +626,7 @@ print(mutate_if(o[order(-pop)],is.double,round,1),r=F)
 3: 2020 1.02061
 4: 2021 1.04326
 5: 2022 0.98411
-6: 2023 0.92289
-</pre>
+6: 2023 0.92289</pre>
 <p>In 2020-2022 there were about 1.13 million MCD COVID covid deaths and 0.95 million UCD COVID deaths, so both are only about 0.3% of the US population.</p>
 <p>According to the US Census Bureau's estimates for the year 2021, the average number of people per household was about 2.5, and about 28% of households consisted of 1 person, 35% of 2 people, 15% of 3 people, 13% of 4 people, 6% of 5 people, 2% of 6 people, and so on. [<a href="https://www.census.gov/data/tables/time-series/demo/families/households.html">https://www.census.gov/data/tables/time-series/demo/families/households.html</a>]</p>
 <p>If someone from a single-person household dies then there is no-one left to report the death in the survey. Many old people also live in elderly homes, but I don't know if the survey included elderly homes as households or not (and if it did then it should've been mentioned somewhere more clearly).</p>
@@ -687,8 +674,7 @@ print(mutate_if(o[order(-pop)],is.double,round,1),r=F)
  2020 3383613 2913107 470506
  2021 3464138 2946844 517294
  2022 3279754 2992052 287702
- 2023 3090884 3056095  34789
-</pre>
+ 2023 3090884 3056095  34789</pre>
 <p>When I used the number of deaths in 2019 as the baseline, I got about 1.03 million deaths in 2021 and 2022 combined (from <code>3279754-2854691+3464138-2854691</code>). However that's not a valid baseline since the number of deaths increased each year between 2010 and 2019 due to the aging population, and before COVID the yearly number of deaths was projected to start increasing even more steeply in the 2020s than the 2010s: [<a href="https://www.census.gov/library/stories/2017/10/aging-boomers-deaths.html">https://www.census.gov/library/stories/2017/10/aging-boomers-deaths.html</a>]</p>
 <div class="width6">
 <img src="i/ethical-akston-census.jpg">
@@ -701,25 +687,25 @@ print(mutate_if(o[order(-pop)],is.double,round,1),r=F)
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)</pre>
-</div>
-<pre>t=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)[,.(dead=sum(dead),pop=sum(pop)),.(year,age)]
+<pre>library(data.table);library(ggplot2)
+
+t=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)[,.(dead=sum(dead),pop=sum(pop)),.(year,age)]
 years=2010:2023
 t=t[year%in%years]
-</pre>
-<pre>t=merge(t,t[year&lt;2020,.(year=years,base=predict(lm(dead/pop~year),.(year=years))),age])
+
+t=merge(t,t[year&lt;2020,.(year=years,base=predict(lm(dead/pop~year),.(year=years))),age])
 t=t[,.(dead=sum(dead),base=sum(base*pop)),year]
 t$base2=t[year%in%2013:2019,predict(lm(dead~year),t)]
 t$ave=t[year%in%2019,mean(dead)]
-</pre>
-<pre>p=t[,.(x=year,y=unlist(.SD[,-1]),z=rep(names(.SD)[-1],each=.N))]
-</pre>
-<pre>lv=c(&quot;Actual deaths&quot;,&quot;2010-2019 linear baseline from CMR by age&quot;,&quot;2013-2019 linear baseline for raw deaths&quot;,&quot;Deaths in 2019&quot;)
+
+p=t[,.(x=year,y=unlist(.SD[,-1]),z=rep(names(.SD)[-1],each=.N))]
+
+lv=c(&quot;Actual deaths&quot;,&quot;2010-2019 linear baseline from CMR by age&quot;,&quot;2013-2019 linear baseline for raw deaths&quot;,&quot;Deaths in 2019&quot;)
 p[,z:=factor(z,unique(z),lv)]
-</pre>
-<pre>xstart=2010;xend=2023;ybreak=pretty(p$y);ystart=ybreak[1];yend=max(ybreak)
-</pre>
-<pre>ggplot(p,aes(x,y))+
+
+xstart=2010;xend=2023;ybreak=pretty(p$y);ystart=ybreak[1];yend=max(ybreak)
+
+ggplot(p,aes(x,y))+
 geom_hline(yintercept=c(ystart,0,yend),color=&quot;black&quot;,linewidth=.3,lineend=&quot;square&quot;)+
 geom_vline(xintercept=c(xstart-.5,xend+.5),color=&quot;black&quot;,linewidth=.3,lineend=&quot;square&quot;)+
 geom_line(aes(color=z,linetype=z),linewidth=.4)+
@@ -751,16 +737,15 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   plot.subtitle=element_text(size=6.9,margin=margin(,,5)),
   plot.title=element_text(size=8,face=2,margin=margin(1,,4)))
 ggsave(&quot;1.png&quot;,width=3.8,height=2.6,dpi=400*4)
-system(&quot;mogrify -resize 25% -colors 256 1.png&quot;)
-</pre>
+system(&quot;mogrify -resize 25% -colors 256 1.png&quot;)</pre>
+</div>
 <p>Kirsch said there were about 720K people who died of COVID in 2021-2022, which is closer to the number of MCD deaths than UCD deaths. On NVSS in 2021 and 2022 combined, there's 732,757 deaths with MCD COVID and 603,445 deaths with UCD COVID:</p>
 <pre>&gt; v=fread(&quot;curl -Ls sars2.net/f/vital.csv.xz|xz -dc&quot;) # NVSS data used by CDC WONDER
 &gt; v[cause==&quot;U071&quot;,.(ucd=sum(ucd),mcd=sum(mcd)),.(year,cause)]|&gt;print(r=F)
  year cause    ucd    mcd
  2020  U071 350831 397566
  2021  U071 416893 478402
- 2022  U071 186552 254355
-</pre>
+ 2022  U071 186552 254355</pre>
 <p>So relative to my figure of 804,995 excess deaths in 2021 and 2022 combined, there's only 72,238 deaths remaining after subtracting MCD COVID deaths or 201,550 deaths remaining after subtracting UCD COVID deaths.</p>
 <p>But a lot of the remaining excess deaths are due to deaths from external causes. In the following code I calculated the baseline by multiplying the 2010-2019 trend in CMR by age by the population size like earlier. But now I only looked at deaths with an underlying cause under the A-Q ICD codes, which consists of natural causes excluding COVID and U and R codes. It gave me about 111,873 excess deaths in 2021 and 2022 combined, even though it includes deaths where the underlying cause was not listed as COVID even though the deaths were actually due to COVID:</p>
 <pre>&gt; ua=\(x,y,...){u=unique(x);y(u,...)[match(x,u)]}
@@ -782,8 +767,7 @@ system(&quot;mogrify -resize 25% -colors 256 1.png&quot;)
  2019 2571053 2594283 -23230
  2020 2715005 2621852  93153
  2021 2700664 2649289  51375
- 2022 2747657 2687160  60497
-</pre>
+ 2022 2747657 2687160  60497</pre>
 <h3>
 <a href=#Mark_Skidmores_survey_with_estimated_289_789_vaccine_deaths_in_2021 id=Mark_Skidmores_survey_with_estimated_289_789_vaccine_deaths_in_2021>Mark Skidmore's survey with estimated 289,789 vaccine deaths in 2021</a>
 </h3>
@@ -809,8 +793,7 @@ system(&quot;mogrify -resize 25% -colors 256 1.png&quot;)
  18 - 24 Years   71.2
  25 - 49 Years   77.5
  50 - 64 Years   89.3
-     65+ Years   95.0
-</pre>
+     65+ Years   95.0</pre>
 <p>Skidmore estimated that 57 respondents reported a vaccine-related death and 165 respondents reported a COVID-related death. So when he multiplied the ratio of <code>57/165</code> with the number of UCD COVID deaths at CDC WONDER which was 839,993, he got a figure of 289,789 vaccine deaths. He wrote: <span class="quote">"The ratio of COVID-19 vaccine deaths to COVID-19 illness deaths of the people respondents knew best who had health problems is 57/165=0.345, whereas the ratio of vaccine-associated fatalities to COVID-19 fatalities from government sources is 8,023/839,993=0.0096. […] Assuming the experiences captured in the survey represent the true ratio, the survey ratio is used to estimate nationwide COVID-19 vaccine fatalities: Estimated fatalities are 289,789 (95% CI: 229,319 - 344,319)."</span> However <code>57/165*839993</code> is about 290,179 and <code>0.345*839993</code> is about 289,998, so neither of them matches Skidmore's figure of 289,789. But Skidmore wrote that he used bootstrapping to calculate the 95% CI for his estimate, so the bootstrapping might have also slightly shifted his average value.</p>
 <p>The number of vaccine deaths in the paper was determined based on this question <span class="quote">"Of the people you know who experienced a health problem after being vaccinated, think about the one you know BEST. Please describe the health condition experienced by that person."</span> However the wording is ambiguous, because a <span class="quote">"health problem after being vaccinated"</span> might be interpreted to mean either a health problem that occurred soon after vaccination and that was related to vaccination, or that occurred long after vaccination and that wasn't even related to the vaccine.</p>
 <p>The original version of the paper in BMC included this paragraph that was later removed from the revised version of the paper: <span class="quote">"Though a person may report that someone they know experienced a COVID-19 vaccine adverse event, it does not mean that vaccination was the cause of injury. As shown in the Table 4 and Additional file 3, some respondents indicated that a person they know had a heart attack after being vaccinated, though the heart attack could have been unrelated to the inoculation. To address this issue, an estimate of the number of people within respondent social groups who are expected to die regardless of inoculation is calculated and subtracted from reported COVID-19 vaccine fatalities. Three commonly reported vaccine adverse events are heart attacks, strokes and other manifestations of blood clots. The average age of a person in the survey dataset who experienced these conditions after being vaccinated is about 40 years of age, and the average age of death is 48. The incidence of heart attacks (myocardial infarction) for people of age 48 is about 17 per 100,000, and the incidence of strokes and blood clots for this age group is very low, near zero [12]. Heart attacks, strokes and blood clots are also commonly reported causes of COVID-19 vaccine death in VAERS. From the survey, about 51% of respondents reported being vaccinated. It is assumed that same proportion applies to those in respondents' social circles. The estimated total number of people in respondents' social circles is about 28,000. To calculate an estimated number of fatalities that might have occurred regardless of inoculation status, 17 is multiplied by the proportion of people who are vaccinated (0.51) and the proportion of people in social circles out of 100,000 (0.28). The estimated number of fatalities that might have occurred regardless of vaccination status is 17 × 0.51 × 0.28 = 2.43 people."</span></p>
@@ -828,8 +811,7 @@ system(&quot;mogrify -resize 25% -colors 256 1.png&quot;)
 &gt; v[year%in%2021:2022][cause%like%&quot;I21&quot;,sum(mcd),age][,weighted.mean(age,V1)]
 [1] 73.64
 &gt; v[year%in%2021:2022][cause%like%&quot;I21&quot;,sum(ucd),age][,weighted.mean(age,V1)]
-[1] 73.96
-</pre>
+[1] 73.96</pre>
 <p>When Skidmore calculated the number of heart attack deaths that might have been expected to occur in the social circle regardless of vaccination, he assumed that the total size of the social circle was 28,000 people, but since there were 2,840 participants, he assumed that the average size of the social circle per participant was about 9.9 people. However he determined the number of heart attack deaths in the social circle based on the questions which asked each participant to describe a health condition in only the single person they knew the best. So the participants may have had other people in their social circle who had a heart attack but they didn't mention it in the survey because it wasn't the person they knew the best.</p>
 <p>For non-elderly participants the person they knew the best may have often been their spouse, child, sibling, friend, or coworker, so it might be that elderly people were underrepresented among the set of people who each participant knew the best relative to the set of people who died that were known by the participants.</p>
 <p>Skidmore also incorrectly derived the expected number of deaths based on the average age at death instead of the age distribution of the people who died. If the average age of people in the social circle who died of a heart attack was 48 years, then it doesn't mean that you can derive the expected number of heart attack deaths within the social circle by looking at the mortality rate for heart attack in people aged 48.</p>
@@ -1315,15 +1297,13 @@ pick=meta$V4==&quot;M&quot;&amp;meta$V3%like%&quot;Y1[2-9]|Y[23]&quot;&amp;meta$
 a=meta[pick][,pop:=as.integer(pop[pick,`2021`])][,.(pop=sum(pop)),.(country=V5)]
 a$myocarditis=c(37,34,53,54)
 a[,ratepermil:=myocarditis/pop*1e6]
-print(a,r=F)
-</pre>
+print(a,r=F)</pre>
 <!-- -->
 <pre> country     pop myocarditis ratepermil
       DK 1095355          37       33.8
       FI 1011146          34       33.6
       NO 1062939          53       49.9
-      SE 2005240          54       26.9
-</pre>
+      SE 2005240          54       26.9</pre>
 <p>So if myocarditis was more likely to get diagnosed in Norway than the other three countries, and Moderna vaccinees were overrepresented in Norway, it might partially explain why Moderna got a higher myocarditis IRR than Pfizer. But on the other hand it would be balanced out by how Moderna vaccinees were even more overrepresented in Sweden, and Sweden had the lowest rate of myocarditis diagnoses per million people in my code above. (My code above looked at males of ages 12-39, and my previous table looked at both sexes in ages 16-24, because neither type of data was provided only for males aged 16-24.)</p>
 <p>However unlike many of the other papers Kirsch has referred to, the study from the Nordic countries was a serious study published in a proper journal, so it may have well found a genuine signal that Moderna has a higher risk of myocarditis than Pfizer.</p>
 <p>A study from British Columbia also found that Moderna had about 2.78 times higher adjusted odds ratio of myocarditis than Pfizer: <span class="quote">"The rates of myocarditis and pericarditis per million second doses were higher for mRNA-1273 (n = 31, rate 35.6; 95% CI: 24.1-50.5; and n = 20, rate 22.9; 95% CI: 14.0-35.4, respectively) than BNT162b2 (n = 28, rate 12.6; 95% CI: 8.4-18.2 and n = 21, rate 9.4; 95% CI: 5.8-14.4, respectively). mRNA-1273 vs BNT162b2 had significantly higher odds of myocarditis (adjusted OR [aOR]: 2.78; 95% CI: 1.67-4.62), pericarditis (aOR: 2.42; 95% CI: 1.31-4.46) and myopericarditis (aOR: 2.63; 95% CI: 1.76-3.93)."</span> [<a href="https://www.jacc.org/doi/full/10.1016/j.jacc.2022.08.799">https://www.jacc.org/doi/full/10.1016/j.jacc.2022.08.799</a>]</p>
@@ -1351,49 +1331,49 @@ print(a,r=F)
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2);library(MMWRweek)</pre>
-</div>
-<pre>download.file(&quot;https://covid.ourworldindata.org/data/owid-covid-data.csv&quot;,&quot;owid-covid-data.csv&quot;)
-</pre>
-<pre>cdc=fread(&quot;AH_Excess_Deaths_by_Sex__Age__and_Race_and_Hispanic_Origin_20250211.csv&quot;)
-</pre>
-<pre>o=owid[,.(date=date-1,cases=new_cases,dead=new_deaths,vax=new_vaccinations)]
+<pre>library(data.table);library(ggplot2);library(MMWRweek)
+
+download.file(&quot;https://covid.ourworldindata.org/data/owid-covid-data.csv&quot;,&quot;owid-covid-data.csv&quot;)
+
+cdc=fread(&quot;AH_Excess_Deaths_by_Sex__Age__and_Race_and_Hispanic_Origin_20250211.csv&quot;)
+
+o=owid[,.(date=date-1,cases=new_cases,dead=new_deaths,vax=new_vaccinations)]
 o=cbind(o[,-1],setNames(MMWRweek(o$date)[-3],c(&quot;year&quot;,&quot;week&quot;)))
 o=o[,lapply(.SD,sum,na.rm=T),.(year,week),.SDcols=1:(ncol(o)-2)]
-</pre>
-<pre>d=cdc[Sex==&quot;All Sexes&quot;&amp;RaceEthnicity==&quot;All Race/Ethnicity Groups&quot;&amp;AgeGroup==&quot;All Ages&quot;]
-</pre>
-<pre>ex=d[MMWRyear%in%2020:2022,.(excess=`Number above average (unweighted)`,year=MMWRyear,week=MMWRweek)]
-</pre>
-<pre>me=merge(ex,o,all.r=T)
+
+d=cdc[Sex==&quot;All Sexes&quot;&amp;RaceEthnicity==&quot;All Race/Ethnicity Groups&quot;&amp;AgeGroup==&quot;All Ages&quot;]
+
+ex=d[MMWRyear%in%2020:2022,.(excess=`Number above average (unweighted)`,year=MMWRyear,week=MMWRweek)]
+
+me=merge(ex,o,all.r=T)
 me[is.na(me)]=0
-</pre>
-<pre>pop=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)
-</pre>
-<pre>base=merge(pop,pop[year%in%2011:2019,.(year=2011:2023,base=predict(lm(dead/pop~year),.(year=2011:2023))),age])
+
+pop=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)
+
+base=merge(pop,pop[year%in%2011:2019,.(year=2011:2023,base=predict(lm(dead/pop~year),.(year=2011:2023))),age])
 base=base[,.(base=sum(base*pop)),year]
 base=merge(d[,.(year=MMWRyear,week=MMWRweek,dead=`Deaths (unweighted)`)],base)
 base[,base:=base/(365+(year%%4==0))*7]
 weekly=base[year%in%2015:2019,.(weekly=mean(dead-base)),week]
 weekly=rbind(weekly,weekly[week==52,.(week=53,weekly)])
 ex2=merge(weekly,base)[year%in%2020:2022,.(excess2=dead-(base+weekly)),,.(year,week)]
-</pre>
-<pre>me=merge(me,ex2)
-</pre>
-<pre>lab=strsplit(&quot;Excess deaths (CDC&#39;s inaccurate baseline; 2015-2019 average)
+
+me=merge(me,ex2)
+
+lab=strsplit(&quot;Excess deaths (CDC&#39;s inaccurate baseline; 2015-2019 average)
 Excess deaths (my accurate baseline; CMR trend by age × population)
 COVID deaths
 COVID cases
 Vaccine doses&quot;,&quot;\\n&quot;)[[1]]
-</pre>
-<pre>p=me[,.(x=MMWRweek2Date(year,week,4),y=c(excess,excess2,dead,cases,vax),z=factor(rep(lab,each=.N),lab))]
+
+p=me[,.(x=MMWRweek2Date(year,week,4),y=c(excess,excess2,dead,cases,vax),z=factor(rep(lab,each=.N),lab))]
 p=p[,.(x,y=scale(y)[,1]),z]
-</pre>
-<pre>xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2023-1-1&quot;)
+
+xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2023-1-1&quot;)
 xbreak=seq(xstart+182,xend,&quot;year&quot;)
 p=p[x%in%xstart:xend]
-</pre>
-<pre>ggplot(p,aes(x,y))+
+
+ggplot(p,aes(x,y))+
 geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),linewidth=.4,color=&quot;gray82&quot;)+
 geom_hline(yintercept=0,linewidth=.4)+
 geom_line(aes(color=z),linewidth=.6)+
@@ -1431,79 +1411,77 @@ theme(axis.text=element_text(size=11,color=&quot;black&quot;),
   plot.margin=margin(5,5,5,5),
   plot.title=element_text(size=11.5,face=2,margin=margin(1,,3)))
 ggsave(&quot;1.png&quot;,width=5.7,height=4.5,dpi=300*4)
-system(&quot;magick 1.png -trim -resize 25% -bordercolor white -border 22 -colors 256 1.png&quot;)
-</pre>
+system(&quot;magick 1.png -trim -resize 25% -bordercolor white -border 22 -colors 256 1.png&quot;)</pre>
+</div>
 <p>In the following code I did a similar model as Pantazatos where I compared excess deaths in his CDC dataset against weekly new cases at OWID, but I didn't add separate terms for different COVID waves. My <code>r^2</code> value was about 0.38 when I didn't shift the cases, 0.40 when I shifted cases forwards by 1 week, and 0.36 when I shifted cases forwards by 2 weeks. However my <code>r^2</code> value increased to about 0.71 when I compared the excess deaths against COVID deaths instead of cases, so then my <code>r^2</code> value was close to the value Pantazatos got when he split the COVID cases into 8 different terms for different waves:</p>
 <pre>library(data.table);library(MMWRweek)
-</pre>
-<pre>download.file(&quot;https://covid.ourworldindata.org/data/owid-covid-data.csv&quot;,&quot;owid-covid-data.csv&quot;)
-</pre>
-<pre>owid=fread(&quot;owid-covid-data.csv&quot;)[location==&quot;United States&quot;]
+
+download.file(&quot;https://covid.ourworldindata.org/data/owid-covid-data.csv&quot;,&quot;owid-covid-data.csv&quot;)
+
+owid=fread(&quot;owid-covid-data.csv&quot;)[location==&quot;United States&quot;]
 adhoc=fread(&quot;AH_Excess_Deaths_by_Sex__Age__and_Race_and_Hispanic_Origin_20250211.csv&quot;)
-</pre>
-<pre># `date-1` is because new cases during the past week are listed on Sundays but MMWR weeks end on Saturday
+
+# `date-1` is because new cases during the past week are listed on Sundays but MMWR weeks end on Saturday
 o=owid[,.(date=date-1,cases=new_cases,coviddead=new_deaths,vax=new_vaccinations)]
-</pre>
-<pre>o=merge(owid[,.(date=date-1+7,cases1=new_cases)],o,all=T)
+
+o=merge(owid[,.(date=date-1+7,cases1=new_cases)],o,all=T)
 o=merge(owid[,.(date=date-1+14,cases2=new_cases)],o,all=T)
 o=cbind(o[,-1],setNames(MMWRweek(o$date)[-3],c(&quot;year&quot;,&quot;week&quot;)))
 o=o[,lapply(.SD,sum,na.rm=T),.(year,week),.SDcols=1:(ncol(o)-2)]
-</pre>
-<pre>d=adhoc[Sex==&quot;All Sexes&quot;&amp;RaceEthnicity==&quot;All Race/Ethnicity Groups&quot;&amp;AgeGroup==&quot;All Ages&quot;]
-</pre>
-<pre>ex=d[MMWRyear%in%2020:2022,.(excess=`Number above average (unweighted)`,year=MMWRyear,week=MMWRweek)]
-</pre>
-<pre>me=merge(ex,o,all.r=T)
+
+d=adhoc[Sex==&quot;All Sexes&quot;&amp;RaceEthnicity==&quot;All Race/Ethnicity Groups&quot;&amp;AgeGroup==&quot;All Ages&quot;]
+
+ex=d[MMWRyear%in%2020:2022,.(excess=`Number above average (unweighted)`,year=MMWRyear,week=MMWRweek)]
+
+me=merge(ex,o,all.r=T)
 me[is.na(me)]=0
-</pre>
-<pre>summary(lm(excess~cases,me))$r.squared # 0.379 (weekly number of new cases explains only about 38% of variance in excess deaths)
+
+summary(lm(excess~cases,me))$r.squared # 0.379 (weekly number of new cases explains only about 38% of variance in excess deaths)
 summary(lm(excess~cases1,me))$r.squared # 0.404 (shifting cases forwards by one week increased explained variance)
 summary(lm(excess~cases2,me))$r.squared # 0.359 (shifting cases forwards by two weeks reduced explained variance)
-</pre>
-<pre>summary(lm(excess~coviddead,me))$r.squared # 0.714 (COVID deaths explain about 71% of variance in excess deaths)
-</pre>
+
+summary(lm(excess~coviddead,me))$r.squared # 0.714 (COVID deaths explain about 71% of variance in excess deaths)</pre>
 <p>When I added a term for weekly vacine doses administered, my <code>r^2</code> value increased only from about 0.379 to 0.384 for cases and from about 0.714 to 0.735 for deaths. But the plot twist is that in both models the coefficient for vaccines was negative, which means that the weekly number of new vaccine doses administered was inversely associated with weekly excess deaths:</p>
 <pre>summary(lm(excess~cases+vax,me))$r.squared # 0.384
 summary(lm(excess~coviddead+vax,me))$r.squared # 0.735
-</pre>
-<pre>coef(lm(excess~cases+vax,me))
+
+coef(lm(excess~cases+vax,me))
 # (Intercept)       cases         vax
 #  8.1779e+03  5.1947e-03 -8.4827e-05
-</pre>
-<pre>coef(lm(excess~coviddead+vax,me))
+
+coef(lm(excess~coviddead+vax,me))
 # (Intercept)   coviddead         vax
-#  4.7433e+03  1.0385e+00 -1.8758e-04
-</pre>
+#  4.7433e+03  1.0385e+00 -1.8758e-04</pre>
 <p>In his Substack post Pantazatos only included a model where he looked at COVID cases split into 8 different waves combined with vaccines. But he didn't include a model where he looked at COVID cases as a single term combined with vaccines, and he also didn't include a model where he looked at COVID deaths combined with vaccines. It might be because in both models he would've gotten a negative coefficient for vaccines. (Edit: He told me he hadn't done a model based on COVID deaths instead of cases.)</p>
 <p>In the following code I took data for cases from the same OWID dataset that Pantazatos used and not from the <code>owid-covid-data.csv</code> file I used earlier where the number of cases is slightly different, and I shifted the dates of cases 8 days forwards like Pantazatos. Pantazatos provided me the starting weeks of each COVID wave. In his models which had separate terms for each COVID wave, Pantazatos got an <code>r^2</code> value of about 0.715 when he didn't include a term for vaccine and about 0.765 when he did include a term for vaccines. However I don't understand how my code below was different from his calculation, because I got an <code>r^2</code> value of about 0.780 without the vaccine term and 0.789 with the vaccine term:</p>
 <pre>library(data.table);library(MMWRweek)
-</pre>
-<pre>waves=data.table(year=rep(2020:2022,c(3,3,2)),week=c(1,24,37,10,26,44,14,43))
-</pre>
-<pre>owid=fread(&quot;owid-covid-data.csv&quot;)[location==&quot;United States&quot;]
+
+waves=data.table(year=rep(2020:2022,c(3,3,2)),week=c(1,24,37,10,26,44,14,43))
+
+owid=fread(&quot;owid-covid-data.csv&quot;)[location==&quot;United States&quot;]
 vax=owid[,.(MMWRweek(date),vax=new_vaccinations)][,.(vax=sum(vax,na.rm=T)),.(year=MMWRyear,week=MMWRweek)]
-</pre>
-<pre>case=fread(&quot;daily-new-confirmed-covid-19-cases.csv&quot;)[Entity==&quot;United States&quot;]
+
+case=fread(&quot;daily-new-confirmed-covid-19-cases.csv&quot;)[Entity==&quot;United States&quot;]
 case=case[,.(MMWRweek(Day+8),cases=.SD[[3]])][,.(cases=sum(cases)),.(year=MMWRyear,week=MMWRweek)]
-</pre>
-<pre>excess=fread(&quot;AH_Excess_Deaths_by_Sex__Age__and_Race_and_Hispanic_Origin_20250211.csv&quot;)
+
+excess=fread(&quot;AH_Excess_Deaths_by_Sex__Age__and_Race_and_Hispanic_Origin_20250211.csv&quot;)
 excess=excess[Sex==&quot;All Sexes&quot;&amp;RaceEthnicity==&quot;All Race/Ethnicity Groups&quot;&amp;AgeGroup==&quot;All Ages&quot;]
 excess=excess[,.(excess=`Number above average (unweighted)`,year=MMWRyear,week=MMWRweek)]
-</pre>
-<pre>me=merge(merge(excess,case,all=T),vax,all=T)[year%in%2020:2022];me[is.na(me)]=0
+
+me=merge(merge(excess,case,all=T),vax,all=T)[year%in%2020:2022];me[is.na(me)]=0
 me$wave=me[,findInterval(year*100+week,waves[,year*100+week])]
 me=cbind(me,`colnames&lt;-`(sapply(1:8,\(i)me[,ifelse(wave==i,cases,0)]),paste0(&quot;w&quot;,1:8)))
-</pre>
-<pre>summary(lm(excess~w1+w2+w3+w4+w5+w6+w7+w8,me)) # without vaccine term
+
+summary(lm(excess~w1+w2+w3+w4+w5+w6+w7+w8,me)) # without vaccine term
 # Call:
 # lm(formula = excess ~ w1 + w2 + w3 + w4 + w5 + w6 + w7 + w8,
 #     data = me)
-</pre>
-<pre># Residuals:
+
+# Residuals:
 #    Min     1Q Median     3Q    Max
 #  -6891  -1618   -156   1104  12608
-</pre>
-<pre># Coefficients:
+
+# Coefficients:
 #             Estimate Std. Error t value Pr(&gt;|t|)
 # (Intercept) 5.36e+03   4.88e+02   10.99  &lt; 2e-16 ***
 # w1          5.66e-02   6.47e-03    8.75  4.4e-15 ***
@@ -1516,12 +1494,12 @@ me=cbind(me,`colnames&lt;-`(sapply(1:8,\(i)me[,ifelse(wave==i,cases,0)]),paste0(
 # w8          1.45e-02   3.47e-03    4.19  4.8e-05 ***
 # ---
 # Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-</pre>
-<pre># Residual standard error: 3230 on 148 degrees of freedom
+
+# Residual standard error: 3230 on 148 degrees of freedom
 # Multiple R-squared:  0.78,    Adjusted R-squared:  0.768
 # F-statistic: 65.6 on 8 and 148 DF,  p-value: &lt;2e-16
-</pre>
-<pre>summary(lm(excess~w1+w2+w3+w4+w5+w6+w7+w8+vax,me)) # with vaccine term
+
+summary(lm(excess~w1+w2+w3+w4+w5+w6+w7+w8+vax,me)) # with vaccine term
 # Call:
 # lm(formula = excess ~ w1 + w2 + w3 + w4 + w5 + w6 + w7 + w8 +
 #     vax, data = me)
@@ -1547,8 +1525,7 @@ me=cbind(me,`colnames&lt;-`(sapply(1:8,\(i)me[,ifelse(wave==i,cases,0)]),paste0(
 #
 # Residual standard error: 3180 on 147 degrees of freedom
 # Multiple R-squared:  0.789,   Adjusted R-squared:  0.776
-# F-statistic: 60.9 on 9 and 147 DF,  p-value: &lt;2e-16
-</pre>
+# F-statistic: 60.9 on 9 and 147 DF,  p-value: &lt;2e-16</pre>
 <p>The next table shows the results of 6 different models out of which 3 included a term for vaccines. I got a negative coefficient for vaccines in 2 of the 3 models, but neither type of model was included in the post by Pantazatos:</p>
 <table>
 <tr>
@@ -1709,8 +1686,8 @@ adhoc[MMWRweek==1,.(MMWRyear,MMWRweek,`Deaths (unweighted)`,`Average number of d
 #     2021        1               87073                                 87073                             26574 # columns here are
 #     2022        1               79826                                 79826                             19327 # erroneously the
 #     2023        1               68841                                 68841                              8342 # same in 2020-2023
-</pre>
-<pre>adhoc[MMWRweek==1,.(MMWRyear,MMWRweek,deaths_minus_excess=`Deaths (unweighted)`-`Number above average (unweighted)`)]|&gt;print(r=F)
+
+adhoc[MMWRweek==1,.(MMWRyear,MMWRweek,deaths_minus_excess=`Deaths (unweighted)`-`Number above average (unweighted)`)]|&gt;print(r=F)
 # MMWRyear MMWRweek deaths_minus_excess # deaths minus excess deaths is always
 #     2015        1                  NA # the same as the 2015-2019 average
 #     2016        1                  NA
@@ -1720,8 +1697,7 @@ adhoc[MMWRweek==1,.(MMWRyear,MMWRweek,`Deaths (unweighted)`,`Average number of d
 #     2020        1               60499
 #     2021        1               60499
 #     2022        1               60499
-#     2023        1               60499
-</pre>
+#     2023        1               60499</pre>
 <p>But anyway since Pantazatos used a 2015-2019 average baseline which exaggerated excess deaths in 2022 and 2021 relative to 2020, in his model where vaccines explained 5% of additional variance in excess mortality beyond COVID cases, it might have partially been because his baseline produced superfluous excess deaths in 2021 and 2022 which happened to partially coincide with periods when vaccine doses were administered. And because his model had a different term for each COVID wave, it allowed the weight of the COVID waves in 2021 and 2022 to be reduced in order to accommodate a higher weight to vaccines.</p>
 <p>In this plot by Pantazatos which shows excess deaths in CDC's ad-hoc dataset, after the first few weeks of 2020 there's no week where the excess mortality is even close to zero:</p>
 <div class="width6">
@@ -1731,17 +1707,17 @@ adhoc[MMWRweek==1,.(MMWRyear,MMWRweek,`Deaths (unweighted)`,`Average number of d
 <p>Pantazatos wrote that there were a total of 1,743,770 excess deaths in 2020-2022. I got the same number of total excess deaths in MMWR years 2020-2022 when I looked at the column <span class="quote">"Number above average (unweighted)"</span> in the ad-hoc dataset he used. However in CDC's primary dataset for excess deaths which used a Farrington surveillance algorithm to calculate the baseline, there was a total of only about 1.32 million excess deaths on weeks ending in 2020-2022: [<a href="https://www.cdc.gov/nchs/nvss/vsrr/covid19/excess_deaths.htm">https://www.cdc.gov/nchs/nvss/vsrr/covid19/excess_deaths.htm</a>; link <span class="quote">"National and State Estimates of Excess Deaths"</span> under downloads]</p>
 <pre>adhoc=fread(&quot;AH_Excess_Deaths_by_Sex__Age__and_Race_and_Hispanic_Origin_20250211.csv&quot;)
 adhoc=adhoc[MMWRyear%in%2020:2022&amp;Sex==&quot;All Sexes&quot;&amp;RaceEthnicity==&quot;All Race/Ethnicity Groups&quot;&amp;AgeGroup==&quot;All Ages&quot;]
-</pre>
-<pre>adhoc[,sum(`Number above average (unweighted)`)] # 1743770 (same as Pantazatos)
-</pre>
-<pre>o=adhoc[,.(cdc_adhoc_excess=sum(`Number above average (unweighted)`)),.(year=MMWRyear)]
-</pre>
-<pre># primary analysis where the baseline was calculated using a Farrington surveillance algorithm
+
+adhoc[,sum(`Number above average (unweighted)`)] # 1743770 (same as Pantazatos)
+
+o=adhoc[,.(cdc_adhoc_excess=sum(`Number above average (unweighted)`)),.(year=MMWRyear)]
+
+# primary analysis where the baseline was calculated using a Farrington surveillance algorithm
 main=fread(&quot;Excess_Deaths_Associated_with_COVID-19.csv&quot;)
 main=main[Type==&quot;Predicted (weighted)&quot;&amp;Outcome==&quot;All causes&quot;&amp;State==&quot;United States&quot;]
 main=main[,.(cdc_main_excess=sum(`Excess Estimate`)),.(year=Year)]
-</pre>
-<pre>o=merge(o,main)
+
+o=merge(o,main)
 o=rbind(o,list(&quot;Total&quot;,sum(o$cdc_adhoc_excess),sum(o$cdc_main_excess)))
 o[,difference:=cdc_adhoc_excess-cdc_main_excess]
 print(o,r=F)
@@ -1749,46 +1725,43 @@ print(o,r=F)
 #  2020           585409          459421     125988 # difference is smallest in 2020
 #  2021           670667          530876     139791
 #  2022           487694          331469     156225 # difference is biggest in 2022
-# Total          1743770         1321766     422004
-</pre>
+# Total          1743770         1321766     422004</pre>
 <p>In the following code I used my own method to calculate excess deaths where I multiplied the 2011-2019 linear trend in CMR for each age by the mid-year resident population estimates of the age. But I got about about 1.27 million excess deaths in 2020-2022, so it's similar to CDC's main dataset for excess deaths:</p>
 <pre>pop=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)
 pop=merge(pop,pop[year%in%2011:2019,.(year=2020:2022,base=predict(lm(dead/pop~year),.(year=2020:2022))),age])
 pop=pop[,.(dead=sum(dead),base=sum(base*pop)),year]
-</pre>
-<pre>my_excess=pop[,dead-base];my_excess=c(my_excess,sum(my_excess))
+
+my_excess=pop[,dead-base];my_excess=c(my_excess,sum(my_excess))
 cbind(o[,-4],my_excess)|&gt;print(r=F)
 #  year cdc_adhoc_excess cdc_main_excess my_excess
 #  2020           585409          459421    468885
 #  2021           670667          530876    515125
 #  2022           487694          331469    285019
-# Total          1743770         1321766   1269029
-</pre>
+# Total          1743770         1321766   1269029</pre>
 <p>In the following code I calculated a more accurate weekly baseline adjusted for seasonality. First I multiplied the 2011-2019 linear trend in CMR for each age by the mid-year resident population estimates of the age to get the yearly expected deaths for each age, and I added together the expected deaths for all ages to get the total yearly expected deaths. Then I divided the yearly expected deaths by the number of days in the year and multiplied it by 7 to get the weekly expected deaths for each year. Then I adjusted the baseline for seasonality by calculating the average difference between the actual deaths and weekly expected deaths for each MMWR week number in 2015-2019, and I added the difference to the baseline for the corresponding MMWR week number of each year.</p>
 <p>I again did a linear model where I first compared COVID deaths against all-cause deaths, and next I also added a term for weekly new vaccine doses to the model. However regardless of whether I took the excess deaths from CDC's ad-hoc dataset or if I used my own more accurate method of calculating excess deaths, the weekly number of new vaccine doses still got a negative coefficient in the model, which means that vaccines were inversely associated with excess mortality:</p>
 <pre># sars2.net/ethical.html#Files_for_US_population_estimates_by_single_year_of_age_up_to_ages_100
 pop=fread(&quot;https://sars2.net/f/uspopdead.csv&quot;)
-</pre>
-<pre>base=merge(pop,pop[year%in%2011:2019,.(year=2011:2023,base=predict(lm(dead/pop~year),.(year=2011:2023))),age])
+
+base=merge(pop,pop[year%in%2011:2019,.(year=2011:2023,base=predict(lm(dead/pop~year),.(year=2011:2023))),age])
 base=base[,.(base=sum(base*pop)),year]
 base=merge(d[,.(year=MMWRyear,week=MMWRweek,dead=`Deaths (unweighted)`)],base)
 base[,base:=base/(365+(year%%4==0))*7]
 weekly=base[year%in%2015:2019,.(weekly=mean(dead-base)),week]
 weekly=rbind(weekly,weekly[week==52,.(week=53,weekly)])
 ex2=merge(weekly,base)[year%in%2020:2022,.(excess2=dead-base-weekly),,.(year,week)]
-</pre>
-<pre>me=merge(me,ex2)
-</pre>
-<pre># inaccurate baseline (CDC&#39;s ad-hoc dataset with 2015-2019 average baseline)
+
+me=merge(me,ex2)
+
+# inaccurate baseline (CDC&#39;s ad-hoc dataset with 2015-2019 average baseline)
 summary(lm(excess~coviddead,me))$r.squared # 0.714
 summary(lm(excess~coviddead+vax,me))$r.squared # 0.735 (adding vaccines to the model increased r^2 by about 0.021)
 coef(lm(excess~coviddead+vax,me))[&quot;vax&quot;] # -0.000188 (vaccines have a negative coefficient)
-</pre>
-<pre># accurate baseline (my 2011-2019 linear trend in CMR by age multiplied by population size)
+
+# accurate baseline (my 2011-2019 linear trend in CMR by age multiplied by population size)
 summary(lm(excess2~coviddead,me))$r.squared # 0.725
 summary(lm(excess2~coviddead+vax,me))$r.squared # 0.754 (adding vaccines to the model increased r^2 by about 0.029)
-coef(lm(excess2~coviddead+vax,me))[&quot;vax&quot;] # -0.000227 (vaccines have a negative coefficient)
-</pre>
+coef(lm(excess2~coviddead+vax,me))[&quot;vax&quot;] # -0.000227 (vaccines have a negative coefficient)</pre>
 <p>Added later: Spiro Pantazatos posted this reply to me at Substack: <span class="quote">"Thanks. When I optimize the fit without a vaccine term I find the model fits best with a 4 day lag on the COVID cases. After adding the vaccine term I then get results consistent with yours (i.e. only a 1.5-2% increase in variance explained). I will update the results in the article to include this improved approach for choosing the lag. Thanks again for your feedback and comments (and excellent idea to apply the lag in days before down-sampling the cases vector)."</span> [<a href="https://telemimesis.substack.com/p/a-simple-time-series-model-of-pandemic/comments">https://telemimesis.substack.com/p/a-simple-time-series-model-of-pandemic/comments</a>]</p>
 <p>I posted this reply to him:</p>
 <blockquote>
@@ -1837,15 +1810,12 @@ WA     3473            3686          213           7400000            404600    
 TAS    931             1092          161           1600000            137200        571600     62900               20400
 NT     1122            1241          119           644400             18700         250100     9800                20700
 ACT    550             599           49            2200000            131400        460900     49200               9200&quot;)
-</pre>
-<pre>t[,cor(total_vaccinations,excess_deaths)] # 0.96581 (not adjusted for population size)
-</pre>
+
+t[,cor(total_vaccinations,excess_deaths)] # 0.96581 (not adjusted for population size)</pre>
 <p>But my correlation fell to about -0.21 when I compared doses per capita against excess deaths per capita instead:</p>
-<pre>t[,cor(total_vaccinations/population,excess_deaths/population)] # -0.20514 (adjusted for population size)
-</pre>
+<pre>t[,cor(total_vaccinations/population,excess_deaths/population)] # -0.20514 (adjusted for population size)</pre>
 <p>Allen got an adjusted r-squared value of about 0.71 between excess deaths and vaccine doses. However my adjusted r-squared value was about 0.92:</p>
-<pre>summary(t[,lm(doses~dead-expecteddead)])$adj.r # 0.91934
-</pre>
+<pre>summary(t[,lm(doses~dead-expecteddead)])$adj.r # 0.91934</pre>
 <p>In order to find why my r-squared value was different from Allen, I checked if I could reproduce the mean values in Allen's Table 2:</p>
 <div class="width5">
 <img src="i/rootclaim-allen-2.png">
@@ -1864,8 +1834,7 @@ print(d,r=f)
 #       booster_doses  521175.00  521180.00     -5.000      -0.00096
 #          population 3282937.50 3329200.00 -46262.500      -1.38960
 # recently_vaccinated  236375.00  236380.00     -5.000      -0.00212
-#        unvaccinated   70587.50   70588.00     -0.500      -0.00071
-</pre>
+#        unvaccinated   70587.50   70588.00     -0.500      -0.00071</pre>
 <p>Next I tried reproducing Allen's correlation matrix:</p>
 <div class="width5">
 <img src="i/rootclaim-allen-3.png">
@@ -1885,8 +1854,7 @@ print(d,r=f)
 # booster_doses           0.9942              0.9993       0.6055
 # population              1.0000              0.9950       0.6663
 # recently_vaccinated     0.9950              1.0000       0.5992
-# unvaccinated            0.6663              0.5992       1.0000
-</pre>
+# unvaccinated            0.6663              0.5992       1.0000</pre>
 <p>In Allen's Table 2 the maximum number of excess deaths was 1051 which matched my table, so I think he calculated the excess deaths for at least one region the same way as me. But his minimum excess deaths were -268 which didn't match my table because I didn't get negative excess deaths for any region. He might have made some error in entering his data or in subtracting actual deaths from expected deaths, because the source dataset didn't have any region that got negative excess deaths in the first quarter of 2023: <a href="https://www.abs.gov.au/articles/measuring-australias-excess-mortality-during-covid-19-pandemic-until-first-quarter-2023">https://www.abs.gov.au/articles/measuring-australias-excess-mortality-during-covid-19-pandemic-until-first-quarter-2023</a>. I checked multiple times that my actual and expected deaths matched the source data, so I don't think I made any error in copying the data.</p>
 <p>As an additional remark on Allen's paper, he wrote: <span class="quote">"Most revealing is the insignificant correlation of 0.5 between the unvaccinated and excess deaths."</span> However I don't know what that is supposed to reveal, except that it is notoriously difficult to estimate the number of unvaccinated people, so the relatively low correlation might simply be due to inaccurate estimates for the number of unvaccinated people.</p>
 <p>In CDC's vaccination data for the United States, there's some states that have more vaccinated people than the total resident population estimate, but the percentage of vaccinated people is capped at a maximum of 95% because it is not realistic for the percentage to reach much closer to 100%, especially considering that the youngest children are usually not vaccinated. [<a href="https://data.cdc.gov/Vaccinations/COVID-19-Vaccinations-in-the-United-States-County/8xkx-amqh">https://data.cdc.gov/Vaccinations/COVID-19-Vaccinations-in-the-United-States-County/8xkx-amqh</a>] In vaccination data from New Zealand, Hong Kong, and the UK, there are also age groups that have more vaccinated people than total people. [<a href="https://github.com/minhealthnz/nz-covid-data/tree/main/vaccine-data/2022-02-16">https://github.com/minhealthnz/nz-covid-data/tree/main/vaccine-data/2022-02-16</a>, <a href="https://www.coronavirus.gov.hk/eng/index.html">https://www.coronavirus.gov.hk/eng/index.html</a>, <a href="https://www.england.nhs.uk/statistics/wp-content/uploads/sites/2/2021/05/Denominators-for-COVID-19-vaccination-statistics.docx">https://www.england.nhs.uk/statistics/wp-content/uploads/sites/2/2021/05/Denominators-for-COVID-19-vaccination-statistics.docx</a>]</p>
@@ -1900,8 +1868,7 @@ print(d,r=f)
 #     WA      1.6
 #    TAS      3.6
 #     NT      8.3
-#    ACT      2.0
-</pre>
+#    ACT      2.0</pre>
 <p>In the spreadsheet of vaccination data used by Allen, there's a note which says that the number of unvaccinated people is <span class="quote">"based on the total Estimated Resident Population minus individuals who have a dose recorded in the Australian Immunisation Register"</span>. [<a href="https://www.health.gov.au/resources/publications/covid-19-vaccination-vaccination-data-10-november-2023">https://www.health.gov.au/resources/publications/covid-19-vaccination-vaccination-data-10-november-2023</a>] However if you look at the rows of the spreadsheet for people whose state of residence is Victoria, the rows for unvaccinated, recently vaccinated, and not recently vaccinated people only add up to 5,154,000, even though the resident population estimate of Victoria on December 31st 2022 was 6,704,300. So I don't know if the youngest ages are excluded from the calculation for the number of unvaccinated people.</p>
 <h3>
 <a href=#Were_vaccine_types_in_the_Czech_record_level_data_distributed_without_bias id=Were_vaccine_types_in_the_Czech_record_level_data_distributed_without_bias>Were vaccine types in the Czech record-level data distributed without bias?</a>
