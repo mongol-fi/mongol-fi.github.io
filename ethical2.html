@@ -23,8 +23,8 @@ img{max-width:100%}
 dt{font-size:1.3em;margin:.3em 0 .3em 0}
 blockquote{margin:0;padding-left:40px;margin-right:0;overflow-x:hidden}
 blockquote p{max-width:480px}
-blockquote p:first-child{margin-top:0}
-blockquote p:last-child{margin-bottom:0}
+blockquote>:first-child{margin-top:0}
+blockquote>:last-child{margin-bottom:0}
 blockquote blockquote p{max-width:440px}
 blockquote blockquote blockquote p{max-width:400px}
 blockquote,.quote,blockquote h1,blockquote h2,blockquote h3{color:hsl(50,100%,85%)}
@@ -228,7 +228,6 @@ oldmod=oldmod[,.(age,year,month,pop=pop*(slope*mult+(1-slope)*1))]
 a=cbind(rbind(oldpop[!(year==2020&amp;month&gt;=4)],newpop),group=&quot;Original unmodified population estimates&quot;)
 a=rbind(a,cbind(rbind(oldmod[!(year==2020&amp;month==4)],newpop),group=&quot;Population estimates based on 2010 census multiplied by linear slope&quot;))
 
-<h2><a href=#a_merge_a_fread_quot_http_sars2_net_f_usdeadmonthly_csv_quot_year_2024_amp_month_gt_9 id=a_merge_a_fread_quot_http_sars2_net_f_usdeadmonthly_csv_quot_year_2024_amp_month_gt_9>a=merge(a,fread(&quot;http://sars2.net/f/usdeadmonthly.csv&quot;)[!(year==2024&amp;month&gt;9)])</a></h2>
 a=merge(a,fread(&quot;http://sars2.net/f/usdeadmonthly.csv&quot;)[year&lt;2025])
 
 std=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/nc-est2023-agesex-res.csv&quot;)
@@ -682,7 +681,6 @@ scale_color_manual(guide=&quot;none&quot;,values=c(hsv(0,1,.6),hsv(30/36,.6,.6),
 scale_alpha_manual(values=c(1,.4,1))+
 scale_linetype_manual(values=c(&quot;solid&quot;,&quot;solid&quot;,&quot;42&quot;))+
 coord_cartesian(clip=&quot;off&quot;,expand=F)+
-<h2><a href=#guides_linetype_guide_legend_order_2_alpha_guide_legend_order_2 id=guides_linetype_guide_legend_order_2_alpha_guide_legend_order_2>guides(linetype=guide_legend(order=2),alpha=guide_legend(order=2))+</a></h2>
 theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
   axis.text.y=element_text(margin=margin(,1)),
@@ -1457,8 +1455,87 @@ system(&quot;magick 1.png -resize 25% PNG8:1.png&quot;)</pre>
 </div>
 <p>In the plot above if you compare the red line for my model against the black line for the real number of deaths, my model has a slightly higher number of deaths in the 2010s, but I think it's because in real life elderly age groups had a decreasing trend in age-specific mortality rates in the 2010s but in my model I used 2010 CMR values for each age indefinitely.</p>
 <p>The Census Bureau has also published this projection of yearly deaths that is fairly similar to the red line in my previous plot, even though I believe the projection also accounts for migration and it doesn't assume constant CMR values for each age: [<a href="https://www.census.gov/library/stories/2017/10/aging-boomers-deaths.html">https://www.census.gov/library/stories/2017/10/aging-boomers-deaths.html</a>]</p>
-<div class="width7">
+<div class="width6">
 <img src="i/ethical-akston-census.jpg">
+</div>
+<p>This plot also shows how Akston's sine wave baseline is way too low in 2024:</p>
+<div class="width6">
+<img src="i/ethical-akston-yearly.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>library(data.table);library(ggplot2)
+
+t=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)
+years=1999:2024
+t=t[year%in%years]
+
+a=t[,.(dead=sum(dead)),year]
+a$base=predict(lm(dead~year,a[year&lt;2020,]),a)
+a[,cum:=cumsum(dead-base)]
+sub=a[year&lt;2020]
+fit=nls(cum~A*sin(B*year+C)+D,sub,
+  list(A=sub[,max(cum)-min(cum)]/2,B=2*pi/sub[,max(year)-min(year)],C=0,D=mean(sub$cum)),
+  nls.control(maxiter=100,tol=1e-6))
+a$sine=diff(c(NA,predict(fit,a)))
+
+t$poi=predict(glm(dead~factor(age),poisson,t[year%in%2010:2019],offset=log(pop)),t,type=&quot;response&quot;)
+
+t=merge(t,t[year%in%2010:2019,.(year=years,base=predict(lm(dead/pop~year),.(year=years))),age])
+t=t[,.(dead=sum(dead),base=sum(base*pop),poi=sum(poi)),year]
+t$owid=t[year%in%2015:2019,predict(lm(dead~year),t)]
+t$akston=a[,base+sine]
+
+p=t[,.(x=year,y=unlist(.SD[,-1]),z=rep(names(.SD)[-1],each=.N))]
+
+lab=c(dead=&quot;Actual deaths&quot;,base=&quot;2010-2019 linear trend in CMR by age&quot;,poi=&quot;2010-2019 Poisson regression&quot;,owid=&quot;2015-2019 linear baseline for raw deaths&quot;,akston=&quot;Akston&#39;s sine wave baseline&quot;)
+p[,z:=factor(z,names(lab),lab)]
+
+xstart=1999;xend=2024;ybreak=pretty(p$y);ylim=extendrange(p$y)
+
+ggplot(p,aes(x,y))+
+geom_vline(xintercept=seq(2000,2020,5),color=&quot;gray80&quot;,linewidth=.4)+
+geom_vline(xintercept=c(xstart-.5,xend+.5),color=&quot;black&quot;,linewidth=.4,lineend=&quot;square&quot;)+
+geom_line(aes(color=z,linetype=z),linewidth=.6)+
+geom_line(data=p[z==z[1]],aes(color=z,linetype=z),linewidth=.6)+
+geom_point(aes(color=z,alpha=z),stroke=0,size=1.3)+
+labs(title=&quot;Yearly deaths in United States&quot;,x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=seq(2000,xend,5))+
+scale_y_continuous(limits=ylim,breaks=ybreak,labels=kim)+
+scale_color_manual(values=c(&quot;black&quot;,&quot;#00aa00&quot;,&quot;#ff44ff&quot;,&quot;blue&quot;,&quot;#aa0000&quot;))+
+scale_alpha_manual(values=c(1,0,0,0,0))+
+scale_linetype_manual(values=c(1,1,1,1,1))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.text.x=element_text(margin=margin(3)),
+  axis.ticks=element_line(linewidth=.4),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(3,&quot;pt&quot;),
+  axis.title=element_text(size=11),
+  legend.background=element_blank(),
+  legend.box.background=element_rect(fill=&quot;white&quot;,color=&quot;black&quot;,linewidth=.4),
+  legend.box.just=&quot;left&quot;,
+  legend.justification=c(0,1),
+  legend.key=element_rect(fill=&quot;white&quot;),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.position=c(0,1),
+  legend.margin=margin(4,5,4,4),
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.4),
+  plot.margin=margin(5,5,5,5),
+  plot.title=element_text(size=11,face=2,margin=margin(1,,4)))
+ggsave(&quot;1.png&quot;,width=5,height=3,dpi=300*4)
+sub=&quot;\u00a0    Yearly deaths were retrieved from CDC WONDER in May 2025.
+The green baseline was calculated by first doing a linear regression for CMR for each single year of age in 2011-2019, and then the yearly population sizes of each age were multiplied by the value of the projected trend. In the Poisson regression the year was a continuous variable, single year of age up to ages 100+ was a categorical variable, and population size was the offset variable.
+     DIY intercensal population estimates were used for 2011-2019, vintage 2023 resident population estimates were used for 2020-2023, and vintage 2023 population projections modified to match the vintage 2023 resident population estimates were used for 2024. The green and magenta lines start from 2010 because population estimates by single year of age up to ages 100+ were not available for earlier years.&quot;
+system(paste0(&quot;mogrify -trim 1.png;magick 1.png \\( -size `identify -format %w 1.png`x -font Arial -interline-spacing -3 -pointsize $[43*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&#39;&quot;,sub),&quot;&#39; -splice x80 \\) -append -resize 25% -bordercolor white -border 24 -dither none -colors 256 1.png&quot;))</pre>
 </div>
 <h2>
 <a href=#Estimated_yearly_new_cancer_cases_by_American_Cancer_Society id=Estimated_yearly_new_cancer_cases_by_American_Cancer_Society>Estimated yearly new cancer cases by American Cancer Society</a>
