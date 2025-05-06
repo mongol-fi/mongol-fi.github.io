@@ -23,8 +23,8 @@ img{max-width:100%}
 dt{font-size:1.3em;margin:.3em 0 .3em 0}
 blockquote{margin:0;padding-left:40px;margin-right:0;overflow-x:hidden}
 blockquote p{max-width:480px}
-blockquote p:first-child{margin-top:0}
-blockquote p:last-child{margin-bottom:0}
+blockquote>:first-child{margin-top:0}
+blockquote>:last-child{margin-bottom:0}
 blockquote blockquote p{max-width:440px}
 blockquote blockquote blockquote p{max-width:400px}
 blockquote,.quote,blockquote h1,blockquote h2,blockquote h3{color:hsl(50,100%,85%)}
@@ -71,6 +71,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <ul class=toc>
 <li><a href=#Ratio_between_unvaccinated_and_vaccinated_mortality_in_ONS_data>Ratio between unvaccinated and vaccinated mortality in ONS data</a></li>
 <li><a href=#Excess_deaths_by_state_in_2021_2022_relative_to_July_to_November_2020>Excess deaths by state in 2021-2022 relative to July to November 2020</a></li>
+<li><a href=#Paper_about_fertility_rate_in_Czech_Republic_by_Mannische_et_al>Paper about fertility rate in Czech Republic by Mannische et al.</a></li>
 </ul>
 
 <h2>
@@ -525,6 +526,1459 @@ theme(axis.text=element_text(size=11,color=&quot;black&quot;),
 ggsave(&quot;1.png&quot;,width=4.92,height=2.8,dpi=300*4)</pre>
 </div>
 <p>(In order to be consistent with Kirsch's analysis, in my analysis above I excluded Hawaii but I treated District of Columbia as a state.)</p>
+<h2>
+<a href=#Paper_about_fertility_rate_in_Czech_Republic_by_Mannische_et_al id=Paper_about_fertility_rate_in_Czech_Republic_by_Mannische_et_al>Paper about fertility rate in Czech Republic by Mannische et al.</a>
+</h2>
+<p>Kirsch linked a paper by Vibeke Mannische, Tomáš Fürst, and Max Schmelling titled <span class="quote">"Rates of Successful Conceptions According to COVID-19 Vaccination Status: Data from the Czech Republic"</span>: <a href="https://www.preprints.org/manuscript/202504.2487/v1">https://www.preprints.org/manuscript/202504.2487/v1</a>.</p>
+<p>The authors made a major error when they calculated the number of women who were vaccinated at conception. The error was independently discovered by Uncle John Returns and Peter Hegarty: <a href="https://x.com/PeterHegarty17/status/1917606473644879924">https://x.com/PeterHegarty17/status/1917606473644879924</a>.</p>
+<p>The authors took the number of women who were vaccinated at delivery and subtracted the number of women who got vaccinated during pregnancy. But women who got vaccinated during pregnancy included women who had received a first dose before conception but who got a second dose or a booster dose during pregnancy.</p>
+<p>The authors posted a spreadsheet of the data here: <a href="https://github.com/Schmeling-M/C-19-Conception">https://github.com/Schmeling-M/C-19-Conception</a>. The <span class="quote">"Computation"</span> sheet shows that the authors calculated that in June 2021 there were 493 successful conceptions in vaccinated women:</p>
+<div class="width10">
+<img src="i/rootclaim-vibeke-1.webp">
+</div>
+<p>The figure was calculated based on the row for October 2022 in the <span class="quote">"Data-translation"</span> sheet, since the authors assumed that the date of conception was 9 months before the date of birth. The authors took total births (7,618), subtracted unvaccinated births (4,499), and subtracted women who were vaccinated during pregnancy (2,626), which gave them the figure of 493:</p>
+<div class="width9">
+<img src="i/rootclaim-vibeke-2.webp">
+</div>
+<p>However in reality the number of women who were unvaccinated at conception may have been much higher, if the 2,626 women who were vaccinated during pregnancy included many women who had received the first dose before conception but who received an additional dose during pregnancy.</p>
+<p>In October 2022 the spreadsheet has 813 births in women who were <span class="quote">"vaccinated by any dose during pregnancy"</span>, which is about 10% of 7,752 total births the same month. You can tell it doesn't mean the women received a first dose during pregnancy but that they received any dose, because in the Czech record-level data only about 15.8% of women aged 18-39 had received any vaccine dose in the 270-day period October 16th 2022, but only about 1.0% of women had received a first dose in the same period:</p>
+<pre>rec=fread(&quot;curl -Ls github.com/skirsch/Czech/raw/refs/heads/main/data/CR_records.csv.xz|xz -dc&quot;)
+sub=rec[(2021-Rok_narozeni)%in%18:39&amp;Pohlavikod==&quot;F&quot;]
+d=sub[,.(id=.I,dose=rep(1:7,each=.N),date=`class&lt;-`(unlist(.SD),&quot;Date&quot;)),.SDcols=grep(&quot;^Datum_&quot;,names(sub))]
+
+dates=seq(as.Date(&quot;2021-1-16&quot;),as.Date(&quot;2023-12-16&quot;),&quot;month&quot;)
+r=do.call(rbind,lapply(dates,\(x)d[(x-date)%in%0:270,.(date=x,any=length(unique(id)),first=sum(dose==1))]))
+people=max(d$id)
+mutate_if(r[,.(date,anydose=any/people*100,firstdose=first/people*100)],is.double,round,1)|&gt;print(r=F)
+#       date anydose firstdose
+# 2021-01-16     1.3       1.3
+# 2021-02-16     2.2       2.2
+# 2021-03-16     4.3       4.3
+# 2021-04-16     6.7       6.7
+# 2021-05-16    10.1      10.1
+# 2021-06-16    28.5      28.5
+# 2021-07-16    43.7      43.7
+# 2021-08-16    50.3      50.3
+# 2021-09-16    53.2      53.2
+# 2021-10-16    54.7      53.3
+# 2021-11-16    59.1      57.8
+# 2021-12-16    64.1      60.3
+# 2022-01-16    65.0      59.2
+# 2022-02-16    65.5      56.2
+# 2022-03-16    64.2      36.6
+# 2022-04-16    59.3      22.7
+# 2022-05-16    47.5      16.6
+# 2022-06-16    42.3      13.9
+# 2022-07-16    40.6      12.5
+# 2022-08-16    36.9       6.9
+# 2022-09-16    28.7       2.2
+# 2022-10-16    15.8       1.0
+# 2022-11-16     7.6       0.5
+# 2022-12-16     6.2       0.4
+# 2023-01-16     5.2       0.3
+# 2023-02-16     4.2       0.2
+# 2023-03-16     3.6       0.2
+# 2023-04-16     3.1       0.2
+# 2023-05-16     2.4       0.1
+# 2023-06-16     1.8       0.1
+# 2023-07-16     1.1       0.1
+# 2023-08-16     0.5       0.0
+# 2023-09-16     0.3       0.0
+# 2023-10-16     0.3       0.0
+# 2023-11-16     0.5       0.0
+# 2023-12-16     0.5       0.0
+#       date anydose firstdose</pre>
+<p>So based on the data provided by the authors, it is not possible to calculate fertility rate by date of conception but only by date of delivery.</p>
+<p>However it also looks unusual, because unvaccinated women still have a massive increase in the rate of births during the second half of 2021, and vaccinated women have a very low rate of births in 2021:</p>
+<div class="width6">
+<img src="i/rootclaim-vibeke-3.webp">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>system(&quot;wget https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-demografie.csv&quot;)
+system(&quot;wget https://github.com/Schmeling-M/C-19-Conception/raw/refs/heads/main/CZ-source-data.zip;unzip CZ-source-data.zip&quot;)
+
+api=&quot;https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/&quot;
+pop=fread(paste0(api,&quot;demo_pjan?format=TSV&quot;),sep=&quot;\t&quot;,header=T,na.strings=&quot;:&quot;)
+meta=fread(text=pop[[1]],header=F)
+pick=meta[,V5==&quot;CZ&quot;&amp;V4==&quot;F&quot;]
+pop=cbind(meta[pick,.(age=V3)],year=rep(1960:2024,each=sum(pick)),pop=unlist(pop[pick,-1]))
+pop[,pop:=as.integer(gsub(&quot;\\D&quot;,&quot;&quot;,pop))]
+pop=pop[age%like%&quot;Y1[89]|Y[23].$&quot;,.(pop=sum(pop)),.(date=as.Date(paste0(year,&quot;-1-1&quot;)))]
+pop=pop[,spline(date,pop,xout=seq(as.Date(&quot;2021-1-16&quot;),as.Date(&quot;2023-12-16&quot;),&quot;month&quot;))]
+
+o=fread(&quot;ockovani-demografie.csv&quot;)
+d=o[vekova_skupina%in%c(&quot;18-24&quot;,&quot;25-29&quot;,&quot;30-34&quot;,&quot;35-39&quot;)&amp;pohlavi==&quot;Z&quot;]
+d=d[poradi_davky==1,.(vax=sum(pocet_davek)),,.(date=datum)]
+d=rbind(d,d[,.(date=seq(min(date),max(date),1),vax=0)])[rowid(date)==1][order(date)]
+d[,cum:=cumsum(vax)]
+vaxpop=d[year(date)%in%2021:2023,.(vax=mean(cum)),.(month=yemo(date))]$vax
+
+t=setDT(read_excel(&quot;CZ-Source-data-total.xlsx&quot;,sheet=3,skip=16))[,c(1,2,3,9)]
+names(t)=c(&quot;month&quot;,&quot;total&quot;,&quot;unvaccinated&quot;,&quot;vaxduringpreg&quot;)
+
+t$pop=pop$y
+t$vaxpop=vaxpop
+
+vax=t[,(total-unvaccinated)/vaxpop]
+unvax=t[,unvaccinated/(pop-vaxpop)]
+all=t[,total/pop]
+
+p=t[,.(x=month,y=c(unvax,vax,all)*1000,type=rep(1:3,each=.N))]
+p[,type:=factor(type,,c(&quot;Unvaccinated&quot;,&quot;Vaccinated&quot;,&quot;Total&quot;))]
+p[,x:=as.Date(paste0(x,&quot;-16&quot;))]
+
+xstart=as.Date(&quot;2021-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;)
+xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=ifelse(month(xbreak)==7,year(xbreak),&quot;&quot;)
+ybreak=pretty(c(0,p$y),8);ystart=0;yend=max(p$y)*1.02
+
+ggplot(p,aes(x,y))+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray80&quot;,linewidth=.4)+
+geom_hline(yintercept=c(ystart,0,yend),linewidth=.4,lineend=&quot;square&quot;)+
+geom_vline(xintercept=c(xstart,xend),linewidth=.4,lineend=&quot;square&quot;)+
+geom_line(aes(color=type),linewidth=.5)+
+geom_point(aes(color=type),shape=16,size=1.2)+
+labs(title=&quot;Czech Republic: Live births per 1,000 women aged 18-39 by\nvaccination status at delivery&quot;,x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
+scale_color_manual(values=c(&quot;#5555ff&quot;,&quot;#ff5555&quot;,&quot;black&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.text.x=element_text(margin=margin(4)),
+  axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(4,&quot;pt&quot;),
+  legend.background=element_rect(fill=alpha(&quot;white&quot;,1),color=&quot;black&quot;,linewidth=.4),
+  legend.box=&quot;vertical&quot;,
+  legend.box.just=&quot;left&quot;,
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.justification=c(1,1),
+  legend.key=element_blank(),
+  legend.margin=margin(4,5,4,4),
+  legend.key.height=unit(12,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.position=c(1,1),
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  plot.margin=margin(5,5,5,5),
+  plot.title=element_text(size=11,face=2,margin=margin(1,,4)))
+ggsave(&quot;1.png&quot;,width=5.2,height=3,dpi=300*4)
+
+sub=&quot;Source: github.com/Schmeling-M/C-19-Conception, Eurostat dataset demo_pjan, and onemocneni-aktualne.mzcr.cz/api/v2/covid-19 (tab \&quot;Očkování\&quot;, file \&quot;COVID-19: Demografický přehled vykázaných očkování v čase\&quot;). Monthly population estimates were interpolated from population estimates on January 1st in the Eurostat dataset demo_pjan. The monthly number of vaccinated women aged 18-39 was calculated as a monthly average of the daily cumulative number of women who had received the first dose at age 18-39 (so that aging over time, migration, and deaths were not accounted for).&quot;
+
+system(paste0(&quot;mogrify -trim 1.png;w=`identify -format %w 1.png`;magick 1.png \\( -size $[w]x -font Arial -interline-spacing -3 -pointsize $[43*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&#39;&quot;,sub),&quot;&#39; -splice x100 \\) -append -resize 25% -bordercolor white -border 26 -colors 256 1.png&quot;))</pre>
+</div>
+<p>In my plot I took the monthly number of vaccinated women aged 18-39 from this file that was also used by Mannische et al.: <a href="https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-demografie.csv">https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/ockovani-demografie.csv</a>. Mannische et al. took the number of vaccinated women at the end of the month, which overestimated the vaccinated population size during early rollout. So I calculated the average number of vaccinated women throughout the month instead.</p>
+<p>I may have made some error in the plot above or there might be some error in the data, because for example in April 2021 the fertility rate is about 300 times higher in unvaccinated women than vaccinated women, and even in October 2021 the fertility rate is still about 11 times higher in unvaccinated women. Such a large difference seems counterintuitive even if vaccinated women were recommended to not get vaccinated:</p>
+<table>
+<tr>
+<th>
+Month
+</th>
+<th>
+Unvaccinated<br>births
+</th>
+<th>
+Vaccinated<br>births
+</th>
+<th>
+Unvaccinated<br>population
+</th>
+<th>
+Vaccinated<br>population
+</th>
+<th>
+Vaccinated<br>percent
+</th>
+<th>
+Unvaccinated<br>rate per 1000
+</th>
+<th>
+Vaccinated<br>rate per 1000
+</th>
+<th>
+Ratio
+</th>
+</tr>
+<tr>
+<td>
+2021-01
+</td>
+<td>
+8451
+</td>
+<td>
+0
+</td>
+<td>
+1271573
+</td>
+<td>
+15031
+</td>
+<td>
+1.2
+</td>
+<td>
+6.646
+</td>
+<td>
+0.000
+</td>
+<td>
+Inf
+</td>
+</tr>
+<tr>
+<td>
+2021-02
+</td>
+<td>
+7947
+</td>
+<td>
+0
+</td>
+<td>
+1253388
+</td>
+<td>
+28936
+</td>
+<td>
+2.3
+</td>
+<td>
+6.340
+</td>
+<td>
+0.000
+</td>
+<td>
+Inf
+</td>
+</tr>
+<tr>
+<td>
+2021-03
+</td>
+<td>
+8710
+</td>
+<td>
+2
+</td>
+<td>
+1223597
+</td>
+<td>
+55409
+</td>
+<td>
+4.3
+</td>
+<td>
+7.118
+</td>
+<td>
+0.036
+</td>
+<td>
+197.2
+</td>
+</tr>
+<tr>
+<td>
+2021-04
+</td>
+<td>
+8215
+</td>
+<td>
+2
+</td>
+<td>
+1188259
+</td>
+<td>
+87692
+</td>
+<td>
+6.9
+</td>
+<td>
+6.913
+</td>
+<td>
+0.023
+</td>
+<td>
+303.1
+</td>
+</tr>
+<tr>
+<td>
+2021-05
+</td>
+<td>
+8371
+</td>
+<td>
+17
+</td>
+<td>
+1139265
+</td>
+<td>
+134359
+</td>
+<td>
+10.5
+</td>
+<td>
+7.348
+</td>
+<td>
+0.127
+</td>
+<td>
+58.1
+</td>
+</tr>
+<tr>
+<td>
+2021-06
+</td>
+<td>
+8865
+</td>
+<td>
+66
+</td>
+<td>
+918989
+</td>
+<td>
+352895
+</td>
+<td>
+27.7
+</td>
+<td>
+9.646
+</td>
+<td>
+0.187
+</td>
+<td>
+51.6
+</td>
+</tr>
+<tr>
+<td>
+2021-07
+</td>
+<td>
+9060
+</td>
+<td>
+193
+</td>
+<td>
+708913
+</td>
+<td>
+561939
+</td>
+<td>
+44.2
+</td>
+<td>
+12.780
+</td>
+<td>
+0.343
+</td>
+<td>
+37.2
+</td>
+</tr>
+<tr>
+<td>
+2021-08
+</td>
+<td>
+8750
+</td>
+<td>
+397
+</td>
+<td>
+618081
+</td>
+<td>
+652393
+</td>
+<td>
+51.4
+</td>
+<td>
+14.157
+</td>
+<td>
+0.609
+</td>
+<td>
+23.3
+</td>
+</tr>
+<tr>
+<td>
+2021-09
+</td>
+<td>
+8279
+</td>
+<td>
+615
+</td>
+<td>
+581490
+</td>
+<td>
+689316
+</td>
+<td>
+54.2
+</td>
+<td>
+14.238
+</td>
+<td>
+0.892
+</td>
+<td>
+16.0
+</td>
+</tr>
+<tr>
+<td>
+2021-10
+</td>
+<td>
+7549
+</td>
+<td>
+869
+</td>
+<td>
+559553
+</td>
+<td>
+712264
+</td>
+<td>
+56.0
+</td>
+<td>
+13.491
+</td>
+<td>
+1.220
+</td>
+<td>
+11.1
+</td>
+</tr>
+<tr>
+<td>
+2021-11
+</td>
+<td>
+6903
+</td>
+<td>
+1153
+</td>
+<td>
+494432
+</td>
+<td>
+779152
+</td>
+<td>
+61.2
+</td>
+<td>
+13.961
+</td>
+<td>
+1.480
+</td>
+<td>
+9.4
+</td>
+</tr>
+<tr>
+<td>
+2021-12
+</td>
+<td>
+6266
+</td>
+<td>
+1591
+</td>
+<td>
+434544
+</td>
+<td>
+841461
+</td>
+<td>
+65.9
+</td>
+<td>
+14.420
+</td>
+<td>
+1.891
+</td>
+<td>
+7.6
+</td>
+</tr>
+<tr>
+<td>
+2022-01
+</td>
+<td>
+5584
+</td>
+<td>
+2149
+</td>
+<td>
+419199
+</td>
+<td>
+860054
+</td>
+<td>
+67.2
+</td>
+<td>
+13.321
+</td>
+<td>
+2.499
+</td>
+<td>
+5.3
+</td>
+</tr>
+<tr>
+<td>
+2022-02
+</td>
+<td>
+4585
+</td>
+<td>
+2387
+</td>
+<td>
+414542
+</td>
+<td>
+868671
+</td>
+<td>
+67.7
+</td>
+<td>
+11.060
+</td>
+<td>
+2.748
+</td>
+<td>
+4.0
+</td>
+</tr>
+<tr>
+<td>
+2022-03
+</td>
+<td>
+4499
+</td>
+<td>
+3119
+</td>
+<td>
+416875
+</td>
+<td>
+870440
+</td>
+<td>
+67.6
+</td>
+<td>
+10.792
+</td>
+<td>
+3.583
+</td>
+<td>
+3.0
+</td>
+</tr>
+<tr>
+<td>
+2022-04
+</td>
+<td>
+4090
+</td>
+<td>
+3311
+</td>
+<td>
+420653
+</td>
+<td>
+871688
+</td>
+<td>
+67.4
+</td>
+<td>
+9.723
+</td>
+<td>
+3.798
+</td>
+<td>
+2.6
+</td>
+</tr>
+<tr>
+<td>
+2022-05
+</td>
+<td>
+4228
+</td>
+<td>
+4056
+</td>
+<td>
+425095
+</td>
+<td>
+872499
+</td>
+<td>
+67.2
+</td>
+<td>
+9.946
+</td>
+<td>
+4.649
+</td>
+<td>
+2.1
+</td>
+</tr>
+<tr>
+<td>
+2022-06
+</td>
+<td>
+4286
+</td>
+<td>
+4242
+</td>
+<td>
+430260
+</td>
+<td>
+873060
+</td>
+<td>
+67.0
+</td>
+<td>
+9.961
+</td>
+<td>
+4.859
+</td>
+<td>
+2.0
+</td>
+</tr>
+<tr>
+<td>
+2022-07
+</td>
+<td>
+4030
+</td>
+<td>
+4496
+</td>
+<td>
+435527
+</td>
+<td>
+873525
+</td>
+<td>
+66.7
+</td>
+<td>
+9.253
+</td>
+<td>
+5.147
+</td>
+<td>
+1.8
+</td>
+</tr>
+<tr>
+<td>
+2022-08
+</td>
+<td>
+3742
+</td>
+<td>
+4572
+</td>
+<td>
+440916
+</td>
+<td>
+874150
+</td>
+<td>
+66.5
+</td>
+<td>
+8.487
+</td>
+<td>
+5.230
+</td>
+<td>
+1.6
+</td>
+</tr>
+<tr>
+<td>
+2022-09
+</td>
+<td>
+3521
+</td>
+<td>
+4660
+</td>
+<td>
+446512
+</td>
+<td>
+874558
+</td>
+<td>
+66.2
+</td>
+<td>
+7.886
+</td>
+<td>
+5.328
+</td>
+<td>
+1.5
+</td>
+</tr>
+<tr>
+<td>
+2022-10
+</td>
+<td>
+3307
+</td>
+<td>
+4445
+</td>
+<td>
+451849
+</td>
+<td>
+874921
+</td>
+<td>
+65.9
+</td>
+<td>
+7.319
+</td>
+<td>
+5.080
+</td>
+<td>
+1.4
+</td>
+</tr>
+<tr>
+<td>
+2022-11
+</td>
+<td>
+3003
+</td>
+<td>
+4083
+</td>
+<td>
+457267
+</td>
+<td>
+875176
+</td>
+<td>
+65.7
+</td>
+<td>
+6.567
+</td>
+<td>
+4.665
+</td>
+<td>
+1.4
+</td>
+</tr>
+<tr>
+<td>
+2022-12
+</td>
+<td>
+3052
+</td>
+<td>
+4022
+</td>
+<td>
+462302
+</td>
+<td>
+875322
+</td>
+<td>
+65.4
+</td>
+<td>
+6.602
+</td>
+<td>
+4.595
+</td>
+<td>
+1.4
+</td>
+</tr>
+<tr>
+<td>
+2023-01
+</td>
+<td>
+3129
+</td>
+<td>
+3993
+</td>
+<td>
+467101
+</td>
+<td>
+875454
+</td>
+<td>
+65.2
+</td>
+<td>
+6.699
+</td>
+<td>
+4.561
+</td>
+<td>
+1.5
+</td>
+</tr>
+<tr>
+<td>
+2023-02
+</td>
+<td>
+2711
+</td>
+<td>
+3629
+</td>
+<td>
+471371
+</td>
+<td>
+875594
+</td>
+<td>
+65.0
+</td>
+<td>
+5.751
+</td>
+<td>
+4.145
+</td>
+<td>
+1.4
+</td>
+</tr>
+<tr>
+<td>
+2023-03
+</td>
+<td>
+3155
+</td>
+<td>
+4182
+</td>
+<td>
+474751
+</td>
+<td>
+875679
+</td>
+<td>
+64.8
+</td>
+<td>
+6.646
+</td>
+<td>
+4.776
+</td>
+<td>
+1.4
+</td>
+</tr>
+<tr>
+<td>
+2023-04
+</td>
+<td>
+2947
+</td>
+<td>
+3835
+</td>
+<td>
+477872
+</td>
+<td>
+875745
+</td>
+<td>
+64.7
+</td>
+<td>
+6.167
+</td>
+<td>
+4.379
+</td>
+<td>
+1.4
+</td>
+</tr>
+<tr>
+<td>
+2023-05
+</td>
+<td>
+3096
+</td>
+<td>
+4209
+</td>
+<td>
+480182
+</td>
+<td>
+875795
+</td>
+<td>
+64.6
+</td>
+<td>
+6.448
+</td>
+<td>
+4.806
+</td>
+<td>
+1.3
+</td>
+</tr>
+<tr>
+<td>
+2023-06
+</td>
+<td>
+3067
+</td>
+<td>
+4128
+</td>
+<td>
+481776
+</td>
+<td>
+875810
+</td>
+<td>
+64.5
+</td>
+<td>
+6.366
+</td>
+<td>
+4.713
+</td>
+<td>
+1.4
+</td>
+</tr>
+<tr>
+<td>
+2023-07
+</td>
+<td>
+3339
+</td>
+<td>
+4399
+</td>
+<td>
+482450
+</td>
+<td>
+875814
+</td>
+<td>
+64.5
+</td>
+<td>
+6.921
+</td>
+<td>
+5.023
+</td>
+<td>
+1.4
+</td>
+</tr>
+<tr>
+<td>
+2023-08
+</td>
+<td>
+3221
+</td>
+<td>
+4327
+</td>
+<td>
+482157
+</td>
+<td>
+875819
+</td>
+<td>
+64.5
+</td>
+<td>
+6.680
+</td>
+<td>
+4.941
+</td>
+<td>
+1.4
+</td>
+</tr>
+<tr>
+<td>
+2023-09
+</td>
+<td>
+2946
+</td>
+<td>
+3960
+</td>
+<td>
+480780
+</td>
+<td>
+875823
+</td>
+<td>
+64.6
+</td>
+<td>
+6.128
+</td>
+<td>
+4.521
+</td>
+<td>
+1.4
+</td>
+</tr>
+<tr>
+<td>
+2023-10
+</td>
+<td>
+2847
+</td>
+<td>
+3872
+</td>
+<td>
+478314
+</td>
+<td>
+875848
+</td>
+<td>
+64.7
+</td>
+<td>
+5.952
+</td>
+<td>
+4.421
+</td>
+<td>
+1.3
+</td>
+</tr>
+<tr>
+<td>
+2023-11
+</td>
+<td>
+2850
+</td>
+<td>
+3727
+</td>
+<td>
+474493
+</td>
+<td>
+875918
+</td>
+<td>
+64.9
+</td>
+<td>
+6.006
+</td>
+<td>
+4.255
+</td>
+<td>
+1.4
+</td>
+</tr>
+<tr>
+<td>
+2023-12
+</td>
+<td>
+2747
+</td>
+<td>
+3466
+</td>
+<td>
+469553
+</td>
+<td>
+875961
+</td>
+<td>
+65.1
+</td>
+<td>
+5.850
+</td>
+<td>
+3.957
+</td>
+<td>
+1.5
+</td>
+</tr>
+</table>
+<p>Mannische et al. wrote that <span class="quote">"to defer vaccination"</span> during pregnancy <span class="quote">"was against sanctioned national public recommendations in the Czech Republic at the time"</span>.</p>
+<p>However the Czech vaccination guidelines seem to have initially recommended to avoid vaccination during the first 12 weeks of pregnancy, because guidelines dated June 3rd 2021 said: <span class="quote">"Vaccination during pregnancy should be planned after the 12th week of pregnancy, i.e. anytime from the 13th week of pregnancy. The first 12 weeks of pregnancy are the most important for the development of the baby. If pregnancy is detected after the first dose of the Covid-19 vaccine, it is advisable to administer the second dose only after the 12th week of pregnancy. The vaccine is functional and stimulates the immune system regardless of the stage of pregnancy in which it is administered."</span> [<a href="https://www.vakcinace.eu/doporuceni-a-stanoviska/ockovani-proti-onemocneni-covid-19-u-tehotnych-a-kojicich-zen">https://www.vakcinace.eu/doporuceni-a-stanoviska/ockovani-proti-onemocneni-covid-19-u-tehotnych-a-kojicich-zen</a>, translated]</p>
+<p>But guidelines dated September 13th 2021 were updated to say: <span class="quote">"The benefits of vaccination for pregnant women far outweigh the theoretical risks of vaccination, and therefore vaccination of pregnant women is recommended. Vaccination is possible at any stage of pregnancy. There is no evidence that it is necessary to delay vaccination beyond the first 12 weeks of pregnancy. Vaccination is considered effective and without increased risk at any stage of pregnancy."</span> [<a href="https://vakcinace.eu/doporuceni-a-stanoviska/aktualizace-ockovani-proti-onemocneni-covid-19-u-tehotnych-a-kojicich-zen">https://vakcinace.eu/doporuceni-a-stanoviska/aktualizace-ockovani-proti-onemocneni-covid-19-u-tehotnych-a-kojicich-zen</a>, translated]</p>
+<p>But regardless, many of the women who gave birth in 2021 were already past the first 12 weeks of the pregnancy by the time their age group became eligible for vaccination. So the number of vaccinated births in 2021 seems too low in the spreadsheet provided by Mannische et al.</p>
+<p>The Czech COVID data group SMIS has also published multiple blog posts about Czech fertility data: <a href="https://smis-lab.cz/2025/04/30/jak-se-dela-konsensus-aneb-dlouho-slibovana-publikace-o-propadu-plodnosti-ceskych-zen-je-na-svete-tedy-vlastne-neni/">https://smis-lab.cz/2025/04/30/jak-se-dela-konsensus-aneb-dlouho-slibovana-publikace-o-propadu-plodnosti-ceskych-zen-je-na-svete-tedy-vlastne-neni/</a>, <a href="https://smis-lab.cz/2025/02/19/ctyri-sady-staci-drahousku-aneb-jak-jsme-s-uzisem-pocitali-kolik-se-u-nas-narodilo-deti-2/">https://smis-lab.cz/2025/02/19/ctyri-sady-staci-drahousku-aneb-jak-jsme-s-uzisem-pocitali-kolik-se-u-nas-narodilo-deti-2/</a>, <a href="https://smis-lab.cz/2024/10/31/propad-porodnosti-oprava-omylu-predsedy-vlady-cr/">https://smis-lab.cz/2024/10/31/propad-porodnosti-oprava-omylu-predsedy-vlady-cr/</a>, <a href="https://smis-lab.cz/2024/01/01/komu-chybi-deti/">https://smis-lab.cz/2024/01/01/komu-chybi-deti/</a>. They not only dealt with the dataset for fertility by vaccination status, but also with the general decrease in fertility rate in the past few years.</p>
+<p>The Eurostat dataset demo_fordagec has births by maternal age: <a href="https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/demo_fordagec?format=TSV">https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/demo_fordagec?format=TSV</a>. I used it to calculate an age-standardized fertility rate:</p>
+<div class="width6">
+<img src="i/rootclaim-vibeke-euro.webp">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>api=&quot;https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/&quot;
+pop=fread(paste0(api,&quot;demo_pjan?format=TSV&quot;),sep=&quot;\t&quot;,header=T,na.strings=&quot;:&quot;)
+meta=fread(text=pop[[1]],header=F)
+pick=meta[,V5==&quot;CZ&quot;&amp;V4==&quot;F&quot;]
+pop=cbind(meta[pick,.(age=V3)],year=rep(1960:2024,each=sum(pick)),pop=unlist(pop[pick,-1]))
+pop[,pop:=as.integer(gsub(&quot;\\D&quot;,&quot;&quot;,pop))]
+
+t=fread(paste0(api,&quot;demo_fordagec?format=TSV&quot;),header=T,na.strings=&quot;:&quot;)
+meta=fread(text=t[[1]])
+pick=meta[,V5==&quot;CZ&quot;&amp;V4==&quot;TOTAL&quot;]
+d=cbind(meta[pick,.(age=V3)],year=rep(1960:2023,each=sum(pick)),births=as.integer(unlist(t[pick,-1])))
+d=d[age%like%&quot;^Y..$&quot;&amp;year&gt;=1995]
+
+me=merge(d,pop)
+me=merge(me[year==2020,.(age,std=pop/sum(pop)*1e3)],me)
+
+p=me[,.(y=c(sum(births)/sum(pop)*1e3,sum(births/pop*std)),z=1:2),.(x=year)]
+p[,z:=factor(z,,paste(c(&quot;Crude&quot;,&quot;Age-standardized&quot;),&quot;fertility rate&quot;))]
+
+xstart=1995;xend=2023;xbreak=xstart:xend
+p=p[x%in%xstart:xend]
+ylim=extendrange(p$y,,.04);ybreak=pretty(ylim,7)
+
+ggplot(p,aes(x,y,z))+
+geom_line(aes(color=z),linewidth=.6)+
+geom_point(aes(color=z),size=1.1)+
+labs(x=NULL,y=NULL,title=&quot;Eurostat: Births per 1,000 women aged 15 to 49 in Czech Republic&quot;)+
+annotate(&quot;text&quot;,x=1995,y=25.3,label=note,color=hsv(3/36,.5,.5),size=3.8,hjust=0,vjust=1,lineheight=.9)+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=xbreak)+
+scale_y_continuous(limits=ylim,breaks=ybreak)+
+scale_color_manual(values=c(&quot;black&quot;,hsv(3/36,.5,.7)))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(color=guide_legend(ncol=2,byrow=F))+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
+  axis.text.y=element_text(margin=margin(,3)),
+  axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(4,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.justification=&quot;center&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.margin=margin(,,4),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.4),
+  panel.spacing=unit(2,&quot;pt&quot;),
+  plot.margin=margin(5,5,5,5),
+  plot.subtitle=element_text(margin=margin(,,5)),
+  plot.title=element_text(size=11.3,face=2,margin=margin(2,,3)))
+ggsave(&quot;1.png&quot;,width=5.6,height=2.8,dpi=300*4)
+
+sub=&quot;Births by maternal age are from the Eurostat dataset demo_fordagec, and population estimates are from the Eurostat dataset demo_pjan. Population estimates on January 1st are used for each year. The 2020 population estimates by single year of age were used as the standard population. The years 2021 and 2011 were census years, when the change in census base may have affected the population estimates. Due to the war in Ukraine, the population estimate of women aged 15-49 increased by about 4.7% between January 1st 2022 and January 1st 2023.&quot;
+system(paste0(&quot;mogrify -trim 1.png;w=`identify -format %w 1.png`;magick 1.png \\( -size $[w]x -font Arial -interline-spacing -3 -pointsize $[43*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&#39;&quot;,sub),&quot;&#39; -splice x100 \\) -append -resize 25% -bordercolor white -border 26 -colors 256 1.png&quot;))</pre>
+</div>
+<p>The reason for the increase between 2020 and 2021 is because 2021 was a census year, and the population estimates of reproductive-age women were revised downwards in 2021, but the population estimate for 2020 was based on the 2011 census. The issue was discussed in a blog post by the Czech COVID data group SMIS: [<a href="https://smis-lab.cz/2023/02/23/opomenute-aspekty-hodnoceni-nejnovejsich-trendu-ve-vyvoji-poctu-narozenych-deti-a-plodnosti/">https://smis-lab.cz/2023/02/23/opomenute-aspekty-hodnoceni-nejnovejsich-trendu-ve-vyvoji-poctu-narozenych-deti-a-plodnosti/</a>]</p>
+<blockquote>
+<p>The estimated numbers of women of reproductive age will then be used for the standard calculation of total fertility for the years 2011 to 2021. For the calculation, we will also use data on the number of live births by mother's age, which are regularly published by the Czech Statistical Office in <a href=https://www.czso.cz/csu/czso/rocenky_souhrn?filtr=true&skupiny=13&vlastnosti=14>the Demographic Yearbooks of the Czech Republic</a> . Specifically, we are based on tables <em>D.04 Live births by mother's age, legitimacy and birth order</em>.</p>
+<p>The resulting estimate of the development of total fertility in the Czech Republic from 2011 to 2021 is shown in Figure 5 in green, the red line shows the original, officially published values.</p>
+<p><img src=i/rootclaim-vibeke-smis.webp class=width7><br> <em>Figure 5: Development of total fertility in the Czech Republic from 2011 to 2021 according to official data from the Czech Statistical Office (red) and after recalculation based on data from the 2021 census (green). Data: Czech Statistical Office.</em></p>
+<p>It should be noted that the officially reported total fertility rates were published gradually in the years between censuses, when statisticians adjusted estimates of the number of women of reproductive age. However, the latest census (2021) showed that these estimates were significantly overestimated and the actual total fertility rate was therefore probably higher than officially published.</p>
+</blockquote>
+<p>The green line in the plot above uses intercensal population estimates, where the population estimates based on the 2011 census were modified so that they matched the estimates based on the 2021 census after the switch of census base. But my plot used population estimates from Eurostat which do not appear to be intercensal estimates.</p>
+<p>The same blog post included this plot that shows the percentage change in the population estimate of reproducive-age women compared to the previous year, where there are regular drops in the estimate during census years, but there's a particularly big drop in 2021:</p>
+<div class="width7">
+<img src="i/rootclaim-vibeke-smis-2.webp">
+</div>
+<p>The next plot is based on the same two Eurostat datasets as my previous plot. There's a sudden drop in population size between 2020 and 2021, but it's due to the switch of census base. And there's a big increase in population size between 2022 and 2023, but it's because I used resident population estimates on January 1st of each year, so Ukrainian migrants were only added to the population size in 2023:</p>
+<div class="width6">
+<img src="i/rootclaim-vibeke-europop.webp">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>api=&quot;https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/&quot;
+pop=fread(paste0(api,&quot;demo_pjan?format=TSV&quot;),sep=&quot;\t&quot;,header=T,na.strings=&quot;:&quot;)
+meta=fread(text=pop[[1]],header=F)
+pick=meta[,V5==&quot;CZ&quot;&amp;V4==&quot;F&quot;]
+pop=cbind(meta[pick,.(age=V3)],year=rep(1960:2024,each=sum(pick)),pop=unlist(pop[pick,-1]))
+pop[,pop:=as.integer(gsub(&quot;\\D&quot;,&quot;&quot;,pop))]
+
+t=fread(paste0(api,&quot;demo_fordagec?format=TSV&quot;),header=T,na.strings=&quot;:&quot;)
+meta=fread(text=t[[1]])
+pick=meta[,V5==&quot;CZ&quot;&amp;V4==&quot;TOTAL&quot;]
+d=cbind(meta[pick,.(age=V3)],year=rep(1960:2023,each=sum(pick)),births=as.integer(unlist(t[pick,-1])))
+d=d[age%like%&quot;^Y..$&quot;&amp;year&gt;=1995]
+
+me=merge(d,pop)
+me=merge(me[year==2020,.(age,std=pop/sum(pop)*1e3)],me)
+
+p=me[,.(y=c(sum(births),sum(pop)),z=1:2),.(x=year)]
+
+p[,z:=factor(z,,c(&quot;Births&quot;,&quot;Population&quot;))]
+
+xstart=1995;xend=2023;xbreak=xstart:xend
+p=p[x%in%xstart:xend]
+ybreak=pretty(c(0,max(p[z==levels(z)[1],y])),7);ylim=range(ybreak)
+ybreak2=p[z==z[2],pretty(c(0,y),7)];secmult=max(ybreak)/max(ybreak2)
+
+pal=c(&quot;#ffaa11&quot;,&quot;#00aa00&quot;)
+
+ggplot(p,aes(x,y=ifelse(z==levels(z)[2],y*secmult,y),z))+
+annotate(&quot;rect&quot;,xmin=xstart-.5,xmax=xend+.5,ymin=0,ymax=ylim[2],linewidth=.4,lineend=&quot;square&quot;,fill=NA,color=&quot;black&quot;)+
+geom_line(aes(color=z),linewidth=.6)+
+geom_point(aes(color=z),size=1.1)+
+labs(x=NULL,y=&quot;Births&quot;,title=&quot;Eurostat: Births and population of women aged 15 to 49 in Czech Republic&quot;)+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=xbreak)+
+scale_y_continuous(limits=ylim,breaks=ybreak,labels=kim,sec.axis=sec_axis(trans=~./secmult,breaks=ybreak2,name=&quot;Population&quot;,labels=kim))+
+scale_color_manual(values=pal)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(color=guide_legend(ncol=2,byrow=F))+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
+  axis.text.y.left=element_text(color=pal[1]),
+  axis.text.y.right=element_text(color=pal[2]),
+  axis.title.y.left=element_text(color=pal[1]),
+  axis.title.y.right=element_text(margin=margin(,,,4),color=pal[2]),
+  axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(4,&quot;pt&quot;),
+  legend.position=&quot;none&quot;,
+  panel.background=element_blank(),
+  plot.margin=margin(5,5,5,5),
+  plot.title=element_text(size=11.3,face=2,margin=margin(2,,7),hjust=.5))
+ggsave(&quot;1.png&quot;,width=5.8,height=2.8,dpi=300*4)
+system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
+</div>
+<p>The plot above shows that the number of births started going down after 2017, and even the number of births in the year 2022 roughly fall on the 2015-2020 quadratic trend. But there was just an unusually high number of births in 2021, which may have partially been due to the lockdowns in 2020.</p>
+<p>In Mannische et al.'s spreadsheet the population size of women aged 18 to 39 was listed as 1,277,590 in 2021, 1,340,229 in 2022, and 1,342,367 in 2023. Their figures were population estimates on December 31st, which are identical to Eurostat's population estimates on January 1st the next year (or off by 3 in the case of 2021/2022 for some reason):</p>
+<table>
+<tr>
+<th>
+Year
+</th>
+<th>
+Women aged 18 to 39 at Eurostat
+</th>
+<th>
+Comment
+</th>
+</tr>
+<tr>
+<td>
+2019
+</td>
+<td>
+1390299
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+2020
+</td>
+<td>
+1360326
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+2021
+</td>
+<td>
+1288901
+</td>
+<td>
+decrease due to census
+</td>
+</tr>
+<tr>
+<td>
+2022
+</td>
+<td>
+1277587
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+2023
+</td>
+<td>
+1340229
+</td>
+<td>
+increase due to Ukrainian migrants
+</td>
+</tr>
+<tr>
+<td>
+2024
+</td>
+<td>
+1342367
+</td>
+<td>
+</td>
+</tr>
+</table>
+<p>Due to Ukrainian refugees, the population size of women aged 18 to 39 increased by about 4.9% between 2022 and 2023 at Eurostat, or between 2021 and 2022 in Mannische's spreadsheet. The war started on February 24th 2022, so March was the month that had by far the most migrants arriving. [<a href="https://zpravy.kurzy.cz/787003-vyvoj-obyvatelstva-ceske-republiky-migrace/">https://zpravy.kurzy.cz/787003-vyvoj-obyvatelstva-ceske-republiky-migrace/</a>]</p>
+<p>However even after accounting for Ukrainian migrants and the change in census base, the birth rate in 2023 in particular was still very low, and I don't know how to explain it.</p>
 <script>
 document.querySelectorAll('a,code,pre').forEach(x=>x.innerHTML=x.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>'))
 
