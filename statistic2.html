@@ -80,6 +80,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href=#Were_there_98_vaccinated_people_in_2023>Were there 98% vaccinated people in 2023?</a></li>
 <li><a href=#Error_in_percentage_increase_of_deaths_between_2020_and_2023>Error in percentage increase of deaths between 2020 and 2023</a></li>
 <li><a href=#Increase_in_patients_treated_for_an_opioid_overdose_by_King_County_EMS>Increase in patients treated for an opioid overdose by King County EMS</a></li>
+<li><a href=#Deaths_with_drug_related_MCD_and_cardiac_MCD_in_Seattle_metropolitan_area>Deaths with drug-related MCD and cardiac MCD in Seattle metropolitan area</a></li>
 </ul></li>
 <li><a href=#Excess_mortality_in_European_countries_compared_to_percentage_of_vaccinated_people>Excess mortality in European countries compared to percentage of vaccinated people</a></li>
 <li><a href=#Steve_Kirsch_Claim_that_Singapore_had_the_highest_excess_mortality_in_2023>Steve Kirsch: Claim that Singapore had the highest excess mortality in 2023</a></li>
@@ -1418,6 +1419,80 @@ Cardiac deaths with resucitation attempted by EMS
 <p>However likely some overdose deaths did not involve EMS, some people had already died of an overdose before EMS arrived, and some people who died of an overdose did not have a cardiac arrest before EMS arrived or while they were treated by EMS.</p>
 <p>Uncle John Returns also found an old study which said that even in the year 2000 when the number of opioid deaths was much smaller than in the 2020s, King County EMS responded to 245 cardiac arrest cases caused by a drug overdose, and 234 of them led to a death: <span class="quote">"<strong>Methods:</strong> The study population was composed of death events caused by acute drug poisoning, deﬁned as poisoning deaths and deaths averted (persons successfully resuscitated from out-of-hospital cardiac arrest by EMS) in King County, Washington, during the year 2000. <strong>Results:</strong> Eleven persons were successfully resuscitated and 234 persons died from cardiac arrest caused by acute drug poisoning, for a total of 245 cardiac events. The EMS responded to 79.6% (195/245), attempted resuscitation in 34.7% (85/245), and successfully resuscitated 4.5% (11/245) of all events."</span> [<a href="https://onlinelibrary.wiley.com/doi/abs/10.1197/j.aem.2003.08.014">https://onlinelibrary.wiley.com/doi/abs/10.1197/j.aem.2003.08.014</a>]</p>
 <p>There's also a study from 2023 which looked at the rate of out-of-hospital cardiac arrests in King County, where the rate increased about 2.5-fold between the years 2015 and 2021. [<a href="https://jamanetwork.com/journals/jamanetworkopen/fullarticle/2811464">https://jamanetwork.com/journals/jamanetworkopen/fullarticle/2811464</a>]</p>
+<h3>
+<a href=#Deaths_with_drug_related_MCD_and_cardiac_MCD_in_Seattle_metropolitan_area id=Deaths_with_drug_related_MCD_and_cardiac_MCD_in_Seattle_metropolitan_area>Deaths with drug-related MCD and cardiac MCD in Seattle metropolitan area</a>
+</h3>
+<p>In my previous plot of NVSS data I included all ICD codes under the chapter for cardiac deaths, but in the next plot I included only ICD codes for cardiac arrest (I46), heart failure (I50), and myocardial infarction (I21 and I22).</p>
+<p>When I looked at deaths where the cause of death list included one of the cardiac codes but it also included one of 16 ICD codes for overdose from recreational drugs, there was a huge increase from 13 deaths in 2018 to 83 deaths in 2023.</p>
+<p>However it seems to be fairly rare for cardiac arrest to be listed as a cause of death for overdose deaths in NVSS, because the EMS datasets have a much higher number of overdose deaths where cardiac resuciation was attempted by EMS.</p>
+<p>Another observation you can make from my plot is that there were less cardiac-related deaths in 2023 than 2022, which conflicts with the PDF reports published by King County Emergency Medical Services, where the number of cardiac deaths for which resucitation was attempted increased by about 4% between 2022 and 2023.</p>
+<div class="width6">
+<img src="i/statistic-seattlecardiacbar.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>t=fread(&quot;http://sars2.net/f/seattlecardiac.csv&quot;)
+t=t[cause!=&quot;all&quot;]
+
+p=t[,.(x=year,y=dead,z=cause)]
+
+cause=c(other=&quot;All minus drugs minus COVID&quot;,drug=&quot;Drugs (X40-44, X60-64, Y10-14, and T40)&quot;,covid=&quot;COVID (U07.1)&quot;)
+p[,z:=factor(z,names(cause),cause)]
+
+xstart=2010;xend=2024
+ystart=0;yend=p[,sum(y),x][,max(V1)*1.1];ybreak=pretty(c(ystart,yend),8)
+
+trend=data.table(x=2010:2024)
+trend$y=p[,sum(y),x][x&lt;2020,predict(lm(V1~x),trend)]
+trend[,x:=x-xstart+1]
+
+p=p[x%in%xstart:xend]
+p[,x:=factor(x)]
+
+lab=&quot;2010-2019 linear trend&quot;
+
+ggplot(p)+
+geom_bar(aes(x=x,y=y,fill=z),stat=&quot;identity&quot;,width=.8,position=position_stack(reverse=T))+
+geom_line(data=trend,aes(x,y,color=lab,linetype=lab),linewidth=.7)+
+labs(title=&quot;CDC WONDER: Yearly cardiac deaths in Seattle metropolitan area&quot;,x=NULL,y=NULL)+
+scale_x_discrete(expand=c(0,.6))+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,expand=c(0,0))+
+scale_fill_manual(values=c(&quot;black&quot;,hsv(9/36,1,.8),hsv(27/36,.8,1),&quot;gray60&quot;))+
+scale_color_manual(labels=lab,values=&quot;gray60&quot;)+
+scale_linetype_manual(labels=lab,values=&quot;42&quot;)+
+coord_cartesian(clip=&quot;off&quot;)+
+guides(fill=guide_legend(order=1),color=guide_legend(order=2),alpha=&quot;none&quot;,linetype=guide_legend(order=2))+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  legend.background=element_rect(fill=alpha(&quot;white&quot;,1),color=&quot;black&quot;,linewidth=.4),
+  legend.box=&quot;vertical&quot;,
+  legend.box.just=&quot;center&quot;,
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.justification=c(.5,.5),
+  legend.key=element_blank(),
+  legend.key.height=unit(12,&quot;pt&quot;),
+  legend.key.width=unit(30,&quot;pt&quot;),
+  legend.margin=margin(4,5,4,4),
+  legend.position=c(.5,.3),
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.grid.major.x=element_blank(),
+  panel.grid.major.y=element_line(linewidth=.4,color=&quot;gray70&quot;),
+  plot.margin=margin(5,5,5,5),
+  plot.title=element_text(size=11,face=2,margin=margin(1,,4),hjust=1))
+ggsave(&quot;1.png&quot;,width=5.25,height=3.2,dpi=300*4)
+sub=&quot;\u00a0    Cardiac deaths are deaths with MCD cardiac arrest (I46), heart failure (I50), or myocardial infarction (I21 and I22). The green bar shows deaths that additionally had a drug-related MCD, and the purple bar shows deaths that additionally had MCD COVID.
+     The included counties of residence are King, Snohomish, and Pierce county. The data was retrieved from CDC WONDER in May 2025, so some drug deaths in 2024 are still missing because of a delay in a cause of death being assigned.
+     Drug deaths are not included for 2017 because there were less than 10 deaths so the number of deaths was suppressed.&quot;
+system(paste0(&quot;mogrify -trim 1.png;magick 1.png \\( -size `identify -format %w 1.png`x -font Arial -interline-spacing -3 -pointsize $[44*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&#39;&quot;,sub),&quot;&#39; -splice x80 \\) -append -resize 25% -bordercolor white -border 24 -dither none -colors 256 1.png&quot;))</pre>
+</div>
+<p>In my plot above I included data for all three counties of the Seattle metropolitan area, because in King County alone there were multiple years when there were less than 10 cardiac deaths that also had a drug-related ICD code, so the number of deaths was suppressed.)</p>
 <h2>
 <a href=#Excess_mortality_in_European_countries_compared_to_percentage_of_vaccinated_people id=Excess_mortality_in_European_countries_compared_to_percentage_of_vaccinated_people>Excess mortality in European countries compared to percentage of vaccinated people</a>
 </h2>
