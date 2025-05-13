@@ -23,8 +23,8 @@ img{max-width:100%}
 dt{font-size:1.3em;margin:.3em 0 .3em 0}
 blockquote{margin:0;padding-left:40px;margin-right:0;overflow-x:hidden}
 blockquote p{max-width:480px}
-blockquote p:first-child{margin-top:0}
-blockquote p:last-child{margin-bottom:0}
+blockquote>:first-child{margin-top:0}
+blockquote>:last-child{margin-bottom:0}
 blockquote blockquote p{max-width:440px}
 blockquote blockquote blockquote p{max-width:400px}
 blockquote,.quote,blockquote h1,blockquote h2,blockquote h3{color:hsl(50,100%,85%)}
@@ -2429,16 +2429,16 @@ o=merge(merge(old[year==2020,.(age,old=pop)],new[year==2020,.(age,new=pop)])[,.(
 # multiply old population estimates by a linear slope so they match new estimates in 2020
 o=rbind(o[year!=2020,.(year,age,pop=round(pop*(1-(((year-2010)/10))*(1-ratio))))],new)
 
-# include population projections for 2024-2030 adjusted to match 2023 resident population estimatess in 2023
+# include population projections for 2024-2060 adjusted to match 2023 resident population estimatess in 2023
 proj=fread(&quot;https://www2.census.gov/programs-surveys/popproj/datasets/2023/2023-popproj/np2023_d1_mid.csv&quot;)
-proj=proj[SEX==0&amp;ORIGIN==0&amp;RACE==0&amp;YEAR&gt;=2023,.(year=YEAR,age=rep(0:100,each=.N),pop=unlist(.SD[,-(1:5)]))]
+proj=proj[SEX==0&amp;ORIGIN==0&amp;RACE==0&amp;YEAR%in%2023:2030,.(year=YEAR,age=rep(0:100,each=.N),pop=unlist(.SD[,-(1:5)]))]
 mult=o[year==2023,pop]/proj[year==2023]$pop
-o=rbind(o,proj[,pop:=pop*mult][year&gt;2023])
+o=rbind(o,proj[,pop:=pop*mult[age+1]][year&gt;2023])
 
 # add a column for yearly deaths from CDC WONDER for convenience (downloaded in February 2025)
-o=merge(o,na.omit(fread(&quot;http://sars2.net/f/usyearlydead.csv&quot;)),all=T)
+o=merge(o,na.omit(fread(&quot;s/f/usyearlydead.csv&quot;)),all=T)
 
-fwrite(o[order(year,age)],&quot;uspopdead.csv&quot;,na=&quot;&quot;)</pre>
+fwrite(o[order(year,age)],&quot;s/f/uspopdead.csv&quot;,na=&quot;&quot;)</pre>
 <p>I uploaded the output here: <a href=f/uspopdead.csv>f/uspopdead.csv</a>.</p>
 <p>The next script generates a similar file for monthly data. The script also includes population projections for 2024 and 2025, which were calculated by doing a spline interpolation of the population estimate on December 2023 and the Census Bureau's mid-year population projections for 2024 to 2026. I uploaded the output here: <a href=f/uspopdeadmonthly.csv>f/uspopdeadmonthly.csv</a>.</p>
 <pre>url=&quot;https://www2.census.gov/programs-surveys/popest/datasets/&quot;
@@ -2456,12 +2456,14 @@ oldmod=merge(mult,oldmod[,.(year,month,pop,slope=seq(0,1,,.N)),age])
 oldmod=oldmod[,.(age,year,month,pop=pop*(slope*mult+(1-slope)*1))]
 
 proj=fread(&quot;https://www2.census.gov/programs-surveys/popproj/datasets/2023/2023-popproj/np2023_d1_mid.csv&quot;)
-proj=proj[SEX==0&amp;ORIGIN==0&amp;RACE==0&amp;YEAR%in%2024:2026,.(x=seq(7,,12,3),age=rep(0:100,each=.N),pop=unlist(.SD[,-(1:5)]))]
-proj=rbind(newpop[year==2023&amp;month==12,.(x=0,pop,age)],proj)
+proj=proj[SEX==0&amp;ORIGIN==0&amp;RACE==0&amp;YEAR%in%2023:2026,.(x=seq(7,,12,4),age=rep(0:100,each=.N),pop=unlist(.SD[,-(1:5)]))]
+proj=rbind(newpop[year==2023&amp;month==7,.(x=0,pop,age)],proj)
+mult=merge(proj,newpop[year==2023&amp;month==7,.(x=7,age,new=pop)])[,new/pop]
+proj[,pop:=pop*mult[age+1]]
 proj=proj[,spline(x,pop,xout=1:24),age][,.(age,year=rep(2024:2025,each=12),month=1:12,pop=round(y))]
 
 pop=rbind(oldmod[!(year==2020&amp;month==4)],newpop,proj)
-dead=fread(&quot;http://sars2.net/f/usdeadmonthly.csv&quot;) # downloaded from CDC WONDER in November 2024
+dead=fread(&quot;http://sars2.net/f/usdeadmonthly.csv&quot;) # downloaded from CDC WONDER in May 2025
 o=merge(dead,pop,all=T)[,date:=sprintf(&quot;%d-%02d&quot;,year,month)][,.(age,year,month,date,dead,pop)]
 o[,persondays:=pop*lubridate::days_in_month(as.Date(paste0(date,&quot;-1&quot;)))]
 fwrite(o,&quot;uspopdeadmonthly.csv&quot;,na=&quot;&quot;)</pre>
@@ -3424,9 +3426,9 @@ system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 <img src="i/ethical-mycoplasma-5.png">
 </div>
 <script>
-document.querySelectorAll('a,code,pre').forEach(x=>x.innerHTML=x.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>'))
+document.querySelectorAll('pre').forEach(e=>e.innerHTML=e.innerHTML.replace(/((^| )# [^\n]*|^#$)/mg,"<span class=comment>$1</span>"))
 
-document.querySelectorAll('pre').forEach(x=>x.innerHTML=x.innerHTML.replace(/((^| )# [^\n]*|^#$)/mg,"<span class=comment>$1</span>"))
+document.querySelectorAll('a,code,pre').forEach(e=>e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041\043-\045\047-\056\072\077-\100\133-\137\173-\176])/g,'$1<wbr>'))
 
 document.querySelectorAll('.spoiler button').forEach(x=>{x.addEventListener('click',function(){
   let block=this.nextElementSibling
