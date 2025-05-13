@@ -99,6 +99,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 </ul></li>
 <li><a href=#Cancer_incidence_in_ages_20_49_in_Switzerland>Cancer incidence in ages 20-49 in Switzerland</a></li>
 <li><a href=#Retsef_Levi_Significant_increase_in_cardiac_arrests_in_US_marathons>Retsef Levi: Significant increase in cardiac arrests in US marathons</a></li>
+<li><a href=#Japanese_FOI_data_shows_why_cheap_trick_is_not_needed_to_explain_n_1_dose_phenomenon>Japanese FOI data shows why cheap trick is not needed to explain n-1 dose phenomenon</a></li>
 </ul>
 
 <h2>
@@ -1423,7 +1424,7 @@ Cardiac deaths with resucitation attempted by EMS
 <a href=#Deaths_with_drug_related_MCD_and_cardiac_MCD_in_Seattle_metropolitan_area id=Deaths_with_drug_related_MCD_and_cardiac_MCD_in_Seattle_metropolitan_area>Deaths with drug-related MCD and cardiac MCD in Seattle metropolitan area</a>
 </h3>
 <p>In my previous plot of NVSS data I included all ICD codes under the chapter for cardiac deaths, but in the next plot I included only ICD codes for cardiac arrest (I46), heart failure (I50), and myocardial infarction (I21 and I22).</p>
-<p>When I looked at deaths where the cause of death list included one of the cardiac codes but it also included one of 16 ICD codes for overdose from recreational drugs, there was a huge increase from 13 deaths in 2018 to 83 deaths in 2023.</p>
+<p>When I looked at deaths that included one of the cardiac causes of death but that also included one of 16 ICD codes for overdose from recreational drugs, there was a huge increase from 13 deaths in 2018 to 83 deaths in 2023.</p>
 <p>However it seems to be fairly rare for cardiac arrest to be listed as a cause of death for overdose deaths in NVSS, because the EMS datasets have a much higher number of overdose deaths where cardiac resuciation was attempted by EMS.</p>
 <p>Another observation you can make from my plot is that there were less cardiac-related deaths in 2023 than 2022, which conflicts with the PDF reports published by King County Emergency Medical Services, where the number of cardiac deaths for which resucitation was attempted increased by about 4% between 2022 and 2023.</p>
 <div class="width6">
@@ -2470,6 +2471,73 @@ sub=&quot;Source: nejm.org/doi/full/10.1056/NEJMoa1106468 (Table 1) and jamanetw
 system(paste0(&quot;mogrify -trim 1.png;magick 1.png \\( -size `identify -format %w 1.png`x -font Arial -interline-spacing -3 -pointsize $[44*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -splice x80 \\) -append -resize 25% -bordercolor white -border 24 -dither none -colors 256 1.png&quot;))</pre>
 </div>
 <p>In the plot above I took data for the years 2000 to 2008 from an earlier version of the JAMA study that was published in 2012: <a href="https://www.nejm.org/doi/full/10.1056/NEJMoa1106468">https://www.nejm.org/doi/full/10.1056/NEJMoa1106468</a>.</p>
+<h2>
+<a href=#Japanese_FOI_data_shows_why_cheap_trick_is_not_needed_to_explain_n_1_dose_phenomenon id=Japanese_FOI_data_shows_why_cheap_trick_is_not_needed_to_explain_n_1_dose_phenomenon>Japanese FOI data shows why cheap trick is not needed to explain n-1 dose phenomenon</a>
+</h2>
+<p>In the English ONS data, the ASMR of people with n-1 doses shoots up after the nth dose is rolled out. Neil and Fenton hypothesized it was because people who died soon after they got the nth dose were misclassified under dose n-1. But the same n-1 dose phenomenon also occurs in the Czech record-level data and Barry Young's New Zealand data even though they don't employ any Fentonian cheap tricks.</p>
+<p>In May 2025 Kenji Fujikawa published a dashboard for Japanese all-cause mortality data by vaccination status, which was based on data received through freedom of information requests: <a href="https://x.com/hudikaha/status/1921935565894852619">https://x.com/hudikaha/status/1921935565894852619</a>, <a href="https://medicalfacts.info/vdeath.rb">https://medicalfacts.info/vdeath.rb</a>.</p>
+<p>You can download the data as JSON by selecting "Open in Vega Editor" from the triple dot menu and selecting "JSON" under "Export". Then this converts the JSON data to TSV:</p>
+<pre>jq -r &#39;.data.values[]|select(.yearmonth|strings)|[.area,.age,.dose,.deaths,.persondays,.yearmonth]|@tsv&#39; visualization.vl.json</pre>
+<p>The Japapanese data only included two age categories, which were all ages and ages 80 and above. But in this plot that shows the crude mortality rate in ages 80 and above, you can see how the mortality rate of people with n-1 doses shoots up when the nth dose is rolled out, but the mortality rate of all vaccinated people combined still remains lower than the mortality rate of unvaccinated people:</p>
+<div class="width6">
+<img src="i/statistic-hudikaha.png">
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>t=fread(&quot;http://sars2.net/f/japanfoihudikaha.csv&quot;)
+t=t[location==location[1]&amp;age==&quot;80over&quot;]
+
+t=rbind(t,t[dose!=0][,dose:=1])
+a=t[,.(dead=sum(dead),pop=sum(pop)),.(month,dose=pmin(dose,6))]
+a[,dose:=factor(dose,,c(&quot;Unvaccinated&quot;,&quot;Vaccinated&quot;,paste(&quot;Dose&quot;,2:5),&quot;Dose 6+&quot;))]
+
+p=a[,.(x=as.Date(paste0(month,&quot;-15&quot;)),y=dead/pop*365e5,dose)]
+
+xstart=as.Date(&quot;2021-1-1&quot;);xend=as.Date(&quot;2024-7-1&quot;)
+xbreak=seq(xstart,xend,&quot;year&quot;);xlab=year(xbreak)
+ybreak=pretty(c(0,p$y),8);ystart=0;yend=max(p$y,na.rm=T)
+
+ggplot(p)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray90&quot;,linewidth=.4)+
+annotate(&quot;rect&quot;,xmin=xstart,xmax=xend,ymin=ystart,ymax=yend,linewidth=.4,lineend=&quot;square&quot;,fill=NA,color=&quot;black&quot;)+
+geom_line(aes(x,y,color=dose),linewidth=.5)+
+geom_point(aes(x,y,color=dose),size=1)+
+labs(title=&quot;Japanese FOI data, ages 80+, deaths per 100,000 person-years&quot;,x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
+scale_color_manual(values=c(&quot;black&quot;,&quot;gray50&quot;,hsv(c(6,12,21,28,33)/36,1,.8)))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(color=guide_legend(nrow=2,byrow=F))+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.text.x=element_text(margin=margin(4),hjust=0),
+  axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(4,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.justification=&quot;center&quot;,
+  legend.key=element_blank(),
+  legend.margin=margin(,,4),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  plot.margin=margin(5,5,5,5),
+  plot.title=element_text(size=11,face=2,margin=margin(1,,4)))
+ggsave(&quot;1.png&quot;,width=5.5,height=2.8,dpi=300*4)
+
+sub=&quot;Source: medicalfacts.info/vdeath.rb via x.com/hudikaha/status/
+1921935565894852619. JSON data was downloaded by selecting \&quot;Open in Vega Editor\&quot; from the triple dot menu and selecting \&quot;JSON\&quot; from \&quot;Export\&quot;. The JSON data was converted to TSV with `jq -r &#39;.data.values[]|select(.yearmonth|strings)|[
+.area,.age,.dose,.deaths,.persondays,.yearmonth]|@tsv&#39; visualization.vl.json`.&quot;
+system(paste0(&quot;mogrify -trim 1.png;magick 1.png \\( -size `identify -format %w 1.png`x -font Arial -interline-spacing -3 -pointsize $[44*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&#39;&quot;,sub),&quot;&#39; -splice x80 \\) -append -resize 25% -bordercolor white -border 24 -dither none -colors 256 1.png&quot;))</pre>
+</div>
+<p>So now this Japanese FOI data also shows that it's expected for the all-cause mortality rate of people with n-1 doses to go up when the nth dose is rolled out, so it's yet another nail in the coffin of the cheap tricksters at the Queen Mary University of London.</p>
 <script>
 document.querySelectorAll('a,code,pre').forEach(x=>x.innerHTML=x.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([\041-\045\047-\057\072\075\077-\100\133-\137\173-\176])/g,'$1<wbr>'))
 
