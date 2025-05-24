@@ -1,0 +1,1595 @@
+<style>body{background:black}
+pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap:break-word;font:15px Menlo,'DejaVu Sans Mono','Liberation Mono',Consolas,monospace}
+.title{color:hsl(0,80%,80%)}
+.prompt{color:hsl(0,80%,70%)}
+.output{color:hsl(210,85%,85%)}
+.comment{color:#aaa}</style>
+<title>r.txt</title>
+<pre>
+<span class=title># get bin index</span></span>
+<span class=prompt>&gt;</span> <span class=code>agegroupstart=c(0,18,65);ages=c(77,45,5,62,18)</span>
+<span class=prompt>&gt;</span> <span class=code>findInterval(ages,agegroupstart)</span>
+<span class=output>[1] 3 2 1 2 2</span>
+<span class=output>
+<span class=title># use NA instead of zero for missing values in `xtabs`</span></span>
+<span class=prompt>&gt;</span> <span class=code>d=data.frame(month=month.name[c(1,1,2)],year=c(2022,2023,2023),val=c(5,2,9))</span>
+<span class=prompt>&gt;</span> <span class=code>d</span>
+<span class=output>     month year val</span>
+<span class=output>1  January 2022   5</span>
+<span class=output>2  January 2023   2</span>
+<span class=output>3 February 2023   9</span>
+<span class=prompt>&gt;</span> <span class=code>xtabs(val~month+year,d)</span><span class=comment> # this returns zero for missing combinations of month and year</span>
+<span class=output>          year</span>
+<span class=output>month      2022 2023</span>
+<span class=output>  February    0    9</span>
+<span class=output>  January     5    2</span>
+<span class=prompt>&gt;</span> <span class=code>tapply(d$val,d[,1:2],c)</span><span class=comment> # this returns NA for missing combinations of month and year</span>
+<span class=output>          year</span>
+<span class=output>month      2022 2023</span>
+<span class=output>  February   NA    9</span>
+<span class=output>  January     5    2</span>
+<span class=output>
+<span class=title># convert 3d array to long form</span></span>
+<span class=prompt>&gt;</span> <span class=code>a=array(sample(99,8),c(2,2,2),list(2022:2023,month.abb[1:2],c(&quot;male&quot;,&quot;female&quot;)))</span>
+<span class=prompt>&gt;</span> <span class=code>cbind(expand.grid(dimnames(a)),x=c(a))</span>
+<span class=output>  Var1 Var2   Var3  x</span>
+<span class=output>1 2022  Jan   male 52</span>
+<span class=output>2 2023  Jan   male 86</span>
+<span class=output>3 2022  Feb   male 63</span>
+<span class=output>4 2023  Feb   male 24</span>
+<span class=output>5 2022  Jan female 94</span>
+<span class=output>6 2023  Jan female 93</span>
+<span class=output>7 2022  Feb female 18</span>
+<span class=output>8 2023  Feb female 92</span>
+<span class=prompt>&gt;</span> <span class=code>as.data.frame.table(a)</span><span class=comment> # this converts the first three columns to factors</span>
+<span class=output>  Var1 Var2   Var3  x</span>
+<span class=output>1 2022  Jan   male 52</span>
+<span class=output>2 2023  Jan   male 86</span>
+<span class=output>3 2022  Feb   male 63</span>
+<span class=output>4 2023  Feb   male 24</span>
+<span class=output>5 2022  Jan female 94</span>
+<span class=output>6 2023  Jan female 93</span>
+<span class=output>7 2022  Feb female 18</span>
+<span class=output>8 2023  Feb female 92</span>
+<span class=output>
+<span class=title># prevent custom function definitions in `.Rprofile` from being overridden by a variable assignment</span></span>
+<span class=prompt>&gt;</span> <span class=code>writeLines(&quot;j=paste0&quot;,&quot;~/.functions.R&quot;)</span>
+<span class=prompt>&gt;</span> <span class=code>source(&quot;~/.functions.R&quot;,attach(NULL,name=&quot;myfunctions&quot;))</span><span class=comment> # add this to `.Rprofile`</span>
+<span class=prompt>&gt;</span> <span class=code>j=9</span>
+<span class=prompt>&gt;</span> <span class=code>j(1,2)</span><span class=comment> # function definition was not overridden by variable assignment</span>
+<span class=output>[1] &quot;12&quot;</span>
+<span class=prompt>&gt;</span> <span class=code>detach(&quot;myfunctions&quot;);j(1,2)</span><span class=comment> # disable custom functions</span>
+<span class=output>Error in j(1, 2) : could not find function &quot;j&quot;</span>
+<span class=output>
+<span class=title># get the fraction of a normal distribution which is 3 standard deviations or more above the mean</span></span>
+<span class=prompt>&gt;</span> <span class=code>1-pnorm(3)</span>
+<span class=output>[1] 0.001349898</span>
+<span class=prompt>&gt;</span> <span class=code>integrate(\(x)exp(-x^2/2)/sqrt(2*pi),3,Inf)$value</span>
+<span class=output>[1] 0.001349899</span>
+<span class=output>
+<span class=title># get z-score for point of normal distribution that is higher than 97.5% of values</span></span>
+<span class=prompt>&gt;</span> <span class=code>qnorm(.975)</span>
+<span class=output>[1] 1.95996</span>
+<span class=output>
+<span class=title># divide ages into age groups</span></span>
+<span class=prompt>&gt;</span> <span class=code>ages=c(53,2,22,105,0,91)</span>
+<span class=prompt>&gt;</span> <span class=code>starts=c(0,18,50,80)</span>
+<span class=prompt>&gt;</span> <span class=code>cut(ages,c(starts,Inf),include.lowest=T,right=F)</span>
+<span class=output>[1] [50,80)  [0,18)   [18,50)  [80,Inf] [0,18)   [80,Inf]</span>
+<span class=output>Levels: [0,18) [18,50) [50,80) [80,Inf]</span>
+<span class=prompt>&gt;</span> <span class=code>agecut=\(x,starts)cut(pmax(x,0),c(starts,Inf),paste0(starts,c(paste0(&quot;-&quot;,starts[-1]-1),&quot;+&quot;)),T,F)</span>
+<span class=prompt>&gt;</span> <span class=code>agecut(ages,starts)</span>
+<span class=output>[1] 50-79 0-17  18-49 80+   0-17  80+</span>
+<span class=output>Levels: 0-17 18-49 50-79 80+</span>
+<span class=output>
+<span class=title># convert a long character vector to dates faster</span></span>
+<span class=prompt>&gt;</span> <span class=code>v=as.character(Sys.Date()-sample(1e3,1e5,T))</span>
+<span class=prompt>&gt;</span> <span class=code>b=microbenchmark(times=10,as.Date(v),</span>
+<span class=prompt>+</span> <span class=code>{u=unique(v);as.Date(u)[match(v,u)]},</span>
+<span class=prompt>+</span> <span class=code>{f=as.factor(v);as.Date(levels(v))[v]},</span>
+<span class=prompt>+</span> <span class=code>fasttime::fastDate(v),</span><span class=comment> # this only supports the `%Y-%m-%d` format and this doesn&apos;t support dates before 1970</span>
+<span class=prompt>+</span> <span class=code>as.Date(lubridate::parse_date_time(v,orders=&quot;ymd&quot;)),</span>
+<span class=prompt>+</span> <span class=code>anytime::anydate(v,calcUnique=T),</span>
+<span class=prompt>+</span> <span class=code>anytime::anydate(v))</span>
+<span class=prompt>&gt;</span> <span class=code>o=sort(tapply(b$time,gsub(&quot;  +&quot;,&quot; &quot;,b$expr),median));writeLines(sprintf(&quot;%.2f %s&quot;,o/min(o),names(o)))</span>
+<span class=comment># median time of 10 runs relative to fastest option</span>
+<span class=output>1.00 fasttime::fastDate(v)</span>
+<span class=output>3.27 anytime::anydate(v, calcUnique = T)</span>
+<span class=output>5.48 { u = unique(v) as.Date(u)[match(v, u)] }</span>
+<span class=output>9.42 { f = as.factor(v) as.Date(levels(v))[v] }</span>
+<span class=output>9.82 as.Date(lubridate::parse_date_time(v, orders = &quot;ymd&quot;))</span>
+<span class=output>101.72 anytime::anydate(v)</span>
+<span class=output>242.50 as.Date(v)</span>
+<span class=output>
+<span class=title># save the intermediate result of pipeline to a variable</span></span>
+<span class=prompt>&gt;</span> <span class=code>sv=\(x,y=p){do.call(&quot;=&quot;,list(substitute(y),x),,.GlobalEnv);x}</span>
+<span class=prompt>&gt;</span> <span class=code>seq(5)|&gt;sv()|&gt;mean()|&gt;c(p)</span><span class=comment> # `p` (pipe) is the default variable name used by `sv`</span>
+<span class=output>[1] 3 1 2 3 4 5</span>
+<span class=prompt>&gt;</span> <span class=code>seq(5)%&gt;%{.-&gt;&gt;p}%&gt;%mean%&gt;%c(p)</span>
+<span class=output>[1] 3 1 2 3 4 5</span>
+<span class=output>
+<span class=title># count dates and return 0 for missing dates in between</span></span>
+<span class=prompt>&gt;</span> <span class=code>d=as.Date(c(&quot;2024-1-2&quot;,&quot;2024-1-2&quot;,&quot;2024-1-5&quot;))</span>
+<span class=prompt>&gt;</span> <span class=code>table(factor(d,as.character(Reduce(\(...)seq(...,by=1),range(d)))))</span>
+<span class=comment># the anonymous function is used because `Reduce` doesn&apos;t support passing additional arguments to a function</span>
+<span class=output>2024-01-02 2024-01-03 2024-01-04 2024-01-05</span>
+<span class=output>         2          0          0          1</span>
+<span class=prompt>&gt;</span> <span class=code>num=as.numeric(d);ran=Reduce(seq,range(num,na.rm=T));setNames(table(factor(num,ran)),as.Date(ran,&quot;1970-1-1&quot;))</span>
+<span class=comment># this was about 7 times faster than the first option in my benchmark for a long vector of dates</span>
+<span class=output>2024-01-02 2024-01-03 2024-01-04 2024-01-05</span>
+<span class=output>         2          0          0          1</span>
+<span class=prompt>&gt;</span> <span class=code>setNames(tabulate(as.numeric(d-min(d))+1),seq(min(d),max(d),1))</span>
+<span class=comment># this was about 25 times faster than the first option in my benchmark</span>
+<span class=output>2024-01-02 2024-01-03 2024-01-04 2024-01-05</span>
+<span class=output>         2          0          0          1</span>
+<span class=output>
+<span class=title># make a matrix for shifted versions of a vector</span></span>
+<span class=prompt>&gt;</span> <span class=code>v=1:4;embed(c(NA,v,NA),3)</span>
+<span class=output>     [,1] [,2] [,3]</span>
+<span class=output>[1,]    2    1   NA</span>
+<span class=output>[2,]    3    2    1</span>
+<span class=output>[3,]    4    3    2</span>
+<span class=output>[4,]   NA    4    3</span>
+<span class=output>
+<span class=title># calculate a centered moving average which uses a narrower window at vector ends instead of returning NA values</span></span>
+<span class=prompt>&gt;</span> <span class=code>v=c(3,5,7,3,-1)</span>
+<span class=prompt>&gt;</span> <span class=code>rowMeans(embed(c(NA,v,NA),3),na.rm=T)</span><span class=comment> # this was the fastest method in my benchmark</span>
+<span class=output>[1] 4 5 5 3 1</span>
+<span class=prompt>&gt;</span> <span class=code>o=outer(1:length(v),-1:1,&quot;+&quot;);rowMeans(matrix(v[ifelse(o&lt;1,NA,o)],length(v)),na.rm=T)</span>
+<span class=comment># this was 2 times slower than the first method</span>
+<span class=output>[1] 4 5 5 3 1</span>
+<span class=prompt>&gt;</span> <span class=code>l=length(v);sapply(1:l,\(i)mean(v[max(1,i-1):min(l,i+1)],na.rm=T))</span>
+<span class=comment># this was about 100 times slower than the first method</span>
+<span class=output>[1] 4 5 5 3 1</span>
+<span class=prompt>&gt;</span> <span class=code>zoo::rollapplyr(v,3,mean,partial=T,align=&quot;center&quot;)</span><span class=comment> # this was about 170 times slower than the first method</span>
+<span class=output>[1] 4 5 5 3 1</span>
+<span class=prompt>&gt;</span> <span class=code>slider::slide_dbl(v,mean,.before=1,.after=1)</span><span class=comment> # this was about 70 times slower than the first method</span>
+<span class=output>[1] 4 5 5 3 1</span>
+<span class=output>
+<span class=title># convert a vector of distances to a `dist` object</span></span>
+<span class=prompt>&gt;</span> <span class=code>v=1:6;class(v)=&quot;dist&quot;;attr(v,&quot;Size&quot;)=ceiling(sqrt(length(v)*2));v</span><span class=comment> # size is the number of rows in a full distance matrix</span>
+<span class=output>  1 2 3</span>
+<span class=output>2 1</span>
+<span class=output>3 2 4</span>
+<span class=output>4 3 5 6</span>
+<span class=prompt>&gt;</span> <span class=code>v=1:6;structure(v,class=&quot;dist&quot;,Size=Re(polyroot(c(-2*length(v),-1,1))[1]))</span>
+<span class=comment># `polyroot` returns `4+0i` which has an imaginary part but `Re` extracts only the real part</span>
+<span class=comment># `polyroot solves the equation `-2*6-1*x+1*x^2=0` (so the coefficients are in increasing order and not decreasing order)</span>
+<span class=comment># the solution to the equation is `-2*6-1*4+1*4^2=0`</span>
+<span class=comment># `2*6` is the size of the lower and upper triangles, 4 is the size of the diagonal, and `4^2` the size of the full matrix</span>
+<span class=output>  1 2 3</span>
+<span class=output>  1 2 3</span>
+<span class=output>2 1</span>
+<span class=output>3 2 4</span>
+<span class=output>4 3 5 6</span>
+<span class=output>
+<span class=title># get length of each subitem of list</span></span>
+<span class=prompt>&gt;</span> <span class=code>lengths(list(1:3,4:9))</span>
+<span class=output>[1] 3 6</span>
+<span class=output>
+<span class=title># split a vector into a list for each run of consecutive integers</span></span>
+<span class=prompt>&gt;</span> <span class=code>v=c(1,2,3,8,9);split(v,cumsum(c(T,diff(v)!=1)))</span>
+<span class=output>$`1`</span>
+<span class=output>[1] 1 2 3</span>
+<span class=output>$`2`</span>
+<span class=output>[1] 8 9</span>
+<span class=output>
+<span class=title># disable alphabetic sorting for `tapply`</span></span>
+<span class=prompt>&gt;</span> <span class=code>v=1:4</span>
+<span class=prompt>&gt;</span> <span class=code>group=c(&quot;b&quot;,&quot;b&quot;,&quot;a&quot;,&quot;a&quot;)</span>
+<span class=prompt>&gt;</span> <span class=code>tapply(v,group,sum)</span>
+<span class=output>a b</span>
+<span class=output>7 3</span>
+<span class=prompt>&gt;</span> <span class=code>tapply(v,factor(group,unique(group)),sum)</span>
+<span class=output>b a</span>
+<span class=output>3 7</span>
+<span class=output>
+<span class=title># convert datetime to float</span></span>
+<span class=prompt>&gt;</span> <span class=code>as.double(difftime(as.POSIXct(&quot;2023-01-02 01:23:45&quot;),as.Date(&quot;1970-1-1&quot;)))</span>
+<span class=output>[1] 19358.97</span>
+<span class=output>
+<span class=title># month name to integer</span></span>
+<span class=prompt>&gt;</span> <span class=code>match(c(&quot;January&quot;,&quot;July&quot;),month.name)</span>
+<span class=output>[1] 1 7</span>
+<span class=output>
+<span class=title># convert HSV to RGB</span></span>
+<span class=prompt>&gt;</span> <span class=code>255*attr(colorspace::hex2RGB(colorspace::hex(HSV(seq(0,300,60),.5,1))),&quot;coords&quot;)</span>
+<span class=output>       R   G   B</span>
+<span class=output>[1,] 255 128 128</span>
+<span class=output>[2,] 255 255 128</span>
+<span class=output>[3,] 128 255 128</span>
+<span class=output>[4,] 128 255 255</span>
+<span class=output>[5,] 128 128 255</span>
+<span class=output>[6,] 255 128 255</span>
+<span class=output>
+<span class=title># sum together each segment of 7 items in a vector</span></span>
+<span class=prompt>&gt;</span> <span class=code>v=1:21;colSums(matrix(v,7))</span>
+<span class=output>[1]  28  77 126</span>
+<span class=output>
+<span class=title># turn a cumulative series to non-cumulative</span></span>
+<span class=prompt>&gt;</span> <span class=code>v=c(0,1,1,5,6)</span>
+<span class=prompt>&gt;</span> <span class=code>diff(c(0,v))</span>
+<span class=output>[1] 0 1 0 4 1</span>
+<span class=output>
+<span class=title># print a dataframe without row names or column names</span></span>
+<span class=prompt>&gt;</span> <span class=code>d=data.frame(col1=1:2,col2=c(&quot;a&quot;,&quot;b&quot;))</span>
+<span class=prompt>&gt;</span> <span class=code>d</span>
+<span class=output>  col1 col2</span>
+<span class=output>1    1    a</span>
+<span class=output>2    2    b</span>
+<span class=prompt>&gt;</span> <span class=code>print.data.frame(d,row.names=F)</span><span class=comment> # there is no option to disable printing column names</span>
+<span class=output> col1 col2</span>
+<span class=output>    1    a</span>
+<span class=output>    2    b</span>
+<span class=prompt>&gt;</span> <span class=code>apply(d,2,\(x)format(x,width=max(nchar(x))))|&gt;apply(1,paste,collapse=&quot; &quot;)|&gt;writeLines()</span>
+<span class=output>1 a</span>
+<span class=output>2 b</span>
+<span class=output>
+<span class=title># shift each item of vector left or right by 2 positions</span></span>
+<span class=prompt>&gt;</span> <span class=code>v=1:5</span>
+<span class=prompt>&gt;</span> <span class=code>lshift\(x,y=1)c(tail(x,-y),rep(NA,y))</span>
+<span class=prompt>&gt;</span> <span class=code>rshift=\(x,y=1)c(rep(NA,y),head(x,-y))</span>
+<span class=prompt>&gt;</span> <span class=code>lshift(v,2)</span>
+<span class=output>[1]  3  4  5 NA NA</span>
+<span class=prompt>&gt;</span> <span class=code>rshift(v,2)</span>
+<span class=output>[1] NA NA  1  2  3</span>
+<span class=prompt>&gt;</span> <span class=code>dplyr::lag(v,2)</span><span class=comment> # this only supports shifting items right</span>
+<span class=output>[1] NA NA  1  2  3</span>
+<span class=prompt>&gt;</span> <span class=code>Hmisc::Lag(v,-2)</span><span class=comment> # `Hmisc::Lag` supports shifting items left when given a negative offset</span>
+<span class=output>[1]  3  4  5 NA NA</span>
+<span class=output>
+<span class=title># prepend item to list</span></span>
+<span class=prompt>&gt;</span> <span class=code>l=list(10,20);append(5,l)</span>
+<span class=output>[[1]]</span>
+<span class=output>[1] 5</span>
+<span class=output>[[2]]</span>
+<span class=output>[1] 10</span>
+<span class=output>[[3]]</span>
+<span class=output>[1] 20</span>
+<span class=output>
+<span class=title># predict values from linear or polynomial regression</span></span>
+<span class=prompt>&gt;</span> <span class=code>df=data.frame(year=2016:2019,deaths=c(53896,53627,54386,53997))</span>
+<span class=prompt>&gt;</span> <span class=code>predict(lm(deaths~year,df),year=c(2023,2024))</span>
+<span class=output>      1       2</span>
+<span class=output>54560.6 54666.8</span>
+<span class=prompt>&gt;</span> <span class=code>predict(lm(deaths~poly(year,2),df),year=c(2023,2024))</span><span class=comment> # second-degree polynomial</span>
+<span class=output>      1       2</span>
+<span class=output>53690.6 53436.8</span>
+<span class=output>
+<span class=title># sum together list of named vectors joining by name</span></span>
+<span class=prompt>&gt;</span> <span class=code>l=list(setNames(c(1,2),c(&quot;a&quot;,&quot;b&quot;)),setNames(c(3,4),c(&quot;b&quot;,&quot;c&quot;)))</span>
+<span class=prompt>&gt;</span> <span class=code>tapply(unlist(l),names(unlist(l)),sum)</span>
+<span class=output>a b c</span>
+<span class=output>1 5 4</span>
+<span class=output>
+<span class=title># add thousands separators</span></span>
+<span class=prompt>&gt;</span> <span class=code>formatC(1234567,digits=0,format=&quot;f&quot;,big.mark=&quot;,&quot;)</span>
+<span class=output>[1] &quot;1,234,567&quot;</span>
+<span class=output>
+<span class=title># include zero counts in `table` output</span></span>
+<span class=prompt>&gt;</span> <span class=code>v=c(1,1,3,4,4,4)</span>
+<span class=prompt>&gt;</span> <span class=code>table(v)</span><span class=comment> # doesn&apos;t include 0 for 2</span>
+<span class=output>v</span>
+<span class=output>1 3 4</span>
+<span class=prompt>&gt;</span> <span class=code>table(factor(v,min(v):max(v)))</span>
+<span class=output>1 2 3 4</span>
+<span class=output>2 0 1 3</span>
+<span class=prompt>&gt;</span> <span class=code>tabulate(v)</span><span class=comment> # vector of counts starting from 1</span>
+<span class=output>[1] 2 0 1 3</span>
+<span class=output>
+<span class=title># difference between maximum and minimum value in vector</span></span>
+<span class=prompt>&gt;</span> <span class=code>diff(range(c(2,-3,5,9)))</span>
+<span class=output>12</span>
+<span class=output>
+<span class=title># get RGB codes for shades of gray</span></span>
+<span class=prompt>&gt;</span> <span class=code>sapply(seq(0,255,,6)/255,\(i)rgb(i,i,i))</span>
+<span class=output>[1] &quot;#FFFFFF&quot; &quot;#CCCCCC&quot; &quot;#999999&quot; &quot;#666666&quot; &quot;#333333&quot; &quot;#000000&quot;</span>
+<span class=output>
+<span class=title># get frequency table for combinations of dataframe columns</span></span>
+<span class=prompt>&gt;</span> <span class=code>d=data.frame(a=c(10,10,20,20,20,10,20,10),b=c(4,5,4,4,4,6,6,6))</span>
+<span class=prompt>&gt;</span> <span class=code>table(d)</span>
+<span class=output>    a</span>
+<span class=output>b    4 5 6</span>
+<span class=output>  10 1 1 2</span>
+<span class=output>  20 3 0 1</span>
+<span class=prompt>&gt;</span> <span class=code>aggregate(rep(1,nrow(d)),d,sum)</span>
+<span class=output>   a b x</span>
+<span class=output>1 10 4 1</span>
+<span class=output>2 20 4 3</span>
+<span class=output>3 10 5 1</span>
+<span class=output>4 10 6 2</span>
+<span class=output>5 20 6 1</span>
+<span class=prompt>&gt;</span> <span class=code>data.table(d)[,.N,by=.(a,b)]</span>
+<span class=output>    a b N</span>
+<span class=output>1: 10 4 1</span>
+<span class=output>2: 10 5 1</span>
+<span class=output>3: 20 4 3</span>
+<span class=output>4: 10 6 2</span>
+<span class=output>5: 20 6 1</span>
+<span class=prompt>&gt;</span> <span class=code>d=data.frame(a=sample(1:1e5,1e4,T),b=sample(1:1e3,1e4,T))</span>
+<span class=prompt>&gt;</span> <span class=code>b=microbenchmark(times=10,table(d),</span>
+<span class=prompt>+</span> <span class=code>aggregate(rep(1,nrow(d)),d,sum),</span>
+<span class=prompt>+</span> <span class=code>data.table(d)[,.N,by=.(a,b)])</span>
+<span class=prompt>&gt;</span> <span class=code>o=sort(tapply(b$time,b$expr,median));writeLines(sprintf(&quot;%.2f %s&quot;,o/min(o),names(o)))</span>
+<span class=output>1.00 data.table(d)[, .N, by = .(a, b)]</span>
+<span class=output>20.87 table(d)</span>
+<span class=output>49.53 aggregate(rep(1, nrow(d)), d, sum)</span>
+<span class=output>
+<span class=title># `seq` from minimum item of vector to maximum</span></span>
+<span class=prompt>&gt;</span> <span class=code>Reduce(seq,range(c(-2,3,4,1)))</span>
+<span class=output>[1] -2 -1  0  1  2  3  4</span>
+<span class=output>
+<span class=title># pass additional arguments to `Reduce`</span></span>
+<span class=prompt>&gt;</span> <span class=code>Reduce(\(...)seq(...,by=2),range(c(-2,3,4,1)))</span>
+<span class=output>[1] -2  0  2  4</span>
+<span class=output>
+<span class=title># get a boolean vector that shows which positions of a square matrix are on the diagonal</span></span>
+<span class=prompt>&gt;</span> <span class=code>m=matrix(1:9,3)</span>
+<span class=prompt>&gt;</span> <span class=code>c(row(m)==col(m))</span>
+<span class=output>[1]  TRUE FALSE FALSE FALSE  TRUE FALSE FALSE FALSE  TRUE</span>
+<span class=prompt>&gt;</span> <span class=code>!(lower.tri(m)|upper.tri(m))</span>
+<span class=output>[1]  TRUE FALSE FALSE FALSE  TRUE FALSE FALSE FALSE  TRUE</span>
+<span class=prompt>&gt;</span> <span class=code>c(diag(nrow(m))==1)</span><span class=comment> # `diag(3)` returns a 3-by-3 identity matrix</span>
+<span class=output>[1]  TRUE FALSE FALSE FALSE  TRUE FALSE FALSE FALSE  TRUE</span>
+<span class=prompt>&gt;</span> <span class=code>1:length(m)==seq(1,length(m),nrow(m)+1)</span>
+<span class=output>[1]  TRUE FALSE FALSE FALSE  TRUE FALSE FALSE FALSE  TRUE</span>
+<span class=output>
+<span class=title># calculate rowsums for a 3D array</span></span>
+<span class=prompt>&gt;</span> <span class=code>a=array(1:8,c(2,2,2))</span>
+<span class=prompt>&gt;</span> <span class=code>colSums(aperm(a,c(2,1,3)))</span><span class=comment> # `aperm` transposes the first and second dimensions</span>
+<span class=output>     [,1] [,2]</span>
+<span class=output>[1,]    4   12</span>
+<span class=output>[2,]    6   14</span>
+<span class=output>
+<span class=title># wide to long conversion in base R</span></span>
+<span class=prompt>&gt;</span> <span class=code>m=matrix(50:55,3,dimnames=list(letters[1:3],month.name[1:2]))</span>
+<span class=prompt>&gt;</span> <span class=code>m</span>
+<span class=output>  January February</span>
+<span class=output>a      50       53</span>
+<span class=output>b      51       54</span>
+<span class=output>c      52       55</span>
+<span class=prompt>&gt;</span> <span class=code>cbind(expand.grid(dimnames(m)),x=c(m))</span>
+<span class=output>  Var1     Var2  x</span>
+<span class=output>1    a  January 50</span>
+<span class=output>2    b  January 51</span>
+<span class=output>3    c  January 52</span>
+<span class=output>4    a February 53</span>
+<span class=output>5    b February 54</span>
+<span class=output>6    c February 55</span>
+<span class=prompt>&gt;</span> <span class=code>data.frame(x=rownames(m),y=c(m),z=colnames(m)[col(m)])</span>
+<span class=output>  x  y        z</span>
+<span class=output>1 a 50  January</span>
+<span class=output>2 b 51  January</span>
+<span class=output>3 c 52  January</span>
+<span class=output>4 a 53 February</span>
+<span class=output>5 b 54 February</span>
+<span class=output>6 c 55 February</span>
+<span class=prompt>&gt;</span> <span class=code>as.data.frame.table(m)</span>
+<span class=comment># the first two columns get converted to factors</span>
+<span class=comment># you can also use `as.data.frame(as.table(m))`</span>
+<span class=output>  Var1     Var2 Freq</span>
+<span class=output>1    a  January   50</span>
+<span class=output>2    b  January   51</span>
+<span class=output>3    c  January   52</span>
+<span class=output>4    a February   53</span>
+<span class=output>5    b February   54</span>
+<span class=output>6    c February   55</span>
+<span class=prompt>&gt;</span> <span class=code>stack(m)</span><span class=comment> # the first two columns get converted to factors and the second column gets converted to an `Rle` factor</span>
+<span class=output>DataFrame with 6 rows and 3 columns</span>
+<span class=output>       row      col     value</span>
+<span class=output>  &lt;factor&gt;    &lt;Rle&gt; &lt;integer&gt;</span>
+<span class=output>1        a  January        50</span>
+<span class=output>2        b  January        51</span>
+<span class=output>3        c  January        52</span>
+<span class=output>4        a February        53</span>
+<span class=output>5        b February        54</span>
+<span class=output>6        c February        55</span>
+<span class=prompt>&gt;</span> <span class=code>d=as.data.frame(m);cbind(row=rownames(d),stack(d))</span>
+<span class=comment># when the input is a dataframe and not a matrix, the rownames don&apos;t get included as a column in `stack` output</span>
+<span class=comment># the colnames don&apos;t get converted to an `Rle` factor when the input for `stack` is a dataframe</span>
+<span class=output>  row values ind</span>
+<span class=output>1   1      1  V1</span>
+<span class=output>2   2      2  V1</span>
+<span class=output>3   3      3  V1</span>
+<span class=output>4   1      4  V2</span>
+<span class=output>5   2      5  V2</span>
+<span class=output>6   3      6  V2</span>
+<span class=output>7   1      7  V3</span>
+<span class=output>8   2      8  V3</span>
+<span class=output>9   3      9  V3</span>
+<span class=output>
+<span class=title># don&apos;t omit missing factor levels from `aggregate` output</span></span>
+<span class=prompt>&gt;</span> <span class=code>aggregate(1:3,list(factor(c(100,102,100),100:102)),sum)</span>
+<span class=output>  Group.1 x</span>
+<span class=output>1     100 4</span>
+<span class=output>2     102 2</span>
+<span class=prompt>&gt;</span> <span class=code>aggregate(1:3,list(factor(c(100,102,100),100:102)),sum,drop=F)</span>
+<span class=output>  Group.1  x</span>
+<span class=output>1     100  4</span>
+<span class=output>2     101 NA</span>
+<span class=output>3     102  2</span>
+<span class=output>
+<span class=title># convert ISO 8601 week number to date</span></span>
+<span class=prompt>&gt;</span> <span class=code>year=2021;week=1;weekday=7</span>
+<span class=prompt>&gt;</span> <span class=code>as.Date(paste(year,week,weekday),&quot;%Y %V %u&quot;)</span><span class=comment> # doesn&apos;t work</span>
+<span class=comment># this returns the month and day of the current date because `as.Date` doesn&apos;t support `%V` (ISO week number)</span>
+<span class=output>[1] &quot;2021-12-24&quot;</span>
+<span class=prompt>&gt;</span> <span class=code>ISOweek::ISOweek2date(sprintf(&quot;%d-W%02d-%d&quot;,year,week,weekday))</span>
+<span class=comment># single-digit week numbers are required to have a leading zero</span>
+<span class=output>[1] &quot;2021-01-10&quot;</span>
+<span class=prompt>&gt;</span> <span class=code>d=as.Date(paste0(year,&quot;-1-4&quot;));d-(as.integer(format(d,&quot;%w&quot;))+6)%%7-1+7*(week-1)+weekday</span>
+<span class=comment># this is a simplified version of `ISOweek2date`</span>
+<span class=output>[1] &quot;2021-01-10&quot;</span>
+<span class=output>
+<span class=title># remove other attributes of a vector but keep names</span></span>
+<span class=prompt>&gt;</span> <span class=code>v=na.omit(setNames(c(1,NA,2),month.abb[1:3]));v</span><span class=comment> # adds unnecessary attributes</span>
+<span class=output>Jan Mar</span>
+<span class=output>  1   2</span>
+<span class=output>attr(,&quot;na.action&quot;)</span>
+<span class=output>Feb</span>
+<span class=output>  2</span>
+<span class=output>attr(,&quot;class&quot;)</span>
+<span class=output>[1] &quot;omit&quot;</span>
+<span class=prompt>&gt;</span> <span class=code>c(v)</span><span class=comment> # other attributes removed but names preserved</span>
+<span class=output>Jan Mar</span>
+<span class=output>  1   2</span>
+<span class=output>
+<span class=title># get year and month for a date</span></span>
+<span class=prompt>&gt;</span> <span class=code>d=as.Date(&quot;2023-12-31&quot;)</span>
+<span class=prompt>&gt;</span> <span class=code>substr(d,1,7)</span><span class=comment> # this is slower</span>
+<span class=output>[1] &quot;2023-12&quot;</span>
+<span class=prompt>&gt;</span> <span class=code>format(d,&quot;%Y-%m&quot;)</span><span class=comment> # this was about 3 times faster than `substr` for a long vector of dates</span>
+<span class=output>[1] &quot;2023-12&quot;</span>
+<span class=output>
+<span class=title># remove dataframe rows with one or more NA column</span></span>
+<span class=prompt>&gt;</span> <span class=code>d=data.frame(x=c(1,NA,3),y=letters[1:3])</span>
+<span class=prompt>&gt;</span> <span class=code>na.omit(d)</span>
+<span class=output>  x y</span>
+<span class=output>1 1 a</span>
+<span class=output>3 3 c</span>
+<span class=output>
+<span class=title># convert character matrix to numeric</span></span>
+<span class=prompt>&gt;</span> <span class=code>m=matrix(c(&quot;1&quot;,&quot;2&quot;,&quot;3&quot;,&quot;4&quot;),2)</span>
+<span class=prompt>&gt;</span> <span class=code>class(m)=&quot;numeric&quot;</span>
+<span class=prompt>&gt;</span> <span class=code>m</span>
+<span class=output>     [,1] [,2]</span>
+<span class=output>[1,]    1    3</span>
+<span class=output>[2,]    2    4</span>
+<span class=output>
+<span class=title># get the point that is halfway between two points on a log scale</span></span>
+<span class=prompt>&gt;</span> <span class=code>exp((log(100)+log(1000))/2)</span>
+<span class=output>[1] 316.2278</span>
+<span class=output>
+<span class=title># `seq` on a log scale</span></span>
+<span class=prompt>&gt;</span> <span class=code>exp(seq(log(100),log(1e5),,5))</span>
+<span class=output>100.0000 316.2278 1000.0000 3162.2777 10000.0000</span>
+<span class=output>
+<span class=title># geometric mean</span></span>
+<span class=prompt>&gt;</span> <span class=code>v=1:5</span>
+<span class=prompt>&gt;</span> <span class=code>prod(v)^(1/length(v))</span>
+<span class=output>[1] 2.605171</span>
+<span class=prompt>&gt;</span> <span class=code>exp(mean(log(v)))</span>
+<span class=output>[1] 2.605171</span>
+<span class=output>
+<span class=title># list definitions of base functions</span></span>
+<span class=prompt>&gt;</span> <span class=code>Filter(is.function,mget(ls(&quot;package:base&quot;),inherits=T))[6:8]</span>
+<span class=output>$`:::`</span>
+<span class=output>function (pkg, name)  .Primitive(&quot;:::&quot;)</span>
+<span class=output>$`!`</span>
+<span class=output>function (x)  .Primitive(&quot;!&quot;)</span>
+<span class=output>$`!.hexmode`</span>
+<span class=output>function (a)</span>
+<span class=output>as.hexmode(bitwNot(as.hexmode(a)))</span>
+<span class=output>&lt;bytecode: 0x7ff0bf2b0c78&gt;</span>
+<span class=output>&lt;environment: namespace:base&gt;</span>
+<span class=output>
+<span class=title># find matrix rows where all columns have the same value</span></span>
+<span class=prompt>&gt;</span> <span class=code>m=matrix(c(8,8,8,9,7,7,5,5,5),3,byrow=T)</span>
+<span class=prompt>&gt;</span> <span class=code>m</span>
+<span class=output>     [,1] [,2] [,3]</span>
+<span class=output>[1,]    8    8    8</span>
+<span class=output>[2,]    9    7    7</span>
+<span class=output>[3,]    5    5    5</span>
+<span class=prompt>&gt;</span> <span class=code>which(rowSums(m!=m[,1])==0)</span>
+<span class=output>[1] 1 3</span>
+<span class=output>
+<span class=title># mode value</span></span>
+<span class=prompt>&gt;</span> <span class=code>v=c(5,3,8,5,8,8)</span>
+<span class=prompt>&gt;</span> <span class=code>collapse::fmode(v)</span><span class=comment> # this was the fastest in a benchmark with a longer vector</span>
+<span class=output>[1] 8</span>
+<span class=prompt>&gt;</span> <span class=code>data.table(v)[,.N,v][which.max(N),v]</span><span class=comment> # this was about 4 times slower</span>
+<span class=output>[1] 8</span>
+<span class=prompt>&gt;</span> <span class=code>as.numeric(names(which.max(table(v))))</span><span class=comment> # this was about 12 times slower</span>
+<span class=output>[1] 8</span>
+<span class=output>
+<span class=title># mean-center matrix columns</span></span>
+<span class=prompt>&gt;</span> <span class=code>m=matrix(c(1,5,-16,-14),2)</span>
+<span class=prompt>&gt;</span> <span class=code>scale(m,scale=F)</span>
+<span class=output>     [,1] [,2]</span>
+<span class=output>[1,]   -2   -1</span>
+<span class=output>[2,]    2    1</span>
+<span class=output>attr(,&quot;scaled:center&quot;)</span>
+<span class=output>[1]   3 -15</span>
+<span class=prompt>&gt;</span> <span class=code>apply(m,2,\(x)x-mean(x))</span>
+<span class=output>     [,1] [,2]</span>
+<span class=output>[1,]   -2   -1</span>
+<span class=output>[2,]    2    1</span>
+<span class=prompt>&gt;</span> <span class=code>t(t(m)-colMeans(m))</span>
+<span class=output>     [,1] [,2]</span>
+<span class=output>[1,]   -2   -1</span>
+<span class=output>[2,]    2    1</span>
+<span class=output>
+<span class=title># round numeric columns to integers</span></span>
+<span class=prompt>&gt;</span> <span class=code>dplyr::mutate_if(iris[1:2,],is.double,round)</span>
+<span class=output>  Sepal.Length Sepal.Width Petal.Length Petal.Width Species</span>
+<span class=output>1            5           4            1           0  setosa</span>
+<span class=output>2            5           3            1           0  setosa</span>
+<span class=prompt>&gt;</span> <span class=code>x=iris[1:2,];for(i in which(sapply(x,is.numeric)))x[i]=round(x[i]);x</span>
+<span class=output>  Sepal.Length Sepal.Width Petal.Length Petal.Width Species</span>
+<span class=output>1            5           4            1           0  setosa</span>
+<span class=output>2            5           3            1           0  setosa</span>
+<span class=output>
+<span class=title># remove rows with the same value in two or more different columns</span></span>
+<span class=prompt>&gt;</span> <span class=code>m=matrix(c(1,1,2,3,4,5,6,7,8,9,9,9),,3,byrow=T)</span>
+<span class=prompt>&gt;</span> <span class=code>m</span>
+<span class=output>     [,1] [,2] [,3]</span>
+<span class=output>[1,]    1    1    2</span>
+<span class=output>[2,]    3    4    5</span>
+<span class=output>[3,]    6    7    8</span>
+<span class=output>[4,]    9    9    9</span>
+<span class=prompt>&gt;</span> <span class=code>m[colSums(apply(m,1,duplicated))==0,]</span>
+<span class=output>     [,1] [,2] [,3]</span>
+<span class=output>[1,]    3    4    5</span>
+<span class=output>[2,]    6    7    8</span>
+<span class=output>
+<span class=title># convert the rows of a matrix to a list of vectors</span></span>
+<span class=prompt>&gt;</span> <span class=code>m=matrix(1:4,2)</span>
+<span class=prompt>&gt;</span> <span class=code>asplit(m,1)</span><span class=comment> # 1 uses the first dimension as the margin</span>
+<span class=output>[[1]]</span>
+<span class=output>[1] 1 3</span>
+<span class=output>[[2]]</span>
+<span class=output>[1] 2 4</span>
+<span class=output>
+<span class=title># order by column name or column number</span></span>
+<span class=prompt>&gt;</span> <span class=code>ob=\(x,y){a=match.call()$y;if(is.name(a))a=as.character(a);x[order(x[,a]),]}</span>
+<span class=prompt>&gt;</span> <span class=code>mtcars|&gt;ob(wt)|&gt;head(2)</span><span class=comment> # this also works with matrices unlike `dplyr::arrange`</span>
+<span class=output>              mpg cyl disp  hp drat    wt  qsec vs am gear carb</span>
+<span class=output>Lotus Europa 30.4   4 95.1 113 3.77 1.513 16.90  1  1    5    2</span>
+<span class=output>Honda Civic  30.4   4 75.7  52 4.93 1.615 18.52  1  1    4    2</span>
+<span class=output>
+<span class=title># vectorized `seq`</span></span>
+<span class=prompt>&gt;</span> <span class=code>bit::vecseq(c(-3,8),c(-2,10))</span>
+<span class=output>[1] -3 -2  8  9 10</span>
+<span class=prompt>&gt;</span> <span class=code>pseq=Vectorize(seq.default,vectorize.args=c(&quot;from&quot;,&quot;to&quot;))</span>
+<span class=prompt>&gt;</span> <span class=code>pseq(c(-3,8),c(-2,10))</span><span class=comment> # this is slow</span>
+<span class=output>[1] -3 -2  8  9 10</span>
+<span class=prompt>&gt;</span> <span class=code>v1=1:1e5;v2=v1+9</span>
+<span class=prompt>&gt;</span> <span class=code>system.time(bit::vecseq(v1,v2))</span>
+<span class=output>   user  system elapsed</span>
+<span class=output>  0.001   0.001   0.002</span>
+<span class=prompt>&gt;</span> <span class=code>system.time(pseq(v1,v2))</span>
+<span class=output>   user  system elapsed</span>
+<span class=output>  0.381   0.042   0.423</span>
+<span class=prompt>&gt;</span> <span class=code>system.time(unlist(mapply(seq,v1,v2)))</span>
+<span class=output>   user  system elapsed</span>
+<span class=output>  0.506   0.002   0.509</span>
+<span class=output>
+<span class=title># modify a variable outside a function in place</span></span>
+<span class=prompt>&gt;</span> <span class=code>plusinplace=\(x,y)eval.parent(substitute(x&lt;-x+y))</span>
+<span class=prompt>&gt;</span> <span class=code>x=1;plusinplace(x,2);x</span>
+<span class=output>[1] 3</span>
+<span class=output>
+<span class=title># swap variables</span></span>
+<span class=prompt>&gt;</span> <span class=code>swap=\(x,y){x2=x;env=parent.frame();do.call(&quot;=&quot;,list(substitute(x),y),,env);do.call(&quot;=&quot;,list(substitute(y),x2),,env)}</span>
+<span class=prompt>&gt;</span> <span class=code>x=1;y=2;swap(x,y);c(x,y)</span>
+<span class=output>[1] 2 1</span>
+<span class=output>
+<span class=title># reorder a hierarchical clustering tree so that similar branches are grouped together</span></span>
+<span class=prompt>&gt;</span> <span class=code>hc=as.hclust(reorder(as.dendrogram(hclust(eurodist)),cmdscale(eurodist,1)))</span>
+<span class=comment># `cmdscale` does classical multidimensional scaling which is similar to PCA but it takes a distance matrix as the input</span>
+<span class=comment># the first dimension of MDS is used as weight so that the furthest branches are arranged to opposite ends of the tree</span>
+<span class=prompt>&gt;</span> <span class=code>hc$label[hc$order]</span>
+<span class=output> [1] &quot;Lisbon&quot;          &quot;Madrid&quot;          &quot;Gibraltar&quot;       &quot;Barcelona&quot;       &quot;Marseilles&quot;      &quot;Lyons&quot;</span>
+<span class=output> [7] &quot;Geneva&quot;          &quot;Milan&quot;           &quot;Cherbourg&quot;       &quot;Paris&quot;           &quot;Calais&quot;          &quot;Brussels&quot;</span>
+<span class=output>[13] &quot;Hook of Holland&quot; &quot;Cologne&quot;         &quot;Munich&quot;          &quot;Vienna&quot;          &quot;Stockholm&quot;       &quot;Hamburg&quot;</span>
+<span class=output>[19] &quot;Copenhagen&quot;      &quot;Rome&quot;            &quot;Athens&quot;</span>
+<span class=output>
+<span class=title># get angle between two vectors</span></span>
+<span class=prompt>&gt;</span> <span class=code>vlen=\(x)sum(x^2)^.5</span>
+<span class=prompt>&gt;</span> <span class=code>vang=\(x,y)acos(sum(x*y)/(vlen(x)*vlen(y)))</span>
+<span class=prompt>&gt;</span> <span class=code>vang(c(2,1),c(1,-2))*180/pi</span>
+<span class=output>[1] 90</span>
+<span class=output>
+<span class=title># number of 2-combinations of 5 items</span></span>
+<span class=prompt>&gt;</span> <span class=code>n=5;k=2;choose(n,k)</span>
+<span class=output>[1] 10</span>
+<span class=prompt>&gt;</span> <span class=code>factorial(n)/(factorial(k)*factorial(n-k))</span>
+<span class=output>[1] 10</span>
+<span class=output>
+<span class=title># get indexes of 2-combinations of 4 items</span></span>
+<span class=prompt>&gt;</span> <span class=code>combn(4,2)</span>
+<span class=output>     [,1] [,2] [,3] [,4] [,5] [,6]</span>
+<span class=output>[1,]    1    1    1    2    2    3</span>
+<span class=output>[2,]    2    3    4    3    4    4</span>
+<span class=prompt>&gt;</span> <span class=code>n=4;rbind(rep(1:(n-1),(n-1):1),unlist(lapply(2:n,\(x)x:n)))</span><span class=comment> # this is faster than `combn` for high values of n</span>
+<span class=output>     [,1] [,2] [,3] [,4] [,5] [,6]</span>
+<span class=output>[1,]    1    1    1    2    2    3</span>
+<span class=output>[2,]    2    3    4    3    4    4</span>
+<span class=prompt>&gt;</span> <span class=code>m=matrix(,4,4);rbind(col(m)[lower.tri(m)],row(m)[lower.tri(m)])</span>
+<span class=output>     [,1] [,2] [,3] [,4] [,5] [,6]</span>
+<span class=output>[1,]    1    1    1    2    2    3</span>
+<span class=output>[2,]    2    3    4    3    4    4</span>
+<span class=prompt>&gt;</span> <span class=code>m=matrix(,4,4);t(which(lower.tri(m),arr.ind=T))</span>
+<span class=comment># `arr.ind=T` returns matrix row and column indexes instead of vector indexes</span>
+<span class=output>    [,1] [,2] [,3] [,4] [,5] [,6]</span>
+<span class=output>row    2    3    4    3    4    4</span>
+<span class=output>col    1    1    1    2    2    3</span>
+<span class=output>
+<span class=title># get indexes of the fifth 2-combination of 4 items</span></span>
+<span class=prompt>&gt;</span> <span class=code>combn(4,2)[,5]</span>
+<span class=output>[1] 2 4</span>
+<span class=prompt>&gt;</span> <span class=code>n=4;k=5;x=(2*n-1-sqrt(4*n^2-4*n+1-8*(k-1)))%/%2;y=k-x*n+(x^2+x)%/%2+x;c(x+1,y+1)</span>
+<span class=output>[1] 2 4</span>
+<span class=output>
+<span class=title># get distance between Tokyo and London in km</span></span>
+<span class=prompt>&gt;</span> <span class=code>geosphere::distm(c(137.53,35.49),c(0.38,51.53),fun=geosphere::distHaversine)/1000</span><span class=comment> # longitude is before latitude</span>
+<span class=output>         [,1]</span>
+<span class=output>[1,] 9487.566</span>
+<span class=output>
+<span class=title># do linear interpolation of NA values</span></span>
+<span class=prompt>&gt;</span> <span class=code>v=c(1,NA,NA,7,NA,5)</span>
+<span class=prompt>&gt;</span> <span class=code>approx(v,n=length(v))$y</span>
+<span class=output>[1] 1 3 5 7 6 5</span>
+<span class=prompt>&gt;</span> <span class=code>zoo::na.approx(v)</span>
+<span class=output>[1] 1 3 5 7 6 5</span>
+<span class=prompt>&gt;</span> <span class=code>w=c(NA,1,NA,NA,7,NA,5,NA)</span>
+<span class=prompt>&gt;</span> <span class=code>approx(w,n=length(w))$y</span><span class=comment> # this removes NA values from the start and end</span>
+<span class=output>[1] 1.000000 2.428571 3.857143 5.285714 6.714286 6.428571 5.714286 5.000000</span>
+<span class=prompt>&gt;</span> <span class=code>zoo::na.approx(v,na.rm=F)</span><span class=comment> # this keeps the NA value at the start but removes the NA value from the end</span>
+<span class=output>[1] NA  1  3  5  7  6  5</span>
+<span class=prompt>&gt;</span> <span class=code>zoo::na.approx(v,rule=2)</span><span class=comment> # this replaces NA values at the start with the first non-NA value</span>
+<span class=output>[1] 1 1 3 5 7 6 5</span>
+<span class=output>
+<span class=title># do spline extrapolation and interpolation of NA values in the ends and middle of a vector</span></span>
+<span class=prompt>&gt;</span> <span class=code>v=c(NA,3,8,NA,30)</span>
+<span class=prompt>&gt;</span> <span class=code>spline(v,n=length(v))$y</span><span class=comment> # this skips the NA value at the start so the output starts from 3</span>
+<span class=output>[1]  3.000  6.375 12.000 19.875 30.000</span>
+<span class=prompt>&gt;</span> <span class=code>zoo::na.spline(v)</span><span class=comment> # this also extrapolates the spline to fill in the NA at the start</span>
+<span class=output>[1]  2  3  8 17 30</span>
+<span class=output>
+<span class=title># remove null items from a list</span></span>
+<span class=prompt>&gt;</span> <span class=code>l=list(&quot;a&quot;,NULL,c(1,2))</span>
+<span class=prompt>&gt;</span> <span class=code>Filter(Negate(is.null),l)</span>
+<span class=output>[[1]]</span>
+<span class=output>[1] &quot;a&quot;</span>
+<span class=output>[[2]]</span>
+<span class=output>[1] 1 2</span>
+<span class=prompt>&gt;</span> <span class=code>l[lengths(l)&gt;0]</span>
+<span class=output>[[1]]</span>
+<span class=output>[1] &quot;a&quot;</span>
+<span class=output>[[2]]</span>
+<span class=output>[1] 1 2</span>
+<span class=prompt>&gt;</span> <span class=code>l|&gt;purrr::discard(is.null)</span>
+<span class=output>[[1]]</span>
+<span class=output>[1] &quot;a&quot;</span>
+<span class=output>[[2]]</span>
+<span class=output>[1] 1 2</span>
+<span class=output>
+<span class=title># get Euclidean distances between vectors on corresponding rows of two equal-sized matrices</span></span>
+<span class=prompt>&gt;</span> <span class=code>m1=matrix(1:12,,3);m2=matrix(8:-3,,3)</span>
+<span class=prompt>&gt;</span> <span class=code>sqrt(rowSums((m2-m1)^2))</span>
+<span class=output>[1] 11.44552 12.44990 14.24781 16.58312</span>
+<span class=output>
+<span class=title># calculate a cross Euclidean distance of each row vector in matrix 1 to each row vector in matrix 2</span></span>
+<span class=prompt>&gt;</span> <span class=code>m1=matrix(10:15,,3);m2=matrix(1:9,,3)</span>
+<span class=prompt>&gt;</span> <span class=code>sqrt(pmax(0,outer(rowSums(m1^2),rowSums(m2^2),&quot;+&quot;)-2*m1%*%t(m2)))</span><span class=comment> # `m1%*%t(m2)` is the same as `tcrossprod(m1,m2)`</span>
+<span class=comment># `pmax(0)` is used so the argument for `sqrt` won&apos;t be negative when two identical rows are compared</span>
+<span class=comment># the result of the substraction is sometimes slightly below zero for identical rows</span>
+<span class=output>         [,1]     [,2]     [,3]</span>
+<span class=output>[1,] 13.92839 12.20656 10.48809</span>
+<span class=output>[2,] 15.65248 13.92839 12.20656</span>
+<span class=prompt>&gt;</span> <span class=code>Rfast::dista(m1,m2)</span><span class=comment> # this was about as fast as the first option</span>
+<span class=output>         [,1]     [,2]     [,3]</span>
+<span class=output>[1,] 13.92839 12.20656 10.48809</span>
+<span class=output>[2,] 15.65248 13.92839 12.20656</span>
+<span class=prompt>&gt;</span> <span class=code>outer(asplit(m1,1),asplit(m2,1),Vectorize(\(x,y)sqrt(sum((x-y)^2))))</span>
+<span class=comment># this was about 100 times slower than the first option in a benchmark where I used bigger matrices</span>
+<span class=comment># `asplit(m,1)` splits a matrix into a list of row vectors, like `split(m,row(m))`</span>
+<span class=output>         [,1]     [,2]     [,3]</span>
+<span class=output>[1,] 13.92839 12.20656 10.48809</span>
+<span class=output>[2,] 15.65248 13.92839 12.20656</span>
+<span class=output>
+<span class=title># find the closest neighbors of a human population in Global25 PCA</span></span>
+<span class=prompt>&gt;</span> <span class=code>t=read.csv(&quot;https://drive.google.com/uc?export=download&amp;id=1wZr-UOve0KUKo_Qbgeo27m-CQncZWb8y&quot;,row.names=1)</span>
+<span class=prompt>&gt;</span> <span class=code>head(sort(as.matrix(dist(t))[,&quot;Udmurt&quot;]))</span>
+<span class=output>     Udmurt   Besermyan     Chuvash       Saami Tatar_Kazan        Komi</span>
+<span class=output> 0.00000000  0.02190332  0.04896754  0.05229796  0.06070359  0.06728795</span>
+<span class=output>
+<span class=title># mean of corresponding cells on a list of matrices of equal size</span></span>
+<span class=prompt>&gt;</span> <span class=code>l=list(matrix(1:20,4),matrix(21:40,4),matrix(41:60,4))</span>
+<span class=prompt>&gt;</span> <span class=code>Reduce(&quot;+&quot;,l)/length(l)</span>
+<span class=output>     [,1] [,2] [,3] [,4] [,5]</span>
+<span class=output>[1,]   21   25   29   33   37</span>
+<span class=output>[2,]   22   26   30   34   38</span>
+<span class=output>[3,]   23   27   31   35   39</span>
+<span class=output>[4,]   24   28   32   36   40</span>
+<span class=output>
+<span class=title># get row and column index of maximum value in a matrix</span></span>
+<span class=prompt>&gt;</span> <span class=code>m=matrix(1:6,2)</span>
+<span class=prompt>&gt;</span> <span class=code>which(m==max(m),arr.ind=T)</span>
+<span class=output>     row col</span>
+<span class=output>[1,]   2   3</span>
+<span class=prompt>&gt;</span> <span class=code>arrayInd(which.max(m),dim(m))</span>
+<span class=output>     [,1] [,2]</span>
+<span class=output>[1,]    2    3</span>
+<span class=output>
+<span class=title># make a matrix with 3 rows where each row contains vector `v`</span></span>
+<span class=prompt>&gt;</span> <span class=code>v=1:4;rep(1,3)%o%v</span><span class=comment> # `%o%` is outer product</span>
+<span class=output>     [,1] [,2] [,3] [,4]</span>
+<span class=output>[1,]    1    2    3    4</span>
+<span class=output>[2,]    1    2    3    4</span>
+<span class=output>[3,]    1    2    3    4</span>
+<span class=output>
+<span class=title># get indexes of up to 2 first occurrences of each unique value in a vector</span></span>
+<span class=prompt>&gt;</span> <span class=code>v=c(4,4,4,2,3,3,3,3,4,4,3)</span>
+<span class=prompt>&gt;</span> <span class=code>unname(unlist(tapply(1:length(v),v,head,2)))</span>
+<span class=output>[1] 4 5 6 1 2</span>
+<span class=prompt>&gt;</span> <span class=code>unname(unlist(lapply(split(1:length(v),v),head,2)))</span>
+<span class=output>[1] 4 5 6 1 2</span>
+<span class=prompt>&gt;</span> <span class=code>which(data.table::rowid(v)&lt;3)</span><span class=comment> # this was the fastest option in my benchmark</span>
+<span class=output>[1] 1 2 4 5 6</span>
+<span class=output>
+<span class=title># `sapply` with indexes</span></span>
+<span class=prompt>&gt;</span> <span class=code>sapply(month.name[1:3],\(x)paste(x,parent.frame()$i))</span>
+<span class=output>     January     February        March</span>
+<span class=output> &quot;January 1&quot; &quot;February 2&quot;    &quot;March 3&quot;</span>
+<span class=prompt>&gt;</span> <span class=code>v=month.name[1:3];mapply(\(x,i)paste(x,i),v,1:length(v))</span>
+<span class=output>     January     February        March</span>
+<span class=output> &quot;January 1&quot; &quot;February 2&quot;    &quot;March 3&quot;</span>
+<span class=output>
+<span class=title># find the 5th biggest value in a vector</span></span>
+<span class=prompt>&gt;</span> <span class=code>set.seed(0);v=rnorm(1e6)</span>
+<span class=prompt>&gt;</span> <span class=code>kit::topn(v,5,index=F)[5]</span><span class=comment> # this is very fast (`index=F` returns values instead of indexes)</span>
+<span class=output>[1] 4.342213</span>
+<span class=prompt>&gt;</span> <span class=code>sort(tail(sort(v,partial=length(v)-5+1),5))[1]</span>
+<span class=comment># `sort(partial=5)` puts the 5 smallest items to start of the vector but not necessarily in the correct order</span>
+<span class=comment># sorting in descending order is not supported with `partial`</span>
+<span class=output>[1] 4.342213</span>
+<span class=output>
+<span class=title># find the indexes of the 3 smallest items in a vector</span></span>
+<span class=prompt>&gt;</span> <span class=code>set.seed(0);v=rnorm(1e6)</span>
+<span class=prompt>&gt;</span> <span class=code>kit::topn(v,3,decreasing=F,hasna=F)</span><span class=comment> # this was the fastest option in my benchmark</span>
+<span class=output>108893 251672 253645</span>
+<span class=prompt>&gt;</span> <span class=code>order(v)[1:3]</span><span class=comment> # this was fairly fast compared to the other options up to around length 1e5</span>
+<span class=output>108893 251672 253645</span>
+<span class=prompt>&gt;</span> <span class=code>w=which(v&lt;=Rfast::nth(v,3+1))[1:3];w[order(v[w])]</span><span class=comment> # `[1:3]` can be removed if there are no duplicates</span>
+<span class=output>108893 251672 253645</span>
+<span class=prompt>&gt;</span> <span class=code>v2=v;o=c();sapply(1:3,\(i){ind=which.min(v2);v2[ind]&lt;&lt;-NA;ind})</span>
+<span class=comment># this is fairly fast for small values of `k` like 3</span>
+<span class=output>108893 251672 253645</span>
+<span class=prompt>&gt;</span> <span class=code>w=which(v&lt;=max(sort(v,partial=3)));w[order(v[w])][1:3]</span>
+<span class=comment># `sort(v,partial=3)` puts the three smallest items to the start of the vector but not necessarily in the correct order</span>
+<span class=output>108893 251672 253645</span>
+<span class=output>
+<span class=title># round numbers to 3 significant digits</span></span>
+<span class=prompt>&gt;</span> <span class=code>x=123456</span>
+<span class=prompt>&gt;</span> <span class=code>signif(x,3)</span>
+<span class=output>[1] 123000</span>
+<span class=prompt>&gt;</span> <span class=code>round(x,3-ceiling(log10(abs(x))))</span><span class=comment> # this is identical to `signif` according to the help page of `signif`</span>
+<span class=output>[1] 123000</span>
+<span class=output>
+<span class=title># add one month to a date</span></span>
+<span class=prompt>&gt;</span> <span class=code>seq(as.Date(&quot;2023-12-25&quot;),,&quot;month&quot;,2)[-1]</span>
+<span class=output>[1] &quot;2024-01-25&quot;</span>
+<span class=prompt>&gt;</span> <span class=code>as.Date(&quot;2023-12-25&quot;)%m+%months(1)</span><span class=comment> # lubridate</span>
+<span class=output>[1] &quot;2024-01-25&quot;</span>
+<span class=prompt>&gt;</span> <span class=code>d=as.POSIXlt(&quot;2023-12-25&quot;);d$mon=d$mon+1;as.Date(d)</span>
+<span class=output>[1] &quot;2024-01-25&quot;</span>
+<span class=output>
+<span class=title># get US state name from abbreviation</span></span>
+<span class=prompt>&gt;</span> <span class=code>state.name[match(&quot;CT&quot;,state.abb)]</span><span class=comment> # these variables are from the base `datasets` package</span>
+<span class=output>[1] &quot;Connecticut&quot;</span>
+<span class=output>
+<span class=title># calculate z-scores</span></span>
+<span class=prompt>&gt;</span> <span class=code>scale(mtcars[1:3,1:3])|&gt;as.data.frame()</span>
+<span class=comment># `scale` calculates z-scores for each column by subtracting the mean and dividing by the standard deviation</span>
+<span class=comment># `as.data.frame` removes attributes added by `scale` without removing dimname attributes</span>
+<span class=output>                     mpg        cyl       disp</span>
+<span class=output>Mazda RX4     -0.5773503  0.5773503  0.5773503</span>
+<span class=output>Mazda RX4 Wag -0.5773503  0.5773503  0.5773503</span>
+<span class=output>Datsun 710     1.1547005 -1.1547005 -1.1547005</span>
+<span class=prompt>&gt;</span> <span class=code>d=mtcars[1:3,1:3];t((t(d)-colMeans(d))/apply(d,2,sd))</span>
+<span class=output>                     mpg        cyl       disp</span>
+<span class=output>Mazda RX4     -0.5773503  0.5773503  0.5773503</span>
+<span class=output>Mazda RX4 Wag -0.5773503  0.5773503  0.5773503</span>
+<span class=output>Datsun 710     1.1547005 -1.1547005 -1.1547005</span>
+<span class=output>
+<span class=title># divide items into clusters of similar items by doing hierarchical clustering of z-scores</span></span>
+<span class=prompt>&gt;</span> <span class=code>hclust(dist(scale(head(mtcars,8))))|&gt;cutree(3)</span><span class=comment> # `cutree(3)` cuts the tree at the height where it has 3 subtrees</span>
+<span class=output>        Mazda RX4     Mazda RX4 Wag        Datsun 710    Hornet 4 Drive</span>
+<span class=output>                1                 1                 1                 2</span>
+<span class=output>Hornet Sportabout           Valiant        Duster 360         Merc 240D</span>
+<span class=output>                3                 2                 3                 1</span>
+<span class=output>
+<span class=title># convert quarterly data to monthly data</span></span>
+<span class=prompt>&gt;</span> <span class=code>quarterly=c(67190,66350,65510,65020)</span>
+<span class=prompt>&gt;</span> <span class=code>round(zoo::na.spline(c(rbind(NA,quarterly,NA))))</span>
+<span class=comment># this always uses the quarterly total as the value for the middle month of the quarter</span>
+<span class=output>[1] 67410 67190 66932 66647 66350 66053 65768 65510 65290 65123 65020 64995</span>
+<span class=prompt>&gt;</span> <span class=code>library(tempdisagg);as.numeric(predict(td(ts(quarterly,frequency=4)~1,&quot;mean&quot;,to=&quot;monthly&quot;)))</span><span class=comment> # preserve quarterly means</span>
+<span class=output> [1] 67268.94 67248.53 67052.53 66677.09 66339.56 66033.35 65752.47 65501.62 65275.91 65070.94</span>
+<span class=output>[11] 64981.93 65007.13</span>
+<span class=output>
+<span class=title># convert quarterly data to daily</span></span>
+<span class=prompt>&gt;</span> <span class=code>d=data.frame(as.Date(c(&quot;2023-1-1&quot;,&quot;2023-4-1&quot;)),c(12345,23456))</span><span class=comment> # the dates have to be the starting days of quarters</span>
+<span class=prompt>&gt;</span> <span class=code>library(tempdisagg);predict(td(d~1,&quot;mean&quot;,&quot;daily&quot;,&quot;fast&quot;))|&gt;head(2)</span><span class=comment> # this preserves quarterly means</span>
+<span class=output>        time    value</span>
+<span class=output>1 2023-01-01 9584.940</span>
+<span class=output>2 2023-01-02 9586.904</span>
+<span class=output>
+<span class=title># split matrix into groups of columns</span></span>
+<span class=prompt>&gt;</span> <span class=code>m=matrix(1:10,2);group=c(1,1,2,2,2)</span>
+<span class=prompt>&gt;</span> <span class=code>t(m)|&gt;split.data.frame(group)|&gt;lapply(t)</span><span class=comment> # `split.data.frame` splits a dataframe or matrix by rows</span>
+<span class=output>$`1`</span>
+<span class=output>     [,1] [,2]</span>
+<span class=output>[1,]    1    3</span>
+<span class=output>[2,]    2    4</span>
+<span class=output>$`2`</span>
+<span class=output>     [,1] [,2] [,3]</span>
+<span class=output>[1,]    5    7    9</span>
+<span class=output>[2,]    6    8   10</span>
+<span class=prompt>&gt;</span> <span class=code>split(1:ncol(m),group)|&gt;lapply(\(x)m[,x])</span>
+<span class=output>$`1`</span>
+<span class=output>     [,1] [,2]</span>
+<span class=output>[1,]    1    3</span>
+<span class=output>[2,]    2    4</span>
+<span class=output>$`2`</span>
+<span class=output>     [,1] [,2] [,3]</span>
+<span class=output>[1,]    5    7    9</span>
+<span class=output>[2,]    6    8   10</span>
+<span class=output>
+<span class=title># calculate rowsums by column group vector</span></span>
+<span class=prompt>&gt;</span> <span class=code>m=matrix(1:10,2);group=c(1,1,2,2,2)</span>
+<span class=prompt>&gt;</span> <span class=code>tapply(m,list(row(m),group[col(m)]),sum)</span>
+<span class=output>  1  2</span>
+<span class=output>1 4 21</span>
+<span class=output>2 6 24</span>
+<span class=prompt>&gt;</span> <span class=code>t(rowsum(t(m),group))</span><span class=comment> # there is no `colsum` function</span>
+<span class=output>     1  2</span>
+<span class=output>[1,] 4 21</span>
+<span class=output>[2,] 6 24</span>
+<span class=output>
+<span class=title># calculate excess deaths using a baseline from a linear regression</span></span>
+<span class=prompt>&gt;</span> <span class=code>d=data.frame(year=2015:2022,deaths=c(31712,31336,33581,33140,34170,32739,34913,38554))</span>
+<span class=prompt>&gt;</span> <span class=code>d$trend=predict(lm(deaths~year,subset(d,year&lt;2020)),d)</span>
+<span class=prompt>&gt;</span> <span class=code>d$excess=d$deaths-d$trend</span>
+<span class=prompt>&gt;</span> <span class=code>round(d)</span>
+<span class=output>  year deaths trend excess</span>
+<span class=output>1 2015  31712 31444    268</span>
+<span class=output>2 2016  31336 32116   -780</span>
+<span class=output>3 2017  33581 32788    793</span>
+<span class=output>4 2018  33140 33460   -320</span>
+<span class=output>5 2019  34170 34132     38</span>
+<span class=output>6 2020  32739 34804  -2065</span>
+<span class=output>7 2021  34913 35476   -563</span>
+<span class=output>8 2022  38554 36148   2406</span>
+<span class=output>
+<span class=title># calculate excess age-standardized mortality rate using the 2013 European Standard Population</span></span>
+<span class=prompt>&gt;</span> <span class=code>nzpop=tail(read.csv(&quot;https://mongol-fi.github.io/f/nz_infoshare_population.csv&quot;,check.names=F),8)</span>
+<span class=prompt>&gt;</span> <span class=code>nzdeath=tail(read.csv(&quot;https://mongol-fi.github.io/f/nz_infoshare_deaths.csv&quot;,check.names=F),8)</span>
+<span class=prompt>&gt;</span> <span class=code>esp=c(10,40,55,55,55,60,60,65,70,70,70,70,65,60,55,50,40,25,15,8,2)*100</span>
+<span class=prompt>&gt;</span> <span class=code>espage=c(0,1,seq(5,95,5))</span>
+<span class=prompt>&gt;</span> <span class=code>espcut=\(x)cut(x,c(espage,Inf),include.lowest=T,right=F)</span>
+<span class=prompt>&gt;</span> <span class=code>pop=t(rowsum(t(nzpop[-1]),espcut(as.numeric(colnames(nzpop)[-1]))))</span>
+<span class=prompt>&gt;</span> <span class=code>death=t(rowsum(t(nzdeath[-1]),espcut(as.numeric(colnames(nzdeath)[-1]))))</span>
+<span class=prompt>&gt;</span> <span class=code>d=data.frame(year=nzpop[1],pop=rowSums(nzpop[-1]),death=rowSums(nzdeath[-1]))</span>
+<span class=prompt>&gt;</span> <span class=code>d$asmr=rowSums(t(t(death)*esp)/pop)</span>
+<span class=prompt>&gt;</span> <span class=code>d$trend=lm(asmr~year,subset(d,year&lt;2020))|&gt;predict(d)</span>
+<span class=prompt>&gt;</span> <span class=code>d$excesspct=(d$asmr/d$trend-1)*100</span>
+<span class=prompt>&gt;</span> <span class=code>print.data.frame(round(d),row.names=F)</span>
+<span class=output> year     pop death asmr trend excesspct</span>
+<span class=output> 2015 4612910 31608  936   924         1</span>
+<span class=output> 2016 4716520 31176  893   918        -3</span>
+<span class=output> 2017 4815070 33333  928   912         2</span>
+<span class=output> 2018 4902090 33234  901   906         0</span>
+<span class=output> 2019 4985560 34257  901   900         0</span>
+<span class=output> 2020 5085970 32616  828   894        -7</span>
+<span class=output> 2021 5111110 34911  859   888        -3</span>
+<span class=output> 2022 5125220 38547  929   882         5</span>
+<span class=output>
+<span class=title># convert date to floating point year</span></span>
+<span class=prompt>&gt;</span> <span class=code>d=as.Date(&quot;2020-12-31&quot;)</span>
+<span class=prompt>&gt;</span> <span class=code>y=as.numeric(format(d,&quot;%Y&quot;));y+(as.numeric(format(d,&quot;%j&quot;))-1)/&quot;if&quot;(y%%4==0&amp;!(y%%100==0&amp;y%%400!=0),366,365)</span>
+<span class=output>[1] 2020.997</span>
+<span class=prompt>&gt;</span> <span class=code>lubridate::decimal_date(d)</span>
+<span class=output>[1] 2020.997</span>
+<span class=output>
+<span class=title># select the first row for each unique value of a column</span></span>
+<span class=prompt>&gt;</span> <span class=code>mtcars[!duplicated(mtcars$cyl),]</span>
+<span class=output>                   mpg cyl disp  hp drat   wt  qsec vs am gear carb</span>
+<span class=output>Mazda RX4         21.0   6  160 110 3.90 2.62 16.46  0  1    4    4</span>
+<span class=output>Datsun 710        22.8   4  108  93 3.85 2.32 18.61  1  1    4    1</span>
+<span class=output>Hornet Sportabout 18.7   8  360 175 3.15 3.44 17.02  0  0    3    2</span>
+<span class=prompt>&gt;</span> <span class=code>dplyr::slice_head(mtcars,by=cyl)</span><span class=comment> # this was about 60 times slower than the previous option in my benchmark</span>
+<span class=output>                   mpg cyl disp  hp drat   wt  qsec vs am gear carb</span>
+<span class=output>Mazda RX4         21.0   6  160 110 3.90 2.62 16.46  0  1    4    4</span>
+<span class=output>Datsun 710        22.8   4  108  93 3.85 2.32 18.61  1  1    4    1</span>
+<span class=output>Hornet Sportabout 18.7   8  360 175 3.15 3.44 17.02  0  0    3    2</span>
+<span class=prompt>&gt;</span> <span class=code>ub=\(x,y){a=match.call()$y;if(is.name(a))a=as.character(a);x[!duplicated(x[,a]),]}</span>
+<span class=prompt>&gt;</span> <span class=code>ub(mtcars,cyl)</span><span class=comment> # unique by (this also works with matrices unlike dplyr)</span>
+<span class=output>                   mpg cyl disp  hp drat   wt  qsec vs am gear carb</span>
+<span class=output>Mazda RX4         21.0   6  160 110 3.90 2.62 16.46  0  1    4    4</span>
+<span class=output>Datsun 710        22.8   4  108  93 3.85 2.32 18.61  1  1    4    1</span>
+<span class=output>Hornet Sportabout 18.7   8  360 175 3.15 3.44 17.02  0  0    3    2</span>
+<span class=prompt>&gt;</span> <span class=code>collapse::ffirst(mtcars,mtcars$cyl)</span><span class=comment> # this is fast but it replaces rownames with group names</span>
+<span class=output>   mpg cyl disp  hp drat   wt  qsec vs am gear carb</span>
+<span class=output>4 22.8   4  108  93 3.85 2.32 18.61  1  1    4    1</span>
+<span class=output>6 21.0   6  160 110 3.90 2.62 16.46  0  1    4    4</span>
+<span class=output>8 18.7   8  360 175 3.15 3.44 17.02  0  0    3    2</span>
+<span class=output>
+<span class=title># make an empty matrix by specifying dimension names</span></span>
+<span class=prompt>&gt;</span> <span class=code>arr=\(...){l=list(...);array(,lengths(l),l)}</span><span class=comment> # `list(...)` converts the ellipsis argument to a list</span>
+<span class=prompt>&gt;</span> <span class=code>arr(state.name[1:2],month.abb[1:3])</span>
+<span class=output>        Jan Feb Mar</span>
+<span class=output>Alabama  NA  NA  NA</span>
+<span class=output>Alaska   NA  NA  NA</span>
+<span class=output>
+<span class=title># get year of date</span></span>
+<span class=prompt>&gt;</span> <span class=code>d=as.Date(&quot;2023-12-31&quot;)</span>
+<span class=prompt>&gt;</span> <span class=code>as.POSIXlt(d)$year+1900</span><span class=comment> # this is the definition of `lubridate::year` and `data.table::year`</span>
+<span class=output>[1] 2023</span>
+<span class=prompt>&gt;</span> <span class=code>as.numeric(format(d,&quot;%Y&quot;))</span><span class=comment> # this was about 10 times slower in my benchmark with a long vector</span>
+<span class=output>[1] 2023</span>
+<span class=output>
+<span class=title># apply multiple functions</span></span>
+<span class=prompt>&gt;</span> <span class=code>mul=\(x,...)sapply(c(...),mapply,x)</span>
+<span class=prompt>&gt;</span> <span class=code>trees|&gt;mul(min,max,mean)</span>
+<span class=output>       [,1] [,2]     [,3]</span>
+<span class=output>Girth   8.3 20.6 13.24839</span>
+<span class=output>Height 63.0 87.0 76.00000</span>
+<span class=output>Volume 10.2 77.0 30.17097</span>
+<span class=output>
+<span class=title># run a benchmark and display the median time of a hundred runs relative to the fastest option</span></span>
+<span class=prompt>&gt;</span> <span class=code>bench=\(times,...){arg=match.call(expand.dots=F)$...;l=length(arg);out=double(times*l);rand=sample(rep(1:l,times))</span>
+<span class=prompt>+</span> <span class=code>n=1;for(x in arg[rand]){t1=Sys.time();eval.parent(x);out[n]=Sys.time()-t1;n=n+1}</span>
+<span class=prompt>+</span> <span class=code>setNames(out,sapply(arg[rand],\(i)gsub(&quot;  +&quot;,&quot; &quot;,paste(deparse(i),collapse=&quot; &quot;))))}</span>
+<span class=prompt>&gt;</span> <span class=code>b=bench(100,1:1e6,seq(1e6),sequence(1e6),seq_len(1e6),seq.int(1e6))</span>
+<span class=prompt>&gt;</span> <span class=code>o=sort(tapply(b,names(b),median));writeLines(sprintf(&quot;%.2f %s&quot;,o/min(o),names(o)))</span>
+<span class=output>1.00 1:1e+06</span>
+<span class=output>1.00 seq_len(1e+06)</span>
+<span class=output>1.00 seq.int(1e+06)</span>
+<span class=output>2.24 seq(1e+06)</span>
+<span class=output>345.06 sequence(1e+06)</span>
+<span class=output>
+<span class=title># select columns</span></span>
+<span class=prompt>&gt;</span> <span class=code>k=\(x,...)x[,sapply(match.call(expand.dots=F)$...,\(i)&quot;if&quot;(is.name(i),match(as.character(i),colnames(x)),i))]</span>
+<span class=prompt>&gt;</span> <span class=code>mtcars[1:2,]|&gt;k(cyl,5)</span><span class=comment> # this supports mixing column names and column numbers like `dplyr::select`</span>
+<span class=output>              cyl drat</span>
+<span class=output>Mazda RX4       6  3.9</span>
+<span class=output>Mazda RX4 Wag   6  3.9</span>
+<span class=output>
+<span class=title># merge dataframes by row names</span></span>
+<span class=prompt>&gt;</span> <span class=code>merge(mtcars[1:3,1:2],mtcars[2:4,6:7],by=0)</span><span class=comment> # `by=0` merges by row names</span>
+<span class=output>      Row.names  mpg cyl    wt  qsec</span>
+<span class=output>1    Datsun 710 22.8   4 2.320 18.61</span>
+<span class=output>2 Mazda RX4 Wag 21.0   6 2.875 17.02</span>
+<span class=output>
+<span class=title># weighted mean by group</span></span>
+<span class=prompt>&gt;</span> <span class=code>t=data.frame(age=c(80,80,70,70),pop=c(2850,1820,3053,5190),deaths=c(312,287,201,220))</span>
+<span class=prompt>&gt;</span> <span class=code>with(t,tapply(deaths*pop,age,sum)/tapply(pop,age,sum))</span>
+<span class=output>      70       80</span>
+<span class=output>212.9629 302.2570</span>
+<span class=prompt>&gt;</span> <span class=code>sapply(split(t,t$age),\(i)weighted.mean(i$deaths,i$pop))</span>
+<span class=output>      70       80</span>
+<span class=output>212.9629 302.2570</span>
+<span class=prompt>&gt;</span> <span class=code>data.table(t)[,weighted.mean(deaths,pop),age]</span>
+<span class=output>   age       V1</span>
+<span class=output>1:  80 302.2570</span>
+<span class=output>2:  70 212.9629</span>
+<span class=output>
+<span class=title># calculate frequency table using specified factors for each dimension</span></span>
+<span class=prompt>&gt;</span> <span class=code>fat=\(x,y){o=table(mapply(factor,x,y,SIMPLIFY=F));names(dimnames(o))=NULL;o}</span><span class=comment> # factor table</span>
+<span class=prompt>&gt;</span> <span class=code>dim=list(letters[1:3],month.abb[1:3],state.abb[1:2])</span>
+<span class=prompt>&gt;</span> <span class=code>fat(list(c(&quot;c&quot;,&quot;c&quot;,&quot;b&quot;),c(&quot;Jan&quot;,&quot;Jan&quot;,&quot;Mar&quot;),c(&quot;AL&quot;,&quot;AL&quot;,&quot;AK&quot;)),dim)</span>
+<span class=output>, , AL</span>
+<span class=output>  Jan Feb Mar</span>
+<span class=output>a   0   0   0</span>
+<span class=output>b   0   0   0</span>
+<span class=output>c   2   0   0</span>
+<span class=output>, , AK</span>
+<span class=output>  Jan Feb Mar</span>
+<span class=output>a   0   0   0</span>
+<span class=output>b   0   0   1</span>
+<span class=output>c   0   0   0</span>
+<span class=output>
+<span class=title># replace NA values with the previous non-NA value</span></span>
+<span class=prompt>&gt;</span> <span class=code>v=c(NA,5,NA,NA,3,NA,4)</span>
+<span class=prompt>&gt;</span> <span class=code>data.table::nafill(v,type=&quot;locf&quot;)</span><span class=comment> # this only works with numeric types</span>
+<span class=output>[1] NA  5  5  5  3  3  4</span>
+<span class=prompt>&gt;</span> <span class=code>zoo::na.locf(v,na.rm=F)</span><span class=comment> # `na.rm=F` disables removing the NA value from the start</span>
+<span class=output>[1] NA  5  5  5  3  3  4</span>
+<span class=output>
+<span class=title># convert a long vector of dates with many repeated dates to character faster</span></span>
+<span class=prompt>&gt;</span> <span class=code>v=as.Date(sample(18000:19000,1e6,T),&quot;1970-1-1&quot;)</span>
+<span class=prompt>&gt;</span> <span class=code>system.time(as.character(v))</span>
+<span class=output>   user  system elapsed</span>
+<span class=output>  1.639   0.030   1.688</span>
+<span class=prompt>&gt;</span> <span class=code>system.time({u=unique(v);as.character(u)[match(v,u)]})</span>
+<span class=output>   user  system elapsed</span>
+<span class=output>  0.036   0.002   0.038</span>
+<span class=prompt>&gt;</span> <span class=code>system.time(as.character(seq(min(v),max(v),1))[as.numeric(v-min(v)+1)])</span>
+<span class=output>   user  system elapsed</span>
+<span class=output>  0.033   0.008   0.041</span>
+<span class=prompt>&gt;</span> <span class=code>system.time(data.table(x=v)[,y:=as.character(x),x]$y)</span>
+<span class=output>   user  system elapsed</span>
+<span class=output>  0.103   0.003   0.105</span>
+<span class=output>
+<span class=title># convert date to year and month</span></span>
+<span class=prompt>&gt;</span> <span class=code>v=Sys.Date()-sample(1e3,1e5,T)</span>
+<span class=prompt>&gt;</span> <span class=code>ua=\(x,fun,...){u=unique(x);fun(u,...)[match(x,u)]}</span><span class=comment> # unique apply (faster for long vectors with many repeated values)</span>
+<span class=prompt>&gt;</span> <span class=code>b=microbenchmark(times=10,</span>
+<span class=prompt>+</span> <span class=code>with(as.POSIXlt(v),sprintf(&quot;%d-%02d&quot;,year+1900,mon+1)),</span>
+<span class=prompt>+</span> <span class=code>format(v,&quot;%Y-%m&quot;),</span>
+<span class=prompt>+</span> <span class=code>substr(v,1,7),</span>
+<span class=prompt>+</span> <span class=code>ua(v,format,&quot;%Y-%m&quot;))</span>
+<span class=prompt>&gt;</span> <span class=code>o=sort(tapply(b$time,gsub(&quot;  +&quot;,&quot; &quot;,b$expr),median));writeLines(sprintf(&quot;%.2f %s&quot;,o/min(o),names(o)))</span>
+<span class=output>1.00 ua(v, format, &quot;%Y-%m&quot;)</span>
+<span class=output>12.75 with(as.POSIXlt(v), sprintf(&quot;%d-%02d&quot;, year + 1900, mon + 1))</span>
+<span class=output>14.40 format(v, &quot;%Y-%m&quot;)</span>
+<span class=output>34.61 substr(v, 1, 7)</span>
+<span class=output>
+<span class=title># count the number of leap days between the epoch and a date in the Julian calendar inclusive of the date</span></span>
+<span class=prompt>&gt;</span> <span class=code>d=as.numeric(as.Date(c(&quot;2000-2-28&quot;,&quot;2000-2-29&quot;,&quot;1968-2-29&quot;,&quot;1968-3-1&quot;)))</span>
+<span class=prompt>&gt;</span> <span class=code>(d-789-ifelse(d&lt;0,1,0))%/%1461+1</span>
+<span class=comment># 1461 is `365*4+1` and 789 is the first leap day after the epoch</span>
+<span class=comment># this incorrectly treats 1900 and 2100 as leap years in the Gregorian calendar</span>
+<span class=output>[1]  7  8 -1  0</span>
+<span class=output>
+<span class=title># get the difference between dates in floored years</span></span>
+<span class=prompt>&gt;</span> <span class=code>d1=as.Date(&quot;2021-01-23&quot;);d2=as.Date(&quot;2022-01-23&quot;)</span>
+<span class=prompt>&gt;</span> <span class=code>p1=as.POSIXlt(d1);p2=as.POSIXlt(d2);p2$year-p1$year-pmin(p2$mon&lt;p1$mon,p2$mon==p1$mon&amp;p2$mday&lt;p1$mday)</span>
+<span class=comment># this was the fastest option which treated leap years correctly in my benchmark</span>
+<span class=comment># if `d1` can be after `d2` then replace `-pmin` with `+ifelse(p1&gt;p2,-1,1)*pmin`</span>
+<span class=output>[1] 1</span>
+<span class=prompt>&gt;</span> <span class=code>as.numeric(format(d2,&quot;%Y&quot;))-as.numeric(format(d1,&quot;%Y&quot;))-as.numeric(format(d2,&quot;%m-%d&quot;)&lt;format(d1,&quot;%m-%d&quot;))</span>
+<span class=comment># this was about 5 times slower than the first option in my benchmark with long vectors of dates</span>
+<span class=output>[1] 1</span>
+<span class=prompt>&gt;</span> <span class=code>as.numeric(substr(d2,1,4))-as.numeric(substr(d1,1,4))-as.numeric(substr(d2,5,10)&lt;substr(d1,5,10))</span>
+<span class=comment># this was about 12 times slower than the first option</span>
+<span class=output>[1] 1</span>
+<span class=prompt>&gt;</span> <span class=code>lubridate::interval(d1,d2)%/%lubridate::years()</span><span class=comment> # this was about 4 times slower than the first option</span>
+<span class=output>[1] 1</span>
+<span class=prompt>&gt;</span> <span class=code>d1%--%d2%/%years()</span><span class=comment> # this is another lubridate option that was also about 4 times slower</span>
+<span class=output>[1] 1</span>
+<span class=prompt>&gt;</span> <span class=code>floor(lubridate::time_length(difftime(d2,d1),&quot;years&quot;))</span><span class=comment> # this is fast but it uses 365.25 days as the length of each year</span>
+<span class=comment># this produces an incorrect result for most pairs of dates that have the same month and day of month</span>
+<span class=output>[1] 0</span>
+<span class=prompt>&gt;</span> <span class=code>floor(as.numeric(lubridate::interval(d1,d2),&quot;years&quot;))</span><span class=comment> # this is fast but similar to the previous option</span>
+<span class=output>[1] 0</span>
+<span class=prompt>&gt;</span> <span class=code>floor(as.numeric(d2-d1)/365.25)</span><span class=comment> # this is similar to the previous two options but it was slightly faster</span>
+<span class=output>[1] 0</span>
+<span class=prompt>&gt;</span> <span class=code>age=\(x,y){class(x)=class(y)=NULL;(d2-d1-(d2-789)%/%1461+(d1-789)%/%1461)%/%365}</span>
+<span class=prompt>&gt;</span> <span class=code>age(d1,d2)</span>
+<span class=comment># this is a very fast way to get the floored difference in years between dates that are after 1900 and before 2100</span>
+<span class=comment># this incorrectly treats 1900 and 2100 as leap years in the Gregorian calendar</span>
+<span class=comment># 1461 is `365*4+1` 789 is the first leap day since the epoch</span>
+<span class=output>[1] 1</span>
+<span class=output>
+<span class=title># calculate a distance matrix using a mean instead of sum of squared differences to reduce bias caused by NA values</span></span>
+<span class=comment># mean of squared differences is used here because rows with many NA values get a low sum of squared differences to other rows</span>
+<span class=prompt>&gt;</span> <span class=code>m=matrix(1:9,3);m[2,3]=NA</span>
+<span class=prompt>&gt;</span> <span class=code>i=combn(nrow(m),2);d=rowMeans((m[i[1,],]-m[i[2,]])^2,na.rm=T);structure(d,class=&quot;dist&quot;,&quot;Size&quot;=nrow(m))</span>
+<span class=comment># a `dist` object is required to have a `Size` attribute which is set to the number of rows in the full square matrix</span>
+<span class=output>     1    2</span>
+<span class=output>2 10.0</span>
+<span class=output>3  7.0  2.5</span>
+<span class=output>
+<span class=title># read CSV faster</span></span>
+<span class=prompt>&gt;</span> <span class=code>write.csv(matrix(sample(1e6),,10),&quot;test.csv&quot;,row.names=F)</span>
+<span class=prompt>&gt;</span> <span class=code>system.time(read.csv(&quot;test.csv&quot;))</span>
+<span class=output>   user  system elapsed</span>
+<span class=output>  0.526   0.014   0.540</span>
+<span class=prompt>&gt;</span> <span class=code>system.time(as.data.frame(readr::read_csv(&quot;test.csv&quot;,show_col_types=F)))</span><span class=comment> # faster</span>
+<span class=output>   user  system elapsed</span>
+<span class=output>  0.161   0.012   0.062</span>
+<span class=prompt>&gt;</span> <span class=code>system.time(as.data.frame(data.table::fread(&quot;test.csv&quot;,showProgress=F)))</span><span class=comment> # fastest</span>
+<span class=output>   user  system elapsed</span>
+<span class=output>  0.016   0.002   0.018</span>
+<span class=output>
+<span class=title># replace NA values with an incrementing sequence starting from the previous non-NA value</span></span>
+<span class=prompt>&gt;</span> <span class=code>v=c(NA,NA,5,NA,NA,2,8,NA)</span>
+<span class=prompt>&gt;</span> <span class=code>Reduce(\(i,j)if(is.na(j))i+1 else j,v,accumulate=T)</span>
+<span class=output>[1] NA NA  5  6  7  2  8  9</span>
+<span class=prompt>&gt;</span> <span class=code>r=rle(is.na(v));w=which(r$values[-1]);s=cumsum(r$lengths)</span>
+<span class=prompt>&gt;</span> <span class=code>v2=v;v2[bit::vecseq(s[w]+1,s[w+1])]=bit::vecseq(v[s[w]]+1,v[s[w]]+r$lengths[w+1]);v2</span>
+<span class=comment># this was about 10 times faster than the first option in a benchmark with a long vector</span>
+<span class=output>[1] NA NA  5  6  7  2  8  9</span>
+<span class=prompt>&gt;</span> <span class=code>nn=!is.na(v);w=which(nn);l=length(v);d=diff(c(w,l+1));v2=v;v2[w[1]:l]=sequence(d,v[nn]);v2</span>
+<span class=comment># this was about 20 times faster than the first option</span>
+<span class=output>[1] NA NA  5  6  7  2  8  9</span>
+<span class=prompt>&gt;</span> <span class=code>Rcpp::cppFunction(&apos;NumericVector loifcpp(NumericVector x){int n=x.size();LogicalVector ina=is_na(x);</span>
+<span class=prompt>+</span> <span class=code>for(int i=1;i&lt;n;i++)if(ina[i])x[i]=x[i-1]+1;return x;}&apos;)</span>
+<span class=prompt>&gt;</span> <span class=code>loifcpp(v)</span>
+<span class=comment># this was about 200 times faster than the first option</span>
+<span class=output>[1] NA NA  5  6  7  2  8  9</span>
+<span class=output>
+<span class=title># remove NA values from a vector</span></span>
+<span class=prompt>&gt;</span> <span class=code>v=ifelse(runif(1e5)&lt;.5,NA,sample(1e5))</span>
+<span class=prompt>&gt;</span> <span class=code>b=microbenchmark(na.omit(v),v[complete.cases(v)],v[!is.na(v)],collapse::na_rm(v))</span>
+<span class=prompt>&gt;</span> <span class=code>o=sort(tapply(b$time,gsub(&quot;  +&quot;,&quot; &quot;,b$expr),median));writeLines(sprintf(&quot;%.2f %s&quot;,o/min(o),names(o)))</span>
+<span class=output>1.00 collapse::na_rm(v)</span>
+<span class=output>2.73 v[!is.na(v)]</span>
+<span class=output>4.05 v[complete.cases(v)]</span>
+<span class=output>5.38 na.omit(v)</span>
+<span class=output>
+<span class=title># prevent automatic conversion of date to integer in `for` loop</span></span>
+<span class=prompt>&gt;</span> <span class=code>d=Sys.Date()-0:1</span>
+<span class=prompt>&gt;</span> <span class=code>for(i in d)print(i)</span>
+<span class=output>[1] 19734</span>
+<span class=output>[1] 19733</span>
+<span class=prompt>&gt;</span> <span class=code>for(i in as.list(d))print(i)</span>
+<span class=output>[1] &quot;2024-01-12&quot;</span>
+<span class=output>[1] &quot;2024-01-11&quot;</span>
+<span class=output>
+<span class=title># convert long to wide</span></span>
+<span class=prompt>&gt;</span> <span class=code>d=data.frame(row=paste0(&quot;row&quot;,sample(1e5)),col=paste0(&quot;col&quot;,sample(10,1e5,T)),val=sample(100,1e5,T))</span>
+<span class=prompt>&gt;</span> <span class=code>d=d[!duplicated(d[,-3]),]</span>
+<span class=prompt>&gt;</span> <span class=code>b=microbenchmark(times=10,</span>
+<span class=prompt>+</span> <span class=code>xtabs=xtabs(val~row+col,d),</span>
+<span class=prompt>+</span> <span class=code>tapply=tapply(d$val,d[,1:2],I),</span>
+<span class=prompt>+</span> <span class=code>reshape=reshape(d,idvar=&quot;row&quot;,timevar=&quot;col&quot;,direction=&quot;wide&quot;),</span>
+<span class=prompt>+</span> <span class=code>dcast=data.table::dcast(data.table::data.table(d),row~col,value.var=&quot;val&quot;),</span>
+<span class=prompt>+</span> <span class=code>matrix={r=unique(d$row);c=unique(d$col);m=matrix(,length(r),length(c),,list(r,c));m[cbind(d$row,d$col)]=d$val;m},</span>
+<span class=prompt>+</span> <span class=code>match={r=unique(d$row);c=unique(d$col);sapply(c,\(i)with(subset(d,col==i),val[match(r,row)]))|&gt;&quot;rownames&lt;-&quot;(r)},</span>
+<span class=prompt>+</span> <span class=code>pivot_wider=tidyr::pivot_wider(d,names_from=col,values_from=val),</span>
+<span class=prompt>+</span> <span class=code>spread=tidyr::spread(d,col,val))</span>
+<span class=prompt>&gt;</span> <span class=code>o=sort(tapply(b$time,b$expr,median));writeLines(sprintf(&quot;%.2f %s&quot;,o/min(o),names(o)))</span>
+<span class=output>1.00 matrix</span>
+<span class=output>1.01 pivot_wider</span>
+<span class=output>2.86 match</span>
+<span class=output>3.42 dcast</span>
+<span class=output>16.26 spread</span>
+<span class=output>18.50 reshape</span>
+<span class=output>23.67 tapply</span>
+<span class=output>24.96 xtabs</span>
+<span class=output>
+<span class=title># get deciles</span></span>
+<span class=prompt>&gt;</span> <span class=code>quantile(rnorm(1e6),seq(0,1,.1))|&gt;round(3)</span>
+<span class=output>    0%    10%    20%    30%    40%    50%    60%    70%    80%    90%   100%</span>
+<span class=output>-5.048 -1.284 -0.844 -0.525 -0.255  0.000  0.253  0.524  0.842  1.282  5.252</span>
+<span class=output>
+<span class=title># generate a random boolean vector based on a vector of probabilities</span></span>
+<span class=prompt>&gt;</span> <span class=code>prob=c(.1,.1,.1,.5,.8,.9,.9,.9,.9);runif(length(prob))&lt;prob</span>
+<span class=output>[1] FALSE FALSE  TRUE FALSE FALSE  TRUE  TRUE  TRUE  TRUE</span>
+<span class=output>
+<span class=title># select first column that exists</span></span>
+<span class=prompt>&gt;</span> <span class=code>mtcars[1:2,]|&gt;dplyr::select(dplyr::any_of(c(&quot;horses&quot;,&quot;horsepower&quot;,&quot;hp&quot;)))</span>
+<span class=output>               hp</span>
+<span class=output>Mazda RX4     110</span>
+<span class=output>Mazda RX4 Wag 110</span>
+<span class=prompt>&gt;</span> <span class=code>firstof=\(x,...)for(a in as.character(match.call(expand.dots=F)$...))if(!is.null(x[[a]]))return(x[,a,drop=F])</span>
+<span class=prompt>&gt;</span> <span class=code>mtcars[1:2,]|&gt;firstof(horses,horsepower,hp)</span>
+<span class=output>               hp</span>
+<span class=output>Mazda RX4     110</span>
+<span class=output>Mazda RX4 Wag 110</span>
+<span class=output>
+<span class=title># get sums of 3D array by first and second dimensions</span></span>
+<span class=prompt>&gt;</span> <span class=code>a=array(1:8,c(2,2,2),list(2023:2024,month.name[1:2],c(&quot;male&quot;,&quot;female&quot;)))</span>
+<span class=prompt>&gt;</span> <span class=code>a</span>
+<span class=output>, , male</span>
+<span class=output>     January February</span>
+<span class=output>2023       1        3</span>
+<span class=output>2024       2        4</span>
+<span class=output>
+, , female</span>
+<span class=output>     January February</span>
+<span class=output>2023       5        7</span>
+<span class=output>2024       6        8</span>
+<span class=prompt>&gt;</span> <span class=code>rowSums(a,dims=2)</span>
+<span class=output>     January February</span>
+<span class=output>2023       6       10</span>
+<span class=output>2024       8       12</span>
+<span class=output>
+<span class=title># convert RGB to HSV</span></span>
+<span class=prompt>&gt;</span> <span class=code>color=c(&quot;#00bb00&quot;,&quot;#888888&quot;)</span>
+<span class=prompt>&gt;</span> <span class=code>col2rgb(color)</span>
+<span class=output>      [,1] [,2]</span>
+<span class=output>red      0  136</span>
+<span class=output>green  187  136</span>
+<span class=output>blue     0  136</span>
+<span class=prompt>&gt;</span> <span class=code>rgb2hsv(col2rgb(color))</span>
+<span class=output>       [,1]      [,2]</span>
+<span class=output>h 0.3333333 0.0000000</span>
+<span class=output>s 1.0000000 0.0000000</span>
+<span class=output>v 0.7333333 0.5333333</span>
+<span class=output>
+<span class=title># probability of rolling a six for 4 but not more rolls out of 5 rolls of a die</span></span>
+<span class=prompt>&gt;</span> <span class=code>dbinom(4,5,1/6)</span><span class=comment> # binomial distribution (the arguments are successes, draws, and probability of success)</span>
+<span class=output>[1] 0.003215021</span>
+<span class=prompt>&gt;</span> <span class=code>p=1/6;n=5;k=4;choose(n,k)*p^k*(1-p)^(n-k)</span>
+<span class=output>[1] 0.003215021</span>
+<span class=output>
+<span class=title># probablility that 6 balls drawn from a box with 10 white balls and 20 black balls contain exactly 4 white balls</span></span>
+<span class=prompt>&gt;</span> <span class=code>dhyper(4,10,20,6)</span><span class=comment> # hypergeometric distribution</span>
+<span class=output>[1] 0.06719717</span>
+<span class=output>
+<span class=title># probablility that 6 balls drawn from a box with 10 white balls and 20 black balls contain 4 or more white balls</span></span>
+<span class=prompt>&gt;</span> <span class=code>sum(dhyper(4:6,10,20,6))</span><span class=comment> # hypergeometric distribution</span>
+<span class=output>[1] 0.0760389</span>
+<span class=prompt>&gt;</span> <span class=code>fisher.test(matrix(c(4,6-4,10-4,20-(6-4)),2),alternative=&quot;greater&quot;)$p</span><span class=comment> # based on hypergeometric distribution</span>
+<span class=comment># top left cell is number of white balls drawn and bottom left cell is number of black balls drawn</span>
+<span class=comment># top right cell is number of white balls not drawn and bottom right cell is number of black balls not drawn</span>
+<span class=output>[1] 0.0760389</span>
+<span class=output>
+<span class=title># convert integer to date</span></span>
+<span class=prompt>&gt;</span> <span class=code>v=c(12345,23456)</span>
+<span class=prompt>&gt;</span> <span class=code>`class&lt;-`(v,&quot;Date&quot;)</span>
+<span class=output>[1] &quot;2003-10-20&quot; &quot;2034-03-22&quot;</span>
+<span class=prompt>&gt;</span> <span class=code>as.Date(v,&quot;1970-1-1&quot;)</span><span class=comment> # base R requires specifying the origin for `as.Date`</span>
+<span class=output>[1] &quot;2003-10-20&quot; &quot;2034-03-22&quot;</span>
+<span class=prompt>&gt;</span> <span class=code>library(zoo);as.Date(v)</span><span class=comment> # `zoo` overrides `as.Date` with a version that doesn&apos;t require specifying the origin</span>
+<span class=output>[1] &quot;2003-10-20&quot; &quot;2034-03-22&quot;</span>
+<span class=output>
+<span class=title># specify variable name for `with`</span></span>
+<span class=prompt>&gt;</span> <span class=code>with(list(x=3),x+1)</span>
+<span class=output>[1] 4</span>
+<span class=output>
+<span class=title># convert dataframe to vector efficiently</span></span>
+<span class=prompt>&gt;</span> <span class=code>summary(microbenchmark(times=100,unlist(mtcars),unlist(mtcars,use.names=F)))[,c(1,5)]</span>
+<span class=output>                           expr     mean</span>
+<span class=output>1                unlist(mtcars) 59.31585</span>
+<span class=output>2 unlist(mtcars, use.names = F)  2.98307</span>
+<span class=output>
+<span class=title># add totals grouped by each variable to data.table</span></span>
+<span class=prompt>&gt;</span> <span class=code>d=data.table(month=month.abb[c(1,1,2,2)],state=state.name[1:2],col1=1:4,col2=10:13)</span>
+<span class=prompt>&gt;</span> <span class=code>d=rbind(d,d[,lapply(.SD,sum),month,.SDcols=3:4][,state:=&quot;Total&quot;])</span>
+<span class=prompt>&gt;</span> <span class=code>d=rbind(d,d[,lapply(.SD,sum),state,.SDcols=3:4][,month:=&quot;Total&quot;])</span>
+<span class=prompt>&gt;</span> <span class=code>d</span>
+<span class=output>   month   state col1 col2</span>
+<span class=output>1:   Jan Alabama    1   10</span>
+<span class=output>2:   Jan  Alaska    2   11</span>
+<span class=output>3:   Feb Alabama    3   12</span>
+<span class=output>4:   Feb  Alaska    4   13</span>
+<span class=output>5:   Jan   Total    3   21</span>
+<span class=output>6:   Feb   Total    7   25</span>
+<span class=output>7: Total Alabama    4   22</span>
+<span class=output>8: Total  Alaska    6   24</span>
+<span class=output>9: Total   Total   10   46</span>
+<span class=output>
+<span class=title># aggregate numeric columns by non-numeric columns</span></span>
+<span class=prompt>&gt;</span> <span class=code>sum0=\(...)sum(...,na.rm=T)</span>
+<span class=prompt>&gt;</span> <span class=code>aua=\(x,fun=sum0,...){n=sapply(x,is.numeric);aggregate(x[,n,drop=F],x[,!n,drop=F],fun,...)}</span>
+<span class=prompt>&gt;</span> <span class=code>aua(iris,mean)</span><span class=comment> # auto-aggregate</span>
+<span class=output>     Species Sepal.Length Sepal.Width Petal.Length Petal.Width</span>
+<span class=output>1     setosa        5.006       3.428        1.462       0.246</span>
+<span class=output>2 versicolor        5.936       2.770        4.260       1.326</span>
+<span class=output>3  virginica        6.588       2.974        5.552       2.026</span>
+<span class=output>
+<span class=title># do a linear interpolation of weekly data to daily</span></span>
+<span class=prompt>&gt;</span> <span class=code>d=data.frame(x=seq(as.Date(&quot;2024-1-1&quot;),,7,3),y=c(53,87,63))</span>
+<span class=prompt>&gt;</span> <span class=code>d</span>
+<span class=output>           x  y</span>
+<span class=output>1 2024-01-01 53</span>
+<span class=output>2 2024-01-08 87</span>
+<span class=output>3 2024-01-15 63</span>
+<span class=prompt>&gt;</span> <span class=code>as.data.frame(approx(d$x,d$y,seq(min(d$x),max(d$x),1)))</span>
+<span class=output>            x        y</span>
+<span class=output>1  2024-01-01 53.00000</span>
+<span class=output>2  2024-01-02 57.85714</span>
+<span class=output>3  2024-01-03 62.71429</span>
+<span class=output>4  2024-01-04 67.57143</span>
+<span class=output>5  2024-01-05 72.42857</span>
+<span class=output>6  2024-01-06 77.28571</span>
+<span class=output>7  2024-01-07 82.14286</span>
+<span class=output>8  2024-01-08 87.00000</span>
+<span class=output>9  2024-01-09 83.57143</span>
+<span class=output>10 2024-01-10 80.14286</span>
+<span class=output>11 2024-01-11 76.71429</span>
+<span class=output>12 2024-01-12 73.28571</span>
+<span class=output>13 2024-01-13 69.85714</span>
+<span class=output>14 2024-01-14 66.42857</span>
+<span class=output>15 2024-01-15 63.00000</span>
+<span class=output>
+<span class=title># delete a single column by name in data.table</span></span>
+<span class=prompt>&gt;</span> <span class=code>data.table(iris)[,Sepal.Width:=NULL][1:2]</span>
+<span class=output>   Sepal.Length Petal.Length Petal.Width Species</span>
+<span class=output>1:          5.1          1.4         0.2  setosa</span>
+<span class=output>2:          4.9          1.4         0.2  setosa</span>
+<span class=output>
+<span class=title># show ratios between units</span></span>
+<span class=prompt>&gt;</span> <span class=code>grid::convertUnit(unit(1,&quot;pt&quot;),&quot;lines&quot;)</span><span class=comment> # 1 pt is about 0.07 lines</span>
+<span class=output>[1] 0.06918500069185lines</span>
+<span class=prompt>&gt;</span> <span class=code>grid::convertUnit(unit(1,&quot;lines&quot;),&quot;in&quot;)</span><span class=comment> # 1 line is 0.2 inches</span>
+<span class=output>[1] 0.2inches</span>
+<span class=output>
+<span class=title># faster `table`</span></span>
+<span class=prompt>&gt;</span> <span class=code>v=sample(letters,1e6,T)</span>
+<span class=prompt>&gt;</span> <span class=code>tab=\(x)data.table(x)[,.N,x][,setNames(N,x)]</span>
+<span class=prompt>&gt;</span> <span class=code>summary(microbenchmark(times=10,table(v),tab(v)))[,c(1,5)]</span>
+<span class=output>      expr   median</span>
+<span class=output>1 table(v) 65.32598</span>
+<span class=output>2   tab(v) 27.96704</span>
+<span class=output>
+<span class=title># `expand.grid` for data.table</span></span>
+<span class=prompt>&gt;</span> <span class=code>CJ(month.abb[1:2],state.name[1:3],sorted=F)</span><span class=comment> # this was slightly faster than `expand.grid` but not much faster</span>
+<span class=comment># CJ stands for cross join</span>
+<span class=output>    V1      V2</span>
+<span class=output>1: Jan Alabama</span>
+<span class=output>2: Jan  Alaska</span>
+<span class=output>3: Jan Arizona</span>
+<span class=output>4: Feb Alabama</span>
+<span class=output>5: Feb  Alaska</span>
+<span class=output>6: Feb Arizona</span>
+<span class=output>
+<span class=title># print a data.table in a pipeline that includes an in-place assignment at the end</span></span>
+<span class=prompt>&gt;</span> <span class=code>d=data.table(x=1:2)</span>
+<span class=prompt>&gt;</span> <span class=code>d[,x:=x*2]|&gt;print()</span><span class=comment> # no output and data.table is modified in place</span>
+<span class=prompt>&gt;</span> <span class=code>d[,x:=x*2][]|&gt;print()</span><span class=comment> # output is printed and data.table is not modified in place</span>
+<span class=output>   x</span>
+<span class=output>1: 4</span>
+<span class=output>2: 8</span>
+<span class=output>
+<span class=title># replace vector values at specified positions with values from another vector</span></span>
+<span class=prompt>&gt;</span> <span class=code>v=rep(1,5)</span>
+<span class=prompt>&gt;</span> <span class=code>replace(v,3:4,8)</span>
+<span class=output>[1] 1 1 8 8 1</span>
+<span class=prompt>&gt;</span> <span class=code>replace(v,3:4,8:9)</span>
+<span class=output>[1] 1 1 8 9 1</span>
+<span class=output>
+<span class=title># insert an item to a vector after the specified position</span></span>
+<span class=prompt>&gt;</span> <span class=code>append(month.abb[1:3],&quot;x&quot;,2)</span>
+<span class=output>[1] &quot;Jan&quot; &quot;Feb&quot; &quot;x&quot;   &quot;Mar&quot;</span>
+<span class=output>
+<span class=title># add new dataframe column after specified index</span></span>
+<span class=prompt>&gt;</span> <span class=code>d=data.frame(a=1,b=10,c=100)</span>
+<span class=prompt>&gt;</span> <span class=code>tibble::add_column(d,x=0,.after=2)</span>
+<span class=output>  a  b x   c</span>
+<span class=output>1 1 10 0 100</span>
+<span class=prompt>&gt;</span> <span class=code>cbind(d,x=0)[append(1:ncol(d),ncol(d)+1,2)]</span>
+<span class=output>  a  b x   c</span>
+<span class=output>1 1 10 0 100</span>
+<span class=output>
+<span class=title># write gzipped CSV</span></span>
+<span class=prompt>&gt;</span> <span class=code>con=gzfile(&quot;output.csv.gz&quot;,&quot;w&quot;,compression=9);write.csv(mtcars,con);close(con)</span>
+<span class=prompt>&gt;</span> <span class=code>write.csv(mtcars,&quot;output.csv&quot;)</span>
+<span class=prompt>&gt;</span> <span class=code>file.info(c(&quot;output.csv.gz&quot;,&quot;output.csv&quot;))$size</span>
+<span class=output>[1]  880 1783</span>
+<span class=output>
+<span class=title># order dataframe based on a vector of column positions</span></span>
+<span class=prompt>&gt;</span> <span class=code>cols=c(2,8,9)</span>
+<span class=prompt>&gt;</span> <span class=code>mtcars[do.call(order,lapply(cols,\(i)mtcars[,i])),][1:2,]</span>
+<span class=output>               mpg cyl  disp hp drat   wt qsec vs am gear carb</span>
+<span class=output>Porsche 914-2 26.0   4 120.3 91 4.43 2.14 16.7  0  1    5    2</span>
+<span class=output>Merc 240D     24.4   4 146.7 62 3.69 3.19 20.0  1  0    4    2</span>
+<span class=output>
+<span class=title># get mode value by group</span></span>
+<span class=prompt>&gt;</span> <span class=code>v=sample(1:10,1e5,T);g=sample(letters,1e5,T)</span>
+<span class=prompt>&gt;</span> <span class=code>modeby=\(v,g)data.table(v,g)[,.N,.(v,g)][order(-N)][rowid(g)==1]</span>
+<span class=prompt>&gt;</span> <span class=code>modeby2=\(v,g)data.table(v,g)[,.N,.(v,g)][,v[which.max(N)],g]</span>
+<span class=prompt>&gt;</span> <span class=code>fmode=\(v,g)data.table(v,g)[,collapse::fmode(v),g]</span>
+<span class=prompt>&gt;</span> <span class=code>fmodetapply=\(v,g)tapply(v,g,collapse::fmode)</span>
+<span class=prompt>&gt;</span> <span class=code>summary(microbenchmark(times=10,modeby(v,g),modeby2(v,g),fmode(v,g),fmodetapply(v,g)))[,c(1,5)]</span>
+<span class=output>               expr   median</span>
+<span class=output>1      modeby(v, g) 4.297637</span>
+<span class=output>2     modeby2(v, g) 4.258582</span>
+<span class=output>3       fmode(v, g) 3.094666</span>
+<span class=output>4 fmodetapply(v, g) 6.454565</span>
+<span class=output>
+<span class=title># subtract 2% from start of range and add 2% to end</span></span>
+<span class=prompt>&gt;</span> <span class=code>extendrange(0:5,,.02)</span>
+<span class=output>[1] -0.1  5.1</span>
+<span class=output>
+<span class=title># convert theme font size 8 to font size for `geom_text`</span></span>
+<span class=prompt>&gt;</span> <span class=code>grid::convertUnit(unit(8,&quot;pt&quot;),&quot;mm&quot;)</span>
+<span class=output>[1] 2.81167842811678mm # theme font sizes are specified in points but `geom_text` sizes are in mm</span>
+<span class=output>
+<span class=title># convert JSON to a dataframe</span></span>
+<span class=prompt>&gt;</span> <span class=code>jsonlite::fromJSON(&apos;{&quot;data&quot;:[{&quot;col1&quot;:1,&quot;col2&quot;:10},{&quot;col1&quot;:2,&quot;col2&quot;:20}]}&apos;)$data</span>
+<span class=output>  col1 col2</span>
+<span class=output>1    1   10</span>
+<span class=output>2    2   20</span>
+<span class=output>
+<span class=title># read URL into a string</span></span>
+<span class=prompt>&gt;</span> <span class=code>con=url(&quot;http://example.com&quot;);paste(readLines(con),collapse=&quot;\n&quot;)|&gt;substr(1,80);close(con)</span>
+<span class=output>[1] &quot;&lt;!doctype html&gt;\n&lt;html&gt;\n&lt;head&gt;\n    &lt;title&gt;Example Domain&lt;/title&gt;\n\n    &lt;meta chars&quot;</span>
+<span class=output>
+<span class=title># show difference between musical notes on an equal-tempered scale and in just intonation</span></span>
+<span class=prompt>&gt;</span> <span class=code>d=data.frame(row.names=LETTERS[c(3:7,1,8)],equal=2^(c(0,2,4,5,7,9,11)/12),just=1+c(0,1/8,1/4,1/3,1/2,2/3,7/8))</span>
+<span class=prompt>&gt;</span> <span class=code>round(d,3)</span>
+<span class=comment># in the regular equal-tempered musical scale, the frequencies of notes are approximations of the pure ratios shown here</span>
+<span class=comment># the just-tempered scale used here is the 5-limit diatonic major scale (Ptolemy&apos;s intense diatonic scale)</span>
+<span class=output>  equal  just</span>
+<span class=output>C 1.000 1.000</span>
+<span class=output>D 1.122 1.125</span>
+<span class=output>E 1.260 1.250</span>
+<span class=output>F 1.335 1.333</span>
+<span class=output>G 1.498 1.500</span>
+<span class=output>A 1.682 1.667</span>
+<span class=output>H 1.888 1.875</span>
+<span class=prompt>&gt;</span> <span class=code>round(transform(1200*log2(d),diff=equal-just),1)</span><span class=comment> # show difference in cents</span>
+<span class=output>  equal   just diff</span>
+<span class=output>C     0    0.0  0.0</span>
+<span class=output>D   200  203.9 -3.9</span>
+<span class=output>E   400  386.3 13.7</span>
+<span class=output>F   500  498.0  2.0</span>
+<span class=output>G   700  702.0 -2.0</span>
+<span class=output>A   900  884.4 15.6</span>
+<span class=output>H  1100 1088.3 11.7</span>
+<span class=output>
+<span class=title># get 95% confidence interval for ratio of two numbers</span></span>
+<span class=prompt>&gt;</span> <span class=code>prop.test(123,456)$conf</span><span class=comment> # Wald interval (less accurate for small numbers or when the ratio is close to 0 or 1)</span>
+<span class=output>[1] 0.2300140 0.3134099</span>
+<span class=output>attr(,&quot;conf.level&quot;)</span>
+<span class=output>[1] 0.95</span>
+<span class=prompt>&gt;</span> <span class=code>n=456;p=123/n;p+c(-1,1)*qnorm(.975)*sqrt(p*(1-p)/n)</span><span class=comment> # normal approximation to binomial distribution</span>
+<span class=comment># this is less accurate for small numbers or when the ratio is close to 0 or 1</span>
+<span class=output>[1] 0.2290011 0.3104726</span>
+<span class=prompt>&gt;</span> <span class=code>library(binom);binom.confint(123,456,methods=&quot;wilson&quot;)</span><span class=comment> # Wilson score interval (more accurate for small sample sizes)</span>
+<span class=output>  method   x   n      mean     lower     upper</span>
+<span class=output>1 wilson 123 456 0.2697368 0.2310496 0.3122712</span>
+<span class=prompt>&gt;</span> <span class=code>x=123;n=456;phat=x/n</span><span class=comment> # manual calculation of Wilson score interval</span>
+<span class=prompt>&gt;</span> <span class=code>z=qnorm(1-(1-.95)/2)</span>
+<span class=prompt>&gt;</span> <span class=code>margin=z*sqrt((phat*(1-phat)+z^2/(4*n))/n)</span>
+<span class=prompt>&gt;</span> <span class=code>(phat+z^2/(2*n)+c(-1,1)*margin)/(1+z^2/n)</span>
+<span class=output>0.2310496 0.3122712</span>
+<span class=output>
+<span class=title># generate tick breaks that cover the specified values</span></span>
+<span class=prompt>&gt;</span> <span class=code>v=c(15319,28652,38568)</span>
+<span class=prompt>&gt;</span> <span class=code>pretty(v)</span><span class=comment> # this always uses steps of 1, 2, or 5 multiplied by an integer exponent of 10 (and not 2.5 or 4 like ggplot)</span>
+<span class=output>[1] 15000 20000 25000 30000 35000 40000</span>
+<span class=prompt>&gt;</span> <span class=code>scales::breaks_extended(n=5,Q=c(1,2,5))(v)</span>
+<span class=output>[1] 15000 20000 25000 30000 35000 40000</span>
+<span class=output>
+<span class=title># filter vector in pipeline</span></span>
+<span class=prompt>&gt;</span> <span class=code>v=1:5</span>
+<span class=prompt>&gt;</span> <span class=code>v%&gt;%.[.&lt;3]</span><span class=comment> # dplyr</span>
+<span class=output>[1] 1 2</span>
+<span class=prompt>&gt;</span> <span class=code>v|&gt;Filter(f=\(x)x&lt;3)</span>
+<span class=output>[1] 1 2</span>
+<span class=output>
+<span class=title># rbind without having to specify column names</span></span>
+<span class=prompt>&gt;</span> <span class=code>d=data.frame(x=1:2,y=c(&quot;a&quot;,b&quot;));rbind(d,list(3,&quot;c&quot;))</span>
+<span class=output>  x y</span>
+<span class=output>1 1 a</span>
+<span class=output>2 2 b</span>
+<span class=output>3 3 c</span>
+<span class=output>
+<span class=title># add integer index for each unique combination of two or more columns</span></span>
+<span class=prompt>&gt;</span> <span class=code>d=data.table(year=rep(2020:2022,each=12),month=1:12)</span>
+<span class=prompt>&gt;</span> <span class=code>d=rbind(d,d)</span>
+<span class=prompt>&gt;</span> <span class=code>d[,totalmonth:=.GRP,.(year,month)]</span><span class=comment> # .GRP is group index</span>
+<span class=prompt>&gt;</span> <span class=code>tail(d,2)</span>
+<span class=output>   year month totalmonth</span>
+<span class=output>1: 2022    11         35</span>
+<span class=output>2: 2022    12         36</span>
+<span class=output>
+<span class=title># get last 3 columns</span></span>
+<span class=prompt>&gt;</span> <span class=code>m=matrix(1:16,2);m[,ncol(m)-2:0]</span>
+<span class=output>     [,1] [,2] [,3]</span>
+<span class=output>[1,]   11   13   15</span>
+<span class=output>[2,]   12   14   16</span>
+<span class=output>
+<span class=title># fill in zeroes for missing combinations of variables</span></span>
+<span class=prompt>&gt;</span> <span class=code>df=data.frame(year=c(2023,2023,2024),sex=c(&quot;F&quot;,&quot;M&quot;,&quot;F&quot;),dead=c(4,2,3))</span>
+<span class=prompt>&gt;</span> <span class=code>dt=data.table(df);tib=tibble(df)</span>
+<span class=prompt>&gt;</span> <span class=code>merge(do.call(CJ,lapply(dt[,-3],unique)),d,all.x=T)[is.na(dead),dead:=0][]</span>
+<span class=comment># `all.x=T` adds rows with NA deaths for combinations of variables included in the first table but not the second table</span>
+<span class=output>   year sex dead</span>
+<span class=output>1: 2023   F    4</span>
+<span class=output>2: 2023   M    2</span>
+<span class=output>3: 2024   F    3</span>
+<span class=output>4: 2024   M    0</span>
+<span class=prompt>&gt;</span> <span class=code>df2=rbind(df,cbind(expand.grid(lapply(df[-3],unique)),dead=0));df2[!duplicated(df2[-3]),]</span><span class=comment> # base R</span>
+<span class=output>  year sex dead</span>
+<span class=output>1 2023   F    4</span>
+<span class=output>2 2023   M    2</span>
+<span class=output>3 2024   F    3</span>
+<span class=output>7 2024   M    0</span>
+<span class=prompt>&gt;</span> <span class=code>expand_grid(year=unique(tib$year),sex=unique(tib$sex))|&gt;left_join(tib)|&gt;mutate(dead=replace_na(dead,0))</span>
+<span class=comment># `left_join` is like `merge(all.x=T)`</span>
+<span class=comment># A tibble: 4 &#215; 3</span>
+<span class=output>   year sex    dead</span>
+<span class=output>  &lt;dbl&gt; &lt;chr&gt; &lt;dbl&gt;</span>
+<span class=output>1  2023 F         4</span>
+<span class=output>2  2023 M         2</span>
+<span class=output>3  2024 F         3</span>
+<span class=output>4  2024 M         0</span>
+<span class=prompt>&gt;</span> <span class=code>tidyr::complete(df,year,sex,fill=list(dead=0))</span>
+<span class=comment># A tibble: 4 &#215; 3</span>
+<span class=output>   year sex    dead</span>
+<span class=output>  &lt;dbl&gt; &lt;chr&gt; &lt;dbl&gt;</span>
+<span class=output>1  2023 F         4</span>
+<span class=output>2  2023 M         2</span>
+<span class=output>3  2024 F         3</span>
+<span class=output>4  2024 M         0</span>
+<span class=output>
+<span class=title># get the number of days in a month</span></span>
+<span class=prompt>&gt;</span> <span class=code>d=data.table(year=c(0,100,2020,2020),month=c(2,2,2,3))</span>
+<span class=prompt>&gt;</span> <span class=code>d[,ifelse(month==2,28+(year%%4==0&amp;!(year%%100==0&amp;year%%400!=0)),(31:30)[rep(1:2,,13)[-8]][month])]</span>
+<span class=output>[1] 29 28 29 31</span>
+<span class=prompt>&gt;</span> <span class=code>lubridate::days_in_month(d[,as.Date(paste(year,month,1,sep=&quot;-&quot;))])</span>
+<span class=output>Feb Feb Feb Mar</span>
+<span class=output> 29  28  29  31</span>
+<span class=output>
+<span class=title># show ggplot default styles</span></span>
+<span class=prompt>&gt;</span> <span class=code>theme_gray()</span>
+<span class=output>List of 97</span>
+<span class=output> $ line                      :List of 6</span>
+<span class=output>  ..$ colour       : chr &quot;black&quot;</span>
+<span class=output>  ..$ linewidth    : num 0.5</span>
+<span class=output>  ..$ linetype     : num 1</span>
+<span class=output>  ..$ lineend      : chr &quot;butt&quot;</span>
+<span class=output>  ..$ arrow        : logi FALSE</span>
+<span class=output>  ..$ inherit.blank: logi TRUE</span>
+<span class=output>  ..- attr(*, &quot;class&quot;)= chr [1:2] &quot;element_line&quot; &quot;element&quot;</span>
+<span class=output> $ rect                      :List of 5</span>
+<span class=output>  ..$ fill         : chr &quot;white&quot;</span>
+<span class=output>  ..$ colour       : chr &quot;black&quot;</span>
+<span class=output>[...]</span>
+<span class=output>
+<span class=title># increment date by one month</span></span>
+<span class=prompt>&gt;</span> <span class=code>d=as.Date(&quot;2024-12-1&quot;)</span>
+<span class=prompt>&gt;</span> <span class=code>seq(d,,&quot;month&quot;,2)[2]</span><span class=comment> # doesn&apos;t work with a vector of multiple dates</span>
+<span class=output>[1] &quot;2025-01-01&quot;</span>
+<span class=prompt>&gt;</span> <span class=code>d2=as.POSIXlt(d);d2$mon=d2$mon+1;as.Date(d2)</span><span class=comment> # also works with a vector of multiple dates</span>
+<span class=output>[1] &quot;2025-01-01&quot;</span>
+<span class=prompt>&gt;</span> <span class=code>d%m+%months(1)</span><span class=comment> # lubridate</span>
+<span class=output>[1] &quot;2025-01-01&quot;</span>
+<span class=prompt>&gt;</span> <span class=code>`month&lt;-`(d,month(d)+1)</span><span class=comment> # `month&lt;-` is included in lubridate but not data.table</span>
+<span class=output>[1] &quot;2025-01-01&quot;</span>
+<span class=output>
+<span class=title># fill columns in reverse order for `expand.grid`</span></span>
+<span class=prompt>&gt;</span> <span class=code>dim=list(sex=c(&quot;M&quot;,&quot;F&quot;),year=2023:2024)</span>
+<span class=prompt>&gt;</span> <span class=code>expand.grid(dim)</span>
+<span class=output>  sex year</span>
+<span class=output>1   M 2023</span>
+<span class=output>2   F 2023</span>
+<span class=output>3   M 2024</span>
+<span class=output>4   F 2024</span>
+<span class=prompt>&gt;</span> <span class=code>rev(expand.grid(rev(dim)))</span>
+<span class=output>  sex year</span>
+<span class=output>1   M 2023</span>
+<span class=output>2   M 2024</span>
+<span class=output>3   F 2023</span>
+<span class=output>4   F 2024</span>
+<span class=output>
+<span class=title># move specified factor level to start</span></span>
+<span class=prompt>&gt;</span> <span class=code>relevel(factor(LETTERS[1:3]),&quot;C&quot;)</span>
+<span class=output>[1] A B C</span>
+<span class=output>Levels: C A B</span>
+<span class=output>
+<span class=title># convert dates to weeks indicated by date of Sunday</span></span>
+<span class=prompt>&gt;</span> <span class=code>dates=as.Date(&quot;2025-2-1&quot;)+0:6</span>
+<span class=prompt>&gt;</span> <span class=code>`class&lt;-`(as.integer(dates)%/%7*7+3,&quot;Date&quot;)</span><span class=comment> # `+3` is because January 4th 1970 is the first Sunday after the epoch</span>
+<span class=output>[1] &quot;2025-02-02&quot; &quot;2025-02-02&quot; &quot;2025-02-02&quot; &quot;2025-02-02&quot; &quot;2025-02-02&quot; &quot;2025-02-09&quot; &quot;2025-02-09&quot;</span>
+<span class=output>
+<span class=title># convert a file that has multiple keys with one shared value on each row to a named vector</span></span>
+<span class=prompt>&gt;</span> <span class=code>input=fread(text=&quot;region states</span>
+<span class=prompt>&gt;</span> <span class=code>Northeast CT,MA,ME,NH,NJ,NY,PA,RI,VT</span>
+<span class=prompt>&gt;</span> <span class=code>Midwest IA,IL,IN,KS,MI,MN,MO,ND,NE,OH,SD,WI&quot;)</span>
+<span class=prompt>&gt;</span> <span class=code>input[,{x=strsplit(states,&quot;,&quot;);setNames(rep(region,lengths(x)),unlist(x))}]</span>
+<span class=output>         CT          MA          ME          NH          NJ          NY</span>
+<span class=output>&quot;Northeast&quot; &quot;Northeast&quot; &quot;Northeast&quot; &quot;Northeast&quot; &quot;Northeast&quot; &quot;Northeast&quot;</span>
+<span class=output>         PA          RI          VT          IA          IL          IN</span>
+<span class=output>&quot;Northeast&quot; &quot;Northeast&quot; &quot;Northeast&quot;   &quot;Midwest&quot;   &quot;Midwest&quot;   &quot;Midwest&quot;</span>
+<span class=output>         KS          MI          MN          MO          ND          NE</span>
+<span class=output>  &quot;Midwest&quot;   &quot;Midwest&quot;   &quot;Midwest&quot;   &quot;Midwest&quot;   &quot;Midwest&quot;   &quot;Midwest&quot;</span>
+<span class=output>         OH          SD          WI</span>
+<span class=output>  &quot;Midwest&quot;   &quot;Midwest&quot;   &quot;Midwest&quot;</span>
+<span class=output>
+<span class=title># add a row for rowsums of other columns except the first column</span></span>
+<span class=prompt>&gt;</span> <span class=code>d=data.table(mtcars,keep.rownames=T)[1:2];d</span>
+<span class=output>              rn mpg cyl disp  hp drat    wt  qsec vs am gear carb</span>
+<span class=output>1:     Mazda RX4  21   6  160 110  3.9 2.620 16.46  0  1    4    4</span>
+<span class=output>2: Mazda RX4 Wag  21   6  160 110  3.9 2.875 17.02  0  1    4    4</span>
+<span class=prompt>&gt;</span> <span class=code>rbind(d,d[,lapply(.SD,sum),.SDcols=-1][,rn:=&quot;Total&quot;])</span>
+<span class=output>              rn mpg cyl disp  hp drat    wt  qsec vs am gear carb</span>
+<span class=output>1:     Mazda RX4  21   6  160 110  3.9 2.620 16.46  0  1    4    4</span>
+<span class=output>2: Mazda RX4 Wag  21   6  160 110  3.9 2.875 17.02  0  1    4    4</span>
+<span class=output>3:         Total  42  12  320 220  7.8 5.495 33.48  0  2    8    8</span>
+<span class=output>
+<span class=title># convert character vector to factor where original order is preserved</span></span>
+<span class=prompt>&gt;</span> <span class=code>factor(1:2,,c(&quot;Male&quot;,&quot;Female&quot;))</span>
+<span class=output>[1] Male   Female</span>
+<span class=output>Levels: Male Female</span>
+</pre>
