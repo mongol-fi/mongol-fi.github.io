@@ -1479,6 +1479,11 @@ new[SEX==0&amp;AGE%in%85:100,sum(POPESTIMATE2020)]
 <div>
 <img src=i/ethical-uncleew-1.png height=380><img src=i/ethical-uncleew-2.png height=380><img src=i/ethical-uncleew-3.png height=380>
 </div>
+<p>Added in May 2025: Ethical Skeptic has now modified this SV40 cancer wave plot so that he gets the lowest ASMR in 2020 and not in 2021 like earlier. [<a href=https://x.com/EthicalSkeptic/status/1927846174423208136>https://x.com/EthicalSkeptic/status/1927846174423208136</a>] But I haven't seen him explain how he changed his methodology:</p>
+<div>
+<img src=i/ethical-sv40update.png width=600><img src=i/ethical-sv40update.gif width=600>
+</div>
+<p>Previously his line for week 14 of 2021 intersected with the point for the year 2021, but now the line is placed slightly after the point for the year 2020. So maybe he meant to draw the line after the point for the year 2021, but he didn't realize that in the new version of his plot the lowest ASMR was now in the year 2020 and not 2021.</p>
 <h2>
 <a href=#Baseline_that_started_from_the_1970s_for_CMR_in_New_Zealand id=Baseline_that_started_from_the_1970s_for_CMR_in_New_Zealand>Baseline that started from the 1970s for CMR in New Zealand</a>
 </h2>
@@ -1921,7 +1926,7 @@ sub=&quot;\u00a0    The deaths are plotted as a moving average where the window 
 
 system(paste0(&quot;f=1.png;mar=100;w=`identify -format %w $f`;magick \\( $f \\) \\( -size $[w-mar*2]x -font Arial -interline-spacing -3 -pointsize $[42*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -gravity southwest -splice $[mar]x80 \\) -append -resize 25% -colors 256 1.png&quot;))</pre>
 </div>
-<p>Then I noticed that the earlier version of his plot had an average of only about 150 excess deaths in 2023. When I tried comparing the earlier version to the new version, I noticed that in the new version the excess deaths were suddenly shifted up around week 9 of 2020 after which the deaths remained permanently elevated compared to the old version. The change is so sudden that it doesn't just seem to be due to a difference in the slope of the baseline, which should result in a more gradual divergence between the new and old versions of the plot:</p>
+<p>Then I noticed that the earlier version of his plot had an average of only about 150 excess deaths in 2023. When I tried comparing the earlier version to the new version, I noticed that in the new version the excess deaths were suddenly shifted up around week 9 of 2020, after which the deaths remained permanently elevated compared to the old version. The change is so sudden that it doesn't just seem to be due to a difference in the slope of the baseline, which should result in a more gradual divergence between the new and old versions of the plot:</p>
 <div>
 <img src=i/ethical-054-3.png width=800>
 </div>
@@ -1951,73 +1956,60 @@ system(paste0(&quot;f=1.png;mar=100;w=`identify -format %w $f`;magick \\( $f \\)
 </blockquote>
 <p>However the x-axis in the plot above started from 2018 so you couldn't see that there had been an increasing trend in the MCD to UCD ratio since approximately 2015. And in my next plot if you look at the light gray line where I subtracted deaths with both MCD COVID and MCD cancer from the MCD cancer deaths, the MCD to UCD ratio since 2020 has remained below the prepandemic trend on average, so basically all of the increase in the MCD to UCD ratio since 2020 can be explained by either a continuation of the prepandemic trend or by deaths with MCD COVID:</p>
 <div>
-<img src=i/ethical-malignant-6.png width=700>
+<img src=i/ethical-malignant-6.png width=580>
 </div>
 <div class="spoiler">
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)
+<pre>t=fread(&quot;http://sars2.net/f/wondermalignantmonthly.csv&quot;)
 
-t=fread(&quot;http://sars2.net/f/wondermalignantmonthly.csv&quot;)
+t[,z:=factor(cause,unique(cause),c(&quot;ucd&quot;,&quot;mcd&quot;,&quot;andmcd&quot;,&quot;anducd&quot;))]
+d=dcast(t,date~z,value.var=&quot;dead&quot;)
+d[,date:=as.Date(paste0(date,&quot;-16&quot;))]
 
-p=t[cause==&quot;MCD malignant neoplasms&quot;,.(date,dead,cause=&quot;COVID not subtracted&quot;)]
+d$base=predict(lm(mcd/ucd~date,d[year(date)%in%2016:2019]),d)
 
-p=rbind(p,merge(p,t[cause==&quot;MCD malignant neoplasms and MCD COVID&quot;,.(and=dead,date)])[,.(date,dead=dead-nafill(and,,0),cause=&quot;MCD COVID subtracted&quot;)])
+p=d[,.(x=date,y=c(c(mcd,mcd-andmcd)/ucd,base)*100,z=factor(rep(1:3,each=.N)))]
 
-p=merge(t[cause==&quot;UCD malignant neoplasms&quot;,.(date,under=dead)],p)
+x1=as.Date(&quot;1999-1-1&quot;);x2=as.Date(&quot;2025-1-1&quot;);xbreak=seq(xstart+182,xend,&quot;year&quot;)
+ybreak=pretty(p[z!=3,y]);y1=ybreak[1];y2=max(ybreak)
 
-p=p[date!=&quot;2024-10&quot;]
-p=p[,.(x=as.Date(paste0(date,&quot;-1&quot;)),y=dead/under*100,z=cause)]
+levels(p$z)=c(&quot;COVID not subtracted&quot;,&quot;MCD COVID subtracted&quot;,&quot;2016-2019 linear trend&quot;)
+color=c(&quot;black&quot;,&quot;gray60&quot;,&quot;#4444ff&quot;)
 
-xstart=as.Date(&quot;1999-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
-xbreak=seq(xstart,xend,&quot;6 month&quot;)
-xlab=c(rbind(&quot;&quot;,1999:2024),&quot;&quot;)
-ybreak=pretty(p[z==&quot;COVID not subtracted&quot;,y]);ystart=ybreak[1];yend=max(ybreak)
-
-color=c(&quot;black&quot;,&quot;gray60&quot;,&quot;black&quot;)
-
-months=seq(xstart,xend,&quot;month&quot;)
-p=rbind(p[,.(x,y,z)],p[z==&quot;COVID not subtracted&quot;&amp;year(x)%in%2016:2019,.(x=months,y=predict(lm(y~x),.(x=months)),z=&quot;2016-2019 linear trend&quot;)])
-
-p[,z:=factor(z,unique(z))]
-
-seg=p[x==D(&quot;2022-1-1&quot;)&amp;!z%like%&quot;MCD&quot;]
-
-ggplot(p,aes(x=x+14,y=y))+
-geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray90&quot;,linewidth=.25)+
-geom_hline(yintercept=c(ystart,yend),linewidth=.25,lineend=&quot;square&quot;)+
-geom_vline(xintercept=c(xstart,xend),linewidth=.25,lineend=&quot;square&quot;)+
-geom_line(aes(color=z,linetype=z),linewidth=.3)+
-labs(title=&quot;CDC WONDER: Monthly deaths with cause C00-C97 (malignant neoplasms): MCD deaths as percentage of UCD deaths&quot;|&gt;stringr::str_wrap(70),x=NULL,y=NULL)+
-scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
-scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,labels=\(x)paste0(x,&quot;%&quot;))+
+ggplot(p,aes(x,y))+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray90&quot;,linewidth=.4)+
+geom_hline(yintercept=ybreak,color=&quot;gray90&quot;,linewidth=.4)+
+annotate(&quot;rect&quot;,xmin=x1,xmax=x2,ymin=y1,ymax=y2,linewidth=.4,color=&quot;gray80&quot;,fill=NA,lineend=&quot;square&quot;)+
+geom_line(aes(color=z,linetype=z),linewidth=.5)+
+geom_line(data=p[z==levels(z)[3]&amp;year(x)%in%2016:2019],color=color[3],linewidth=.5)+
+labs(title=&quot;CDC WONDER, malignant neoplasms (C00-C97): Multiple cause
+of death as percentage of underlying cause of death&quot;,x=NULL,y=NULL)+
+scale_x_continuous(limits=c(x1,x2),breaks=xbreak,labels=year(xbreak))+
+scale_y_continuous(limits=c(y1,y2),breaks=ybreak,labels=\(x)paste0(x,&quot;%&quot;))+
 scale_color_manual(values=color)+
-scale_linetype_manual(values=c(1,1,2))+
+scale_linetype_manual(values=c(&quot;solid&quot;,&quot;solid&quot;,&quot;11&quot;))+
 coord_cartesian(clip=&quot;off&quot;,expand=F)+
-theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+theme(axis.text=element_text(size=11,margin=margin(3,3,3,3),color=&quot;gray40&quot;),
   axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
-  axis.ticks.x=element_line(color=alpha(&quot;black&quot;,c(1,0))),
-  axis.ticks=element_line(linewidth=.25,color=&quot;black&quot;),
-  axis.ticks.length=unit(3,&quot;pt&quot;),
-  axis.ticks.length.x=unit(0,&quot;pt&quot;),
-  axis.title=element_text(size=8),
-  legend.background=element_blank(),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  legend.background=element_rect(fill=&quot;white&quot;,color=&quot;gray80&quot;,linewidth=.4),
   legend.box.just=&quot;left&quot;,
-  legend.justification=c(0,1),
+  legend.justification=c(.5,1),
   legend.key=element_blank(),
-  legend.key.height=unit(10,&quot;pt&quot;),
-  legend.key.width=unit(17,&quot;pt&quot;),
-  legend.position=c(0,1),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.margin=margin(3,4,3,3,&quot;pt&quot;),
+  legend.position=c(.5,1),
   legend.spacing.x=unit(2,&quot;pt&quot;),
-  legend.box.background=element_rect(fill=&quot;white&quot;,color=&quot;black&quot;,linewidth=.3),
-  legend.margin=margin(-2,5,4,4,&quot;pt&quot;),
-  legend.text=element_text(size=7,vjust=.5),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11),
   legend.title=element_blank(),
   panel.background=element_blank(),
-  plot.margin=margin(5,5,5,5),
-  plot.title=element_text(size=7.6,margin=margin(2,,4)))
-ggsave(&quot;1.png&quot;,width=4.2,height=2.8,dpi=450)</pre>
+  plot.margin=margin(5,5,4,5),
+  plot.title=element_text(size=11,margin=margin(1,,4),hjust=.5,lineheight=.9))
+ggsave(&quot;1.png&quot;,width=5,height=3.1,dpi=300*4)</pre>
 </div>
 <p>In the plot below if you look at the black line for UCD deaths, it remained near the baseline in 2020 and 2021 but by 2023 it had risen clearly above the baseline. And similarly if you look at the light gray line for MCD deaths with COVID subtracted, it also remained close to the baseline in 2020 and 2021 but it rose clearly above the baseline in 2023. So there seems to be a genuine increase in cancer deaths above the trend in 2023 even if you only look at UCD deaths, even though it's much smaller than the increase Ethical Skeptic gets when he applies his excess MCD normalization and PFE adjustment tricks to the data:</p>
 <div>
@@ -3454,7 +3446,22 @@ system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 <script>
 document.querySelectorAll('pre').forEach(e=>e.innerHTML=e.innerHTML.replace(/((^| )# [^\n]*|^#$)/mg,"<span class=comment>$1</span>"))
 
-document.querySelectorAll('a,code,pre').forEach(e=>e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([!#$%()*+,\-.:?@[\]\\]^_{|}~'])/g,'$1<wbr>').replace(/([^<])\//g,"$1/<wbr>"))
+const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,null,false)
+const nodes=[]
+while(walker.nextNode())nodes.push(walker.currentNode)
+nodes.forEach(node=>{
+  const text=node.textContent
+  if(text.split(/\s+/).some(piece=>piece.length>=20)){
+    const parent=node.parentNode
+    const frag=document.createDocumentFragment()
+    const parts=text.split(/([\041-\057\072-\100\133-\140\173-\176])/g)
+    for(let i=0;i<parts.length;i++){
+      frag.appendChild(document.createTextNode(parts[i]))
+      if(i%2===1)frag.appendChild(document.createElement('wbr'))
+    }
+    parent.replaceChild(frag,node)
+  }
+})
 
 document.querySelectorAll('.spoiler button').forEach(x=>{x.addEventListener('click',function(){
   let block=this.nextElementSibling
