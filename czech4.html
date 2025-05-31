@@ -81,6 +81,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href="#Relative_risk_of_Moderna_and_Pfizer_in_low_COVID_months">Relative risk of Moderna and Pfizer in low-COVID months</a></li>
 <li><a href="#Case_fatality_ratio_in_new_UZIS_data">Case fatality ratio in new UZIS data</a></li>
 <li><a href="#Daily_raw_number_of_deaths_by_vaccination_status">Daily raw number of deaths by vaccination status</a></li>
+<li><a href="#Monthly_ASMR_by_vaccination_status">Monthly ASMR by vaccination status</a></li>
 </ul>
 
 
@@ -2790,10 +2791,98 @@ ggsave(&quot;1.png&quot;,width=5.3,height=4.3,dpi=300*4)
 sub=&quot;Source: github.com/PalackyUniversity/uzis-data-analysis. People are counted as vaccinated from the day of the first dose. Partially vaccinated people are not excluded. The age groups used for ASMR were 0-14, single years of age for ages 50-89, and 5-year age groups for other ages. The resident population estimates in the 2021 census were used as the standard population.&quot;
 system(paste0(&quot;mogrify -trim 1.png;magick 1.png \\( -size `identify -format %w 1.png`x -font Arial -interline-spacing -3 -pointsize $[43*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -splice x80 \\) -append -resize 25% -bordercolor white -border 24 -colors 256 1.png&quot;))</pre>
 </div>
+<h2>
+<a href=#Monthly_ASMR_by_vaccination_status id=Monthly_ASMR_by_vaccination_status>Monthly ASMR by vaccination status</a>
+</h2>
+<div>
+<img src=i/czech-monthlyasmr.png width=600>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>ages=c(0,3:4*10,seq(50,95,5))
+
+t=fread(&quot;http://sars2.net/f/czbuckets.csv.gz&quot;)
+std=fread(&quot;http://sars2.net/f/czcensus2021pop.csv&quot;)
+
+doses=c(&quot;Unvaccinated&quot;,paste(&quot;Dose&quot;,c(1:3,&quot;4+&quot;)))
+a=t[,.(dead=sum(dead),pop=sum(alive)),.(dose=factor(doses[pmin(dose,4)+1],doses),age=agecut(age,ages),month)]
+a=rbind(a,a[dose!=&quot;Unvaccinated&quot;,.(dead=sum(dead),pop=sum(pop),dose=&quot;Vaccinated&quot;),.(age,month)])
+a=rbind(a,a[dose%like%&quot;accinated&quot;,.(dead=sum(dead),pop=sum(pop),dose=&quot;All people&quot;),.(age,month)])
+a=merge(a,std[,.(std=sum(pop)),.(age=agecut(age,ages))][,std:=std/sum(std)])
+
+p=a[,.(pop=sum(pop),y=sum(dead/pop*std*365e5)),.(x=as.Date(paste0(month,&quot;-1&quot;)),z=dose)]
+p[pop/365&lt;1e3,y:=NA]
+frac=p[!z%in%c(&quot;Vaccinated&quot;,&quot;All people&quot;),.(frac=pop/sum(pop),z),x]
+
+ybreak=pretty(p$y,8);ystart=0;yend=max(ybreak);xstart=min(p$x);xend=max(p$x)
+
+pal=c(hcl(c(21,11,6,0,31)*10+15,90,70),&quot;black&quot;,&quot;gray50&quot;)
+
+ggplot(p,aes(x,y,color=z))+
+geom_area(data=frac,aes(y=frac*yend*.9999,fill=z),linewidth=.15,show.legend=F,alpha=.3)+
+annotate(&quot;rect&quot;,xmin=xstart,xmax=xend,ymin=ystart,ymax=yend,linewidth=.4,lineend=&quot;square&quot;,fill=NA,color=&quot;black&quot;)+
+geom_line(aes(linetype=z,linewidth=z))+
+geom_point(aes(alpha=z),size=1)+
+annotate(&quot;label&quot;,x=xstart,y=yend,hjust=0,vjust=1,size=3.8,label=&quot;ASMR per 100,000 person-years&quot;,label.r=unit(0,&quot;pt&quot;),label.padding=unit(5,&quot;pt&quot;),label.size=.4)+
+annotate(&quot;label&quot;,x=xend,y=yend,hjust=1,vjust=1,size=3.8,label=&quot;Percentage of group&quot;,label.r=unit(0,&quot;pt&quot;),label.padding=unit(5,&quot;pt&quot;),label.size=.4)+
+scale_x_date(breaks=unique(p$x)[c(T,F)],date_labels=&quot;%b\n%y&quot;)+
+scale_y_continuous(limits=c(ystart,yend),breaks=seq(0,yend,1000),labels=\(i)ifelse(i&lt;1000,i,paste0(i/1e3,&quot;k&quot;)),sec.axis=sec_axis(trans=~./yend*100,labels=\(x)paste0(x,&quot;%&quot;)))+
+labs(x=NULL,y=NULL)+
+ggtitle(&quot;Age-standardized mortality rate in Czech Republic&quot;)+
+scale_color_manual(values=pal)+
+scale_linetype_manual(values=rep(c(&quot;solid&quot;,&quot;42&quot;),c(6,1)))+
+scale_linewidth_manual(values=rep(c(.4,.6),c(6,1)))+
+scale_alpha_manual(values=rep(1:0,c(6,1)))+
+scale_fill_manual(values=pal)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(color=guide_legend(nrow=2))+
+theme(axis.text=element_text(size=10,color=&quot;black&quot;),
+  axis.ticks=element_line(linewidth=.4),
+  axis.ticks.length=unit(3,&quot;pt&quot;),
+  axis.title=element_text(size=11),
+  legend.background=element_blank(),
+  legend.box.background=element_blank(),
+  legend.box.just=&quot;center&quot;,
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.key=element_rect(fill=&quot;white&quot;),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.justification=&quot;center&quot;,
+  legend.margin=margin(,,3),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=10.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  plot.margin=margin(5,5,4,5),
+  plot.title=element_text(size=11,face=2,hjust=.5,margin=margin(,,2)))
+ggsave(&quot;1.png&quot;,width=5.6,height=3.7,dpi=300*4)
+
+sub=&quot;Source: github.com/PalackyUniversity/uzis-data-analysis. The 2021 census population was used as the standard population, with age groups 0-29, 30-39, 40-49, 50-54, ..., 90-94, 95+.&quot;
+system(paste0(&quot;mogrify -trim 1.png;magick 1.png \\( -size `identify -format %w 1.png`x -font Arial -interline-spacing -3 -pointsize $[44*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&#39;&quot;,sub),&quot;&#39; -splice x80 \\) -append -resize 25% -bordercolor white -border 24 -dither none -colors 256 1.png&quot;))</pre>
+</div>
 <script>
 document.querySelectorAll('pre').forEach(e=>e.innerHTML=e.innerHTML.replace(/((^| )# [^\n]*|^#$)/mg,"<span class=comment>$1</span>"))
 
-document.querySelectorAll('a,code,pre').forEach(e=>e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([!#$%()*+,\-.:?@[\]\\]^_{|}~'])/g,'$1<wbr>').replace(/([^<])\//g,"$1/<wbr>"))
+const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,null,false)
+const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode)
+nodes.forEach(node=>{
+  const text=node.textContent
+  if(text.split(/\s+/).some(piece=>piece.length>=20)){
+    const parent=node.parentNode
+    const frag=document.createDocumentFragment()
+    const parts=text.split(/([\041-\057\072-\100\133-\140\173-\176])/g)
+    for(let i=0;i<parts.length;i++){
+      frag.appendChild(document.createTextNode(parts[i]))
+      if(i%2===1)frag.appendChild(document.createElement('wbr'))
+    }
+    parent.replaceChild(frag,node)
+  }
+})
 
 document.querySelectorAll('.spoiler button').forEach(x=>{x.addEventListener('click',function(){
   let block=this.nextElementSibling
