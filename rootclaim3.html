@@ -13,7 +13,6 @@ h3{font-size:1.3em}
 h4{font-size:1.1em}
 blockquote h2,blockquote h3,blockquote h4,blockquote h5{margin:.5em 0 0 0}
 blockquote ul,blockquote ol{margin:.4em}
-blockquote p{margin:.7em 0}
 a{color:hsl(220,100%,75%)}
 a:visited{color:hsl(270,100%,75%)}
 pre,code{white-space:pre-wrap;word-wrap:break-word;font:14px Menlo,'DejaVu Sans Mono','Liberation Mono',Consolas,monospace;background:#4a4a4a;color:white}
@@ -1046,7 +1045,7 @@ Drop
 Show code
 </button>
 <pre># https://sars2.net/stat.html#Download_fixed_width_and_CSV_files_for_the_NVSS_data_used_at_CDC_WONDER
-v=fread(&quot;xz -dc http://sars2.net/f/vital.csv.xz&quot;)
+v=fread(&quot;curl -Ls sars2.net/f/vital.csv.xz|xz -dc&quot;)
 
 icd3=fread(text=&quot;code;cause
 Y62.3;Failure of sterile precautions during injection or immunization
@@ -3126,7 +3125,21 @@ print(mutate_if(o,is.double,round,2),r=F)
 <script>
 document.querySelectorAll('pre').forEach(e=>e.innerHTML=e.innerHTML.replace(/((^| )# [^\n]*|^#$)/mg,"<span class=comment>$1</span>"))
 
-document.querySelectorAll('a,code,pre').forEach(e=>e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([!#$%()*+,\-.:?@[\]\\]^_{|}~'])/g,'$1<wbr>').replace(/([^<])\//g,"$1/<wbr>"))
+const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,null,false)
+const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode)
+nodes.forEach(node=>{
+  const text=node.textContent
+  if(text.split(/\s+/).some(piece=>piece.length>=20)){
+    const parent=node.parentNode
+    const frag=document.createDocumentFragment()
+    const parts=text.split(/([\041-\057\072-\100\133-\140\173-\176])/g)
+    for(let i=0;i<parts.length;i++){
+      frag.appendChild(document.createTextNode(parts[i]))
+      if(i%2===1)frag.appendChild(document.createElement('wbr'))
+    }
+    parent.replaceChild(frag,node)
+  }
+})
 
 document.querySelectorAll('.spoiler button').forEach(x=>{x.addEventListener('click',function(){
   let block=this.nextElementSibling
