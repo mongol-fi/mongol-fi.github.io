@@ -28,7 +28,7 @@ blockquote>:first-child{margin-top:0}
 blockquote>:last-child{margin-bottom:0}
 blockquote blockquote p{max-width:440px}
 blockquote blockquote blockquote p{max-width:400px}
-blockquote *,.quote{color:hsl(50,100%,85%)}
+blockquote,.quote,blockquote h2,blockquote h3{color:hsl(50,100%,85%)}
 blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(45,55%,65%)}
 blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote .quote,.quote .quote .quote{color:hsl(40,40%,50%)}
 .spoiler button{width:90px;border:0;font-family:inherit;font-size:inherit;color:inherit;margin:0;background:#4a4a4a;padding:4px 0px;outline:none;cursor:pointer}
@@ -1249,18 +1249,21 @@ Rscript --no-init-file -e &#39;library(readr);for(i in 21:23){f=Sys.glob(paste0(
 
 # make gzipped CSV files for a subset of columns
 for i in {1999..2023};do sed &#39;1s/\beduc\b/educ2003/&#39; mort$i.csv|csvtk cut -f restatus,monthdth,sex,age,year,ucod,enicon_1,enicon_2,enicon_3,enicon_4,enicon_5,enicon_6,enicon_7,enicon_8,enicon_9,enicon_10,enicon_11,enicon_12,enicon_13,enicon_14,enicon_15,enicon_16,enicon_17,enicon_18,enicon_19,enicon_20|gzip -c&gt;$i.csv.gz;done</pre>
-<p>This makes a file grouped by cause, year, month, and age for the count of UCD deaths, count of MCD deaths, and count of MCD deaths that also have MCD COVID:</p>
+<p>This makes a file grouped by cause, year, month, and age for the count of UCD deaths, count of MCD deaths, and count of MCD deaths that also have MCD COVID. In the case of deaths where an ICD code is listed as only UCD but not MCD, I still counted the code as MCD to be consistent with CDC WONDER:</p>
 <pre>r=do.call(rbind,lapply(1999:2023,\(i){
   t=fread(paste0(i,&quot;.csv.gz&quot;))[restatus!=4]
   t[year&gt;=2003,age:=ifelse(age%/%1000%in%c(1,9),age%%1000,0)] # unknown age is usually 9999 but sometimes 1999
   t[year&lt;2003,age:=ifelse(age&gt;=200&amp;age!=999,0,age)] # age field is 3 characters long for years before 2003
   t=t[,.(.I,year,month=monthdth,age,ucd=ucod,mcd=unlist(.SD,,F)),.SDcols=patterns(&quot;enicon_&quot;)][mcd!=&quot;&quot;]
-  t1=t[rowid(I)==1,.(ucd=.N),.(cause=ucd,year,month,age)]
-  t2=t[,.(mcd=.N),.(cause=mcd,year,month,age)]
-  t3=t[I%in%I[mcd==&quot;U071&quot;]&amp;mcd!=&quot;&quot;,.(andcovid=.N),.(cause=mcd,year,month,age)]
-  t=merge(merge(t1,t2,all=T),t3,all=T);t[is.na(t)]=0;t}))
+  ucd=t[rowid(I)==1,.(ucd=.N),.(year,month,age,cause=ucd)]
+  t2=rbind(t[,.(I,year,month,age,cause=mcd)],t[rowid(I)==1,.(I,year,month,age,cause=ucd)])
+  mcd=t2[rowid(I,cause)==1][,.(mcd=.N),.(year,month,age,cause)]
+  and=t2[I%in%t2[cause==&quot;U071&quot;,I]][rowid(I,cause)==1][,.(andcovid=.N),.(year,month,age,cause)]
+  t=merge(merge(ucd,mcd,all=T),and,all=T);t[is.na(t)]=0;t}))
 
-fwrite(r,&quot;vital.csv.gz&quot;,na=&quot;&quot;)</pre>
+setorder(r,year,month,age,cause)
+fwrite(r,&quot;vital.csv&quot;,na=&quot;&quot;)
+system(&quot;xz -f vital.csv&quot;)</pre>
 <p>I uploaded the output here: <a href=f/vital.csv.xz>f/vital.csv.xz</a>.</p>
 <p>This gets the most common MCD for deaths with UCD COVID in ages below 18:</p>
 <pre>library(readr);library(data.table)
