@@ -87,6 +87,9 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href="#Twitter_thread_by_Uncle_John_Returns">Twitter thread by Uncle John Returns</a></li>
 <li><a href="#Cumulative_deaths_in_ages_below_80">Cumulative deaths in ages below 80</a></li>
 <li><a href="#Comparison_to_people_with_and_without_a_third_dose">Comparison to people with and without a third dose</a></li>
+</ul>
+<li><a href="#Further_analysis_of_Czech_data_using_KCOR_method">Further analysis of Czech data using KCOR method</a></li>
+<ul class=toc>
 <li><a href="#Deaths_in_unvaccinated_people_compared_to_people_with_two_doses_in_early_2022">Deaths in unvaccinated people compared to people with two doses in early 2022</a></li>
 </ul>
 </ul>
@@ -3562,6 +3565,9 @@ ggsave(&quot;1.png&quot;,width=4.9,height=3.9,dpi=300*4)</pre>
 <div>
 <img src=i/statistic-hudikaha.png width=600>
 </div>
+<h2>
+<a href=#Further_analysis_of_Czech_data_using_KCOR_method id=Further_analysis_of_Czech_data_using_KCOR_method>Further analysis of Czech data using KCOR method</a>
+</h2>
 <h3>
 <a href=#Deaths_in_unvaccinated_people_compared_to_people_with_two_doses_in_early_2022 id=Deaths_in_unvaccinated_people_compared_to_people_with_two_doses_in_early_2022>Deaths in unvaccinated people compared to people with two doses in early 2022</a>
 </h3>
@@ -3592,15 +3598,17 @@ t[Datum_Prvni_davka!=&quot;&quot;&amp;Datum_Prvni_davka&lt;=&quot;2022-05&quot;,
 t[Datum_Druha_davka!=&quot;&quot;&amp;Datum_Druha_davka&lt;=&quot;2022-05&quot;,dose:=2]
 t[Datum_Treti_davka!=&quot;&quot;&amp;Datum_Treti_davka&lt;=&quot;2022-05&quot;,dose:=3]
 
+t2=t[!(!is.na(Infekce)&amp;Infekce&gt;1)]
+
 a=t[,.(coviddead=.N),.(dose,week=Umrti)]
-a=merge(t[,.(dead=.N),.(dose,week=DatumUmrtiLPZ)],a,all=T)
+a=merge(t2[,.(dead=.N),.(dose,week=DatumUmrtiLPZ)],a,all=T)
 a[is.na(a)]=0
 
 weeks=data.table(date=as.Date(&quot;2019-1-1&quot;)+(0:3e3))[,week:=format(date,&quot;%G-%V&quot;)][rowid(week)==4,setNames(date,week)]
 
 p=a[week!=&quot;&quot;,.(x=weeks[week],y=c(dead,pmax(0,dead-coviddead)),z=rep(1:2,each=.N),dose)]
 p[,z:=factor(z,,c(&quot;All causes&quot;,&quot;Not COVID&quot;))]
-p[,dose:=factor(dose,,c(&quot;Unvaccinated&quot;,paste(&quot;Dose&quot;,1:2),&quot;Dose 3+&quot;))]
+p[,dose:=factor(dose,,c(&quot;Unvaccinated&quot;,&quot;Dose 1&quot;,&quot;Dose 2&quot;,&quot;Dose 3+&quot;))]
 
 p[y==0,y:=NA]
 
