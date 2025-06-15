@@ -93,6 +93,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href="#Deaths_in_unvaccinated_people_compared_to_people_with_two_doses_in_early_2022">Deaths in unvaccinated people compared to people with two doses in early 2022</a></li>
 <li><a href="#Buckets_file_for_NZIP_data">Buckets file for NZIP data</a></li>
 <li><a href="#Absolute_cumulative_deaths_in_people_under_the_age_of_80">Absolute cumulative deaths in people under the age of 80</a></li>
+<li><a href="#Confusion_caused_by_missing_deaths_in_2020">Confusion caused by missing deaths in 2020</a></li>
 </ul>
 </ul>
 
@@ -3882,6 +3883,38 @@ ggsave(&quot;1.png&quot;,width=5,height=4,dpi=300*4)
 sub=&quot;The observation period starts on week 24 of 2021. People who received a first dose on week 24 of 2021 or later are counted as unvaccinated. The CMR and ASMR are deaths per 100,000 person-years. The ASMR was calculated by 5-year groups for year of birth, so that the population included in the dataset on week 1 of 2022 was used as the standard population.&quot;
 system(paste0(&quot;mogrify -trim 1.png;magick 1.png \\( -size `identify -format %w 1.png`x -font Arial -interline-spacing -3 -pointsize $[44*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&#39;&quot;,sub),&quot;&#39; -splice x80 \\) -append -resize 25% -bordercolor white -border 24 -dither none -colors 256 1.png&quot;))</pre>
 </div>
+<h3>
+<a href=#Confusion_caused_by_missing_deaths_in_2020 id=Confusion_caused_by_missing_deaths_in_2020>Confusion caused by missing deaths in 2020</a>
+</h3>
+<p>In the <span class="quote">"ACM reduction during COVID"</span> sheet in the file <code>KCORv2.xlsx</code>, Kirsch pointed out that between September and December 2020, deaths increased by a factor about 2.1 in people born in 1940-1944 but by about 1.8 in people born in 1950-1954: [<a href=https://github.com/skirsch/Czech/blob/main/analysis/KCORv2.xlsx>https://github.com/skirsch/Czech/blob/main/analysis/KCORv2.xlsx</a>]</p>
+<div>
+<img src=i/rootclaim-kcor2-5.png width=1404>
+</div>
+<p>However he didn't take into account that the proportion of deaths that were missing the year of birth was much higher in September than December 2020:</p>
+<div>
+<img src=i/rootclaim-cum-8.png width=600>
+</div>
+<p>In the March 2024 dataset that is not missing the year of birth for people who died in 2020, the deaths between September and December 2020 increased only by a factor of about 1.62 in people born in 1940-1944 but by about 1.35 in people born in 1950-1954:</p>
+<pre>t=fread(&quot;xz -dc CR_records.csv.xz&quot;)
+s=t[year(DatumUmrti)==2020][,month:=month(DatumUmrti)]
+
+s[Rok_narozeni%in%1940:1944,sum(month==12)/sum(month==9)] # 1.623465
+s[Rok_narozeni%in%1950:1954,sum(month==12)/sum(month==9)] # 1.351871</pre>
+<p>Similarly in the <span class="quote">"about"</span> sheet in the file <code>vax_24_1950.xlsx</code>, Kirsch wrote this about the cohort of people who were born in 1950-1954: [<a href=https://github.com/skirsch/Czech/blob/main/analysis/vax_24_1950.xlsx>https://github.com/skirsch/Czech/blob/main/analysis/vax_24_1950.xlsx</a>]</p>
+<blockquote>
+<p>To 2020-37, this is entire cohort with zero COVID at .92% annual death rate. It then rose due to COVID from the baseline values</p>
+<p>But after 85% vaxxed, it's 3.79% for the vaxxed during NO COVID so they are dying 4.11x higher than <span class="quote">"normal"</span></p>
+<p>After 85% are vaxxed, during zero COVID, the ACM death rate is now 1.66% for the FULL cohort. Which means they totally FUCKED over the vaxxed with this shit.</p>
+</blockquote>
+<p>However Kirsch didn't take into account that a large part of deaths in 2020 are missing the year of birth field. In the old record-level dataset where the deaths are not missing, people born in 1950-1954 had an annualized death rate of about 1.85% on weeks 10-37 of 2020:</p>
+<pre>t=fread(&quot;xz -dc CR_records.csv.xz&quot;)
+s=t[Rok_narozeni&gt;=1950&amp;Rok_narozeni&lt;=1954]
+
+isoweek=\(year,week,weekday=7){d=as.Date(paste0(year,&quot;-1-4&quot;));d-(as.integer(format(d,&quot;%w&quot;))+6)%%7-1+7*(week-1)+weekday}
+
+dead=s[DatumUmrti&gt;=isoweek(2020,10,1)&amp;DatumUmrti&lt;=isoweek(2020,37,7),.N]
+dead/27/7*365/s[,.N]
+# 0.01846462</pre>
 <script>
 document.querySelectorAll('pre').forEach(e=>e.innerHTML=e.innerHTML.replace(/((^| )# [^\n]*|^#$)/mg,"<span class=comment>$1</span>"))
 
