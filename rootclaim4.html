@@ -92,6 +92,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <ul class=toc>
 <li><a href="#Deaths_in_unvaccinated_people_compared_to_people_with_two_doses_in_early_2022">Deaths in unvaccinated people compared to people with two doses in early 2022</a></li>
 <li><a href="#Buckets_file_for_NZIP_data">Buckets file for NZIP data</a></li>
+<li><a href="#Absolute_cumulative_deaths_in_people_under_the_age_of_80">Absolute cumulative deaths in people under the age of 80</a></li>
 </ul>
 </ul>
 
@@ -3670,7 +3671,7 @@ Show code
 
 cul=\(x,y)y[cut(x,c(y,Inf),,T,F)]
 
-t[,age:=cul(pmax(1925,born),c(seq(1925,1950,5),seq(1960,1990,10)))]
+t[,age:=cul(pmax(1925,born),c(seq(1925,1960,5),seq(1970,1990,10)))]
 
 a=t[,.(dead=sum(dead),coviddead=sum(coviddead),pop=sum(pop)),.(age,dose=pmin(dose,3),obsweek)]
 a=rbind(a,cbind(do.call(CJ,lapply(a[,1:3],unique)),a[1,-(1:3)][,lapply(.SD,\(x)0)]))
@@ -3767,7 +3768,7 @@ for(obsweek in 1:length(weeks)){
 }
 
 covid=t[Umrti!=&quot;&quot;]
-covid$dose=max.col(cbind(.5,covid[,11:17]!=&quot;&quot;),ties.method=&quot;last&quot;)-1
+covid$dose=max.col(cbind(1,covid[,11:17]!=&quot;&quot;),ties.method=&quot;last&quot;)-1
 covid$vaxweek=nafill(match(apply(covid[,11:17],1,max),weeks),,1)
 me=merge(buck,covid[,.(coviddead=.N),.(obsweek=match(Umrti,weeks),dose,born,sex,vaxweek)],all=T)
 me[is.na(me)]=0
@@ -3776,6 +3777,113 @@ setorder(me,born,sex,dose,vaxweek,obsweek)
 fwrite(me,&quot;nzipbuckets.csv&quot;,quote=F)
 system(&quot;xz -f nzipbuckets.csv&quot;)</pre>
 <p>I uploaded the output here (about 2 MB): <a href=f/nzipbuckets.csv.xz>f/nzipbuckets.csv.xz</a>.</p>
+<h3>
+<a href=#Absolute_cumulative_deaths_in_people_under_the_age_of_80 id=Absolute_cumulative_deaths_in_people_under_the_age_of_80>Absolute cumulative deaths in people under the age of 80</a>
+</h3>
+<p>Kirsch included this plot in a Word document in his Github repository: [<a href=https://github.com/skirsch/Czech/blob/main/analysis/CzechUnder80.docx>https://github.com/skirsch/Czech/blob/main/analysis/CzechUnder80.docx</a>]</p>
+<div>
+<img src=i/rootclaim-kcor2-u80.png width=605>
+</div>
+<p>He wrote <span class="quote">"the death rate of the previously vaccinated diverged when the booster shots were delivered"</span>. But his plot showed raw deaths and not mortality rates. If he would've actually plotted mortality rates, then the lines of his two cohorts would've converged instead of diverging from 2022 onwards:</p>
+<div>
+<img src=i/rootclaim-kcor2-u80-2.png width=600>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>t=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv.gz&quot;)
+t=t[RokNarozeni&gt;=&quot;1940&quot;]
+t[Umrti!=&quot;&quot;&amp;DatumUmrtiLPZ==&quot;&quot;,DatumUmrtiLPZ:=Umrti]
+t[Umrti!=&quot;&quot;&amp;DatumUmrtiLPZ!=Umrti,Umrti:=DatumUmrtiLPZ]
+t=t[!(DatumUmrtiLPZ!=&quot;&quot;&amp;Datum_Prvni_davka&gt;DatumUmrtiLPZ)]
+t[,vax:=Datum_Prvni_davka!=&quot;&quot;&amp;Datum_Prvni_davka&lt;=&quot;2021-23&quot;]
+
+ages=c(1800,seq(1930,1955,5),seq(1960,1990,10))
+t[,born:=ages[findInterval(as.integer(substr(RokNarozeni,1,4)),ages)]]
+
+t2=t[Infekce%in%c(NA,1)]
+
+dead=t2[,.(unvaxdead=sum(!vax),vaxdead=sum(vax)),.(week=DatumUmrtiLPZ,born)]
+coviddead=t[,.(unvaxcoviddead=sum(!vax),vaxcoviddead=sum(vax)),.(week=Umrti,born)]
+vax=t2[,.(newvax=.N),.(week=Datum_Prvni_davka,born)]
+
+a=merge(dead,merge(coviddead,vax,all=T),all=T)[week!=&quot;&quot;]
+a[is.na(a)]=0
+
+a=merge(t2[,.(startpop=.N),born],a)
+a[,unvaxpop:=startpop-cumsum(unvaxdead)-cumsum(newvax),born]
+a[,vaxpop:=cumsum(newvax)-cumsum(vaxdead),born]
+
+l=a[,.(week,dead=c(unvaxdead,vaxdead),covid=c(unvaxcoviddead,vaxcoviddead),pop=c(unvaxpop,vaxpop),dose=rep(1:2,each=.N),born)]
+l=rbind(l,l[,.(dead=sum(dead),pop=sum(pop),covid=sum(covid),dose=0),.(born,week)])
+l=l[week&gt;=&quot;2021-24&quot;]
+l=merge(l,l[week==&quot;2022-01&quot;,sum(pop),born][,.(std=V1/sum(V1),born)])
+
+a2=l[,.(dead=sum(dead),covid=sum(covid),pop=sum(pop)),.(week,dose)]
+p1=a2[,.(y=c(dead,dead-covid),type=1:2,facet=1),.(week,dose)]
+p2=a2[,.(y=c(dead,dead-covid)/pop/7*365e5,type=1:2,facet=2),.(week,dose)]
+p3=l[,.(y=c(sum(dead/pop*std),sum((dead-covid)/pop*std))/7*365e5,type=1:2,facet=3),.(week,dose)]
+
+cum=l[,.(dead=cumsum(dead),covid=cumsum(covid),pop=cumsum(pop),week),.(born,dose,std)]
+c1=cum[,.(y=c(sum(dead),sum(dead-covid)),type=1:2,facet=1),.(week,dose)]
+c2=cum[,.(y=c(sum(dead),sum(dead-covid))/sum(pop)/7*365e5,type=1:2,facet=2),.(week,dose)]
+c3=cum[,.(y=c(sum(dead/pop*std/7*365e5),sum((dead-covid)/pop*std/7*365e5)),type=1:2,facet=3),.(week,dose)]
+
+p=rbind(rbind(c1,c2,c3)[,cum:=2],rbind(p1,p2,p3)[,cum:=1])
+
+p[,dose:=factor(dose,,c(&quot;Total&quot;,&quot;Unvaccinated&quot;,&quot;Vaccinated&quot;))]
+p[,type:=factor(type,,c(&quot;All causes&quot;,&quot;Not COVID&quot;))]
+p[,facet:=factor(facet,,c(&quot;Deaths&quot;,&quot;CMR&quot;,&quot;ASMR&quot;))]
+p[,cum:=factor(cum,,c(&quot;Not cumulative&quot;,&quot;Cumulative&quot;))]
+
+weeks=data.table(date=as.Date(&quot;2019-1-1&quot;)+(0:3e3))[,week:=format(date,&quot;%G-%V&quot;)][rowid(week)==4,setNames(date,week)]
+p[,x:=weeks[week]]
+
+xstart=as.Date(&quot;2021-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;);xbreak=seq(xstart+182,xend,&quot;year&quot;);xlab=year(xbreak)
+ybreak=pretty(c(0,p$y),7);yend=max(ybreak)
+
+ggplot(p)+
+facet_grid(facet~cum,scales=&quot;free&quot;)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray87&quot;,linewidth=.4,lineend=&quot;square&quot;)+
+geom_vline(xintercept=weeks[&quot;2021-24&quot;]-3.5,color=&quot;gray87&quot;,linewidth=.4,linetype=&quot;22&quot;)+
+geom_line(aes(x,y,color=dose,alpha=type),linewidth=.6)+
+labs(x=NULL,y=NULL,title=&quot;Czech Republic, people born in 1940 or later&quot;)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
+scale_y_continuous(limits=\(x)range(pretty(c(0,x),4)),breaks=\(x)pretty(c(0,x),4),labels=\(x)ifelse(x==max(x),&quot;&quot;,ifelse(x&gt;=1e3,paste0(x/1e3,&quot;k&quot;),x)))+
+scale_color_manual(values=c(&quot;black&quot;,&quot;#66f&quot;,&quot;#f66&quot;))+
+scale_alpha_manual(values=c(1,.4))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=11,color=&quot;gray50&quot;,margin=margin(3,3,3,3)),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  legend.background=element_rect(color=&quot;gray87&quot;,linewidth=.4),
+  legend.box=&quot;vertical&quot;,
+  legend.box.just=&quot;center&quot;,
+  legend.box.margin=margin(,,1),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;horizontal&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.margin=margin(2.5,5.5,2.5,2.5),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(3,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.grid.major.x=element_blank(),
+  panel.grid.major.y=element_line(linewidth=.4,color=&quot;gray87&quot;),
+  panel.spacing=unit(2,&quot;pt&quot;),
+  plot.margin=margin(4,4,4,4),
+  plot.title=element_text(size=11,face=2,hjust=.5,margin=margin(2,,4)),
+  strip.background=element_blank(),
+  strip.text=element_text(size=11,margin=margin(3,3,3,3)))
+ggsave(&quot;1.png&quot;,width=5,height=4,dpi=300*4)
+
+sub=&quot;The people included in the dataset on week 1 of 2022 were used as the standard population. The observation period starts on week 24 of 2021. People who received a first dose on week 24 of 2021 or later are counted as unvaccinated. The population included in the dataset on week 1 of 2022 was used as the standard population. The ASMR was calculated by year of birth groups 1900-1929, 1930-1934, ..., 1945-1959, 1960-1969, ..., 1980-1989, and 1990+.&quot;
+system(paste0(&quot;mogrify -trim 1.png;magick 1.png \\( -size `identify -format %w 1.png`x -font Arial -interline-spacing -3 -pointsize $[44*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&#39;&quot;,sub),&quot;&#39; -splice x80 \\) -append -resize 25% -bordercolor white -border 24 -dither none -colors 256 1.png&quot;))</pre>
+</div>
 <script>
 document.querySelectorAll('pre').forEach(e=>e.innerHTML=e.innerHTML.replace(/((^| )# [^\n]*|^#$)/mg,"<span class=comment>$1</span>"))
 
