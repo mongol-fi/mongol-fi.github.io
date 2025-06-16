@@ -3786,7 +3786,7 @@ system(&quot;xz -f nzipbuckets.csv&quot;)</pre>
 <div>
 <img src=i/rootclaim-kcor2-u80.png width=600>
 </div>
-<p>He wrote <span class="quote">"the death rate of the previously vaccinated diverged when the booster shots were delivered"</span>. But his plot showed raw deaths and not mortality rates. If he would've actually plotted mortality rates, then the lines of his two cohorts would've converged from 2022 onwards instead of diverging:</p>
+<p>Kirsch confusingly wrote about mortality rates even though his plot showed raw deaths and not mortality rates. But anyway, if he would've plotted ASMR instead of raw deaths, then the lines of his two cohorts would've converged over time instead of diverging:</p>
 <div>
 <img src=i/rootclaim-kcor2-u80-2.png width=600>
 </div>
@@ -3799,8 +3799,9 @@ t=t[RokNarozeni&gt;=&quot;1940&quot;]
 t[Umrti!=&quot;&quot;&amp;DatumUmrtiLPZ==&quot;&quot;,DatumUmrtiLPZ:=Umrti]
 t[Umrti!=&quot;&quot;&amp;DatumUmrtiLPZ!=Umrti,Umrti:=DatumUmrtiLPZ]
 t=t[!(DatumUmrtiLPZ!=&quot;&quot;&amp;Datum_Prvni_davka&gt;DatumUmrtiLPZ)]
-t[,vax:=Datum_Prvni_davka!=&quot;&quot;&amp;Datum_Prvni_davka&lt;=&quot;2021-23&quot;]
-t[,born:RokNarozeni]
+t[,vax:=Datum_Prvni_davka!=&quot;&quot;&amp;Datum_Prvni_davka&lt;&quot;2021-24&quot;]
+t[,born:=ifelse(RokNarozeni&gt;=&quot;2000&quot;,&quot;2000+&quot;,RokNarozeni)]
+t[Datum_Prvni_davka&gt;=&quot;2021-24&quot;,Datum_Prvni_davka:=&quot;&quot;]
 
 t2=t[Infekce%in%c(NA,1)]
 
@@ -3809,6 +3810,8 @@ coviddead=t[,.(unvaxcoviddead=sum(!vax),vaxcoviddead=sum(vax)),.(week=Umrti,born
 vax=t2[,.(newvax=.N),.(week=Datum_Prvni_davka,born)]
 
 a=merge(dead,merge(coviddead,vax,all=T),all=T)[week!=&quot;&quot;]
+a=rbind(a,cbind(do.call(CJ,lapply(a[,1:2],unique)),a[1,-(1:2)][,lapply(.SD,\(x)0)]))
+a=a[rowid(week,born)==1][order(born,week)]
 a[is.na(a)]=0
 
 a=merge(t2[,.(startpop=.N),born],a)
@@ -3818,6 +3821,7 @@ a[,vaxpop:=cumsum(newvax)-cumsum(vaxdead),born]
 l=a[,.(week,dead=c(unvaxdead,vaxdead),covid=c(unvaxcoviddead,vaxcoviddead),pop=c(unvaxpop,vaxpop),dose=rep(1:2,each=.N),born)]
 l=rbind(l,l[,.(dead=sum(dead),pop=sum(pop),covid=sum(covid),dose=0),.(born,week)])
 l=l[week&gt;=&quot;2021-24&quot;]
+
 l=merge(l,l[week==&quot;2022-01&quot;,sum(pop),born][,.(std=V1/sum(V1),born)])
 
 a2=l[,.(dead=sum(dead),covid=sum(covid),pop=sum(pop)),.(week,dose)]
@@ -3881,7 +3885,7 @@ theme(axis.text=element_text(size=11,color=&quot;gray50&quot;,margin=margin(3,3,
   strip.text=element_text(size=11,margin=margin(3,3,3,3)))
 ggsave(&quot;1.png&quot;,width=5,height=4,dpi=300*4)
 
-sub=&quot;The observation period starts on week 24 of 2021. People who received a first dose on week 24 of 2021 or later are counted as unvaccinated. The CMR and ASMR are deaths per 100,000 person-years. The ASMR was calculated by 5-year groups for year of birth, so that the population included in the dataset on week 1 of 2022 was used as the standard population.&quot;
+sub=&quot;The observation period starts on week 24 of 2021. People who received a first dose on week 24 of 2021 or later are counted as unvaccinated. The CMR and ASMR are deaths per 100,000 person-years. The ASMR was calculated by 5-year groups for other years of birth but people born in the 2000s were combined into a single group. The population included in the dataset on week 1 of 2022 was used as the standard population.&quot;
 system(paste0(&quot;mogrify -trim 1.png;magick 1.png \\( -size `identify -format %w 1.png`x -font Arial -interline-spacing -3 -pointsize $[44*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&#39;&quot;,sub),&quot;&#39; -splice x80 \\) -append -resize 25% -bordercolor white -border 24 -dither none -colors 256 1.png&quot;))</pre>
 </div>
 <h3>
