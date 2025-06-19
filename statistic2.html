@@ -2961,6 +2961,66 @@ ggsave(&quot;1.png&quot;,width=5.5,height=2.8,dpi=300*4)
 sub=&quot;Source: medicalfacts.info/vdeath.rb via x.com/hudikaha/status/ 1921935565894852619. JSON data was downloaded by selecting \&quot;Open in Vega Editor\&quot; from the triple dot menu and selecting \&quot;JSON\&quot; from \&quot;Export\&quot;. The JSON data was converted to TSV with `jq -r &#39;.data.values[]|select(.yearmonth|strings)|[ .area,.age,.dose,.deaths,.persondays,.yearmonth]|@tsv&#39; visualization.vl.json`.&quot;
 system(paste0(&quot;mogrify -trim 1.png;magick 1.png \\( -size `identify -format %w 1.png`x -font Arial -interline-spacing -3 -pointsize $[44*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&#39;&quot;,sub),&quot;&#39; -splice x80 \\) -append -resize 25% -bordercolor white -border 24 -dither none -colors 256 1.png&quot;))</pre>
 </div>
+<p>The Japanese FOI data also shows that unvaccinated people have a bigger increase in all-cause mortality during COVID waves than vaccinated people:</p>
+<div>
+<img src=i/statistic-yuukoku-13.png width=600>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre> download.file(&quot;https://srhdpeuwpubsa.blob.core.windows.net/whdh/COVID/WHO-COVID-19-global-data.csv&quot;,&quot;WHO-COVID-19-global-data.csv&quot;)
+
+t=fread(&quot;https://sars2.net/f/japanfoihudikaha.csv&quot;)
+t=t[location==location[1]&amp;age==&quot;80over&quot;]
+
+t=rbind(t,t[,.(dead=sum(dead),pop=sum(pop),dose=-1),.(location,age,month)])
+
+p=t[,.(y=sum(dead)/sum(pop)*365e5),.(x=as.Date(paste0(month,&quot;-15&quot;)),z=pmin(dose,1))]
+
+p[,z:=factor(z,,c(&quot;Total&quot;,&quot;Unvaccinated&quot;,&quot;Vaccinated&quot;))]
+
+dead=fread(&quot;WHO-COVID-19-global-data.csv&quot;)[Country==&quot;Japan&quot;]
+dead=dead[,.(y=sum(New_deaths)),.(x=as.Date(`day&lt;-`(Date_reported,15)))]
+p=rbind(p,dead[,z:=&quot;COVID deaths (all ages, not CMR)&quot;])
+
+xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2024-7-1&quot;)
+xbreak=seq(xstart,xend,&quot;year&quot;);xlab=year(xbreak)
+ybreak=pretty(c(0,p$y),8);ystart=0;yend=max(p$y,na.rm=T)
+
+ggplot(p)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray90&quot;,linewidth=.4)+
+annotate(&quot;rect&quot;,xmin=xstart,xmax=xend,ymin=ystart,ymax=yend,linewidth=.4,lineend=&quot;square&quot;,fill=NA,color=&quot;black&quot;)+
+geom_line(aes(x,y,color=z),linewidth=.5)+
+geom_point(aes(x,y,color=z),size=1)+
+labs(title=&quot;Japanese FOI data, ages 80+, deaths per 100,000 person-years&quot;,x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,labels=kim)+
+scale_color_manual(values=c(&quot;black&quot;,&quot;#5555ff&quot;,&quot;#ff5555&quot;,&quot;gray50&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(color=guide_legend(nrow=2,byrow=F))+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.text.x=element_text(margin=margin(4),hjust=0),
+  axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(4,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.justification=&quot;center&quot;,
+  legend.key=element_blank(),
+  legend.margin=margin(,,4),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  plot.margin=margin(5,5,5,5),
+  plot.title=element_text(size=11,face=2,margin=margin(1,,4)))
+ggsave(&quot;1.png&quot;,width=5.5,height=2.8,dpi=300*4)</pre>
+</div>
 <script>
 document.querySelectorAll('pre').forEach(e=>e.innerHTML=e.innerHTML.replace(/((^| )# [^\n]*|^#$)/mg,"<span class=comment>$1</span>"))
 
