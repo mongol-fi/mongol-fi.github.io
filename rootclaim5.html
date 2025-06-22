@@ -65,6 +65,8 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href="#13_47_reduction_in_all_cause_mortality_during_a_COVID_period">13.47% reduction in all-cause mortality during a COVID period</a></li>
 <li><a href="#Mortality_in_ages_80_and_above_in_Japanese_FOI_data">Mortality in ages 80 and above in Japanese FOI data</a></li>
 <li><a href="#Cumulative_CFR_in_Czech_Republic">Cumulative CFR in Czech Republic</a></li>
+<li><a href="#Why_were_deaths_in_the_United_States_higher_than_the_low_point_in_2018">Why were deaths in the United States higher than the low point in 2018?</a></li>
+<li><a href="#Ratio_between_unvaccinated_and_vaccinated_ASMR_in_English_ONS_data">Ratio between unvaccinated and vaccinated ASMR in English ONS data</a></li>
 </ul>
 </ul>
 
@@ -531,6 +533,160 @@ theme(axis.text=element_text(size=11,color=&quot;gray50&quot;,margin=margin(2,2,
   plot.title=element_text(size=11,hjust=.5,face=2,margin=margin(2,,4)))
 ggsave(&quot;1.png&quot;,width=5,height=3,dpi=300*4)</pre>
 </div>
+<h3>
+<a href=#Why_were_deaths_in_the_United_States_higher_than_the_low_point_in_2018 id=Why_were_deaths_in_the_United_States_higher_than_the_low_point_in_2018>Why were deaths in the United States higher than the low point in 2018?</a>
+</h3>
+<p>Kirsch wrote:</p>
+<blockquote>
+<p>These graphs are from the official US data from UCOD (underlying cause of death). I use these spreadsheets: <a href=https://github.com/skirsch/debate/blob/094f9d1e94a3003db9ed9e5047cd7342a47d2f79/acm_analysis/ACM%20by%20month%20by%20age%20analysis%20showing%20higher%20baseline.xlsx>ACM by month</a> and <a href=https://github.com/skirsch/debate/blob/094f9d1e94a3003db9ed9e5047cd7342a47d2f79/acm_analysis/ACM_by_age_year_analysis.xlsx>ACM by year</a> [broken links to Kirsch's GitHub repository]. These charts speak for themselves.</p>
+<p>If the vaccine was saving lives, <strong>we should have seen a return to baseline mortality</strong> in older ages. We didn't. We saw a <strong>mortality rate gap that persisted</strong>.</p>
+<p>SW's claims just don't match up with the actual US data.</p>
+<p>Are we supposed to trust his models and ignore reality?</p>
+<div>
+<img src=i/rootclaim-usacm.png width=600>
+</div>
+</blockquote>
+<p>But anyway there's an increasing trend in the number of deaths per year because of the aging population, so it doesn't make sense to use the number of deaths in 2018 as the baseline. When I calculated the baseline by doing a Poisson regression in 2010-2019, I got negative excess deaths in 2023:</p>
+<div>
+<img src=i/rootclaim-usacm-2.png width=550>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>t=fread(&quot;https://sars2.net/f/uspopdead.csv&quot;)[,.(dead=sum(dead),pop=sum(pop)),.(year,age)]
+t=t[year%in%2010:2024]
+
+t$poi=predict(glm(dead~factor(age),poisson,t[year&lt;2020],offset=log(pop)),t,type=&quot;response&quot;)
+
+t=merge(t,t[year&lt;2020,.(year=2010:2024,base=predict(lm(dead/pop~year),.(year=2010:2024))),age])
+a=t[,.(dead=sum(dead),base=sum(base*pop),poi=sum(poi)),year]
+a$base2=a[year%in%2010:2019,predict(lm(dead~year),a)]
+a$ave=a[year==2018,mean(dead)]
+
+p=a[,.(x=year,y=unlist(.SD[,-1]),z=rep(1:(ncol(.SD)-1),each=.N))]
+p[,z:=factor(z,,c(&quot;Actual deaths&quot;,&quot;2010-2019 linear CMR by age&quot;,&quot;2010-2019 Poisson regression&quot;,&quot;2010-2019 linear regression&quot;,&quot;Deaths in 2018&quot;))]
+
+xstart=2010;xend=2024;ybreak=pretty(p$y);ystart=ybreak[1];yend=max(ybreak)
+
+ggplot(p)+
+annotate(&quot;rect&quot;,xmin=xstart-.5,xmax=xend+.5,ymin=ystart,ymax=yend,linewidth=.4,lineend=&quot;square&quot;,fill=NA,color=&quot;gray50&quot;)+
+geom_line(aes(x,y,color=z),linewidth=.6)+
+geom_line(data=p[z==z[1]],aes(x,y,color=z),linewidth=.6)+
+geom_point(aes(x,y,color=z,alpha=z),stroke=0,size=1.5)+
+labs(title=&quot;Yearly deaths in the United States&quot;,x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=seq(xstart,xend,2))+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,labels=kim)+
+scale_color_manual(values=c(&quot;black&quot;,&quot;#00aa00&quot;,&quot;#ff44ff&quot;,&quot;blue&quot;,hsv(3/36,.9,.6)))+
+scale_alpha_manual(values=c(1,0,0,0,0))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=11,color=&quot;gray50&quot;,margin=margin(0,0,0,0)),
+  axis.ticks=element_line(linewidth=.4,color=&quot;gray50&quot;),
+  axis.ticks.length=unit(4,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.background=element_rect(color=&quot;gray50&quot;,linewidth=.4),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.justification=c(0,1),
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.margin=margin(3,5,3,3),
+  legend.position=c(0,1),
+  legend.spacing.x=unit(1,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  plot.margin=margin(4,5,4,5),
+  plot.subtitle=element_text(size=11,margin=margin(,,4)),
+  plot.title=element_text(size=11.3,face=2,hjust=.5,margin=margin(1,,4)))
+ggsave(&quot;1.png&quot;,width=5,height=2.9,dpi=300*4)</pre>
+</div>
+<h3>
+<a href=#Ratio_between_unvaccinated_and_vaccinated_ASMR_in_English_ONS_data id=Ratio_between_unvaccinated_and_vaccinated_ASMR_in_English_ONS_data>Ratio between unvaccinated and vaccinated ASMR in English ONS data</a>
+</h3>
+<p>Kirsch wrote:</p>
+<blockquote>
+<p>From the <a href=https://github.com/skirsch/covid/blob/b7e26286ce7018ca86d96a20f96e481f89b5de97/UK/UK_deaths_by_vax_status.xlsx>official UK data</a>, but with my ratio between u/v ASMR rates.</p>
+<p>Note: I'm not a big fan of the UK data because the ONS admitted that it was so problematic, it was unfit for purpose.</p>
+<p>See: <a href=http://web.archive.org/web/20230120222512/<a href=https://wherearethenumbers.substack.com/p/uk-statistics-regulator-agrees-with>UK&gt;<a href="https://wherearethenumbers.substack.com/p/uk-statistics-regulator-agrees-with" class="uri">https://wherearethenumbers.substack.com/p/uk-statistics-regulator-agrees-with</a>&gt;UK</a> Statistics Regulator agrees with our recommendation to <strong>ignore any claims of vaccine safety based on ONS deaths by vaccination status data</strong></a></p>
+<p>So with that caveat in mind, here's what the Death by vaccination status reveals:</p>
+<div>
+<img src=i/rootclaim-onsratio.png width=600>
+</div>
+<p>Note that <strong>if the vaccine worked, the unvaxxed/vaxxed ASMR ratio should increase</strong> during COVID (e.g., Nov and Dec 2021.</p>
+<p>It doesn't. <strong>It goes the other way. The ASMR for the unvaccinated falls while the ASMR of the vaccinated increases. So it's relatively better to be unvaccinated.</strong></p>
+<p>I don't place much weight in this data. Look at how the ASMR for the unvaccinated fluctuates in 30 days. It's not credible. So if anyone tries to use this data, you'd have to wonder why.</p>
+</blockquote>
+<p>The reason why he used November and December as his high-COVID period seems to have been because the Czech Republic deaths during the Delta wave peaked in November to December 2021. But the UK already had a lot of Delta deaths in August, and there was a period with elevated COVID mortality from July 2021 until January 2022.</p>
+<p>But the ratio between unvaccinated and vaccinated ASMR dropped in February 2022 after the COVID deaths went down. So Kirsch should've used the period from February 2022 onwards as his low-COVID baseline period, and not the period before November 2021 like in his analysis of the Czech data:</p>
+<div>
+<img src=i/rootclaim-onsratio-2.png width=580>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>t=fread(&quot;https://sars2.net/f/ons.csv&quot;)
+t=rbind(t[ed==7&amp;month&lt;=&quot;2021-03&quot;],t[ed==9])
+
+s=t[status%like%&quot;acci&quot;&amp;age==&quot;Total&quot;&amp;cause!=&quot;Deaths involving COVID-19&quot;]
+p=s[,.(x=as.Date(paste0(month,&quot;-16&quot;)),y=asmr,z=status,cause,facet=1)]
+
+p[,cause:=factor(cause,,c(&quot;All causes&quot;,&quot;Not COVID&quot;))]
+p[,z:=factor(z,unique(z),c(&quot;Unvaccinated&quot;,&quot;Vaccinated&quot;))]
+
+p=rbind(p,dcast(p,x+cause~z,value.var=&quot;y&quot;)[,.(x,y=Unvaccinated/Vaccinated,cause,z=&quot;Ratio&quot;,facet=2)])
+
+p[,facet:=factor(facet,,c(&quot;ASMR&quot;,&quot;Ratio&quot;))]
+
+xstart=as.Date(&quot;2021-1-1&quot;);xend=as.Date(&quot;2023-6-1&quot;);xbreak=seq(xstart,xend,&quot;year&quot;)
+
+ggplot(p)+
+facet_wrap(~facet,ncol=1,scales=&quot;free_y&quot;)+
+geom_line(aes(x,y,color=z,alpha=cause),linewidth=.6)+
+geom_point(aes(x,y,color=z,alpha=cause,shape=cause),stroke=.6,size=1.5)+
+geom_text(data=p[,max(pretty(c(0,y))),facet],aes(y=V1,label=facet),vjust=1.7,x=pmean(xstart,xend),hjust=.5,size=3.87,fontface=2)+
+labs(x=NULL,y=NULL,title=&quot;Monthly ASMR per 100,000 person-years in English ONS data&quot;)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=year(xbreak))+
+scale_y_continuous(limits=\(x)range(pretty(c(0,x))),breaks=\(x)pretty(c(0,x)))+
+scale_color_manual(values=c(&quot;#5555ff&quot;,&quot;#ff5555&quot;,&quot;gray50&quot;))+
+scale_alpha_manual(values=c(1,.5))+
+scale_shape_manual(values=c(16,1))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(color=guide_legend(order=1),alpha=guide_legend(order=2),shape=guide_legend(order=2))+
+theme(axis.text=element_text(size=11,margin=margin(2,2,2,2),color=&quot;gray40&quot;),
+  axis.text.x=element_text(hjust=0),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  legend.background=element_rect(color=&quot;gray70&quot;,linewidth=.4),
+  legend.box=&quot;vertical&quot;,
+  legend.box.just=&quot;center&quot;,
+  legend.box.margin=margin(,,3),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;horizontal&quot;,
+  legend.justification=&quot;center&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.margin=margin(2.5,5.5,2.5,2.5),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(3,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.4,color=&quot;gray70&quot;),
+  panel.grid.major=element_line(linewidth=.4,color=&quot;gray90&quot;),
+  panel.spacing=unit(10,&quot;pt&quot;),
+  plot.margin=margin(5,5,4,5),
+  plot.title=element_text(size=11.4,face=2,margin=margin(1,,5),hjust=.5),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=5.2,height=4.1,dpi=300*4)</pre>
+</div>
+<p>When Kirsch said that the <span class="quote">"the ASMR for the unvaccinated fluctuates in 30 days"</span>, I don't know if he meant the change in ASMR during the first months of 2021 that was due to HVE, or the change in later months that was due to variability in COVID deaths.</p>
+<p>But in case he meant the former, Kirsch should recognize by now that the HVE explains why unvaccinated people have high mortality when the first dose is rolled out, since he has identified a similar phenomenon in the Czech data. He linked to a Substack post about the ONS data by Norman Fenton and Martin Neil, who used to claim that the high mortality in unvaccinated people in early 2021 was somehow anomalous, and it was not explained by the HVE.</p>
+<p>In 2022 Fenton and Neil also wrote a paper where they claimed that the ONS dataset was <span class="quote">"corrupted"</span> because there was a very low number of deaths during the first two weeks from vaccination. But since then several other datasets have been released which have a similarly low number of deaths in the first two weeks after vaccination, including the Medicare and New Zealand datasets that were released by Kirsch. Even Kirsch's own analysis of the various record-level datasets has shown why Fenton and Neil's old preprints about the ONS data were wrong.</p>
 <script>
 document.querySelectorAll('pre').forEach(e=>e.innerHTML=e.innerHTML.replace(/((^| )# [^\n]*|^#$)/mg,"<span class=comment>$1</span>"))
 
