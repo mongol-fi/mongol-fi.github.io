@@ -80,7 +80,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href="#Comparison_of_monthly_ASMR_to_other_variables">Comparison of monthly ASMR to other variables</a></li>
 <li><a href="#Monthly_excess_ASMR">Monthly excess ASMR</a></li>
 <li><a href="#Excess_deaths_by_age_and_month">Excess deaths by age and month</a></li>
-<li><a href="#Comparison_to_excess_deaths_from_all_natural_causes">Comparison to excess deaths from all natural causes</a></li>
+<li><a href="#Comparison_to_excess_deaths_from_all_causes">Comparison to excess deaths from all causes</a></li>
 <li><a href="#The_last_author_Masanori_Fukushima_may_have_also_published_a_fake_survey">The last author Masanori Fukushima may have also published a fake survey</a></li>
 </ul>
 <li><a href="#Cancer_incidence_in_ages_20_49_in_Switzerland">Cancer incidence in ages 20-49 in Switzerland</a></li>
@@ -2106,7 +2106,7 @@ a[,month:=month(date)]
 a=merge(a,a[year(date)%in%2010:2019,.(monthly=mean(asmr-base)),month])
 
 lab=c(&quot;ASMR&quot;,&quot;2010-2019 linear baseline&quot;,&quot;Seasonal baseline&quot;,&quot;Excess ASMR&quot;)
-p=a[,.(x=date,y=c(asmr,base,base+monthly,(asmr/(base+monthly)-1)*100),z=factor(rep(lab,each=.N),lab),facet=factor(rep(facet,c(.N*3,.N)),facet))]
+facet=c(&quot;ASMR&quot;,&quot;Excess ASMR percent&quot;)    p=a[,.(x=date,y=c(asmr,base,base+monthly,(asmr/(base+monthly)-1)*100),z=factor(rep(lab,each=.N),lab),facet=factor(rep(facet,c(.N*3,.N)),facet))]
 
 p=rbind(p,p[z==z[1]&amp;x==max(x)][,x:=seq(x,,&quot;month&quot;,2)[2]])
 
@@ -2213,7 +2213,7 @@ system(&quot;w=`identify -format %w 1.png`;pad=20;magick -pointsize 43 -font Ari
 </div>
 <p>In the plot above some age groups have consistently positive excess mortality and others have consistently negative mortality. But it might be because there is some degree of error introduced to the slope of the baseline due to random variation in mortality during the prediction period, or because the long-term trend in mortality was not actually linear, or because I calculated the excess mortality by 5-year age groups and not by single year of age.</p>
 <h3>
-<a href=#Comparison_to_excess_deaths_from_all_natural_causes id=Comparison_to_excess_deaths_from_all_natural_causes>Comparison to excess deaths from all natural causes</a>
+<a href=#Comparison_to_excess_deaths_from_all_causes id=Comparison_to_excess_deaths_from_all_causes>Comparison to excess deaths from all causes</a>
 </h3>
 <p>My previous plot showed that the peak monthly excess cancer ASMR was about 3.5%. But it's actually fairly small in comparison to the excess all-cause ASMR shown below, which has remained at a sustained level of over 5% each month since February 2022, and which reached above 20% during two months of 2024:</p>
 <div>
@@ -2295,6 +2295,51 @@ tclass3val=0. Population estimates on October 1st of each year were spline inter
 system(paste0(&quot;f=1.png;mar=100;w=`/usr/local/bin/identify -format %w $f`;/usr/local/bin/magick \\( $f \\) \\( -size $[w-mar*2]x -font Arial -interline-spacing -3 -pointsize $[42*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -gravity southwest -splice $[mar]x80 \\) -append -resize 25% -dither none -colors 256 1.png&quot;))</pre>
 </div>
 <p>So cancer deaths in Japan are not even elevated that much compared to deaths from other causes.</p>
+<p>This code downloads files for monthly deaths by cause and age group:</p>
+<pre>curl &#39;https://www.e-stat.go.jp/stat-search/files?page=1&amp;layout=datalist&amp;toukei=00450011&amp;tstat=000001028897&amp;cycle=1&amp;tclass1=000001053058&amp;tclass2=000001053060&amp;cycle_facet=tclass1&amp;tclass3val=0&#39;|grep -Po &#39;href=&quot;\K[^&quot;]*&#39;|grep &#39;^/stat.*year&#39;|sed &#39;s/&amp;amp;/\&amp;/g&#39;&gt;japanmonthurl
+
+for x in `&lt;japanmonthurl`;do curl -Ls &quot;https://www.e-stat.go.jp/$x&quot;|sed &#39;1,/6&lt;\/span/d&#39;|grep fileKind|sed 1q|cut -d\&quot; -f2;done&gt;japanmonthurl2
+
+mkdir japanasmr
+
+paste -d\  &lt;(sed &#39;s/.*year=//;s/0&amp;month=......\(..\).*/-\1/&#39; japanmonthurl) japanmonthurl2|sed &#39;s/0$/&amp; xls/;s/4$/&amp; xlsx/;s/1$/&amp; csv/&#39;|parallel -C\  curl https://www.e-stat.go.jp{2} -Lso japanasmr/{1}.{3}
+
+rename s/xls/xlsx/ japanasmr/{2019-12,2020}*xls
+
+recode shiftjis.. japanasmr/*.csv</pre>
+<p>I took population estimates from tables 3 here under <span class="quote">"Yearly &gt; 2024"</span> and <span class="quote">"Time Series 2000 - 2020"</span>: <a href=https://www.e-stat.go.jp/en/stat-search/files?page=1&toukei=00200524&tstat=000000090001.><a href="https://www.e-stat.go.jp/en/stat-search/files?page=1&amp;toukei=00200524&amp;tstat=000000090001" class="uri">https://www.e-stat.go.jp/en/stat-search/files?page=1&amp;toukei=00200524&amp;tstat=000000090001</a>.</a> This code makes a single file for the combined population estimates and deaths:</p>
+<pre>u=&quot;https://www.e-stat.go.jp/en/stat-search/file-download?statInfId=&quot;
+download.file(paste0(u,&quot;000013168603&amp;fileKind=4&quot;),&quot;jappopold.xlsx&quot;)
+download.file(paste0(u,&quot;000040268912&amp;fileKind=4&quot;),&quot;jappopnew.xlsx&quot;)
+
+g=Sys.glob(&quot;japanasmr/*.csv&quot;)
+new=sapply(g,\(f)fread(f)[V3%like%&quot;総数|全死因&quot;][1,as.integer(unlist(.SD)),.SDcols=12:32])
+new=data.table(date=rep(sub(&quot;.*/(.*).csv&quot;,&quot;\\1&quot;,g),each=21),age=0:20*5,dead=c(new))
+
+g=Sys.glob(&quot;japanasmr/*.xls*&quot;)
+old=sapply(g,\(f){s1=setDT(read_excel(f,skip=2))
+  d1=s1[s1[[2]]%like%&quot;全.*死.*因&quot;|s1[[3]]%like%&quot;全.*死.*因&quot;]
+  d1=d1[1,as.integer(unlist(.SD)),.SDcols=patterns(&quot;～&quot;)]
+  s2=setDT(read_excel(f,sheet=2,skip=2))
+  d2=s2[s2[[2]]%like%&quot;全.*死.*因&quot;|s2[[3]]%like%&quot;全.*死.*因&quot;]
+  d2=d2[1,as.integer(unlist(.SD)),.SDcols=patterns(&quot;～|１００歳以上&quot;)]
+  c(d1,d2)})
+
+old=data.table(date=rep(sub(&quot;.*/([^.]*).*&quot;,&quot;\\1&quot;,g),each=21),age=0:20*5,dead=c(old))
+
+dead=rbind(new,old)[,date:=as.Date(paste0(date,&quot;-15&quot;))]
+
+pop=unlist(read_excel(&quot;jappopold.xlsx&quot;,range=&quot;C17:R37&quot;,col_names=F))
+pop=c(pop,unlist(read_excel(&quot;jappopold.xlsx&quot;,sheet=7,range=&quot;D16:G36&quot;,col_names=F)))
+pop=c(pop,unlist(read_excel(&quot;jappopnew.xlsx&quot;,range=&quot;J20:N40&quot;,col_names=F)))
+pop=data.table(year=rep(2000:2024,each=21),age=0:20*5,pop)
+
+pop[,date:=as.Date(paste0(year,&quot;-10-1&quot;))]
+pop=pop[,spline(date,pop,xout=unique(dead$date)),age]
+pop=pop[,.(date=`class&lt;-`(x,&quot;Date&quot;),age,pop=round(y*1000))]
+
+out=merge(dead,pop)[,date:=substr(date,1,7)]
+fwrite(out,&quot;japanacmbyage.csv&quot;)</pre>
 <h3>
 <a href=#The_last_author_Masanori_Fukushima_may_have_also_published_a_fake_survey id=The_last_author_Masanori_Fukushima_may_have_also_published_a_fake_survey>The last author Masanori Fukushima may have also published a fake survey</a>
 </h3>
@@ -2832,17 +2877,16 @@ Show code
 t=t[location==location[1]&amp;age==&quot;80over&quot;]
 
 a=t[,.(dead=sum(dead),pop=sum(pop)),.(month,dose)]
-a=rbind(a,a[,.(dead=sum(dead),pop=sum(pop),dose=1),month])
+a=rbind(a,a[,.(dead=sum(dead),pop=sum(pop),dose=.5),month])
 
 a[,x:=as.Date(paste0(month,&quot;-15&quot;))][,people:=pop/days_in_month(x)]
 p=a[,.(x,y=c(dead,people,dead/pop*365e5),facet=rep(1:3,each=.N),dose)]
 p=p[y&gt;0]
-p[,dose:=factor(dose,,c(&quot;Unvaccinated&quot;,&quot;Vaccinated&quot;,paste(&quot;Dose&quot;,2:7)))]
+p[,dose:=factor(dose,,c(&quot;Unvaccinated&quot;,&quot;Vaccinated&quot;,paste(&quot;Dose&quot;,1:7)))]
 p[,facet:=factor(facet,,c(&quot;Deaths divided by days in month&quot;,&quot;Person-days divided by days in month&quot;,&quot;Deaths per 100,000 person-years&quot;))]
 
 xstart=as.Date(&quot;2021-1-1&quot;);xend=as.Date(&quot;2024-7-1&quot;)
 xbreak=seq(xstart,xend,&quot;year&quot;);xlab=year(xbreak)
-ybreak=pretty(c(0,p$y),8);ystart=0;yend=max(p$y,na.rm=T)
 
 ggplot(p)+
 facet_wrap(~facet,ncol=1,scales=&quot;free_y&quot;)+
@@ -2850,12 +2894,12 @@ geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray85&quot;
 geom_rect(data=p[,max(pretty(y)),facet],aes(ymax=V1),ymin=0,xmin=xstart,xmax=xend,lineend=&quot;square&quot;,fill=NA,color=&quot;black&quot;)+
 geom_line(aes(x,y,color=dose),linewidth=.5)+
 geom_point(aes(x,y,color=dose),size=1)+
-labs(title=&quot;Japanese FOI data, ages 80+&quot;,x=NULL,y=NULL)+
+labs(title=&quot;Japanese FOI data, age 80+ at time of data extraction&quot;,x=NULL,y=NULL)+
 scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
-scale_y_continuous(limits=\(x)range(pretty(x)),breaks=pretty,labels=\(x)ifelse(x&gt;=1e3,paste0(x/1e3,&quot;k&quot;),x))+
-scale_color_manual(values=c(&quot;black&quot;,&quot;gray60&quot;,hsv(c(4,6,12,21,28,33)/36,1,.8)))+
+scale_y_continuous(limits=\(x)range(pretty(x)),breaks=pretty,labels=kim)+
+scale_color_manual(values=c(&quot;black&quot;,&quot;gray60&quot;,hsv(c(1,3)/36,c(.5,.5),c(1,.9)),hsv(c(6,12,21,28,33)/36,1,.8)))+
 coord_cartesian(clip=&quot;off&quot;,expand=F)+
-guides(color=guide_legend(nrow=2,byrow=F))+
+guides(color=guide_legend(nrow=3,byrow=F))+
 theme(axis.text=element_text(size=11,color=&quot;black&quot;,margin=margin(2,2,2,2)),
   axis.text.x=element_text(hjust=0),
   axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
@@ -2881,7 +2925,6 @@ theme(axis.text=element_text(size=11,color=&quot;black&quot;,margin=margin(2,2,2
   strip.text=element_text(size=11,margin=margin(3,,3)))
 ggsave(&quot;1.png&quot;,width=4.8,height=4.8,dpi=300*4)</pre>
 </div>
-<p>In the plot above if you look at the person-days for the gray line that shows all vaccinated people, there's a temporary reduction in the person-days in May to July 2021, but it's because the dataset is missing people with only one dose. (So the unvaccinated category does not mean people who are not fully vaccinated, but people with only one dose are not included in any category.)</p>
 <p>If you look at all ages instead, then the mortality rate of unvaccinated people decreases from about 88 per 100,000 person-years in March 2021 to about 56 a year later. So it roughly matches the plot that went viral, where the mortality rate of unvaccinated people is about 0.010 per person-year on the first week from March 8th 2021, and it gradually falls to about 0.006 a year later:</p>
 <div>
 <img src=i/statistic-yuukoku-8.png width=530>
@@ -2899,11 +2942,11 @@ t=t[location==location[1]&amp;age==&quot;all&quot;]
 
 t[,i:=as.integer(factor(month))]
 a=merge(t,t[,.(max=i[which.max(pop)]),dose])[,.(x=i-max,dead,pop,dose)]
-a=rbind(a,a[,.(dead=sum(dead),pop=sum(pop),dose=1),x])
+a=rbind(a,a[,.(dead=sum(dead),pop=sum(pop),dose=.5),x])
 
 p=a[,.(x,y=c(dead,pop/365,dead/pop*365e5),facet=rep(1:3,each=.N),dose)]
 p=p[y&gt;0]
-p[,dose:=factor(dose,,c(&quot;Unvaccinated&quot;,&quot;Vaccinated&quot;,paste(&quot;Dose&quot;,2:7)))]
+p[,dose:=factor(dose,,c(&quot;Unvaccinated&quot;,&quot;Vaccinated&quot;,paste(&quot;Dose&quot;,1:7)))]
 p[,facet:=factor(facet,,c(&quot;Deaths&quot;,&quot;Person-years&quot;,&quot;Deaths per 100,000 person-years&quot;))]
 
 xstart=-10;xend=30;xbreak=seq(xstart,xend,10)
@@ -2916,10 +2959,10 @@ geom_line(aes(x,y,color=dose),linewidth=.5)+
 geom_point(aes(x,y,color=dose),size=1)+
 labs(title=&quot;Japanese FOI data, all ages, deaths and population size by\nmonths since month with peak population size for dose&quot;,x=NULL,y=NULL)+
 scale_x_continuous(limits=c(xstart,xend),breaks=xbreak)+
-scale_y_continuous(limits=\(x)range(pretty(x)),breaks=pretty,labels=\(x)ifelse(x&gt;=1e3,paste0(x/1e3,&quot;k&quot;),x))+
-scale_color_manual(values=c(&quot;black&quot;,&quot;gray60&quot;,hsv(c(4,6,12,21,28,33)/36,1,.8)))+
+scale_y_continuous(limits=\(x)range(pretty(x)),breaks=pretty,labels=kim)+
+scale_color_manual(values=c(&quot;black&quot;,&quot;gray60&quot;,hsv(c(1,3)/36,c(.5,.5),c(1,.9)),hsv(c(6,12,21,28,33)/36,1,.8)))+
 coord_cartesian(clip=&quot;off&quot;,expand=F)+
-guides(color=guide_legend(nrow=2,byrow=F))+
+guides(color=guide_legend(nrow=3,byrow=F))+
 theme(axis.text=element_text(size=11,color=&quot;black&quot;,margin=margin(2,2,2,2)),
   axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
   axis.ticks.length.x=unit(0,&quot;pt&quot;),
