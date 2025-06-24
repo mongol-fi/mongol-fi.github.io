@@ -1388,8 +1388,9 @@ o[,.(year,unvax=round(unvax),vax=round(vax),ratio=round(unvax/vax,2))]
 <div>
 <img src=i/rootclaim-nzdose3.png width=500>
 </div>
-<p>The reason why the mortality rate increased between week 0 and 30 was because the healthy vaccinee effect got weaker over time, and also because the rollout of the first booster to elderly people peaked in January to February 2022, but New Zealand had the first big increase in deaths due to COVID in March 2022.</p>
-<p>The reason why the deaths started going down after week 30 was because people were removed from the population size after they got a fourth dose, and old people were more likely to get a second booster than young people, so the average age of people with only one booster went down after the second booster was rolled out:</p>
+<p>His plot only included ages 60 and above. The reason why the mortality rate increased between week 0 and 30 was because the healthy vaccinee effect got weaker over time, and also because the rollout of the first booster to ages 60 and above peaked in January to February 2022, but New Zealand had the first big wave of COVID deaths in March 2022.</p>
+<p>The reason why the mortality rate started going down after week 27 was because people were removed from the population size after they got a fourth dose, people at the lower end of ages 60 and above were less likely to get a second booster than older people, so the average age of people with only three doses went down after the second booster was rolled out.</p>
+<p>The mortality rate of people with 3 doses remains above the baseline mortality rate from week 24 onwards, but it's because the healthy vaccinees moved under the 4th dose, so the people who remained under the 4th dose had elevated mortality because of the straggler effect:</p>
 <div>
 <img src=i/rootclaim-nzdose3-2.png width=600>
 </div>
@@ -1399,7 +1400,7 @@ Show code
 </button>
 <pre>ua=\(x,y,...){u=unique(x);y(u,...)[match(x,u)]}
 
-t=fread(&quot;https://sars2.net/f/buckets.gz&quot;)[dose==3]
+t=fread(&quot;https://sars2.net/f/buckets.gz&quot;)[dose==3&amp;age&gt;=60]
 a=t[,.(dead=sum(dead),pop=sum(alive)),.(week,age=pmin(age,95)%/%5*5,month=ua(date,substr,1,7))]
 
 nz=fread(&quot;https://sars2.net/f/nz_monthly_deaths_by_age.csv&quot;)
@@ -1411,16 +1412,16 @@ nz=merge(nz,nzpop[,spline(date,pop,xout=unique(nz$date)),age][,.(age,date=x,pop=
 nz=nz[,.(month=substr(date,1,7),base=dead/pop/days_in_month(date),age)]
 
 a=merge(a,nz)
-p1=a[,.(y=sum(dead)/sum(pop)*365e5,z=&quot;Mortality rate per 100,000 person-years&quot;),week]
+p1=a[,.(y=`if`(sum(pop)&lt;=365e2,NA_real_,sum(dead)/sum(pop)*365e5),z=&quot;Mortality rate per 100,000 person-years&quot;),week]
 p2=a[,.(y=sum(base*pop)/sum(pop)*365e5,z=&quot;Baseline mortality rate&quot;),week]
 p3=t[,.(y=weighted.mean(age,alive),z=&quot;Average age&quot;),week]
-p4=a[,.(y=sum(pop)/1e5,z=&quot;Person-days × 100,000&quot;),week]
+p4=a[,.(y=sum(pop)/365e2,z=&quot;Hundreds of person-years&quot;),week]
 p=rbind(p1,p2,p3,p4)[,z:=factor(z,unique(z))]
 
-yend=2000;ybreak=0:4*500;yend2=80;ybreak2=0:4*20;secmult=yend/yend2
+yend=5000;ybreak=0:5*1000;yend2=100;ybreak2=0:5*20;secmult=yend/yend2
 xstart=0;xend=100;xbreak=0:10*10
 
-leg=p[,.(label=levels(z),hjust=c(0,0,1,1),x=c(2,2,98,98),y=c(350,150))]
+leg=p[,.(label=levels(z),hjust=c(0,0,1,1),x=c(2,2,98,98),y=yend*c(.16,.07))]
 color=c(&quot;black&quot;,&quot;gray60&quot;,&quot;#bbbb00&quot;,&quot;#00bb00&quot;)
 
 p[,ymult:=ifelse(z%in%levels(z)[1:2],y,y*secmult)]
@@ -1430,7 +1431,7 @@ annotate(&quot;rect&quot;,xmin=xstart,xmax=xend,ymin=0,ymax=yend,color=&quot;gra
 geom_line(aes(week,ymult,color=z),linewidth=.6)+
 geom_point(aes(week,ymult,color=z),stroke=0,size=1.2)+
 geom_label(data=leg,aes(x,y,hjust=hjust,label=label),size=3.87,color=color,label.r=unit(0,&quot;pt&quot;),label.padding=unit(4,&quot;pt&quot;),label.size=.3,fill=alpha(&quot;white&quot;,.8))+
-labs(x=NULL,y=NULL,title=&quot;Mortality rate by weeks since third dose in New Zealand&quot;)+
+labs(x=NULL,y=NULL,title=&quot;Mortality rate by weeks since third dose in New Zealand, ages 60+&quot;)+
 scale_x_continuous(limits=c(xstart,xend),breaks=xbreak)+
 scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,sec.axis=sec_axis(trans=~./secmult,breaks=ybreak2))+
 scale_color_manual(values=color)+
@@ -1440,9 +1441,7 @@ theme(axis.text=element_text(size=11,color=&quot;gray40&quot;,margin=margin(2,2,
   axis.ticks.length=unit(4,&quot;pt&quot;),
   legend.position=&quot;none&quot;,
   panel.background=element_blank(),
-  panel.spacing=unit(0,&quot;pt&quot;),
-  plot.subtitle=element_text(size=11,hjust=.5,margin=margin(,,4)),
-  plot.title=element_text(size=11.3,hjust=.5,face=&quot;bold&quot;,margin=margin(1,,4)),
+  plot.title=element_text(size=11.3,hjust=.5,face=&quot;bold&quot;,margin=margin(1,,6)),
   strip.background=element_blank(),
   strip.text=element_blank())
 ggsave(&quot;1.png&quot;,width=5.4,height=3.5,dpi=300*4)</pre>
