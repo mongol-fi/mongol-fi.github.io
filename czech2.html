@@ -5,15 +5,12 @@ body{background:#2f2f2f;color:white;margin:6px 6px 6px max(6px, min(50vw - 270px
 body,td,th{font:14.5px/1.3 Arial,Helvetica,'Liberation Sans',sans-serif}
 p{max-width:540px}
 ul,ol{max-width:500px}
-.toc{max-width:none}
 h1,h2,h3,h2 a,h3 a,h2 a:visited,h3 a:visited{color:white;font-weight:normal}
-h1{font-size:2.1em;margin-top:.8em}
+h1{font-size:2.1em;margin-top:.7em}
 h2{font-size:1.7em}
 h3{font-size:1.3em}
-h4{font-size:1.1em}
-blockquote h2,blockquote h3,blockquote h4,blockquote h5{margin:.5em 0 0 0}
-blockquote ul,blockquote ol{margin:.4em}
-blockquote p{margin:.7em 0}
+blockquote h2,blockquote h3{margin:.5em 0}
+blockquote ul,blockquote ol{margin:.4em 0}
 a{color:hsl(220,100%,75%)}
 a:visited{color:hsl(270,100%,75%)}
 pre,code{white-space:pre-wrap;word-wrap:break-word;font:14px Menlo,'DejaVu Sans Mono','Liberation Mono',Consolas,monospace;background:#4a4a4a;color:white}
@@ -23,24 +20,24 @@ table{border-collapse:collapse}
 td,th{border:1px solid #555;padding:1px 3px}
 th{background:#444;text-align:left;font-weight:bold}
 img{max-width:100%}
-dt{font-size:1.3em;margin:.4em 0 .4em 0}
 hr{border: none;border-top: 2px solid #bbb;margin:1em 0}
+dt{font-size:1.3em;margin:.4em 0}
 blockquote{margin:0;padding-left:40px;margin-right:0;overflow-x:hidden}
 blockquote p{max-width:480px}
 blockquote>:first-child{margin-top:0}
 blockquote>:last-child{margin-bottom:0}
 blockquote blockquote p{max-width:440px}
 blockquote blockquote blockquote p{max-width:400px}
-blockquote,.quote,blockquote h1,blockquote h2,blockquote h3{color:hsl(50,100%,85%)}
+blockquote,.quote,blockquote,blockquote{color:hsl(50,100%,85%)}
 blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(45,55%,65%)}
 blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote .quote,.quote .quote .quote{color:hsl(40,40%,50%)}
+blockquote h3{color:inherit}
 .spoiler button{width:90px;border:0;font-family:inherit;font-size:inherit;color:inherit;margin:0;background:#4a4a4a;padding:4px 0px;outline:none;cursor:pointer}
 .spoiler pre{display:none;margin-top:0}
 .red,.red .quote{color:hsl(0,100%,77%)!important}
-.comment{color:hsl(0,100%,80%) !important}
+.comment{color:hsl(0,100%,80%)!important}
+.toc{max-width:none}
 .width00{margin-left:calc(-1 * max(0px, min(50vw - 270px, 100vw - 1100px)) + 6px)}
-.width00 img,.width0 img{margin:0 -1.5px -1.5px 0;vertical-align:bottom}
-.blockimg{max-width:calc(100vw - min(50vw - 270px, 100vw - 1100px) - 40px - 6px)}
 @media print{
   body{background:white;color:black;margin:0px;zoom:1;print-color-adjust:exact;-webkit-print-color-adjust:exact}
   a{color:#0000EE}a:visited{color:#551A8B}
@@ -203,12 +200,14 @@ kimi=\(x){e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1
 
 type1=&quot;Moderna&quot;;type2=&quot;Pfizer&quot;
 
-b=fread(&quot;http://sars2.net/f/czbucketskeep.csv.gz&quot;)[month&gt;=&quot;2020-12&quot;&amp;dose&lt;=1][,age:=pmin(age,100)]
+b=fread(&quot;https://sars2.net/f/czbucketskeep.csv.gz&quot;)[month&gt;=&quot;2021-01&quot;&amp;dose%in%c(0,1)][,age:=pmin(age,100)]
 t=b[,.(dead=sum(dead),alive=as.numeric(sum(alive))),.(age,month,vaxmonth,type)]
-t=merge(t[type!=&quot;&quot;],t[,.(base=sum(dead)/sum(alive)),age])[,base:=base*alive]
+t=merge(t[type!=&quot;&quot;],t[,.(base=sum(dead)/sum(alive)),.(age,month)])[,base:=base*alive]
 t=rbind(t,t[,.(dead=sum(dead),alive=sum(alive),base=sum(base),month=&quot;Total&quot;),.(age,vaxmonth,type)])
 t=rbind(t,t[,.(dead=sum(dead),alive=sum(alive),base=sum(base),vaxmonth=&quot;Total&quot;),.(age,month,type)])
 t=t[,.(rat=sum(dead)/sum(base),alive=sum(alive)),.(type,vaxmonth,month)]
+
+t=t[month&gt;=&quot;2021-01&quot;&amp;vaxmonth&gt;=&quot;2021-01&quot;]
 
 a=tapply(t$rat,t[,1:3],c)
 m1=a[type1,,];m2=a[type2,,]
@@ -225,7 +224,7 @@ pheatmap::pheatmap(m,filename=&quot;mort.png&quot;,display_numbers=disp,
   breaks=seq(-maxcolor,maxcolor,,256),
   colorRampPalette(hsv(rep(c(7/12,0),4:5),c(.9,.75,.6,.3,0,.3,.6,.75,.9),c(.4,.65,1,1,1,1,1,.65,.4)))(256))
 
-rec=fread(&quot;CR_records.csv&quot;,showProgress=F)
+rec=fread(&quot;xz -dc CR_records.csv.xz&quot;,showProgress=F)
 d=rec[,.N,.(month=ua(Datum_1,substr,1,7),type=OckovaciLatka_1)]
 name1=unique(d$type);name2=rep(&quot;Other&quot;,length(name1))
 name2[name1==&quot;&quot;]=&quot;&quot;
@@ -247,7 +246,8 @@ pheatmap::pheatmap(pop^exp2,filename=&quot;pop.png&quot;,display_numbers=kimi(po
   number_color=ifelse(pop^exp2&gt;maxcolor2^exp2*.45,&quot;white&quot;,&quot;black&quot;),
   breaks=seq(0,maxcolor2^exp2,,256),sapply(seq(1,0,,256),\(i)rgb(i,i,i)))
 
-system(&quot;magick mort.png \\( pop.png -chop 14x -splice x5 \\) +append 0.png;w=`identify -format %w 0.png`;pad=22;magick -pointsize 46 -font Arial-Bold -interline-spacing -2 \\( -size $[w-pad*2]x caption:&#39;Czech record-level data: Moderna-Pfizer mortality ratio from day of first dose until end of 2022&#39; -splice $[pad]x20 \\) \\( -pointsize 42 -font Arial caption:&#39;The y-axis shows the month of vaccination and the x-axis shows the month of death. The two columns on the right show the number of people who got vaccinated each month. Only first doses included.&#39; -splice $[pad]x14 \\) 0.png -append 1.png&quot;)</pre>
+system(&quot;magick mort.png \\( pop.png -chop 14x -splice x5 \\) +append 0.png;w=`identify -format %w 0.png`;pad=22;magick -pointsize 46 -font Arial-Bold -interline-spacing -2 \\( -size $[w-pad*2]x caption:&#39;Czech record-level data: Moderna-Pfizer mortality ratio from day of first dose until end of 2022&#39; -splice $[pad]x20 \\) \\( -pointsize 42 -font Arial caption:&#39;The y-axis shows the month of vaccination and the x-axis shows the observation month. The two columns on the right show the number of people who got a first dose each month. The displayed ratio was calculated as `(Moderna deaths / Moderna baseline) / (Pfizer deaths / Pfizer baseline)`, where the baseline was calculated by multiplying the number of person-days for each combination of age and observation month with the mortality rate among the general Czech population for the same combination of age and observation month.&#39; -splice $[pad]x14 \\) 0.png -append -colors 256 1.png&quot;)
+qp()</pre>
 <p>Kirsch later quoted my triangle plot in a Substack post where his caption for the plot said: <span class="quote">"Triangle plot. Y is date of shot. x is month of death. For all 110 combinations with sufficient data to be above the noise, Moderna was a disaster."</span> [<a href=https://kirschsubstack.com/p/while-working-on-the-czech-republic>https://kirschsubstack.com/p/while-working-on-the-czech-republic</a>] However you don't have to look at the Moderna-Pfizer ratio grouped by both month of vaccination and month of death, but you can just look at the ratio by the month of vaccination alone like in the total column in my heatmap. And there's about 103k people who got a first dose from a Moderna or Pfizer vaccine in October 2021, 317k in November, and 141k in December, so I think it's a big enough sample size. And the Moderna-Pfizer ratio was only about 0.93 in people who were vaccinated in October 2021, 1.02 in November, and 1.02 in December:</p>
 <pre>&gt; library(data.table)
 &gt; b=fread(&quot;http://sars2.net/f/czbucketskeep.csv.gz&quot;)[,age:=pmin(age,100)]
@@ -1617,7 +1617,21 @@ system(&quot;montage -tile 2x i[1-4].png -geometry +0+10 0.png;convert 0.png -tr
 <script>
 document.querySelectorAll('pre').forEach(e=>e.innerHTML=e.innerHTML.replace(/((^| )# [^\n]*|^#$)/mg,"<span class=comment>$1</span>"))
 
-document.querySelectorAll('a,code,pre').forEach(e=>e.innerHTML=e.innerHTML.replace(/(\w{60,})/g,x=>x.replace(/./g,'$&<wbr>')).replace(/([!#$%()*+,\-.:?@[\]\\]^_{|}~'])/g,'$1<wbr>').replace(/([^<])\//g,"$1/<wbr>"))
+const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,null,false)
+const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode)
+nodes.forEach(node=>{
+  const text=node.textContent
+  if(text.split(/\s+/).some(piece=>piece.length>=20)){
+    const parent=node.parentNode
+    const frag=document.createDocumentFragment()
+    const parts=text.split(/([\041-\057\072-\100\133-\140\173-\176])/g)
+    for(let i=0;i<parts.length;i++){
+      frag.appendChild(document.createTextNode(parts[i]))
+      if(i%2===1)frag.appendChild(document.createElement('wbr'))
+    }
+    parent.replaceChild(frag,node)
+  }
+})
 
 document.querySelectorAll('.spoiler button').forEach(x=>{x.addEventListener('click',function(){
   let block=this.nextElementSibling
