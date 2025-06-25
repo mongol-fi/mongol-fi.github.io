@@ -28,9 +28,10 @@ blockquote>:first-child{margin-top:0}
 blockquote>:last-child{margin-bottom:0}
 blockquote blockquote p{max-width:440px}
 blockquote blockquote blockquote p{max-width:400px}
-blockquote,.quote,blockquote h2,blockquote h3{color:hsl(50,100%,85%)}
+blockquote,.quote,blockquote,blockquote{color:hsl(50,100%,85%)}
 blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(45,55%,65%)}
 blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote .quote,.quote .quote .quote{color:hsl(40,40%,50%)}
+blockquote h3{color:inherit}
 .spoiler button{width:90px;border:0;font-family:inherit;font-size:inherit;color:inherit;margin:0;background:#4a4a4a;padding:4px 0px;outline:none;cursor:pointer}
 .spoiler pre{display:none;margin-top:0}
 .red,.red .quote{color:hsl(0,100%,77%)!important}
@@ -78,6 +79,7 @@ blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote 
 <li><a href="#Did_Arbel_et_al_show_that_unvaccinated_people_were_10_times_more_likely_to_die_from_COVID">Did Arbel et al. show that unvaccinated people were 10 times more likely to die from COVID?</a></li>
 <li><a href="#Cumulative_deaths_in_people_under_the_age_of_80_in_Czech_Republic">Cumulative deaths in people under the age of 80 in Czech Republic</a></li>
 <li><a href="#Mortality_rate_by_weeks_after_third_dose_in_New_Zealand">Mortality rate by weeks after third dose in New Zealand</a></li>
+<li><a href="#COVID_and_all_cause_mortality_rates_by_age">COVID and all-cause mortality rates by age</a></li>
 </ul>
 </ul>
 
@@ -214,14 +216,90 @@ s[,sum(pop)/7,.(dose=pmin(dose,2),week)][,tapply(V1,.(week,dose),round)]
 # 2021-15 1925  675  502
 # 2021-16 1880  737  561
 # 2021-17 2002  662  567
-# 2021-18 1902  598  602 # dose 1 has low ASMR because of healthy vaccinee effect
+# 2021-18 1902  598  602 # dose 1 has low ASMR because of the healthy vaccinee effect
 # 2021-19 1955  659  591
 # 2021-20 1926  603  572
 # 2021-21 1805  703  527
 # 2021-22 1828  812  573
 # 2021-23 1759  822  518
 # 2021-24 1809  950  538
-# 2021-25 1685 1266  553 # dose 1 has high ASMR because of straggler effect</pre>
+# 2021-25 1685 1266  553 # dose 1 has high ASMR because of the straggler effect</pre>
+<p>In the next plot the ASMR of people with 1 but not more doses almost doubled between week 18 and week 24 of 2021. The results are slightly different from the previous code, because I used the November 2024 NZIP data instead of the March 2024 FOI data, and I also calculated the ASMR by year of birth and not by age:</p>
+<div>
+<img src=i/rootclaim-dose1vs2-3.png width=570>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>t=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv.gz&quot;)
+
+t=t[Infekce%in%c(NA,1)][RokNarozeni!=&quot;-&quot;]
+t[,born:=pmin(2000,pmax(1925,as.integer(substr(RokNarozeni,1,4))))]
+
+t[,dose1:=Datum_Prvni_davka][,dose2:=Datum_Druha_davka]
+t=t[!(DatumUmrtiLPZ!=&quot;&quot;&amp;pmax(dose1,dose2)&gt;DatumUmrtiLPZ)]
+
+t=rbind(copy(t)[dose1&gt;&quot;2021-24&quot;,dose1:=&quot;&quot;][dose2&gt;&quot;2021-24&quot;,dose2:=&quot;&quot;][,facet:=1],t[,facet:=2])
+t[,dose:=0][dose1!=&quot;&quot;,dose:=1][dose2!=&quot;&quot;,dose:=2]
+
+a=t[,.(week=c(rep(&quot;2020-10&quot;,.N),dose1,dose2),dose=rep(0:2,each=.N),born,facet)]
+a=a[,.(vax=.N),.(week,dose,born,facet)]
+a=merge(a,t[,.(dead=.N),.(week=DatumUmrtiLPZ,born,dose,facet)],all=T)[week!=&quot;&quot;]
+a=merge(do.call(CJ,lapply(a[,1:4],unique)),a,all=T);a[is.na(a)]=0
+
+a[,cumvax:=cumsum(vax),.(born,dose,facet)][,pop:=cumvax-cumsum(dead),.(born,dose,facet)]
+a[dose==0,pop:=pop-a[dose==1,cumvax]][dose==1,pop:=pop-a[dose==2,cumvax]]
+
+a=merge(a[week==&quot;2022-01&quot;,sum(pop),born][,.(std=V1/sum(V1),born)],a)
+
+iso=as.Date(1+0:1e4*7);names(iso)=format(iso,&quot;%G-%V&quot;)
+p=a[,.(y=ifelse(sum(pop)*7&lt;365e3,NA_real_,sum(dead/pop/7*365e5*std,na.rm=T))),.(dose,x=iso[week],facet)]
+p[,dose:=factor(dose,,c(&quot;Unvaccinated&quot;,&quot;Dose 1&quot;,&quot;Dose 2 or more&quot;))]
+p[,facet:=factor(facet,,paste(&quot;Doses admin-\nistered after cutoff\ndate&quot;,c(&quot;ignored&quot;,&quot;not ignored&quot;)))]
+
+xstart=as.Date(&quot;2021-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;);xbreak=seq(xstart+182,xend,&quot;year&quot;)
+ystart=0;ybreak=pretty(p$y,6);yend=max(ybreak)
+
+ggplot(p)+
+facet_wrap(~facet,ncol=1,scales=&quot;free&quot;)+
+geom_hline(yintercept=c(ybreak[ybreak&lt;yend],yend),color=&quot;gray90&quot;,linewidth=.4,lineend=&quot;square&quot;)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray90&quot;,linewidth=.4,lineend=&quot;square&quot;)+
+annotate(&quot;rect&quot;,xmin=xstart,xmax=xend,ymin=0,ymax=yend,color=&quot;gray75&quot;,linewidth=.4,lineend=&quot;square&quot;,linejoin=&quot;mitre&quot;,fill=NA)+
+geom_line(aes(x,y,color=dose),linewidth=.6)+
+geom_vline(xintercept=iso[&quot;2021-24&quot;],linewidth=.4,linetype=&quot;22&quot;)+
+geom_label(data=p[rowid(facet)==1],aes(label=facet),y=yend,x=xend,hjust=1,vjust=1,fill=&quot;white&quot;,label.r=unit(0,&quot;pt&quot;),label.padding=unit(4,&quot;pt&quot;),label.size=.4,color=&quot;gray75&quot;,size=3.87,lineheight=.8)+
+geom_label(data=p[rowid(facet)==1],aes(label=facet),y=yend,x=xend,hjust=1,vjust=1,fill=NA,label.r=unit(0,&quot;pt&quot;),label.padding=unit(4,&quot;pt&quot;),label.size=0,size=3.87,lineheight=.8)+
+labs(x=NULL,y=NULL,title=&quot;Weekly ASMR per 100,000 person-years in Czech Republic&quot;)+
+annotate(geom=&quot;text&quot;,x=iso[&quot;2021-25&quot;],label=&quot;Vaccination cutoff date (week 24)&quot;,y=4250,hjust=0,vjust=.5,size=3.87)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=year(xbreak))+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
+scale_color_manual(values=c(&quot;#EB3727&quot;,&quot;#DA7842&quot;,&quot;#67A442&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=11,color=&quot;gray50&quot;,margin=margin(2,2,2,2)),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  legend.box.margin=margin(,,3),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;horizontal&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.background=element_rect(color=&quot;gray75&quot;,linewidth=.4),
+  legend.margin=margin(2,5,2,2),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.spacing=unit(2,&quot;pt&quot;),
+  plot.margin=margin(4,5,4,5),
+  plot.title=element_text(size=11,face=2,hjust=.5,margin=margin(1,,3)),
+  plot.subtitle=element_text(hjust=.5,margin=margin(,,3)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=5,height=4.7,dpi=300*4)</pre>
+</div>
 <h3>
 <a href=#Comment_by_AI_about_ratio_of_all_cause_mortality_between_unvaccinated_and_vaccinated_people id=Comment_by_AI_about_ratio_of_all_cause_mortality_between_unvaccinated_and_vaccinated_people>Comment by AI about ratio of all-cause mortality between unvaccinated and vaccinated people</a>
 </h3>
@@ -229,7 +307,7 @@ s[,sum(pop)/7,.(dose=pmin(dose,2),week)][,tapply(V1,.(week,dose),round)]
 <blockquote>
 <p>This level of bias is enormous. For comparison:</p>
 <ul>
-<li>Real-world HVE estimates in high-quality studies (e.g., flu vaccine studies in seniors) are generally in the <strong>1.1–1.2</strong> range (10–20%).</li>
+<li>Real-world HVE estimates in high-quality studies (e.g., flu vaccine studies in seniors) are generally in the <strong>1.1-1.2</strong> range (10-20%).</li>
 <li>A 3.0 ratio would be <strong>unprecedented</strong> and <strong>easily visible in every time-series ACM dataset</strong>, including non-COVID vaccination campaigns.</li>
 </ul>
 <h3 id="should-be-obvious-in-the-data">2. Should Be Obvious in the Data</h3>
@@ -270,13 +348,13 @@ s[,sum(pop)/7,.(dose=pmin(dose,2),week)][,tapply(V1,.(week,dose),round)]
 <p>The spontaneous reporting system for adverse drug reactions is primarily useful for generating hypotheses and is not particularly suitable as a basis for assessing causality. Many of the reports did not contain sufficient clinical information to form an impression of the patient's clinical course and a possible causal link between vaccination and death. Almost half of the reporting parties did not submit additional information. In particular, there was a lack of information about which phase of life the patients were in, and whether their health and general condition were already rapidly or slowly deteriorating before vaccination. All patients were in a complex clinical situation characterised by old age, frailty and multiple chronic diseases, which means that a variety of factors could have contributed to the deaths. It is therefore practically impossible to determine with any certainty how much of a role the vaccine played in the deaths.</p>
 <p>The extremely high mortality rate in nursing homes means that random factors will lead to a certain number of deaths shortly after vaccination anyway. It cannot be ruled out that some of the deaths that were classified as probable are in fact due to such random factors. Nevertheless, we find it reasonable to assume that adverse effects from the vaccine in very frail patients can trigger a cascade of new complications which, in the worst case, end up expediting death.</p>
 <p>The categories <span class="quote">'probable'</span> and <span class="quote">'unlikely'</span> were used in cases where the expert group considered there to be a clear likelihood one way or the other, and the category <span class="quote">'possible'</span> was used where a causal link between vaccination and death was just as likely as unlikely. Many of the cases classified as <span class="quote">'possible'</span> are therefore very uncertain, and some of them could perhaps also have been categorised as unclassifiable. The group considered far more cases to be either probable or unlikely than the Norwegian Institute of Public Health in its initial assessment. This is probably due to access to more information as well as knowledge of typical clinical courses in frail elderly people.</p>
-<p>The adverse reaction reports were submitted within a period of approximately 50 days, during which it can be assumed that 2000–2500 nursing home patients died in Norway (7). Whether 10 or 36 of these deaths were accelerated by the vaccine, the proportion is still low. In the same period, almost 30 000 nursing home patients were vaccinated, which means that there will most likely have been far more than 100 deaths in nursing homes in a close temporal relationship to vaccination in the relevant time period. Our findings cannot therefore be used to estimate the incidence of vaccine-related deaths.</p>
+<p>The adverse reaction reports were submitted within a period of approximately 50 days, during which it can be assumed that 2000-2500 nursing home patients died in Norway (7). Whether 10 or 36 of these deaths were accelerated by the vaccine, the proportion is still low. In the same period, almost 30 000 nursing home patients were vaccinated, which means that there will most likely have been far more than 100 deaths in nursing homes in a close temporal relationship to vaccination in the relevant time period. Our findings cannot therefore be used to estimate the incidence of vaccine-related deaths.</p>
 <p>It is important to emphasise that the vast majority of long-term patients in nursing homes have a short remaining life expectancy. They are definitely in the final stage of life. This is reflected in the expert group's scoring of 48 out of 79 classifiable patients in CFS category 8 or 9, which indicates an expected lifespan of less than six months.</p>
 </blockquote>
 <h3>
 <a href=#Adjusted_odds_ratios_of_matched_and_unmatched_cohorts_in_Levi_et_al id=Adjusted_odds_ratios_of_matched_and_unmatched_cohorts_in_Levi_et_al>Adjusted odds ratios of matched and unmatched cohorts in Levi et al.</a>
 </h3>
-<p>Kirsch wrote: <span class="quote">"The effect was observed in the full cohort of over 9 million individuals, and <strong>after 1:1 matching on 7 key factors to create a 1.5 million person matched cohort, the NCACM odds ratio differed by less than 1%</strong>. This <strong>strongly suggests</strong> that the Pfizer–Moderna mortality gap was not due to confounding from unmatched variables, since <strong>such aggressive matching would have materially shifted the result if residual confounding were the primary cause</strong>."</span></p>
+<p>Kirsch wrote: <span class="quote">"The effect was observed in the full cohort of over 9 million individuals, and <strong>after 1:1 matching on 7 key factors to create a 1.5 million person matched cohort, the NCACM odds ratio differed by less than 1%</strong>. This <strong>strongly suggests</strong> that the Pfizer-Moderna mortality gap was not due to confounding from unmatched variables, since <strong>such aggressive matching would have materially shifted the result if residual confounding were the primary cause</strong>."</span></p>
 <p>By a difference of less than 1%, he probably referred to how the adjusted odds ratio for non-COVID mortality was about 1.356 in the matched cohorts and 1.361 in the unmatched cohorts: [<a href=https://www.medrxiv.org/content/10.1101/2025.04.25.25326460v1>https://www.medrxiv.org/content/10.1101/2025.04.25.25326460v1</a>]</p>
 <div>
 <img src=i/rootclaim-levitables.png width=600>
@@ -501,7 +579,7 @@ pheatmap::pheatmap(m2^exp2,filename=paste0(&quot;i2.png&quot;),display_numbers=i
 <ol type="1">
 <li>The Czech data, using KCOR, 100% independently confirms the harm signal in Levi.</li>
 <li>The only difference between the lines is how many shots these people got.</li>
-<li>You can't argue "it was the sicker people" who opted for Shot #2 because:
+<li>You can't argue <span class="quote">"it was the sicker people"</span> who opted for Shot #2 because:
 <ol type="a">
 <li>Nearly everyone got 2 shots</li>
 <li>It's always the healthiest people who opt for the next shot. We know that from the data thanks to the Henjin plot at the end of this section (Henjin collaborates with SW).</li>
@@ -848,7 +926,7 @@ ggsave(&quot;1.png&quot;,width=5.2,height=4.1,dpi=300*4)</pre>
 </h3>
 <p>Kirsch wrote: <span class="quote">"Short term HVE is always around 21 days regardless of location or vaccine."</span></p>
 <p>When I searched for studies that showed deaths by time after vaccination for non-COVID vaccines, I found a paper from 2009, which showed that deaths by weeks after influenza vaccination kept climbing long after 21 days from vaccination had passed (even though it might partially be because of seasonal variation in mortality, because influenza vaccines are often administered before the flu season when mortality peaks in the winter).</p>
-<p>The paper featured the following plot with this caption: <span class="quote">"Mortality (deaths per 100 person-years) by week after influenza vaccination among higher-risk vaccinees, lower-risk vaccinees, and all vaccinees (1.9 million flu shots), Kaiser Permanente, Northern California, 1996–2005. The flat reference line shows the average monthly mortality during all unvaccinated time in the study population. COPD, chronic obstructive pulmonary disease."</span> [<a href=https://pmc.ncbi.nlm.nih.gov/articles/PMC2728831/>https://pmc.ncbi.nlm.nih.gov/articles/PMC2728831/</a>]</p>
+<p>The paper featured the following plot with this caption: <span class="quote">"Mortality (deaths per 100 person-years) by week after influenza vaccination among higher-risk vaccinees, lower-risk vaccinees, and all vaccinees (1.9 million flu shots), Kaiser Permanente, Northern California, 1996-2005. The flat reference line shows the average monthly mortality during all unvaccinated time in the study population. COPD, chronic obstructive pulmonary disease."</span> [<a href=https://pmc.ncbi.nlm.nih.gov/articles/PMC2728831/>https://pmc.ncbi.nlm.nih.gov/articles/PMC2728831/</a>]</p>
 <div>
 <img src=i/rootclaim-fluhve.png width=400>
 </div>
@@ -1069,6 +1147,81 @@ ggsave(&quot;1.png&quot;,width=5,height=5,dpi=300*4)</pre>
 <p>In the next plot I calculated excess mortality in the Czech dataset that was adjusted for age and the background mortality rate. For each combination of age group and observation month, I used the mortality rate of all people included in the dataset as the baseline. Then for each dose number and week after vaccination, I multiplied the person-days for each combination of age group and observation month with the baseline mortality rate to get the expected number of deaths, and I calculated the percentage of excess deaths by dividing the actual deaths by expected deaths and subtracting 1. It takes about 20 weeks for the excess mortality to stabilize around the level of -25% to -15%, even though it later keeps climbing even closer to 0% [<a href=czech2.html#Excess_mortality_by_weeks_after_vaccination>czech2.html#Excess_mortality_by_weeks_after_vaccination</a>]</p>
 <div>
 <img src=i/czech-weekdose.png width=660>
+</div>
+<p>I also came up with a method to compare vaccinated ASMR by weeks after vaccination against ASMR in a matched cohort of unvaccinated people. When I applied the method to the first 4 doses in the Czech FOI data, for each dose unvaccinated people got over 6 times higher ASMR than vaccinated people during the first week from vaccination, even though by week 10 the ratio had dropped to about 2.8 for the first dose, 2.5 for the second dose, 3.3 for the third dose, and 2.0 for the fourth dose:</p>
+<div>
+<img src=i/rootclaim-hudimatchsimple.png width=520>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>t=fread(&quot;https://sars2.net/f/czbucketskeep.csv.gz&quot;)[dose&lt;=4]
+
+a=t[,.(dead=sum(dead),pop=sum(alive)),.(week,month,dose,age=pmin(age,95)%/%5*5)]
+
+std=fread(&quot;https://sars2.net/f/czcensus2021pop.csv&quot;)[,sum(pop),.(age=pmin(age,95)%/%5*5)][,.(age,std=V1/sum(V1))]
+
+vax=a[dose&gt;0,.(dead=sum(dead),pop=sum(pop)),.(week,month,age,dose)]
+base=merge(vax,vax[,.(sum=sum(pop)),.(week,dose)])
+base=base[,.(frac=pop/sum,month,age,week,dose)]
+
+unvax=a[dose==0,.(dead,pop,age,month)]
+unvax=merge(unvax,base)[,.(dead=sum(dead*frac),pop=sum(pop*frac)),.(age,week,dose)]
+
+vax=vax[,.(dead=sum(dead),pop=sum(pop)),.(week,age,dose)]
+
+p=rbind(vax[,z:=2],unvax[,z:=1])
+p=merge(std,p)[,.(y=sum(dead/pop*std*365e5)),.(x=week,dose,z)]
+
+p=merge(vax[,sum(pop),.(week,dose)][V1&gt;=365e2,.(x=week,dose)],p)
+
+xstart=0;xend=100;xbreak=0:10*10;ystart=0;yend=4000;ybreak=1:3*1e3
+
+p[,z:=factor(z,,c(&quot;Unvaccinated&quot;,&quot;Vaccinated&quot;))]
+p[,dose:=factor(paste(&quot;Dose&quot;,dose))]
+
+p=rbind(p,dcast(p,x+dose~z,value.var=&quot;y&quot;)[,.(x,dose,y=Unvaccinated/Vaccinated,z=&quot;Ratio (right axis)&quot;)])
+yend2=8;secmult=yend/yend2
+
+ggplot(p,aes(x,y))+
+facet_wrap(~dose,ncol=1,scales=&quot;free_y&quot;)+
+annotate(&quot;rect&quot;,xmin=xstart,xmax=xend,ymin=ystart,ymax=yend,linewidth=.4,lineend=&quot;square&quot;,fill=NA,color=&quot;gray70&quot;)+
+geom_line(aes(color=z,y=ifelse(z==levels(z)[3],y*secmult,y)),linewidth=.6)+
+geom_label(data=p[rowid(dose)==1],aes(label=dose),y=yend,x=pmean(xstart,xend),vjust=1,fill=&quot;white&quot;,label.r=unit(0,&quot;pt&quot;),label.padding=unit(4,&quot;pt&quot;),label.size=.4,color=&quot;gray70&quot;,size=3.87)+
+geom_label(data=p[rowid(dose)==1],aes(label=dose),y=yend,x=pmean(xstart,xend),vjust=1,fill=NA,label.r=unit(0,&quot;pt&quot;),label.padding=unit(4,&quot;pt&quot;),label.size=0,size=3.87)+
+labs(title=&quot;ASMR by weeks since vaccination in Czech Republic&quot;,x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak)+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,sec.axis=sec_axis(trans=~./secmult,breaks=1:3*2))+
+scale_color_manual(values=c(&quot;#5555ff&quot;,&quot;#ff5555&quot;,&quot;gray&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=11,color=&quot;gray45&quot;),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box=&quot;vertical&quot;,
+  legend.box.just=&quot;right&quot;,
+  legend.box.margin=margin(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;horizontal&quot;,
+  legend.justification=&quot;center&quot;,
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.key=element_rect(fill=&quot;white&quot;),
+  legend.margin=margin(,,4),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11),
+  legend.title=element_blank(),
+  panel.grid.major=element_line(linewidth=.4,color=&quot;gray90&quot;),
+  panel.background=element_blank(),
+  panel.spacing=unit(0,&quot;pt&quot;),
+  plot.margin=margin(4,14,4,4),
+  plot.subtitle=element_text(size=11,hjust=.5,margin=margin(,,4)),
+  plot.title=element_text(size=11,face=&quot;bold&quot;,hjust=.5,margin=margin(1,,3)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=4.6,height=4,dpi=300*4)</pre>
 </div>
 <h3>
 <a href=#Ratio_of_mortality_rates_by_age_group_in_Czech_data id=Ratio_of_mortality_rates_by_age_group_in_Czech_data>Ratio of mortality rates by age group in Czech data</a>
@@ -1446,6 +1599,88 @@ theme(axis.text=element_text(size=11,color=&quot;gray40&quot;,margin=margin(2,2,
   strip.text=element_blank())
 ggsave(&quot;1.png&quot;,width=5.4,height=3.5,dpi=300*4)</pre>
 </div>
+<h3>
+<a href=#COVID_and_all_cause_mortality_rates_by_age id=COVID_and_all_cause_mortality_rates_by_age>COVID and all-cause mortality rates by age</a>
+</h3>
+<p>Kirsch wrote:</p>
+<blockquote>
+<p>I was fooled into thinking there was a vaccine benefit because the KCOR charts showed a period during COVID where the slope went negative.</p>
+<p>It took me a while to figure that out. KCOR assumes proportional hazards. So it gave the vaccine the benefit of doubt. Contradiction finally resolved!</p>
+<blockquote>
+<p>was COVID a proportional hazard? I don't think it was because I heard that old people had 1000x higher risk of COVID, but the mortality difference between a 20 year old and a 60 year old is only 10x. Is that right?</p>
+</blockquote>
+<p><strong>ChatGPT said</strong>:</p>
+<blockquote>
+<p>You're absolutely right - <strong>COVID was not a proportional hazard across</strong> age groups, and your reasoning is solid.</p>
+<h3 id="heres-why">Here's why:</h3>
+<p><strong>1. Proportional hazards assumption:</strong></p>
+<p>In survival analysis, the <strong>proportional hazards assumption</strong> means that the <strong>hazard ratio between two groups stays constant over time and across covariates</strong> (like age). If a disease is a proportional hazard, the relative risk (e.g., hazard ratio) would be stable across groups - say, if everyone had a 3x higher risk due to some factor, regardless of baseline risk.</p>
+<p><strong>2. COVID clearly violated this:</strong></p>
+<ul>
+<li>COVID-19 <strong>disproportionately impacted older individuals</strong>.</li>
+<li>Studies showed the <strong>infection fatality rate (IFR)</strong> was:
+<ul>
+<li><strong>~0.001%</strong> for children</li>
+<li><strong>~0.01%</strong> for 20-year-olds</li>
+<li><strong>~1%</strong> for 60-year-olds</li>
+<li><strong>~10-20%</strong> for 85+ in some nursing home settings</li>
+</ul></li>
+</ul>
+<p>This means:</p>
+<ul>
+<li>A <strong>60-year-old has ~100x higher COVID death risk</strong> than a 20-year-old.</li>
+<li>Yet, for <strong>all-cause mortality</strong>, a 60-year-old only has about a <strong>10x higher baseline risk</strong> than a 20-year-old.</li>
+</ul>
+<ol start="3" type="1">
+<li><strong>Implication: COVID was more than proportional</strong></li>
+</ol>
+<p>COVID <strong>amplified risk nonlinearly</strong> with age, far beyond what you'd expect if it were a proportional hazard based on background mortality.</p>
+</blockquote>
+</blockquote>
+<p>However instead of relying on estimates of IFR, he could've looked up how COVID mortality by age group compares to all-cause mortality. In the United States in 2020-2023, the COVID mortality rate as a percentage of all-cause mortality rate was about 8-9% in all 10-year age groups between 40-49 and 80-89. In ages 30-39 it was only about 5%, and in ages 20-29 it was only about 2%. However younger age groups have a low percentage of deaths from natural causes in general and not only a low percentage of COVID deaths, so the percentage of deaths from natural causes was about 96% in ages 80-89 but only about 24% in ages 20-29:</p>
+<pre>t=fread(&quot;curl -Ls sars2.net/f/vital.csv.xz|xz -dc&quot;)[year&gt;=2020]
+agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
+t=t[age!=999][,age:=agecut(age,0:9*10)]
+a=t[,.(covid=sum(ucd[cause==&quot;U071&quot;]),all=sum(ucd),natural=sum(ucd[ua(cause,like,&quot;[A-Q]|U071&quot;)])),age]
+popdead=fread(&quot;https://sars2.net/f/uspopdead.csv&quot;)
+a=merge(a,popdead[year%in%2020:2023,.(pop=sum(pop)),.(age=agecut(age,0:9*10))])
+o=a[,.(age,all=all/pop*1e5,covid=covid/pop*1e5,natural=natural/pop*1e5)]
+o[,covidpct:=covid/all*100][,naturalpct:=natural/all*100]
+cbind(o[,1],round(o[,-1]))
+#   age   all covid natural covidpct naturalpct
+#   0-9    67     0      49        1         72
+# 10-19    38     1      10        1         26
+# 20-29   124     3      30        2         24
+# 30-39   204     9      86        5         42
+# 40-49   332    25     220        8         66
+# 50-59   683    58     571        9         84
+# 60-69  1412   119    1308        8         93
+# 70-79  2996   252    2872        8         96
+# 80-89  8135   620    7814        8         96
+#   90+ 21995  1464   21033        7         96</pre>
+<p>(In the code above I defined deaths from natural causes as deaths with the underlying cause A-Q or COVID, even though there's also some deaths from natural causes that have an R or U code listed as the underlying cause.)</p>
+<p>In the United States in 2020-2023, people aged 60 had only about 11 times higher mortality rate than people aged 20, which is close to Kirsch's estimate of a 10-fold difference, but it's because young people in the United States have a lot of deaths from drug overdoses and other external causes. But for example in the Czech Republic in 2020-2023, people aged 60 had about 21 times higher mortality rate than people aged 20:</p>
+<pre>cz=fread(&quot;https://sars2.net/f/eurostatpopdead.csv.gz&quot;)[location==&quot;CZ&quot;]
+cz[year%in%2020:2023,sum(dead)/sum(pop),age][,V1[age==60]/V1[age==20]]
+# 20.643</pre>
+<p>However even in the Czech Republic, COVID deaths accounted for only about 2% of all deaths in people in their 20s in 2020-2023:</p>
+<pre>um=fread(&quot;https://onemocneni-aktualne.mzcr.cz/api/v2/covid-19/umrti.csv&quot;)
+um=um[year(datum)&lt;=2023,.(covid=.N),.(age=agecut(vek,0:9*10))]
+um=merge(um,cz[,.(dead=sum(dead),pop=sum(pop)),.(age=agecut(age,0:9*10))])
+o=um[,.(age,all=dead/pop*1e5,covid=covid/pop*1e5)][,covidpct:=covid/dead*100]
+cbind(o[,1],round(o[,-1]))
+#   age   all covid covidpct
+#   0-9    30     0        1
+# 10-19    18     0        1
+# 20-29    48     1        2
+# 30-39    88     3        3
+# 40-49   195     8        4
+# 50-59   538    30        6
+# 60-69  1450   115        8
+# 70-79  3582   360       10
+# 80-89  9956   947       10
+#   90+ 27677  2073        7</pre>
+<p>But again, it's expected for younger age groups to have a low mortality rate for deaths from natural causes relative to the overall mortality rate of the age group. That doesn't mean that within an age group the most frail people would have a disproportionately high risk of dying from COVID relative to dying from other causes. And it doesn't mean that the HVE would explain why unvaccinated people would have a 10 times higher COVID ASMR than vaccinated people but only 3 times higher all-cause ASMR.</p>
 <script>
 document.querySelectorAll('pre').forEach(e=>e.innerHTML=e.innerHTML.replace(/((^| )# [^\n]*|^#$)/mg,"<span class=comment>$1</span>"))
 
