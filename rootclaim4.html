@@ -71,6 +71,8 @@ blockquote h3{color:inherit}
 <li><a href="#Blog_posts_my_SMIS">Blog posts my SMIS</a></li>
 <li><a href="#Response_by_Peter_Hegarty">Response by Peter Hegarty</a></li>
 <li><a href="#Plot_posted_by_Vibeke_Manniche_for_total_fertility_rate_in_European_countries">Plot posted by Vibeke Manniche for total fertility rate in European countries</a></li>
+<li><a href="#Women_with_higher_SES_have_higher_vaccination_rate_and_lower_fertility_rate">Women with higher SES have higher vaccination rate and lower fertility rate</a></li>
+<li><a href="#Fertility_rate_weighted_by_person_days_by_age_in_vaccinated_and_unvaccinated_women">Fertility rate weighted by person-days by age in vaccinated and unvaccinated women</a></li>
 </ul>
 <li><a href="#Ratio_of_cumulative_vaccinated_and_unvaccinated_deaths_in_Czech_data">Ratio of cumulative vaccinated and unvaccinated deaths in Czech data</a></li>
 <ul class=toc>
@@ -653,7 +655,7 @@ d=o[vekova_skupina%in%c(&quot;18-24&quot;,&quot;25-29&quot;,&quot;30-34&quot;,&q
 d=d[poradi_davky==1,.(vax=sum(pocet_davek)),,.(date=datum)]
 d=rbind(d,d[,.(date=seq(min(date),max(date),1),vax=0)])[rowid(date)==1][order(date)]
 d[,cum:=cumsum(vax)]
-vaxpop=d[year(date)%in%2021:2023,.(vax=mean(cum)),.(month=yemo(date))]$vax
+vaxpop=d[year(date)%in%2021:2023,.(vax=mean(cum)),.(month=substr(date,1,7))]$vax
 
 t=setDT(read_excel(&quot;CZ-Source-data-total.xlsx&quot;,sheet=3,skip=16))[,c(1,2,3,9)]
 names(t)=c(&quot;month&quot;,&quot;total&quot;,&quot;unvaccinated&quot;,&quot;vaxduringpreg&quot;)
@@ -2101,7 +2103,7 @@ increase due to Ukrainian migrants
 </div>
 <p>I tried making a similar plot using data from Eurostat. There's many countries where the TFR in 2022 was clearly above the 2016-2020 linear trend, like Norway, Finland, Belgium, Spain, Italy, Serbia, and Macedonia. From the bottom right plot which shows a weighted average of all countries where the weight was the number of women aged 18-39, you can see that the TFR in 2022 roughly fell on the 2016-2020 trend, even though the TFR in 2023 was clearly below the trend (however it might be that the long-term trend is curved downwards, because the years 2012-2015 all fell below the trend as well):</p>
 <div>
-<img src=i/rootclaim-tfr-3.png width=700>
+<img src=i/rootclaim-tfr-3.png width=620>
 </div>
 <div class="spoiler">
 <button>
@@ -2206,7 +2208,7 @@ ggsave(&quot;1.png&quot;,width=5.7,height=5.5,dpi=300*4)</pre>
 </div>
 <p>The Short-Term Fertility Fluctuations dataset also includes data for 2024 which was missing from the Human Fertility Database. But there isn't any clear reduction in TFR below the pre-COVID trend in 2024 either, even though in some Eastern European countries there was a large drop in TFR between 2023 and 2024: [<a href=https://www.humanfertility.org/Data/STFF>https://www.humanfertility.org/Data/STFF</a>]</p>
 <div>
-<img src=i/rootclaim-tfr-4.png width=700>
+<img src=i/rootclaim-tfr-4.png width=620>
 </div>
 <div class="spoiler">
 <button>
@@ -2307,6 +2309,59 @@ theme(axis.text=element_text(size=11,color=&quot;gray30&quot;,margin=margin(2,2,
   strip.text=element_blank())
 ggsave(&quot;1.png&quot;,width=5.6,height=5.6,dpi=300*4)</pre>
 </div>
+<h3>
+<a href=#Women_with_higher_SES_have_higher_vaccination_rate_and_lower_fertility_rate id=Women_with_higher_SES_have_higher_vaccination_rate_and_lower_fertility_rate>Women with higher SES have higher vaccination rate and lower fertility rate</a>
+</h3>
+<p>Here the Twitter user Jean Fisch pointed out an obvious confounder in the study by Mannische et al.: [<a href=https://x.com/Jean&#x5f;&#x5f;Fisch/status/1937807068922028222>https://x.com/Jean__Fisch/status/1937807068922028222</a>, <a href=https://bmcpublichealth.biomedcentral.com/articles/10.1186/s12889-025-21988-x>https://bmcpublichealth.biomedcentral.com/articles/10.1186/s12889-025-21988-x</a>, <a href=https://www.demographic-research.org/articles/volume/38/56>https://www.demographic-research.org/articles/volume/38/56</a>, <a href=https://www.un.org/development/desa/pd/sites/www.un.org.development.desa.pd/files/undp_egm_201511_policy_brief_no%2e_6.pdf>https://www.un.org/development/desa/pd/sites/www.un.org.development.desa.pd/files/undp_egm_201511_policy_brief_no%2e_6.pdf</a>]</p>
+<div>
+<img src=i/rootclaim-vibeke-fisch.png width=500>
+</div>
+<h3>
+<a href=#Fertility_rate_weighted_by_person_days_by_age_in_vaccinated_and_unvaccinated_women id=Fertility_rate_weighted_by_person_days_by_age_in_vaccinated_and_unvaccinated_women>Fertility rate weighted by person-days by age in vaccinated and unvaccinated women</a>
+</h3>
+<p>When I took a weighted average of fertility rates for each age where the weight was the person-days by vaccination status, the weighted average was only about 3% higher for unvaccinated women than vaccinated women in 2021, about 5% higher in 2022, and about 3% higher in 2023. So the difference in age distribution between unvaccinated and vaccinated women might not explain too much of the difference in fertility rate in Mannische's paper:</p>
+<pre>api=&quot;https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/&quot;
+pop=fread(paste0(api,&quot;demo_pjan?format=TSV&quot;),sep=&quot;\t&quot;,header=T,na.strings=&quot;:&quot;)
+meta=fread(text=pop[[1]],header=F)
+pick=meta[,V5==&quot;CZ&quot;&amp;V4==&quot;F&quot;]
+pop=cbind(meta[pick,.(age=V3)],year=rep(1960:2024,each=sum(pick)),pop=unlist(pop[pick,-1]))
+pop[,pop:=as.integer(gsub(&quot;\\D&quot;,&quot;&quot;,pop))]
+
+t=fread(paste0(api,&quot;demo_fordagec?format=TSV&quot;),header=T,na.strings=&quot;:&quot;)
+meta=fread(text=t[[1]])
+pick=meta[,V5==&quot;CZ&quot;&amp;V4==&quot;TOTAL&quot;]
+d=meta[pick,.(age=V3)]
+d=cbind(d,year=rep(1960:2023,each=sum(pick)),births=as.integer(unlist(t[pick,-1])))
+d=d[age%like%&quot;^Y..$&quot;&amp;year&gt;=1995]
+fert=merge(d,pop)[,age:=as.integer(substr(age,2,3))]
+
+rec=fread(&quot;xz -dc CR_records.csv.xz&quot;) # github.com/PalackyUniversity/uzis-data-analysis
+d=rec[Pohlavikod==&quot;F&quot;,.(born=Rok_narozeni,dead=DatumUmrti,vax=Datum_1)]
+a=d[!is.na(dead),.(vaxdead=sum(!is.na(vax)),unvaxdead=sum(is.na(vax))),.(date=dead,born)]
+a=merge(a,d[,.(newvax=.N),.(date=vax,born)],all=T)
+a=a[!is.na(date)]
+a=merge(a[,CJ(born=unique(born),date=seq(min(date,na.rm=T),max(date,na.rm=T),1))],a,all=T)
+a[is.na(a)]=0
+a=merge(a,d[,.(startpop=.N),,born])
+
+a[,unvaxpop:=startpop-cumsum(newvax)-cumsum(unvaxdead),born]
+a[,vaxpop:=cumsum(newvax)-cumsum(vaxdead),born]
+a[,year:=year(date)][,age:=year-born] # age is age on December 31st
+
+me=merge(a[,.(vaxpop=sum(vaxpop),unvaxpop=sum(unvaxpop)),.(year,age)],fert)
+me[,rate:=births/pop*1e3]
+
+o=me[age%in%18:39,.(unvax=weighted.mean(rate,unvaxpop),vax=weighted.mean(rate,vaxpop)),year]
+o[year==2020,vax:=NA]
+
+# weighted average of yearly births per thousand women aged 18-39 at Eurostat
+# weighted by unvaccinated and vaccinated person-days for each age in Czech FOI data
+round(o[,ratio:=unvax/vax],2)
+# year unvax   vax ratio
+# 2020 76.89    NA    NA
+# 2021 83.32 80.66  1.03 # 3% higher in unvaccinated
+# 2022 77.35 73.51  1.05 # 5% higher in unvaccinated
+# 2023 65.22 63.41  1.03 # 3% higher in unvaccinated</pre>
 <h2>
 <a href=#Ratio_of_cumulative_vaccinated_and_unvaccinated_deaths_in_Czech_data id=Ratio_of_cumulative_vaccinated_and_unvaccinated_deaths_in_Czech_data>Ratio of cumulative vaccinated and unvaccinated deaths in Czech data</a>
 </h2>
