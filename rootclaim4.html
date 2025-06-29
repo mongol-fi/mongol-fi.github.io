@@ -2332,14 +2332,12 @@ meta=fread(text=t[[1]])
 pick=meta[,V5==&quot;CZ&quot;&amp;V4==&quot;TOTAL&quot;]
 d=meta[pick,.(age=V3)]
 d=cbind(d,year=rep(1960:2023,each=sum(pick)),births=as.integer(unlist(t[pick,-1])))
-d=d[age%like%&quot;^Y..$&quot;&amp;year&gt;=1995]
-fert=merge(d,pop)[,age:=as.integer(substr(age,2,3))]
+fert=merge(d,pop)[age%like%&quot;Y&quot;][,age:=as.integer(substr(age,2,3))]
 
 rec=fread(&quot;xz -dc CR_records.csv.xz&quot;) # github.com/PalackyUniversity/uzis-data-analysis
 d=rec[Pohlavikod==&quot;F&quot;,.(born=Rok_narozeni,dead=DatumUmrti,vax=Datum_1)]
-a=d[!is.na(dead),.(vaxdead=sum(!is.na(vax)),unvaxdead=sum(is.na(vax))),.(date=dead,born)]
-a=merge(a,d[,.(newvax=.N),.(date=vax,born)],all=T)
-a=a[!is.na(date)]
+a=d[,.(vaxdead=sum(!is.na(vax)),unvaxdead=sum(is.na(vax))),.(date=dead,born)]
+a=merge(a,d[,.(newvax=.N),.(date=vax,born)],all=T)[!is.na(date)]
 a=merge(a[,CJ(born=unique(born),date=seq(min(date,na.rm=T),max(date,na.rm=T),1))],a,all=T)
 a[is.na(a)]=0
 a=merge(a,d[,.(startpop=.N),,born])
@@ -2354,7 +2352,7 @@ me[,rate:=births/pop*1e3]
 o=me[age%in%18:39,.(unvax=weighted.mean(rate,unvaxpop),vax=weighted.mean(rate,vaxpop)),year]
 o[year==2020,vax:=NA]
 
-# weighted average of yearly births per thousand women aged 18-39 at Eurostat
+# weighted average of yearly births per thousand women aged 18-39
 # weighted by unvaccinated and vaccinated person-days for each age in Czech FOI data
 round(o[,ratio:=unvax/vax],2)
 # year unvax   vax ratio
