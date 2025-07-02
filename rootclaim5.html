@@ -11,8 +11,8 @@ h2{font-size:1.7em}
 h3{font-size:1.3em}
 blockquote h2,blockquote h3{margin:.5em 0}
 blockquote ul,blockquote ol{margin:.4em 0}
-a{color:hsl(220,100%,75%)}
-a:visited{color:hsl(270,100%,75%)}
+a,a .quote{color:hsl(220,100%,75%)}
+a:visited,a .quote{color:hsl(270,100%,75%)}
 pre,code{white-space:pre-wrap;word-wrap:break-word;font:14px Menlo,'DejaVu Sans Mono','Liberation Mono',Consolas,monospace;background:#4a4a4a;color:white}
 pre{padding:4px}
 code{padding:1px}
@@ -81,6 +81,10 @@ blockquote h3{color:inherit}
 <li><a href="#Mortality_rate_by_weeks_after_third_dose_in_New_Zealand">Mortality rate by weeks after third dose in New Zealand</a></li>
 <li><a href="#COVID_and_all_cause_mortality_rates_by_age">COVID and all-cause mortality rates by age</a></li>
 <li><a href="#Did_Levi_Ladapo_show_that_Pfizer_vaccines_caused_a_22_increase_in_all_cause_mortality_in_the_US">Did Levi-Ladapo show that Pfizer vaccines caused a 22% increase in all-cause mortality in the US?</a></li>
+</ul>
+<li><a href="#Further_arguments_to_Kirsch">Further arguments to Kirsch</a></li>
+<ul class=toc>
+<li><a href="#Duration_of_short_term_HVE_in_light_of_Japanese_FOI_data">Duration of short-term HVE in light of Japanese FOI data</a></li>
 </ul>
 </ul>
 
@@ -1844,6 +1848,169 @@ ggsave(&quot;1.png&quot;,width=5.4,height=3.4,dpi=300*4)</pre>
 </div>
 <p>Also in my plot above there was a total of only about 17% excess deaths in 2021 and 9% in 2022, and most of it was accounted by deaths with the underlying cause COVID, so there doesn't seem to be room for 22% excess deaths caused by Pfizer vaccines.</p>
 <p>Kirsch even calculated the percentage of 22% wrong, because he multiplied 36% with the percentage of vaccinated people who got a Pfizer vaccine, even though he should've multiplied 36% with the percentage of total US population that got a Pfizer vaccine (or a percentage by age group weighted by deaths within each age group).</p>
+<h2>
+<a href=#Further_arguments_to_Kirsch id=Further_arguments_to_Kirsch>Further arguments to Kirsch</a>
+</h2>
+<h3>
+<a href=#Duration_of_short_term_HVE_in_light_of_Japanese_FOI_data id=Duration_of_short_term_HVE_in_light_of_Japanese_FOI_data>Duration of short-term HVE in light of Japanese FOI data</a>
+</h3>
+<p>In June 2025 Kirsch published a small record-level dataset from the city of Koganei in Japan, which contains a total of about 130,000 people and 4,000 deaths. [<a href=https://kirschsubstack.com/p/my-2500-challenge-to-the-worlds-epidemiologists>https://kirschsubstack.com/p/my-2500-challenge-to-the-worlds-epidemiologists</a>, <a href=statistic2.html#Deaths_by_days_since_vaccination_in_Japan>statistic2.html#Deaths_by_days_since_vaccination_in_Japan</a>]</p>
+<p>About 95% of the deaths in the dataset are in people aged 60 and above:</p>
+<pre>t=fread(&quot;https://sars2.net/f/jpbucketskeep.csv.gz&quot;)
+t[dose&lt;=1,sum(dead[age&gt;=60])/sum(dead)] # 0.9473442</pre>
+<p>I showed this plot to Kirsch:</p>
+<div>
+<img src=i/rootclaim-koganei-asmrratio.png width=510>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>t=fread(&quot;https://sars2.net/f/jpbuckets.csv.gz&quot;)
+ages=c(0,3:4*10,10:19*5)
+t[,age:=ages[findInterval(pmax(age,0),ages)]]
+
+doses=c(&quot;Unvaccinated&quot;,paste(&quot;Dose&quot;,1:7))
+a=t[,.(dead=sum(dead),pop=sum(pop)),.(dose=factor(dose,,doses),age,month)]
+a=rbind(a,a[dose!=&quot;Unvaccinated&quot;,.(dead=sum(dead),pop=sum(pop),dose=&quot;Vaccinated&quot;),.(age,month)])
+a=rbind(a,a[dose%like%&quot;accin&quot;,.(dead=sum(dead),pop=sum(pop),dose=&quot;All people&quot;),.(age,month)])
+a=merge(a,t[month==&quot;2022-01&quot;,sum(pop),age][,.(std=V1/sum(V1),age)])
+
+p=a[,.(pop=sum(pop),y=sum(dead/pop*std*365e5)),.(x=as.Date(paste0(month,&quot;-1&quot;)),z=dose)]
+p[pop/365&lt;1e3,y:=NA]
+p[y&gt;=5e3,y:=NA]
+frac=p[!z%in%c(&quot;Vaccinated&quot;,&quot;All people&quot;),.(frac=pop/sum(pop),z),x]
+
+ybreak=pretty(p$y,8);ystart=0;yend=max(ybreak);xstart=min(p$x);xend=max(p$x)
+
+pal=c(&quot;gray50&quot;,hcl(c(23,17,11,7,3,0,33)*10+15,90,70),&quot;black&quot;,&quot;gray50&quot;)
+
+ggplot(p,aes(x,y,color=z))+
+geom_area(data=frac,aes(y=frac*yend*.9999,fill=z),linewidth=.15,show.legend=F,alpha=.3)+
+annotate(&quot;rect&quot;,xmin=xstart,xmax=xend,ymin=ystart,ymax=yend,linewidth=.4,lineend=&quot;square&quot;,fill=NA,color=&quot;black&quot;)+
+geom_line(aes(linetype=z,linewidth=z))+
+geom_point(aes(alpha=z),size=1)+
+annotate(&quot;label&quot;,x=xstart,y=yend,hjust=0,vjust=1,size=3.8,label=&quot;ASMR per 100,000 person-years&quot;,label.r=unit(0,&quot;pt&quot;),label.padding=unit(5,&quot;pt&quot;),label.size=.4)+
+annotate(&quot;label&quot;,x=xend,y=yend,hjust=1,vjust=1,size=3.8,label=&quot;Percentage of group&quot;,label.r=unit(0,&quot;pt&quot;),label.padding=unit(5,&quot;pt&quot;),label.size=.4)+
+scale_x_date(breaks=unique(p$x)[c(F,F,T)],date_labels=&quot;%b\n%y&quot;)+
+scale_y_continuous(limits=c(ystart,yend),breaks=seq(0,yend,1000),labels=\(i)ifelse(i&lt;1000,i,paste0(i/1e3,&quot;k&quot;)),sec.axis=sec_axis(trans=~./yend*100,labels=\(x)paste0(x,&quot;%&quot;)))+
+labs(x=NULL,y=NULL)+
+ggtitle(&quot;Age-standardized mortality rate in Japanese dataset&quot;)+
+scale_color_manual(values=pal)+
+scale_linetype_manual(values=rep(c(&quot;solid&quot;,&quot;42&quot;),c(9,1)))+
+scale_linewidth_manual(values=rep(c(.4,.6),c(9,1)))+
+scale_alpha_manual(values=rep(1:0,c(9,1)))+
+scale_fill_manual(values=pal)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(color=guide_legend(nrow=2))+
+theme(axis.text=element_text(size=10,color=&quot;black&quot;),
+  axis.ticks=element_line(linewidth=.4),
+  axis.ticks.length=unit(3,&quot;pt&quot;),
+  axis.title=element_text(size=11),
+  legend.background=element_blank(),
+  legend.box.background=element_blank(),
+  legend.box.just=&quot;center&quot;,
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.key=element_rect(fill=&quot;white&quot;),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.justification=&quot;center&quot;,
+  legend.margin=margin(,,3),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=10.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  plot.margin=margin(5,5,4,5),
+  plot.title=element_text(size=11,face=2,hjust=.5,margin=margin(,,2)))
+ggsave(&quot;1.png&quot;,width=5.6,height=3.7,dpi=300*4)</pre>
+</div>
+<p>And I asked him that if the short-term HVE lasts for only 3 weeks like he claims, then why do unvaccinated people in the Koganei data have higher mortality in the last 3 months of 2021 than in 2022-2024? If you look at only ages 60+ which account for about 95% of all deaths in the dataset, then in the last 3 months of 2021 there are no longer many people who had received the first dose less than 21 days ago, so if the short-term HVE only lasts for 3 weeks, it should no longer have elevated the mortality of unvaccinated people by too much:</p>
+<pre>t[age&gt;=60&amp;week&lt;=2&amp;dose==1&amp;month%like%2021][,.(pdays=sum(pop)),month]
+#   month  pdays # person-days of people aged 60+ who received
+# 2021-03    627 # the first dose less than 21 days ago
+# 2021-04   7434
+# 2021-05 157371
+# 2021-06 270027
+# 2021-07 159067
+# 2021-08  35337
+# 2021-09  12817
+# 2021-10   5796
+# 2021-11   1152
+# 2021-12    391</pre>
+<p>But in the last 3 months of 2021, unvaccinated people have about 3.4 times higher ASMR than vaccinated people:</p>
+<pre>s=t[dose&lt;=1&amp;month%like%&quot;2021-1[012]&quot;]
+a=s[,.(dead=sum(dead),pop=sum(pop)),.(dose,age=pmin(age,95)%/%5*5)]
+a[,std:=a[,sum(pop),age][,V1/sum(V1)][factor(age)]]
+a[,sum(dead/pop*std),dose][,V1[1]/V1[2]] # 3.41715</pre>
+<p>In the next plot I calculated the baseline by multiplying the number of person-days for each combination of age group and observation month with the mortality rate among all people included in the dataset for the same combination of age group and observation month. You can see that it takes much longer than 3 weeks after vaccination for the deaths to reach close to the baseline:</p>
+<div>
+<img src=i/rootclaim-koganei-weekafter.png width=700>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
+
+b=fread(&quot;https://sars2.net/f/jpbucketskeep.csv.gz&quot;)
+b[,age:=pmin(age,95)%/%5*5]
+
+d=merge(b,b[dose&lt;=1,.(base=sum(dead)/sum(pop)),.(month,age)])[,base:=base*pop]
+d=rbind(d[dose&gt;0][,dose:=0],d[dose&gt;0])
+a=d[,.(dead=as.double(sum(dead)),base=sum(base)),.(week,dose)]
+
+a[,dead:=ma(dead,2),dose]
+mean=a[week&lt;=60,.(mean=mean(base)),,dose]
+a=merge(a,mean)
+p=a[,.(x=week,y=c(dead,base)/mean*100,z=rep(1:2,each=.N),dose)]
+
+p[,z:=factor(z,,c(&quot;Deaths&quot;,&quot;Baseline&quot;))]
+p[,dose:=factor(dose,,paste0(c(&quot;All doses&quot;,paste(&quot;Dose&quot;,1:7)),&quot; (&quot;,sprintf(&quot;%.1f&quot;,mean$mean),&quot;)&quot;))]
+
+xstart=0;xend=max(p$x);xstep=20;ystart=0;yend=160;ybreak=0:7*20
+
+ggplot(p)+
+facet_wrap(~dose,ncol=2,dir=&quot;v&quot;)+
+geom_hline(yintercept=100,color=&quot;gray75&quot;,linewidth=.4)+
+annotate(&quot;rect&quot;,xmin=xstart,xmax=xend,ymin=ystart,ymax=yend,linewidth=.4,lineend=&quot;square&quot;,linejoin=&quot;mitre&quot;,fill=NA,color=&quot;gray75&quot;)+
+geom_line(aes(x,y,color=z),linewidth=.6)+
+geom_label(data=p[rowid(dose)==1],aes(label=dose),x=xstart,y=yend,hjust=0,vjust=1,fill=&quot;white&quot;,label.r=unit(0,&quot;pt&quot;),label.padding=unit(4,&quot;pt&quot;),label.size=.4,color=&quot;gray75&quot;,size=3.87)+
+geom_label(data=p[rowid(dose)==1],aes(label=dose),x=xstart,y=yend,hjust=0,vjust=1,fill=NA,label.r=unit(0,&quot;pt&quot;),label.padding=unit(4,&quot;pt&quot;),label.size=0,size=3.87)+
+labs(title=&quot;Deaths by weeks since vaccination in Koganei (±2-week moving average)&quot;,subtitle=&quot;Shown as percentage of average baseline value on weeks 0-60 (in parentheses)&quot;,x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart,xend),breaks=seq(xstart,xend,xstep))+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
+scale_color_manual(values=c(&quot;black&quot;,&quot;#ff5555&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=11,color=&quot;gray40&quot;),
+  axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box=&quot;vertical&quot;,
+  legend.box.just=&quot;center&quot;,
+  legend.box.margin=margin(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;horizontal&quot;,
+  legend.key.height=unit(12,&quot;pt&quot;),
+  legend.key.width=unit(21,&quot;pt&quot;),
+  legend.key=element_rect(fill=&quot;white&quot;),
+  legend.margin=margin(,,5),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.grid.major=element_line(linewidth=.4,color=&quot;gray90&quot;),
+  panel.spacing=unit(3,&quot;pt&quot;),
+  plot.subtitle=element_text(size=11,hjust=.5,margin=margin(,,2)),
+  plot.title=element_text(size=11.3,face=&quot;bold&quot;,hjust=.5,margin=margin(1,,4)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=6,height=6,dpi=300*4)</pre>
+</div>
 <script>
 document.querySelectorAll('pre').forEach(e=>e.innerHTML=e.innerHTML.replace(/((^| )# [^\n]*|^#$)/mg,"<span class=comment>$1</span>"))
 
