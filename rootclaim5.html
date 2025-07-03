@@ -85,6 +85,7 @@ blockquote h3{color:inherit}
 <li><a href="#Further_arguments_to_Kirsch">Further arguments to Kirsch</a></li>
 <ul class=toc>
 <li><a href="#Duration_of_short_term_HVE_in_light_of_Japanese_FOI_data">Duration of short-term HVE in light of Japanese FOI data</a></li>
+<li><a href="#HVE_test_for_KCOR">HVE test for KCOR</a></li>
 </ul>
 </ul>
 
@@ -2010,6 +2011,235 @@ theme(axis.text=element_text(size=11,color=&quot;gray40&quot;),
   strip.background=element_blank(),
   strip.text=element_blank())
 ggsave(&quot;1.png&quot;,width=6,height=6,dpi=300*4)</pre>
+</div>
+<h3>
+<a href=#HVE_test_for_KCOR id=HVE_test_for_KCOR>HVE test for KCOR</a>
+</h3>
+<p>Kirsch updated his KCOR article to add this section: [<a href=https://kirschsubstack.com/p/czech-data-clearly-shows-covid-vaccines>https://kirschsubstack.com/p/czech-data-clearly-shows-covid-vaccines</a>]</p>
+<blockquote>
+<h3 id="hve-tests">HVE tests</h3>
+<p>If there is HVE, deaths shift from the vaccinated group to the unvaccinated group and the # of deaths shifted exponentially decays with a 4 day half life.</p>
+<p>So in 3 weeks it is mostly gone.</p>
+<p>But that is if you were vaccinated right before the enrollment date. In the Czech Republic, we chose an enrollment date of 6/14/21 well after most of the people who die were vaccinated. So there is no reason for a 3 week delay.</p>
+<p>And we can prove that by doing an objective HVE test.</p>
+<p>Here are the HVE tests to see if there is HVE over a period of time, e.g., 4 weeks.</p>
+<p>See the HVE tests tabl of the KCORv2 spreadsheet for details.</p>
+<ol type="1">
+<li><p>Plot the average(u,v)/average(u,v final) raw death counts over time. If it's HVE, the average should be 1 over time.</p></li>
+<li><p>Plot</p></li>
+</ol>
+<div>
+<img src=i/rootclaim-hvetest-1.jpg width=300>
+</div>
+<ol start="3" type="1">
+<li><p>If there is HVE, this should be =1 for all values of t.</p></li>
+<li><p>Test for exponential decay:</p></li>
+</ol>
+<div>
+<img src=i/rootclaim-hvetest-2.jpg width=500>
+</div>
+<p>On ideal simulated data, we get exactly as expected:</p>
+<div>
+<img src=i/rootclaim-hvetest-3.png width=700>
+</div>
+<p>On the Czech data right after the enrollment date it's doesn't look like HVE at all.</p>
+<div>
+<img src=i/rootclaim-hvetest-4.png width=700>
+</div>
+</blockquote>
+<p>The screenshots were from the <span class="quote">"HVE tests"</span> sheet in the <code>KCORv2.xlsx</code> file: [<a href=https://github.com/skirsch/Czech/blob/main/analysis/KCORv2.xlsx>https://github.com/skirsch/Czech/blob/main/analysis/KCORv2.xlsx</a>]</p>
+<div>
+<img src=i/rootclaim-hvetest-5.png width=1200>
+</div>
+<p>In the spreadsheet Kirsch considered that if unvaccinated deaths follow an exponential decay plus a constant factor, then the deaths subtracted from the constant factor will be linear on a log scale. And similarly if vaccinated deaths follow a constant factor minus exponential decay, then the deaths subtracted from the constant factor will be linear on a log scale.</p>
+<p>In his Czech plot weeks 1-4 are weeks 24-27 of 2021. Kirsch should've included a much longer period in his plot, because different people were vaccinated at different times, and many people were vaccinated long before his observation period started, so there was not a very sharp increase in vaccinated mortality at the start of his observation period. And there's so much week-to-week variation in the deaths that it's difficult to tell which function the deaths follow based on 4 weeks alone.</p>
+<p>And anyway the unvaccinated deaths had not yet reached a plateau on week 27 of 2021, so even if the unvaccinated deaths followed an exponential decay, the deaths on a given week minus deaths on week 27 would not be linear on a log scale. Kirsch should've rather tried to fit a curve of the form <code>c-a*log(-b*x)</code> to the data, like in my next plot.</p>
+<p>In the next plot I adjusted deaths for seasonality by dividing deaths by deaths the same week in both unvaccinated and vaccinated people. I also excluded the period with high COVID deaths in the winter of 2021-2022. After that both vaccinated and unvaccinated deaths roughly followed an exponential function:</p>
+<div>
+<img src=i/rootclaim-hvetest-6.png width=560>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>t=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv.gz&quot;)[DatumUmrtiLPZ!=&quot;&quot;]
+t[,dose:=0]
+t[Datum_Prvni_davka!=&quot;&quot;&amp;Datum_Prvni_davka&lt;=&quot;2021-24&quot;,dose:=1]
+
+a=t[,.(dead=.N,coviddead=sum(Umrti!=&quot;&quot;)),,.(dose,week=DatumUmrtiLPZ)]
+a=a[,.(dead=dead/sum(dead)*100,dose),week]
+
+iso=as.Date(1+0:1e4*7);names(iso)=format(iso,&quot;%G-%V&quot;)
+p=a[week&gt;=&quot;2021-24&quot;&amp;week&lt;=&quot;2022-52&quot;,.(x=iso[week],week,y=dead,z=factor(dose,,c(&quot;Unvaccinated&quot;,&quot;Vaccinated&quot;)))]
+p[,i:=as.integer(factor(x))]
+
+p2=p[,{sub=.SD[!(week&gt;=&quot;2021-41&quot;&amp;week&lt;=&quot;2022-15&quot;)]
+  .(x,i,week,y=predict(nls(y~c-a*exp(-b*i),sub,sub[,.(a=y[1]-y[.N],b=.08,c=max(y))]),.SD),type=2)},z]
+
+p=rbind(cbind(p,type=1),p2)
+p[,type:=factor(type,,c(&quot;Deaths&quot;,&quot;Exponential fitted curve&quot;))]
+
+xstart=as.Date(&quot;2021-1-1&quot;);xend=as.Date(&quot;2023-1-1&quot;);xbreak=seq(xstart,xend,&quot;month&quot;)
+ystart=0;yend=100;ybreak=0:10*10
+
+note=&quot;Vaccination status was determined at the end of week 24 of
+2021. The dotted weeks were excluded from the fitting period
+of the exponential curve (2021 week 41 to 2022 week 15).&quot;
+
+ggplot(p)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray75&quot;,linewidth=.4)+
+geom_line(data=copy(p)[type==type[1]&amp;week&gt;&quot;2021-41&quot;&amp;week&lt;&quot;2022-15&quot;,y:=NA],aes(x,y,color=z,alpha=type),linewidth=.6)+
+geom_line(data=p[type==type[1]&amp;week&gt;=&quot;2021-41&quot;&amp;week&lt;=&quot;2022-15&quot;],aes(x,y,color=z,alpha=type),linetype=&quot;11&quot;,linewidth=.6,show.legend=F)+
+labs(x=NULL,y=NULL,title=&quot;NZIP data: Deaths as percentage of weekly total deaths&quot;)+
+annotate(geom=&quot;label&quot;,x=pmean(xstart,xend),y=17,label=note,label.r=unit(4,&quot;pt&quot;),label.padding=unit(4,&quot;pt&quot;),label.size=.4,size=3.5,color=&quot;gray75&quot;,lineheight=.9)+
+annotate(geom=&quot;label&quot;,x=pmean(xstart,xend),y=17,label=note,label.r=unit(4,&quot;pt&quot;),label.padding=unit(4,&quot;pt&quot;),label.size=0,fill=NA,size=3.5,lineheight=.9)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=ifelse(month(xbreak)==7,year(xbreak),&quot;&quot;))+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,labels=\(x)paste0(x,&quot;%&quot;))+
+scale_color_manual(values=c(&quot;#5555ff&quot;,&quot;#ff5555&quot;))+
+scale_alpha_manual(values=c(1,.4))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=11,color=&quot;gray50&quot;,margin=margin(2,2,2,2)),
+  axis.ticks=element_line(linewidth=.4,color=&quot;gray75&quot;),
+  axis.ticks.length.x=unit(-3,&quot;pt&quot;),
+  axis.ticks.length.y=unit(0,&quot;pt&quot;),
+  legend.background=element_rect(color=&quot;gray75&quot;,linewidth=.4),
+  legend.box=&quot;horizontal&quot;,
+  legend.box.margin=margin(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.justification=c(.5,1),
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.margin=margin(3,5,3,3),
+  legend.position=c(.5,1),
+  legend.spacing.x=unit(0,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,color=&quot;gray75&quot;,linewidth=.4),
+  panel.grid.major.x=element_blank(),
+  panel.grid.major.y=element_line(linewidth=.4,color=&quot;gray90&quot;),
+  panel.spacing=unit(3,&quot;pt&quot;),
+  plot.margin=margin(5,5,3,4),
+  plot.subtitle=element_text(margin=margin(,,4),hjust=.5),
+  plot.title=element_text(size=11,hjust=.5,face=2,margin=margin(1,,4)))
+ggsave(&quot;1.png&quot;,width=4.6,height=3,dpi=300*4)</pre>
+</div>
+<p>The next plot shows excess deaths by weeks after the first dose in the Czech FOI data. The exponential, logistic, and Gompertz functions all produce a fairly good fit to the data, even though they are all too low on week 0. However the logarithmic function produces a much worse fit:</p>
+<div>
+<img src=i/rootclaim-hvetest-7.png width=560>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>b=fread(&quot;https://sars2.net/f/czbucketskeep.csv.gz&quot;)
+b[,age:=pmin(age,95)%/%5*5]
+b=merge(b[dose&lt;=1,.(base=sum(dead)/sum(alive)),.(age,month)],b)
+b[,week:=week+1]
+
+p1=b[week&lt;=61&amp;dose==3,.(y=sum(dead)/sum(base*alive),z=1),.(x=week)]
+p2=p1[,.(x,y=predict(nls(y~L/(1+exp(-k*(x-x0))),start=list(L=1,k=0.3,x0=10)),p1),z=2)]
+p3=p1[,.(x,y=predict(nls(y~a*exp(-b*exp(-c*x)),start=list(a=1,b=5,c=0.3)),p1),z=3)]
+p4=p1[,.(x,y=predict(lm(y~log(x),p0),p1),z=4)]
+p5=p1[,.(x,y=predict(nls(y~a*exp(-b*x)+c,start=list(a=-.6,b=.1,c=.85)),p1),z=5)]
+
+p=rbind(p1,p2,p3,p4,p5)[,z:=factor(z,,c(&quot;Dose 3 ratio to baseline&quot;,&quot;Logistic&quot;,&quot;Gompertz&quot;,&quot;Logarithmic&quot;,&quot;Exponential&quot;))]
+p[,x:=x-1]
+
+xstart=min(p$x);xend=max(p$x);ybreak=pretty(c(0,p$y),7);ystart=min(ybreak);yend=max(ybreak)
+
+ggplot(p)+
+geom_hline(yintercept=1,color=&quot;gray75&quot;,linewidth=.4)+
+annotate(&quot;rect&quot;,xmin=xstart,xmax=xend,ymin=ystart,ymax=yend,linewidth=.4,lineend=&quot;square&quot;,linejoin=&quot;mitre&quot;,fill=NA,color=&quot;gray75&quot;)+
+geom_line(aes(x,y,color=z),linewidth=.6)+
+labs(x=NULL,y=NULL,title=&quot;Czech FOI: Deaths relative to baseline by weeks after dose 3&quot;)+
+scale_x_continuous(limits=c(xstart,xend),breaks=seq(xstart,xend,5))+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
+scale_color_manual(values=c(&quot;black&quot;,hsv(c(22,30,12)/36,.6,1),&quot;#cccc00&quot;))+
+scale_alpha_manual(values=c(1,0,0,0,0))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(color=guide_legend(ncol=1,byrow=F))+
+theme(axis.text=element_text(size=11,color=&quot;gray50&quot;,margin=margin(2,2,2,2)),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  legend.background=element_rect(color=&quot;gray75&quot;,linewidth=.4),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.justification=c(.5,0),
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.margin=margin(3,5,3,3),
+  legend.position=c(.5,.05),
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.grid.major=element_line(linewidth=.4,color=&quot;gray90&quot;),
+  plot.margin=margin(5,12,5,5),
+  plot.subtitle=element_text(margin=margin(,,4),hjust=.5),
+  plot.title=element_text(size=11,hjust=.5,face=2,margin=margin(2,,4)))
+ggsave(&quot;1.png&quot;,width=4.9,height=3,dpi=300*4)</pre>
+</div>
+<p>In the Japanese FOI data for the city of Koganei, there's such a small sample size that individual doses have a high level of noise, so in the next plot I looked at all doses added together. Now the exponential, logistic, and Gompertz curves again produce a fairly good fit, even though all of them are too high on week 0. All of them reach a plateau around week 40:</p>
+<div>
+<img src=i/rootclaim-hvetest-8.png width=560>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>b=fread(&quot;https://sars2.net/f/jpbucketskeep.csv.gz&quot;)
+b[,age:=pmin(age,95)%/%5*5]
+b=merge(b[dose&lt;=1,.(base=sum(dead)/sum(pop)),.(age,month)],b)
+b=b[week&lt;=170]
+b[,week:=week+1]
+
+p1=b[dose&gt;0,.(y=sum(dead)/sum(base*pop),z=1),.(x=week)]
+p2=p1[,.(x,y=predict(nls(y~L/(1+exp(-k*(x-x0))),start=list(L=1,k=0.3,x0=10),p1),p1),z=2)]
+p3=p1[,.(x,y=predict(nls(y~a*exp(-b*exp(-c*x)),start=list(a=1,b=5,c=0.3),p1),p1),z=3)]
+p4=p1[,.(x,y=predict(lm(y~log(x),p1),p1),z=4)]
+p5=p1[,.(x,y=predict(nls(y~a*exp(-b*x)+c,start=list(a=-.6,b=.1,c=.85)),p1),z=5)]
+
+p=rbind(p1,p2,p3,p4,p5)
+p[,z:=factor(z,,c(&quot;Deaths ratio to baseline&quot;,&quot;Logistic&quot;,&quot;Gompertz&quot;,&quot;Logarithmic&quot;,&quot;Exponential&quot;))]
+p[,x:=x-1]
+
+xstart=min(p$x);xend=max(p$x);ybreak=pretty(c(0,p$y));ystart=min(ybreak);yend=max(ybreak)
+
+ggplot(p)+
+geom_hline(yintercept=1,color=&quot;gray75&quot;,linewidth=.4)+
+annotate(&quot;rect&quot;,xmin=xstart,xmax=xend,ymin=ystart,ymax=yend,linewidth=.4,lineend=&quot;square&quot;,linejoin=&quot;mitre&quot;,fill=NA,color=&quot;gray75&quot;)+
+geom_line(aes(x,y,color=z),linewidth=.6)+
+labs(x=NULL,y=NULL,title=&quot;Deaths relative to baseline by weeks after vaccination in\nKoganei, Japan (all doses added together)&quot;)+
+scale_x_continuous(limits=c(xstart,xend),breaks=seq(xstart,xend,20))+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
+scale_color_manual(values=c(&quot;black&quot;,hsv(c(22,30,12)/36,.6,1),&quot;#cccc00&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(color=guide_legend(ncol=1,byrow=F))+
+theme(axis.text=element_text(size=11,color=&quot;gray50&quot;,margin=margin(2,2,2,2)),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  legend.background=element_rect(color=&quot;gray75&quot;,linewidth=.4),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.justification=c(.5,0),
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.margin=margin(3,5,3,3),
+  legend.position=c(.5,.05),
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.grid.major=element_line(linewidth=.4,color=&quot;gray90&quot;),
+  plot.subtitle=element_text(margin=margin(,,4),hjust=.5),
+  plot.title=element_text(size=11,hjust=.5,face=2,margin=margin(1,,4)))
+ggsave(&quot;1.png&quot;,width=5,height=3,dpi=300*4)</pre>
 </div>
 <script>
 document.querySelectorAll('pre').forEach(e=>e.innerHTML=e.innerHTML.replace(/((^| )# [^\n]*|^#$)/mg,"<span class=comment>$1</span>"))
