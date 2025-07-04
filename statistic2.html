@@ -3173,7 +3173,7 @@ ggsave(&quot;1.png&quot;,width=5.1,height=3.5,dpi=300*4)</pre>
 36                   1</pre>
 <p>Rows where the date is after a date of death or emigration can be first removed. Rows where the date is earlier than a date of birth or immigration can similarly be removed.</p>
 <hr />
-<p>Added in July 2025: Steve Kirsch published Japanese FOI data for the city of Koganei, which includes a total of about 130,000 people and about 4,000 deaths: <a href=https://kirschsubstack.com/p/my-2500-challenge-to-the-worlds-epidemiologists/>https://kirschsubstack.com/p/my-2500-challenge-to-the-worlds-epidemiologists/</a>, <a href=https://github.com/skirsch/covid/blob/main/japan/jp132101_Koganei-Tokyo_all_doses.xlsx.><a href="https://github.com/skirsch/covid/blob/main/japan/jp132101_Koganei-Tokyo_all_doses.xlsx" class="uri">https://github.com/skirsch/covid/blob/main/japan/jp132101_Koganei-Tokyo_all_doses.xlsx</a>.</a> A few days later Kenji Fujikawa published a version of the same dataset that also included columns for vaccine brand and lot number: <a href=https://medicalfacts.info/vdeath.rb>https://medicalfacts.info/vdeath.rb</a>, <a href=https://fujikawa.org/pub/jp132101_Koganei-Tokyo_all.csv.><a href="https://fujikawa.org/pub/jp132101_Koganei-Tokyo_all.csv" class="uri">https://fujikawa.org/pub/jp132101_Koganei-Tokyo_all.csv</a>.</a></p>
+<p>Added in July 2025: Steve Kirsch published Japanese FOI data for the city of Koganei, which includes a total of about 130,000 people and about 4,000 deaths: <a href=https://kirschsubstack.com/p/my-2500-challenge-to-the-worlds-epidemiologists/>https://kirschsubstack.com/p/my-2500-challenge-to-the-worlds-epidemiologists/</a>, <a href=https://github.com/skirsch/covid/blob/main/japan/jp132101_Koganei-Tokyo_all_doses.xlsx.><a href="https://github.com/skirsch/covid/blob/main/japan/jp132101_Koganei-Tokyo_all_doses.xlsx" class="uri">https://github.com/skirsch/covid/blob/main/japan/jp132101_Koganei-Tokyo_all_doses.xlsx</a>.</a> He obfuscated the data by shifting the ages of people by -4 to 4 years, and by shifting vaccination dates by -1 to 1 days. A few days later Kenji Fujikawa published an unobfuscated version of the same dataset that also included columns for vaccine brand and lot number: <a href=https://medicalfacts.info/vdeath.rb>https://medicalfacts.info/vdeath.rb</a>, <a href=https://fujikawa.org/pub/jp132101_Koganei-Tokyo_all.csv.><a href="https://fujikawa.org/pub/jp132101_Koganei-Tokyo_all.csv" class="uri">https://fujikawa.org/pub/jp132101_Koganei-Tokyo_all.csv</a>.</a></p>
 <p>I used this script to make <span class="quote">"buckets"</span> files of the data, which show the number of deaths and person-days grouped by dose number, sex, age, vaccine brand, weeks since vaccination, observation month, and vaccination month:</p>
 <pre>download.file(&quot;https://fujikawa.org/pub/jp132101_Koganei-Tokyo_all.csv&quot;,&quot;jp132101_Koganei-Tokyo_all.csv&quot;)
 
@@ -3200,19 +3200,19 @@ buck=data.table()
 for(day in as.list(seq(mindate,maxdate,1))){
   cat(as.character(day),&quot;\n&quot;)
   sub=d[date&lt;=day&amp;!(day&lt;=dead)%in%F&amp;day&gt;=born]
-  # sub=sub[rowid(id)==1] # remove under earlier doses
-  sub=sub[!(dose==0&amp;id%in%id[dose&gt;0])] # keep under earlier doses
+  sub=sub[rowid(id)==1] # remove under earlier doses
+  # sub=sub[!(dose==0&amp;id%in%id[dose&gt;0])] # keep under earlier doses
   sub=sub[,.(week=ifelse(dose==0,0,as.numeric(day-date)%/%7),month=substr(day,1,7),
     vaxmonth,age=age(born,day),sex,dose,brand,pop=1,dead=dead==day)]
   buck=rbind(buck,sub)[,.(pop=sum(pop),dead=sum(dead,na.rm=T)),.(month,vaxmonth,week,age,sex,dose,brand)]
 }
 
 setorder(buck,month,vaxmonth,week,age,sex,dose,brand)
-fwrite(buck,&quot;koganeibucketskeep.csv.gz&quot;,quote=F)</pre>
+fwrite(buck,&quot;koganeibuckets.csv.gz&quot;,quote=F)</pre>
 <p>I uploaded the output here: <a href=f/koganeibuckets.csv.gz>f/koganeibuckets.csv.gz</a>. In this version people are kept under earlier doses after a new dose: <a href=f/koganeibucketskeep.csv.gz>f/koganeibucketskeep.csv.gz</a>.</p>
 <p>Kirsch said that the age of people was calculated in May 2025 but he didn't specify which date it was, so in the code above I generated a random birthday for each person based on their age on the middle day of May 2025.</p>
-<p>Fujikawa wrote that <span class="quote">"Age categories are based on the data as of the time of disclosure and do not reflect changes due to individuals aging into a new category"</span> and <span class="quote">"The deceased's age is based on the data disclosure date and is thus older than at the time of death"</span>. [<a href=https://medicalfacts.info/vdeath.rb>https://medicalfacts.info/vdeath.rb</a>] In the Koganei data, the average age at death is about 3 years higher for people who died in 2021 than people who died in 2024. So I don't know if the age of people who died was determined based on the age at death in Hamamatsu but age in May 2025 in Koganei.</p>
-<p>The next plot shows deaths, CMR, and ASMR in both versions of the file generated by my script above. In the magenta line people are removed under earlier doses after a new dose, and in the blue line people are kept under earlier doses after a new dose. The plot that went viral looks he most like the magenta line for raw deaths, where the deaths peak around week 10-20, and week 20 has about 3 times more deaths than week 50. The magenta line for CMR is roughly stable from week 20 to week 60, so it doesn't look like the plot that went viral where there were about 5 times more deaths on day 120 than day 360:</p>
+<p>Fujikawa wrote that <span class="quote">"Age categories are based on the data as of the time of disclosure and do not reflect changes due to individuals aging into a new category"</span> and that <span class="quote">"The deceased's age is based on the data disclosure date and is thus older than at the time of death"</span>. [<a href=https://medicalfacts.info/vdeath.rb>https://medicalfacts.info/vdeath.rb</a>] In the Koganei data, the average age at death is about 3 years higher for people who died in 2021 than people who died in 2024. So I don't know if the age of people who died was determined based on the age at death in Hamamatsu but age in May 2025 in Koganei.</p>
+<p>In the next plot I compared the two versions of the file generated by my script above. In the magenta line people are removed under earlier doses after a new dose, and in the blue line people are kept under earlier doses after a new dose. The plot that went viral looks he most like the magenta line for raw deaths, where the deaths peak around week 10-20, and week 20 has about 3 times more deaths than week 50. The magenta line for CMR is roughly stable from week 20 to week 60, so it doesn't look like the plot that went viral where there were about 5 times more deaths on day 120 than day 360:</p>
 <div>
 <img src=i/statistic-koganei4.png width=600>
 </div>
@@ -3286,7 +3286,7 @@ theme(axis.text=element_text(size=11,color=&quot;gray40&quot;),
   strip.text=element_blank())
 ggsave(&quot;1.png&quot;,width=5.29,height=4.8,dpi=300*4)</pre>
 </div>
-<p>In the next plot the top left panel shows the same data that is shown in the top panel in the previous plot, but the other panels show the results split out by dose number. Regardless of dose number, the deaths remain below the baseline if you look at the blue line. In the magenta line the deaths reach above the baseline after a new dose is rolled out, but it's because the healthy vaccinees move under the new dose, so the stragglers who remain under the previous dose have elevated mortality:</p>
+<p>In the next plot the top left panel shows the same data that is shown in the top panel in the previous plot, but the other panels show the results split out by dose number. Regardless of dose number, the deaths remain below the baseline if you look at the blue line. In the magenta line the deaths cross above the baseline after a new dose is rolled out, but it's because the healthy vaccinees move under the new dose, so the stragglers who remain under the previous dose have elevated mortality:</p>
 <div>
 <img src=i/statistic-koganei-3.png width=650>
 </div>
