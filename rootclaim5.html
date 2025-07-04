@@ -86,6 +86,7 @@ blockquote h3{color:inherit}
 <ul class=toc>
 <li><a href="#Duration_of_short_term_HVE_in_light_of_Japanese_FOI_data">Duration of short-term HVE in light of Japanese FOI data</a></li>
 <li><a href="#HVE_test_for_KCOR">HVE test for KCOR</a></li>
+<li><a href="#Moderna_Pfizer_mortality_ratio_in_Japanese_Koganei_data">Moderna-Pfizer mortality ratio in Japanese Koganei data</a></li>
 </ul>
 </ul>
 
@@ -188,7 +189,7 @@ ggsave(&quot;1.png&quot;,width=4.9,height=3.3,dpi=300*4)</pre>
 <p>In order to get fixed cohorts of people by dose number, Kirsch determined the vaccination status at the end of week 24 of 2021. Therefore he didn't have to adjust the deaths for population size since the population sizes remained roughly constant from week 25 of 2021 onwards, apart from depletion due to deaths and change due to migration.</p>
 <p>However the period when people with only one had the lowest mortality due to HVE was before week 25 of 2021. In Kirsch's plot the number of deaths in people with only one dose remained around the same level between weeks 11 and 24 of 2021. But if you look at ages 60 and above which accounted for about 90% of total deaths in the Czech Republic in 2021, the population size of people with only one dose tripled from about 400,000 on week 11 to about 1,200,000 on week 20, and by week 25 it had falled back down to about 400,000 after people had moved under the second dose. By week 25 of 2021, ages 60 and above had about 4 times as many people with two or more doses as people with only one dose:</p>
 <pre>t=fread(&quot;https://sars2.net/f/czbucketsdaily.csv.gz&quot;)
-ages=c(0,seq(20,95,5))
+ages=c(0,4:19*5)
 t[,age:=ages[findInterval(age,ages)]]
 
 a=t[,.(dead=sum(dead),pop=sum(alive)),.(dose=pmin(dose,2),age,week=format(date,&quot;%G-%V&quot;))]
@@ -2237,6 +2238,34 @@ theme(axis.text=element_text(size=11,color=&quot;gray50&quot;,margin=margin(2,2,
   plot.title=element_text(size=11,hjust=.5,face=2,margin=margin(1,,4)))
 ggsave(&quot;1.png&quot;,width=5,height=3,dpi=300*4)</pre>
 </div>
+<h3>
+<a href=#Moderna_Pfizer_mortality_ratio_in_Japanese_Koganei_data id=Moderna_Pfizer_mortality_ratio_in_Japanese_Koganei_data>Moderna-Pfizer mortality ratio in Japanese Koganei data</a>
+</h3>
+<p>A few days after Steve Kirsch published a spreadsheet of the record-level data from Koganei in Japan, Kenji Fujikawa posted a CSV version of the data that also includes vaccine brands: <a href=https://medicalfacts.info/vdeath.rb.><a href="https://medicalfacts.info/vdeath.rb" class="uri">https://medicalfacts.info/vdeath.rb</a>.</a></p>
+<p>I used the CSV file to do a Poisson regression for mortality by vaccine brand, which I adjusted for age group, sex, observation month, and vaccination month. The Pfizer-Moderna risk ratio was about 2.0 for first doses, 2.2 for second doses, 0.8 for third doses, 0.7 for 4th doses, and 0.4 for 5th doses, and 0.5 for 6th doses. So Pfizer had higher risk for primary course doses but Moderna had higher risk for booster doses.</p>
+<p>The Florida study by Levi-Ladapo included only primary course doses, but the results of the study might have been different for booster doses.</p>
+<p>The third and fourth doses had the most deaths for Moderna so they had the narrowest confidence intervals. I kept people included under earlier doses after a new dose, so if someone died after getting a Moderna vaccine for the third dose and a Pfizer vaccine for the fourth dose, I counted their both death under Moderna for the third dose and under Pfizer for the fourth dose.</p>
+<pre>t=fread(&quot;https://sars2.net/f/koganeibucketskeep.csv.gz&quot;)
+
+s=t[brand%like%&quot;Mod|Pfi&quot;]
+s[,age:=factor(pmin(age,95)%/%5*5)]
+a=s[,.(pop=sum(pop),dead=sum(dead)),.(brand,age,vaxmonth,month,sex,dose)]
+
+rr=a[,{lm=glm(dead~brand+age+month+vaxmonth+sex,offset=log(pop),poisson)
+  rr=exp(coef(lm))[2]
+  err=qnorm(.975)*sqrt(diag(vcov(lm)))[2]
+  .(rr,low=exp(log(rr)-err),high=exp(log(rr)+err))},dose]
+
+dead=a[,sum(dead),,.(brand,dose)][,.(pfizerdead=V1[2],modernadead=V1[1]),dose]
+print(round(merge(rr,dead),2),r=F)
+# dose   rr  low high pfizerdead modernadead
+#    1 2.01 1.55 2.60       3301          73
+#    2 2.16 1.65 2.81       3238          73
+#    3 0.84 0.75 0.93       2215         443
+#    4 0.67 0.58 0.78       1834         214
+#    5 0.43 0.34 0.55       1440          73
+#    6 0.45 0.36 0.58        890          76
+#    7 0.78 0.55 1.10        537          36</pre>
 <script>
 document.querySelectorAll('pre').forEach(e=>e.innerHTML=e.innerHTML.replace(/((^| )# [^\n]*|^#$)/mg,"<span class=comment>$1</span>"))
 
