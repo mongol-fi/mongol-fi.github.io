@@ -3173,25 +3173,25 @@ ggsave(&quot;1.png&quot;,width=5.1,height=3.5,dpi=300*4)</pre>
 36                   1</pre>
 <p>Rows where the date is after a date of death or emigration can be first removed. Rows where the date is earlier than a date of birth or immigration can similarly be removed.</p>
 <hr />
-<p>Added in July 2025: Steve Kirsch has now published Japanese FOI data for the city of Koganei, which includes a total of about 130,000 people and about 4,000 deaths: <a href=https://kirschsubstack.com/p/my-2500-challenge-to-the-worlds-epidemiologists/>https://kirschsubstack.com/p/my-2500-challenge-to-the-worlds-epidemiologists/</a>, <a href=https://github.com/skirsch/covid/blob/main/japan/jp132101_Koganei-Tokyo_all_doses.xlsx.><a href="https://github.com/skirsch/covid/blob/main/japan/jp132101_Koganei-Tokyo_all_doses.xlsx" class="uri">https://github.com/skirsch/covid/blob/main/japan/jp132101_Koganei-Tokyo_all_doses.xlsx</a>.</a></p>
-<p>I used this script to make <span class="quote">"buckets"</span> files of the data, which show the number of deaths and person-days grouped by dose number, age, weeks since vaccination, observation month, and vaccination month:</p>
-<pre>f=&quot;jp132101_Koganei-Tokyo_all_doses.xlsx&quot;
-download.file(paste0(&quot;https://github.com/skirsch/covid/raw/refs/heads/main/japan/&quot;,f),f)
+<p>Added in July 2025: Steve Kirsch published Japanese FOI data for the city of Koganei, which includes a total of about 130,000 people and about 4,000 deaths: <a href=https://kirschsubstack.com/p/my-2500-challenge-to-the-worlds-epidemiologists/>https://kirschsubstack.com/p/my-2500-challenge-to-the-worlds-epidemiologists/</a>, <a href=https://github.com/skirsch/covid/blob/main/japan/jp132101_Koganei-Tokyo_all_doses.xlsx.><a href="https://github.com/skirsch/covid/blob/main/japan/jp132101_Koganei-Tokyo_all_doses.xlsx" class="uri">https://github.com/skirsch/covid/blob/main/japan/jp132101_Koganei-Tokyo_all_doses.xlsx</a>.</a> A few days later Kenji Fujikawa published a version of the same dataset that also included columns for vaccine brand and lot number: <a href=https://medicalfacts.info/vdeath.rb>https://medicalfacts.info/vdeath.rb</a>, <a href=https://fujikawa.org/pub/jp132101_Koganei-Tokyo_all.csv.><a href="https://fujikawa.org/pub/jp132101_Koganei-Tokyo_all.csv" class="uri">https://fujikawa.org/pub/jp132101_Koganei-Tokyo_all.csv</a>.</a></p>
+<p>I used this script to make <span class="quote">"buckets"</span> files of the data, which show the number of deaths and person-days grouped by dose number, sex, age, vaccine brand, weeks since vaccination, observation month, and vaccination month:</p>
+<pre>download.file(&quot;https://fujikawa.org/pub/jp132101_Koganei-Tokyo_all.csv&quot;,&quot;jp132101_Koganei-Tokyo_all.csv&quot;)
 
-library(data.table);library(readxl)
+library(data.table);library(lubridate)
+
+t=fread(&quot;jp132101_Koganei-Tokyo_all.csv&quot;,fill=T)
 
 age=\(x,y){class(x)=class(y)=NULL;(y-x-(y-789)%/%1461+(x-789)%/%1461)%/%365}
 
-t=setDT(read_excel(&quot;jp132101_Koganei-Tokyo_all_doses.xlsx&quot;,guess_max=1e6,sheet=2,skip=1))
-
-set.seed(0);t[,born:=as.Date(paste0(2024-age,&quot;-1-1&quot;))+runif(.N,,364)]
-t[!is.na(date_death),born:={x=as.POSIXlt(date_death);x$year=x$year-age;as.Date(x-runif(.N,,364))}]
+set.seed(0);t[,born:=as.Date(&quot;2025-5-16&quot;)-years(age)-sample(0:364,.N,T)]
 t[born&gt;date_lot1,born:=date_lot1]
 
 mindate=as.Date(&quot;2021-2-1&quot;);maxdate=as.Date(&quot;2025-3-31&quot;)
 
 d=t[,.(id,sex,born,dead=date_death,dose=rep(0:7,each=.N))]
-d$date=c(rep(mindate,nrow(t)),as.Date(as.POSIXlt(unlist(t[,6:12],,F),origin=&quot;1970-1-1&quot;)))
+d$date=c(rep(mindate,nrow(t)),t[,unlist(.SD,,F),.SDcols=patterns(&quot;date_lot&quot;)])
+d$brand=c(rep(&quot;&quot;,nrow(t)),t[,unlist(.SD,,F),.SDcols=patterns(&quot;pharma&quot;)])
+d[,brand:=fcase(brand==&quot;moderna&quot;,&quot;Moderna&quot;,brand==&quot;pfizer&quot;,&quot;Pfizer&quot;,brand==&quot;&quot;,&quot;&quot;,default=&quot;Other&quot;)]
 
 d=d[!is.na(date)][date&lt;=maxdate][.N:1]
 d[,vaxmonth:=substr(date,1,7)]
@@ -3199,18 +3199,20 @@ d[,vaxmonth:=substr(date,1,7)]
 buck=data.table()
 for(day in as.list(seq(mindate,maxdate,1))){
   cat(as.character(day),&quot;\n&quot;)
-  sub=d[date&lt;=day&amp;(is.na(dead)|day&lt;=dead)&amp;day&gt;=born][rowid(id)==1] # remove under earlier doses
-  # sub=d[date&lt;=day&amp;(is.na(dead)|day&lt;=dead)&amp;day&gt;=born][!(dose==0&amp;id%in%id[dose&gt;0])] # keep under earlier doses
+  sub=d[date&lt;=day&amp;!(day&lt;=dead)%in%F&amp;day&gt;=born]
+  # sub=sub[rowid(id)==1] # remove under earlier doses
+  sub=sub[!(dose==0&amp;id%in%id[dose&gt;0])] # keep under earlier doses
   sub=sub[,.(week=ifelse(dose==0,0,as.numeric(day-date)%/%7),month=substr(day,1,7),
-    vaxmonth,age=age(born,day),sex,dose,pop=1,dead=dead==day)]
-  buck=rbind(buck,sub)[,.(pop=sum(pop),dead=sum(dead,na.rm=T)),.(month,vaxmonth,week,age,sex,dose)]
+    vaxmonth,age=age(born,day),sex,dose,brand,pop=1,dead=dead==day)]
+  buck=rbind(buck,sub)[,.(pop=sum(pop),dead=sum(dead,na.rm=T)),.(month,vaxmonth,week,age,sex,dose,brand)]
 }
 
-setorder(buck,month,vaxmonth,week,age,sex,dose)
-fwrite(buck,&quot;jpbuckets.csv.gz&quot;,quote=F)</pre>
-<p>For people who didn't die, I got an estimated year of birth by subtracting the age from 2024, and I picked a random date within the year as the day of birth. For people who died, I subtracted the age number of years from the date of death, and I subtracted a random number of days between 0 and 364 from the result.</p>
-<p>I uploaded the output here: <a href=f/jpbuckets.csv.gz>f/jpbuckets.csv.gz</a>. In this version people are kept under earlier doses after a new dose: <a href=f/jpbucketskeep.csv.gz>f/jpbucketskeep.csv.gz</a>.</p>
-<p>The next plot shows deaths, CMR, and ASMR in both versions of the file, where the <code>jpbuckets</code> version is shown in magenta and the <code>jpbucketskeep</code> version is shown in blue. The plot that went viral looks he most like the magenta line for raw deaths, where the deaths peak around week 10-20, and week 20 has about 3 times more deaths than week 50. The magenta line for CMR is roughly stable from week 20 to week 60, so it doesn't look like the plot that went viral where there were about 5 times more deaths on day 120 than day 360:</p>
+setorder(buck,month,vaxmonth,week,age,sex,dose,brand)
+fwrite(buck,&quot;koganeibucketskeep.csv.gz&quot;,quote=F)</pre>
+<p>I uploaded the output here: <a href=f/koganeibuckets.csv.gz>f/koganeibuckets.csv.gz</a>. In this version people are kept under earlier doses after a new dose: <a href=f/koganeibucketskeep.csv.gz>f/koganeibucketskeep.csv.gz</a>.</p>
+<p>Kirsch said that the age of people was calculated in May 2025 but he didn't specify which date it was, so in the code above I generated a random birthday for each person based on their age on the middle day of May 2025.</p>
+<p>Fujikawa wrote that <span class="quote">"Age categories are based on the data as of the time of disclosure and do not reflect changes due to individuals aging into a new category"</span> and <span class="quote">"The deceased's age is based on the data disclosure date and is thus older than at the time of death"</span>. [<a href=https://medicalfacts.info/vdeath.rb>https://medicalfacts.info/vdeath.rb</a>] In the Koganei data, the average age at death is about 3 years higher for people who died in 2021 than people who died in 2024. So I don't know if the age of people who died was determined based on the age at death in Hamamatsu but age in May 2025 in Koganei.</p>
+<p>The next plot shows deaths, CMR, and ASMR in both versions of the file generated by my script above. In the magenta line people are removed under earlier doses after a new dose, and in the blue line people are kept under earlier doses after a new dose. The plot that went viral looks he most like the magenta line for raw deaths, where the deaths peak around week 10-20, and week 20 has about 3 times more deaths than week 50. The magenta line for CMR is roughly stable from week 20 to week 60, so it doesn't look like the plot that went viral where there were about 5 times more deaths on day 120 than day 360:</p>
 <div>
 <img src=i/statistic-koganei4.png width=600>
 </div>
@@ -3220,8 +3222,8 @@ Show code
 </button>
 <pre>ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
 
-b=fread(&quot;https://sars2.net/f/jpbucketskeep.csv.gz&quot;)[,type:=1]
-b=rbind(b,fread(&quot;https://sars2.net/f/jpbuckets.csv.gz&quot;)[,type:=2])
+b=fread(&quot;https://sars2.net/f/koganeibucketskeep.csv.gz&quot;)[,type:=1]
+b=rbind(b,fread(&quot;https://sars2.net/f/koganeibuckets.csv.gz&quot;)[,type:=2])
 b[,age:=pmin(age,95)%/%5*5]
 
 d=merge(b,rbind(b[type==1&amp;dose&lt;=1],b[type==2])[,.(base=sum(dead)/sum(pop)),.(month,age,type)])
@@ -3250,7 +3252,7 @@ geom_rect(data=p[,max(pretty(c(0,y))),facet],aes(ymax=V1),ymin=0,xmin=xstart,xma
 geom_line(aes(x,y,color=type,alpha=z),linewidth=.6)+
 geom_label(data=p[,max(pretty(c(0,y))),facet],aes(y=V1,label=facet),x=pmean(xstart,xend),vjust=1,fill=&quot;white&quot;,label.r=unit(0,&quot;pt&quot;),label.padding=unit(4,&quot;pt&quot;),label.size=.4,color=&quot;gray75&quot;,size=3.87)+
 geom_label(data=p[,max(pretty(c(0,y))),facet],aes(y=V1,label=facet),x=pmean(xstart,xend),vjust=1,fill=NA,label.r=unit(0,&quot;pt&quot;),label.padding=unit(4,&quot;pt&quot;),label.size=0,size=3.87)+
-labs(x=NULL,y=NULL,title=&quot;Mortality by weeks since vaccination in Koganei&quot;,subtitle=&quot;All lines are ±2-week moving averages&quot;)+
+labs(x=NULL,y=NULL,title=&quot;Mortality by weeks since vaccination in Koganei, Japan&quot;,subtitle=&quot;All lines are ±2-week moving averages&quot;)+
 scale_x_continuous(limits=c(xstart,xend),breaks=seq(xstart,xend,20))+
 scale_y_continuous(limits=\(x)range(pretty(c(0,x))),breaks=\(x)pretty(c(0,x)),labels=\(x)ifelse(x==max(pretty(c(0,x))),&quot;&quot;,x))+
 scale_color_manual(values=c(&quot;#2222ff&quot;,&quot;#ff22ff&quot;))+
@@ -3288,14 +3290,10 @@ ggsave(&quot;1.png&quot;,width=5.29,height=4.8,dpi=300*4)</pre>
 <div>
 <img src=i/statistic-koganei-3.png width=650>
 </div>
-<div class="spoiler">
-<button>
-Show code
-</button>
 <pre>ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
 
-b=fread(&quot;https://sars2.net/f/jpbuckets.csv.gz&quot;)[,type:=1]
-b=rbind(b,fread(&quot;https://sars2.net/f/jpbucketskeep.csv.gz&quot;)[,type:=2])
+b=fread(&quot;s/f/koganeibuckets.csv.gz&quot;)[,type:=1]
+b=rbind(b,fread(&quot;s/f/koganeibucketskeep.csv.gz&quot;)[,type:=2])
 
 b[,age:=pmin(age,95)%/%5*5]
 base=rbind(b[type==1],b[type==2&amp;dose&lt;=1])
@@ -3353,7 +3351,6 @@ theme(axis.text=element_text(size=11,color=&quot;gray40&quot;),
   strip.background=element_blank(),
   strip.text=element_blank())
 ggsave(&quot;1.png&quot;,width=5.5,height=5.2,dpi=300*4)</pre>
-</div>
 <p>In both plots above, I calculated the baseline by multiplying the number of person-days for each combination of age group and observation month with the mortality rate among all people included in the dataset for the same combination of age group and observation month. I calculated the ASMR by 5-year age groups up to ages 95+, so that I used the fraction of person-days for each age group in January 2022 as my standard population.</p>
 <script>
 document.querySelectorAll('pre').forEach(e=>e.innerHTML=e.innerHTML.replace(/((^| )# [^\n]*|^#$)/mg,"<span class=comment>$1</span>"))
