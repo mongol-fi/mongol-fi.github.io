@@ -11,8 +11,8 @@ h2{font-size:1.7em}
 h3{font-size:1.3em}
 blockquote h2,blockquote h3{margin:.5em 0}
 blockquote ul,blockquote ol{margin:.4em 0}
-a{color:hsl(220,100%,75%)}
-a:visited{color:hsl(270,100%,75%)}
+a,a .quote{color:hsl(220,100%,75%)}
+a:visited,a .quote{color:hsl(270,100%,75%)}
 pre,code{white-space:pre-wrap;word-wrap:break-word;font:14px Menlo,'DejaVu Sans Mono','Liberation Mono',Consolas,monospace;background:#4a4a4a;color:white}
 pre{padding:4px}
 code{padding:1px}
@@ -630,6 +630,78 @@ ggsave(&quot;1.png&quot;,width=6,height=4,dpi=300*4)
 
 sub=&quot;Drug overdose deaths consist of ICD codes X40-44, X60-64, and Y10-14. External causes consist of the ICD codes V01-Y89. I45-51 are cardiac ICD codes included in Ethical Skeptic&#39;s plot (Other conduction disorders; Cardiac arrest; Paroxysmal tachycardia; Atrial fibrillation and flutter; Other cardiac arrhythmias; Heart failure; Complications and ill-defined descriptions of heart disease).&quot;
 system(paste0(&quot;mar=$[24*4];w=`identify -format %w 1.png`;magick \\( 1.png -gravity southwest -chop 0x40 \\) \\( -size $[w-mar*2]x -font Arial -interline-spacing -3 -pointsize $[44*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&#39;&quot;,sub),&quot;&#39; -gravity southwest -splice $[mar]x$[20*4] \\) -append -resize 25% -colors 256 1.png&quot;))</pre>
+</div>
+<p>The next plot shows how many deaths each year had one of the MCDs listed in the plot by ES:</p>
+<div>
+<img src=i/ethical-heartheat.png width=700>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>ua=\(x,y,...){u=unique(x);y(u,...)[match(x,u)]}
+dotcode=\(x)ua(x,\(x)ifelse(x%like%&quot;^ &quot;,substr(x,2,4),sub(&quot;(...)(.)&quot;,&quot;\\1.\\2&quot;,x)))
+kimi=\(x){na=is.na(x);x[na]=0;e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)%/%3+1;x[]=ifelse(abs(x)&lt;1e3,round(x),paste0(sprintf(paste0(&quot;%.&quot;,ifelse(e%%3==0,1,0),&quot;f&quot;),x/1e3^(e2-1)),c(&quot;&quot;,&quot;k&quot;,&quot;M&quot;,&quot;B&quot;,&quot;T&quot;)[e2]));x[na]=&quot;NA&quot;;x}
+
+# sars2.net/stat.html#Download_fixed_width_and_CSV_files_for_the_NVSS_data_used_at_CDC_WONDER
+vit=do.call(rbind,lapply(2015:2023,\(i)fread(j(i,&quot;.csv.gz&quot;))[age!=9999&amp;or(age&gt;=2000,age&lt;=1054)]))
+l=vit[,.(.I,year,code=unlist(.SD,,F)),.SDcols=patterns(&quot;ucod|enicon_&quot;)][code!=&quot;&quot;]
+
+codes=sub(&quot;\\.&quot;,&quot;&quot;,rbind(pick,pick4)$code)
+
+any=l[code%in%codes]
+a2=any[,.(dead=length(unique(I)),label=&quot;Any cause above&quot;),year]
+a3=any[!I%in%I[code==&quot;U071&quot;],.(dead=n_distinct(I),label=&quot;Any cause above and not MCD COVID&quot;),year]
+a4=any[!I%in%I[code%like%&quot;X4[0-4]|X6[0-4]|Y1[0-4]&quot;],.(dead=n_distinct(I),label=&quot;Any cause above and not MCD drugs (X40-44/X60-64/Y10-14)&quot;),year]
+a5=any[!I%in%I[code%like%&quot;X4[0-4]|X6[0-4]|Y1[0-4]|U071&quot;],.(dead=n_distinct(I),label=&quot;Any cause above and not MCD COVID or MCD drugs&quot;),year]
+
+pick=fread(&quot;code;cause
+I45;Other conduction disorders
+I46;Cardiac arrest
+I47;Paroxysmal tachycardia
+I48;Atrial fibrillation and flutter
+I49;Other cardiac arrhythmias
+I50;Heart failure
+I51;Complications and ill-defined descriptions of heart disease
+R00;Abnormalities of heart beat
+R01;Cardiac murmurs and other cardiac sounds
+R96;Other sudden death, cause unknown
+R99;Other ill-defined and unspecified causes of mortality
+X30;Exposure to excessive natural heat (hyperthermia)
+X44;Accidental drug overdose&quot;)
+
+pick4=fread(&quot;code;cause
+I51.4;Myocarditis
+R09.2;Respiratory arrest
+R09.8;Other symptoms and signs (circulatory and respiratory)
+U07.1;COVID&quot;)
+
+v=fread(&quot;cat https://sars2.net/f/vital3.csv.xz|xz -dc&quot;)
+v4=fread(&quot;cat https://sars2.net/f/vital.csv.xz|xz -dc&quot;)
+setnames(v4,&quot;cause&quot;,&quot;code&quot;)
+
+a=rbind(v,v4)[year&gt;=2015&amp;age&lt;=54,.(dead=sum(mcd)),,.(year,code)]
+a[,code:=dotcode(code)]
+
+a=merge(rbind(pick,pick4),a)
+a1=a[,.(label=paste0(code,&quot;: &quot;,cause),year,dead)]
+
+a0=rbind(a1,a2,a3,a4,a5)
+a0=rbind(a0[!label%like%&quot;U07&quot;],a0[label%like%&quot;U07&quot;])
+
+m=a0[,xtabs(dead~factor(label,unique(label))+year)]
+
+disp=kimi(m)
+m=m^.6;m=m/max(m)
+
+pal=colorRampPalette(hex(HSV(c(210,210,210,160,110,60,30,0,0,0),c(0,.25,rep(.5,8)),c(rep(1,8),.5,0))))(256)
+
+pheatmap::pheatmap(m,filename=&quot;0.png&quot;,display_numbers=disp,
+  gaps_row=length(lab)-c(0,4),
+  cluster_rows=F,cluster_cols=F,legend=F,cellwidth=17,cellheight=13,fontsize=9,fontsize_number=8,
+  border_color=NA,na_col=&quot;white&quot;,
+  number_color=ifelse(m&gt;=.8,&quot;white&quot;,&quot;black&quot;),
+  breaks=seq(0,1,,length(pal)),pal)</pre>
 </div>
 <h2>
 <a href=#Plot_for_X44_drug_deaths id=Plot_for_X44_drug_deaths>Plot for X44 drug deaths</a>
