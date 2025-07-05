@@ -73,6 +73,7 @@ blockquote h3{color:inherit}
 <li><a href="#Are_deaths_with_UCD_COVID_but_MCD_cancer_miscoded_UCD_cancer_deaths">Are deaths with UCD COVID but MCD cancer miscoded UCD cancer deaths?</a></li>
 <li><a href="#Is_negative_excess_ASMR_in_2024_at_Mortality_Watch_due_to_a_lack_of_PFE_adjustment">Is negative excess ASMR in 2024 at Mortality Watch due to a lack of PFE adjustment?</a></li>
 <li><a href="#Why_did_the_population_estimate_of_ages_72_and_above_increase_in_2020_2022_despite_COVID_deaths">Why did the population estimate of ages 72 and above increase in 2020-2022 despite COVID deaths?</a></li>
+<li><a href="#Yearly_ASMR_in_April_to_September_2024">Yearly ASMR in April to September 2024</a></li>
 </ul>
 
 
@@ -2490,7 +2491,7 @@ t[,.(dead=sum(dead),base=sum(base)),.(year,month)][1:2]
 <img src=i/ethical-72plus.png width=586>
 </div>
 <p>His plot shows that the size of the age group 72 and above increased by about 15.1% between 2020 and 2024, even though the historic baseline increase over a 4-year period was only about 2.4%. But he didn't take baby boomers into account.</p>
-<p>The earliest baby boomers were born in mid-1946, so they turned 72 in mid-2018, but there were not yet many baby boomers included in the mid-year population estimate for ages 72 and above until 2019. But in the subsequent years the size of the age group 72 and above increased by about 1-1.4 million per year despite the large number of COVID deaths:</p>
+<p>The earliest baby boomers were born in mid-1946, so they turned 72 in mid-2018, but there were not yet many baby boomers included in the mid-year population estimate for ages 72 and above until 2019. But in the subsequent years even though there was a large number of COVID deaths, the population size of ages 72 and above still increased by about 1-1.4 million per year:</p>
 <div>
 <img src=i/ethical-72plus-2.png width=700>
 </div>
@@ -2524,6 +2525,89 @@ pheatmap::pheatmap(m,filename=&quot;1.png&quot;,display_numbers=disp,
   breaks=seq(0,max(m),,256),sapply(seq(1,0,,256),\(i)rgb(i,i,i)))
 
 system(&quot;pad=22;w=`identify -format %w 1.png`;magick \\( -size $[w-pad*2]x -font Arial-Bold -pointsize 42 caption:&#39;Mid-year US resident population estimate in millions by age and year&#39; -splice $[pad]x16 \\) \\( -size $[w-pad*2] -font Arial -pointsize 38 caption:&#39;Vintage 2024 population estimates were used for 2020-2024. DIY intercensal estimates were used for 2010-2019, where the 2010-2020 population estimates for each age were multiplied by a linear slope so that they were equal to the 2020-2024 estimates in 2020. Source: www2.census.gov/programs-surveys/popest/datasets, files 2020-2024/national/asrh/nc-est2024-agesex-res.csv and 2010-2020/national/asrh/nc-est2020-agesex-res.csv.&#39; -splice $[pad]x10 \\) 1.png -append -colorspace gray 1.png&quot;)</pre>
+</div>
+<h2>
+<a href=#Yearly_ASMR_in_April_to_September_2024 id=Yearly_ASMR_in_April_to_September_2024>Yearly ASMR in April to September 2024</a>
+</h2>
+<p>Ethical Skeptic claims the United States still had about 3,000-5,000 excess deaths per week in 2025, which would be the equivalent of about 7% excess deaths per year. [<a href=https://x.com/henjin256/status/1940356437240414316>https://x.com/henjin256/status/1940356437240414316</a>, <a href=https://x.com/EthicalSkeptic/status/1940487722071666911>https://x.com/EthicalSkeptic/status/1940487722071666911</a>] However I'm getting close to 0% excess deaths in the US since January 2023, and with some methods I'm even getting negative excess deaths in 2024.</p>
+<p>The baseline ES used to calculate the excess deaths seemed to be based on his method of <span class="quote">"summer trough regression"</span>. The slope of his baseline seems to be too low, because his baseline is above the summer trough in 2014 but below the trough in 2019:</p>
+<div>
+<img src=i/ethical-trougharrows.jpg width=1000>
+</div>
+<p>Ethical Skeptic gives a low weight to 2014 when he determines the slope of his baseline, because he says the summer of 2014 had an unusually low number of deaths:</p>
+<div>
+<img src=i/ethical-trough-4.png width=1000>
+</div>
+<p>However in both of his plots above ES started the x-axis from 2014, so it's difficult to tell how the deaths in the summer of 2014 compare to the long-term trend. It would also be easier to see how high the overall deaths in the summer were if he plotted yearly data that showed the deaths on all summer weeks added together, because the number of deaths during the lowest point in the summer is not necessarily representative of deaths during the whole summer.</p>
+<p>In order to address both shortcomings, I made the following plot where I calculated ASMR for United States using deaths in April to September only. The long-term trend in ASMR was clearly curved, so I fitted a spline to the data instead of a line. The year 2014 was actually not too far from my spline baseline, because the years 2015-2017 were all above the long-term trend, which was not easy to discern from the plot by ES:</p>
+<div>
+<img src=i/ethical-summerasmr.png width=550>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>t=fread(&quot;https://sars2.net/f/uspopdeadmonthly.csv&quot;)[month%in%4:9]
+a=t[,.(dead=sum(dead)),.(year,age=ifelse(age&gt;85,age%/%5*5,age))]
+pop=fread(&quot;https://sars2.net/f/uspopdead.csv&quot;)[,.(pop=sum(pop,na.rm=T)),.(age=ifelse(age&gt;85,age%/%5*5,age),year)]
+a=merge(a,pop)[year%in%2000:2024]
+
+a=merge(a[year==2020,.(age,std=pop/sum(pop))],a)
+
+p=a[,.(y=sum(dead/pop*std/183*365e5),z=1),.(x=year)]
+
+p=rbind(p,setDT(predict(p[x&lt;2020,smooth.spline(x,y,spar=.7)],p$x))[,z:=2])
+
+p=rbind(p[,facet:=1],p[,.(y=(y[1]/y[2]-1)*100,z=1,facet=2),x])
+
+p[,z:=factor(z,,c(&quot;ASMR&quot;,&quot;2000-2019 smoothed spline&quot;))]
+p[,facet:=factor(facet,,c(&quot;ASMR per 100,000 person-years&quot;,&quot;Excess ASMR percent&quot;))]
+
+xstart=1999.5;xend=2024.5;xbreak=seq(2000,xend,1)
+ylim=p[,{x=extendrange(y);.(ymin=x[1],ymax=x[2])},facet]
+
+ggplot(p)+
+facet_wrap(~facet,dir=&quot;v&quot;,scales=&quot;free_y&quot;)+
+geom_vline(xintercept=seq(xstart,xend,5),color=&quot;gray90&quot;,linewidth=.4)+
+geom_rect(data=ylim,aes(ymin=ymin,ymax=ymax),xmin=xstart,xmax=xend,lineend=&quot;square&quot;,linejoin=&quot;mitre&quot;,fill=NA,color=&quot;gray72&quot;,linewidth=.4)+
+geom_segment(data=ylim[2],y=0,yend=0,x=xstart,xend=xend,linewidth=.4,color=&quot;gray72&quot;)+
+geom_point(aes(x,y,color=z,alpha=z),stroke=0,size=1.5)+
+geom_line(data=p[!(z==levels(z)[2]&amp;x&gt;2019)],aes(x,y,color=z),linewidth=.5)+
+geom_line(data=p[z==levels(z)[2]&amp;x&gt;=2019],aes(x,y,color=z),linetype=&quot;11&quot;,linewidth=.5)+
+geom_label(data=ylim,aes(label=facet,y=ymax),x=pmean(xstart,xend),hjust=.5,vjust=1,fill=&quot;white&quot;,label.r=unit(0,&quot;pt&quot;),label.padding=unit(4,&quot;pt&quot;),label.size=.4,color=&quot;gray72&quot;,size=3.87)+
+geom_label(data=ylim,aes(label=facet,y=ymax),x=pmean(xstart,xend),hjust=.5,vjust=1,fill=NA,label.r=unit(0,&quot;pt&quot;),label.padding=unit(4,&quot;pt&quot;),label.size=0,size=3.87)+
+labs(x=NULL,y=NULL,title=&quot;ASMR in April to September in United States&quot;)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak)+
+scale_y_continuous(breaks=pretty,labels=\(x)ifelse(x&lt;100,paste0(x,&quot;%&quot;),x))+
+scale_color_manual(values=c(&quot;black&quot;,&quot;#5555ff&quot;))+
+scale_alpha_manual(values=1:0)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=11,color=&quot;gray40&quot;,margin=margin(2,2,2,2)),
+  axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
+  axis.ticks=element_line(linewidth=.4,color=&quot;gray72&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(4,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.key=element_blank(),
+  legend.margin=margin(,,4),
+  legend.key.height=unit(12,&quot;pt&quot;),
+  legend.key.width=unit(24,&quot;pt&quot;),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.spacing=unit(3,&quot;pt&quot;),
+  plot.title=element_text(size=11,face=2,hjust=.5,margin=margin(,,2)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=4.7,height=3.6,dpi=300*4)</pre>
+</div>
+<p>So when ES determines the slope of his baseline, he might just as well give a high weight to 2014 but a low weight to 2015-2017. Here I tried to draw the green line to approximate a linear regression of deaths at the lowest points of 2014, 2018, and 2019, but my green line is much steeper than Ethical Skeptic's yellow-green dashed line:</p>
+<div>
+<img src=i/ethical-trougharrows-2.jpg width=1000>
 </div>
 <script>
 document.querySelectorAll('pre').forEach(e=>e.innerHTML=e.innerHTML.replace(/((^| )# [^\n]*|^#$)/mg,"<span class=comment>$1</span>"))
