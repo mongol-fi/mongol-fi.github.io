@@ -647,13 +647,13 @@ kimi=\(x){na=is.na(x);x[na]=0;e=floor(log10(ifelse(x==0,1,abs(x))));e2=pmax(e,0)
 vit=do.call(rbind,lapply(2015:2023,\(i)fread(j(i,&quot;.csv.gz&quot;))[age!=9999&amp;or(age&gt;=2000,age&lt;=1054)]))
 l=vit[,.(.I,year,code=unlist(.SD,,F)),.SDcols=patterns(&quot;ucod|enicon_&quot;)][code!=&quot;&quot;]
 
-codes=sub(&quot;\\.&quot;,&quot;&quot;,rbind(pick,pick4)$code)
+codes=paste(sub(&quot;\\.&quot;,&quot;&quot;,rbind(pick,pick4[code!=&quot;U07.1&quot;])$code),collapse=&quot;|&quot;)
 
-any=l[code%in%codes]
-a2=any[,.(dead=length(unique(I)),label=&quot;Any cause above&quot;),year]
-a3=any[!I%in%I[code==&quot;U071&quot;],.(dead=n_distinct(I),label=&quot;Any cause above and not MCD COVID&quot;),year]
-a4=any[!I%in%I[code%like%&quot;X4[0-4]|X6[0-4]|Y1[0-4]&quot;],.(dead=n_distinct(I),label=&quot;Any cause above and not MCD drugs (X40-44/X60-64/Y10-14)&quot;),year]
-a5=any[!I%in%I[code%like%&quot;X4[0-4]|X6[0-4]|Y1[0-4]|U071&quot;],.(dead=n_distinct(I),label=&quot;Any cause above and not MCD COVID or MCD drugs&quot;),year]
+any=l[I%in%l[ua(code,like,codes),I]]
+a2=any[,.(dead=uniqueN(I),label=&quot;Any cause above&quot;),year]
+a3=any[!I%in%I[code==&quot;U071&quot;],.(dead=uniqueN(I),label=&quot;Any cause above and not MCD COVID&quot;),year]
+a4=any[!I%in%I[code%like%&quot;X4[0-4]|X6[0-4]|Y1[0-4]&quot;],.(dead=uniqueN(I),label=&quot;Any cause above and not MCD drugs (X40-44/X60-64/Y10-14)&quot;),year]
+a5=any[!I%in%I[code%like%&quot;X4[0-4]|X6[0-4]|Y1[0-4]|U071&quot;],.(dead=uniqueN(I),label=&quot;Any cause above and not MCD COVID or MCD drugs&quot;),year]
 
 pick=fread(&quot;code;cause
 I45;Other conduction disorders
@@ -676,8 +676,8 @@ R09.2;Respiratory arrest
 R09.8;Other symptoms and signs (circulatory and respiratory)
 U07.1;COVID&quot;)
 
-v=fread(&quot;cat https://sars2.net/f/vital3.csv.xz|xz -dc&quot;)
-v4=fread(&quot;cat https://sars2.net/f/vital.csv.xz|xz -dc&quot;)
+v=fread(&quot;curl -Ls sars2.net/f/vital3.csv.xz|xz -dc&quot;)
+v4=fread(&quot;curl -Ls sars2.net/f/vital.csv.xz|xz -dc&quot;)
 setnames(v4,&quot;cause&quot;,&quot;code&quot;)
 
 a=rbind(v,v4)[year&gt;=2015&amp;age&lt;=54,.(dead=sum(mcd)),,.(year,code)]
