@@ -1461,7 +1461,7 @@ system(&quot;magick 1.png -resize 25% PNG8:1.png&quot;)</pre>
 </div>
 <p>This plot also shows how Akston's sine wave baseline is way too low in 2024:</p>
 <div>
-<img src=i/ethical-akston-yearly.png width=600>
+<img src=i/ethical-akston-yearly.png width=530>
 </div>
 <div class="spoiler">
 <button>
@@ -1539,7 +1539,7 @@ system(paste0(&quot;mogrify -trim 1.png;magick 1.png \\( -size `identify -format
 </div>
 <p>When I used Akston's sine wave method to fit a baseline against deaths in 1990-2009, the baseline was way too low by the late 2010s:</p>
 <div>
-<img src=i/ethical-akstonold.png width=600>
+<img src=i/ethical-akstonold.png width=550>
 </div>
 <div class="spoiler">
 <button>
@@ -1700,6 +1700,132 @@ theme(axis.text=element_text(size=11,color=&quot;black&quot;),
   strip.text=element_blank())
 ggsave(&quot;1.png&quot;,width=7,height=6,dpi=300*4)
 system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
+</div>
+<p>ES started the x-axis of his plot from 2013, but there was a plateau in the estimated cancer cases around the years 2013-2017, which made the increase between 2020 and 2021 seem rather impressive in comparison. However if he would've extended the x-axis further to the past, people would've seen that the plateau in 2013-2017 was an anomaly relative to the long-term trend, and before the plateau the yearly number of projected new cases increased at a similar rate as in the 2020s. From his plot you couldn't also see that before 2013 there were a few sharp changes in the slope of the estimates, which make the increase between 2020 and 2021 seem less anomalous in comparison:</p>
+<div>
+<img src=i/ethical-cancerincidence.png width=580>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>p1=data.table(x=1999:2021,y=c(1344122,1373852,1420906,1438707,1452951,1477359,1506539,1544548,1593851,1618511,1637693,1631299,1668983,1660374,1695256,1721875,1765534,1790526,1822959,1848657,1898978,1713991,1839670),z=1)
+p2=data.table(x=2000:2025,y=c(1220100,1268000,1284900,1334100,1368030,1372910,1399760,1444920,1437180,1479350,1529560,1596670,1638910,1660290,1665540,1658370,1685210,1688780,1735350,1762450,1806590,1898160,1918030,1958310,2001140,2041910),z=2)
+
+p=rbind(p1,p2)
+p[,z:=factor(z,,c(&quot;Reported incidence on CDC WONDER&quot;,&quot;Projected estimate by American Cancer Society&quot;))]
+
+xstart=2000;xend=2025;xbreak=seq(xstart,xend,5);p=p[x%in%xstart:xend]
+
+ggplot(p)+
+geom_line(aes(x,y,color=z),linewidth=.6)+
+geom_point(aes(x,y,color=z),size=1.1)+
+labs(x=NULL,y=NULL,title=&quot;Cancer incidence in United States&quot;)+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=xbreak)+
+scale_y_continuous(limits=extendrange(p$y),breaks=pretty(p$y,7),labels=\(x)sprintf(&quot;%.1fM&quot;,x/1e6))+
+scale_color_manual(values=c(&quot;black&quot;,hsv(c(21,30)/36,.7,1)))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(color=guide_legend(ncol=1,byrow=F))+
+theme(axis.text=element_text(size=11,color=&quot;gray40&quot;,margin=margin(2,2,2,2)),
+  axis.ticks=element_line(linewidth=.4,color=&quot;gray70&quot;),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(12,&quot;pt&quot;),
+  legend.key.width=unit(24,&quot;pt&quot;),
+  legend.margin=margin(,,4),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.4,color=&quot;gray70&quot;),
+  panel.grid.major=element_line(linewidth=.4,color=&quot;gray90&quot;),
+  panel.spacing=unit(2,&quot;pt&quot;),
+  plot.margin=margin(5,10,5,5),
+  plot.title=element_text(size=11.2,face=2,hjust=.5,margin=margin(,,2)))
+ggsave(&quot;1.png&quot;,width=5,height=3,dpi=300*4)</pre>
+</div>
+<p>The ACS report for 2025 said that the estimate for the number of new cancer cases excludes <span class="quote">"basal cell and squamous cell skin cancers and in situ carcinoma except urinary bladder"</span>. [<a href=https://www.cancer.org/research/cancer-facts-statistics/all-cancer-facts-figures.html>https://www.cancer.org/research/cancer-facts-statistics/all-cancer-facts-figures.html</a>] The same excluded types of cancer were listed in the 2006 report.</p>
+<p>A paper from 2021 said that the ACS updates their methodology for estimating new cancer cases every 5 to 8 years, which might explain some of the sudden jumps in the estimates. [<a href=https://aacrjournals.org/cebp/article-abstract/30/11/1993/670678/Updated-Methodology-for-Projecting-U-S-and-State>https://aacrjournals.org/cebp/article-abstract/30/11/1993/670678/Updated-Methodology-for-Projecting-U-S-and-State</a>] ChatGPT said the methodology was updated in 2007, 2015, and 2020:</p>
+<blockquote>
+<h3 id="section">2007</h3>
+<ul>
+<li>ACS introduced an improved projection method based on <strong>data from the National Cancer Institute's SEER (Surveillance, Epidemiology, and End Results) program</strong> and <strong>joinpoint regression models</strong>.</li>
+<li>This update marked a shift away from using simple linear extrapolations toward more sophisticated modeling techniques.</li>
+</ul>
+<h3 id="section-1">2015</h3>
+<ul>
+<li>A significant update incorporated <strong>age-period-cohort models</strong> and more nuanced demographic projections.</li>
+<li>Greater alignment with <strong>SEER*Stat</strong> software tools and <strong>U.S. Census Bureau</strong> population estimates.</li>
+</ul>
+<h3 id="section-2">2020</h3>
+<ul>
+<li>ACS began using <strong>NAACCR's Cancer in North America (CiNA) Analytic File</strong> with data from <strong>46 states and D.C.</strong>, covering over <strong>95%</strong> of the U.S. population.</li>
+<li>Projections were further refined with <strong>state-level data and trends</strong>, improving geographic accuracy.</li>
+<li>Additional refinements in estimating rare cancer types.</li>
+</ul>
+</blockquote>
+<p>ES plotted a 2013-2019 linear trend for the estimated number of new cases, but a 2000-2019 linear trend would have been much more steep:</p>
+<div>
+<img src=i/ethical-cancerincidence-2.png width=510>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>p1=data.table(x=2000:2025,y=c(1220100,1268000,1284900,1334100,1368030,1372910,1399760,1444920,1437180,1479350,1529560,1596670,1638910,1660290,1665540,1658370,1685210,1688780,1735350,1762450,1806590,1898160,1918030,1958310,2001140,2041910),z=1)
+p2=p1[,.(x,y=predict(lm(y~x,.SD[x%in%2013:2019]),.SD),z=2)]
+p3=p1[,.(x,y=predict(lm(y~x,.SD[x%in%2000:2019]),.SD),z=3)]
+
+p=rbind(p1,p2,p3)
+p[,z:=factor(z,,c(&quot;Projected estimate by American Cancer Society&quot;,&quot;2013-2019 linear regression&quot;,&quot;2000-2019 linear regression&quot;))]
+
+xstart=2000;xend=2025;xbreak=seq(xstart,xend,5);p=p[x%in%xstart:xend]
+
+ggplot(p)+
+geom_vline(xintercept=seq(xstart-.5,xend,5),color=&quot;gray90&quot;,linewidth=.4)+
+geom_line(aes(x,y,color=z),linetype=&quot;22&quot;,linewidth=.6)+
+geom_line(data=p[!(z==levels(z)[2]&amp;!x%in%2013:2019)&amp;!(z==levels(z)[3]&amp;x&gt;2019)],aes(x,y,color=z),linewidth=.6)+
+geom_point(aes(x,y,color=z,alpha=z),size=1.1)+
+labs(x=NULL,y=NULL,title=&quot;Estimated yearly new cancer cases in United States&quot;)+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=xstart:xend)+
+scale_y_continuous(limits=extendrange(p$y),breaks=pretty(p$y,7),labels=\(x)sprintf(&quot;%.1fM&quot;,x/1e6))+
+scale_color_manual(values=c(hsv(21/36,.7,1),&quot;gray50&quot;,&quot;black&quot;))+
+scale_alpha_manual(values=c(1,0,0))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(color=guide_legend(override.aes=list(linetype=c(&quot;solid&quot;,&quot;8222&quot;,&quot;8222&quot;))))+
+theme(axis.text=element_text(size=11,color=&quot;gray40&quot;,margin=margin(2,2,2,2)),
+  axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
+  axis.ticks=element_line(linewidth=.4,color=&quot;gray70&quot;),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(12,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.margin=margin(,,4),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.4,color=&quot;gray70&quot;),
+  panel.grid=element_blank(),
+  panel.grid.major.y=element_line(linewidth=.4,color=&quot;gray90&quot;),
+  panel.spacing=unit(2,&quot;pt&quot;),
+  plot.margin=margin(5,10,5,5),
+  plot.title=element_text(size=11.2,face=2,hjust=.5,margin=margin(,,2)))
+ggsave(&quot;1.png&quot;,width=4.5,height=3,dpi=300*4)</pre>
+</div>
+<p>As of July 2025, cancer incidence data for 2021 is still missing from CDC WONDER even though it has been published at SEER. At SEER age-normalized cancer incidence was lower in 2022 than 2019: [<a href=https://seer.cancer.gov/statistics-network/explorer/application.html>https://seer.cancer.gov/statistics-network/explorer/application.html</a>]</p>
+<div>
+<img src=i/ethical-seerincidence.png width=600>
 </div>
 <h2>
 <a href=#Baseline_fitted_against_summer_troughs_in_2014_2019 id=Baseline_fitted_against_summer_troughs_in_2014_2019>Baseline fitted against summer troughs in 2014-2019</a>
