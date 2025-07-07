@@ -74,6 +74,7 @@ blockquote h3{color:inherit}
 <li><a href="#Is_negative_excess_ASMR_in_2024_at_Mortality_Watch_due_to_a_lack_of_PFE_adjustment">Is negative excess ASMR in 2024 at Mortality Watch due to a lack of PFE adjustment?</a></li>
 <li><a href="#Why_did_the_population_estimate_of_ages_72_and_above_increase_in_2020_2022_despite_COVID_deaths">Why did the population estimate of ages 72 and above increase in 2020-2022 despite COVID deaths?</a></li>
 <li><a href="#Yearly_ASMR_in_April_to_September_2024">Yearly ASMR in April to September 2024</a></li>
+<li><a href="#Increase_in_raw_cancer_deaths_since_2020">Increase in raw cancer deaths since 2020</a></li>
 </ul>
 
 
@@ -1461,7 +1462,7 @@ system(&quot;magick 1.png -resize 25% PNG8:1.png&quot;)</pre>
 </div>
 <p>This plot also shows how Akston's sine wave baseline is way too low in 2024:</p>
 <div>
-<img src=i/ethical-akston-yearly.png width=530>
+<img src=i/ethical-akston-yearly.png width=550>
 </div>
 <div class="spoiler">
 <button>
@@ -1943,7 +1944,7 @@ sum(increasepercent*weights) # 34.57 (weighted average of growth percentages)
 ((600/100)^(1/5)-1)*100 # 43.10 (unweighed compound annual growth rate)</pre>
 <p>Ethical Skeptic wrote that when he fits the baseline, he avoids <span class="quote">"anomalous one year surges or depressions"</span>, and he gave the summer of 2014 as an example of an anomalous year, but it's not clear if he omits 2014 entirely from his baseline calculation period or if he simply assigns a reduced weight to 2014. And then in order to reproduce his methodology, what criteria should I use to determine which years are anomalous and how much their weights should be reduced or if the years should be excluded entirely? It's also not clear if he applies the same yearly weights for all causes of death or all age groups. So if for example there was an unusually high number of cancer deaths in 2018, then does he reduce the weight for 2018 when he calculates a baseline for cancer deaths?</p>
 <p>But in any case his methodology doesn't seem to produce a steep enough baseline in his plot for deaths from all causes since 2014. In US population projections published before COVID, the deaths were projected to start increasing more steeply in the 2020s than the 2010s because of the aging population, so ES should also take it into account when he calculates his initial baseline that has not yet been adjusted for PFE. The long-term trend in raw deaths is also curved upwards if you simply take the prepandemic linear trend in CMR by age and multiply it by the population size of each age, like in the green line in my next plot.</p>
-<p>In the next plot I calculated the green baseline by first calculating the total number of deaths for each age in June to September of each year, I divided it by <code>30+31+31+30</code> and multiplied it by 7, and I plotted the result on August 1st of each year. Then I divided the deaths by the population size of each age in June to September based on monthly population estimates published by the Census Bureau, where I used DIY intercensal estimates for 2010-2019. And then I calculated a linear regression of the CMR values for each age in 2014-2019 and I multiplied the projected regression by the population size to get the expected deaths.</p>
+<p>In the next plot I calculated the green baseline by first calculating the total number of deaths for each age in June to September of each year, and then I divided it by <code>30+31+31+30</code> and multiplied it by 7, and I plotted the result on August 1st of each year. Then I divided the deaths by the population size of each age in June to September based on monthly population estimates published by the Census Bureau, where I used DIY intercensal estimates for 2010-2019. And then I calculated a linear regression of the CMR values for each age in 2014-2019 and I multiplied the projected regression by the population size to get the expected deaths.</p>
 <p>However my green baseline was much higher in 2023 than Ethical Skeptic's yellow-green baseline, even though my baseline accounted for the reduction in population size due to excess deaths since 2020 but the baseline by ES did not:</p>
 <div>
 <img src=i/ethical-summertroughgreen.png width=1100>
@@ -2795,6 +2796,83 @@ ggsave(&quot;1.png&quot;,width=4.7,height=3.6,dpi=300*4)</pre>
 <p>So when ES determines the slope of his baseline, he might just as well give a high weight to 2014 but a low weight to 2015-2017. Here I tried to draw the green line to approximate a linear regression of deaths at the lowest points of 2014, 2018, and 2019, but my green line is much steeper than Ethical Skeptic's yellow-green dashed line:</p>
 <div>
 <img src=i/ethical-trougharrows-2.jpg width=1000>
+</div>
+<h2>
+<a href=#Increase_in_raw_cancer_deaths_since_2020 id=Increase_in_raw_cancer_deaths_since_2020>Increase in raw cancer deaths since 2020</a>
+</h2>
+<p>Ethical Skeptic linked to this plot to show that raw deaths for UCD cancer shows an increase since 2020: [<a href=https://theethicalskeptic.com/2025/06/20/the-state-of-things-pandemic/>https://theethicalskeptic.com/2025/06/20/the-state-of-things-pandemic/</a>]</p>
+<div>
+<img src=i/ethical-rawcancer.jpg width=800>
+</div>
+<p>The next plot shows that cancer ASMR has followed a roughly linear trend since 2000, which indicates that cancer mortality has followed a stable trajectory. But because of the uneven age structure of the population, raw number of deaths has followed a wavy pattern, where it has alternated between relatively flat perioads in 2000-2004 and in 2016-2019, and increasing periods in other years. ES started the x-axis of his plot from 2014, so it wasn't clear that before 2014 the yearly number of cancer deaths increasing increased at a similar slope as in 2020-2024:</p>
+<div>
+<img src=i/ethical-rawcancer-2.png width=560>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>t=fread(&quot;https://sars2.net/f/wondermalignantyearly.csv&quot;)[cause%like%&quot;UCD&quot;&amp;year%in%2000:2024]
+pop=fread(&quot;https://sars2.net/f/uspopdead.csv&quot;)
+
+a=t[,.(dead=sum(dead)),.(age=ifelse(age&gt;=85,age%/%5*5,age),year)]
+a=merge(a,pop[,.(pop=sum(pop,na.rm=T)),.(year,age=ifelse(age&gt;=85,age%/%5*5,age))])
+a=merge(a[year==2020,.(age,std=pop/sum(pop))],a)
+
+lm=glm(dead~year+factor(age),poisson,a[year%in%2000:2019],offset=log(pop))
+a$base=predict(lm,a,type=&quot;response&quot;)
+a=a[,.(dead=sum(dead),base=sum(base)),.(year)]
+
+p1=a[,.(x=year,y=c(dead,base),z=rep(1:2,each=.N),facet=1)]
+
+p2=a2[,.(y=sum(dead/pop*std/183*365e5),z=1),.(x=year)]
+p2=rbind(p2,setDT(predict(p2[x&lt;2020,smooth.spline(x,y,spar=.7)],p2$x))[,z:=2])
+p=rbind(p1,p2[,facet:=2])
+
+p[,z:=factor(z,,c(&quot;Mortality&quot;,&quot;Baseline&quot;))]
+p[,facet:=factor(facet,,c(&quot;Raw deaths (base-\nline is 2000-2019\nPoisson regression)&quot;,&quot;ASMR per 100,000 person-\nyears (baseline is 2000-\n2019 linear regression)&quot;))]
+
+xstart=1999.5;xend=2024.5;xbreak=seq(2000,xend,1)
+ylim=p[,{x=extendrange(y);.(ymin=x[1],ymax=x[2])},facet]
+
+ggplot(p)+
+facet_wrap(~facet,dir=&quot;v&quot;,scales=&quot;free_y&quot;)+
+geom_vline(xintercept=seq(xstart,xend,5),color=&quot;gray90&quot;,linewidth=.4)+
+geom_rect(data=ylim,aes(ymin=ymin,ymax=ymax),xmin=xstart,xmax=xend,lineend=&quot;square&quot;,linejoin=&quot;mitre&quot;,fill=NA,color=&quot;gray72&quot;,linewidth=.4)+
+geom_segment(data=ylim[2],y=0,yend=0,x=xstart,xend=xend,linewidth=.4,color=&quot;gray72&quot;)+
+geom_point(aes(x,y,color=z,alpha=z),stroke=0,size=1.5)+
+geom_line(data=p[!(z==levels(z)[2]&amp;x&gt;2019)],aes(x,y,color=z),linewidth=.5)+
+geom_line(data=p[z==levels(z)[2]&amp;x&gt;=2019],aes(x,y,color=z),linetype=&quot;11&quot;,linewidth=.5)+
+geom_label(data=ylim,aes(label=facet,y=ymax),x=c(xstart,xend),hjust=c(0,1),vjust=1,fill=&quot;white&quot;,label.r=unit(0,&quot;pt&quot;),label.padding=unit(4,&quot;pt&quot;),label.size=.4,color=&quot;gray72&quot;,size=3.87,lineheight=.8)+
+geom_label(data=ylim,aes(label=facet,y=ymax),x=c(xstart,xend),hjust=c(0,1),vjust=1,fill=NA,label.r=unit(0,&quot;pt&quot;),label.padding=unit(4,&quot;pt&quot;),label.size=0,size=3.87,lineheight=.8)+
+labs(x=NULL,y=NULL,title=&quot;CDC WONDER: Deaths with UCD malignant neoplasms&quot;)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak)+
+scale_y_continuous(breaks=pretty,labels=\(x)ifelse(x&gt;=1e3,paste0(x/1e3,&quot;k&quot;),x))+
+scale_color_manual(values=c(&quot;black&quot;,&quot;#5555ff&quot;))+
+scale_alpha_manual(values=1:0)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=11,color=&quot;gray40&quot;,margin=margin(2,2,2,2)),
+  axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
+  axis.ticks=element_line(linewidth=.4,color=&quot;gray72&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(4,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.key=element_blank(),
+  legend.margin=margin(,,4),
+  legend.key.height=unit(12,&quot;pt&quot;),
+  legend.key.width=unit(24,&quot;pt&quot;),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.spacing=unit(3,&quot;pt&quot;),
+  plot.title=element_text(size=11,face=2,hjust=.5,margin=margin(,,2)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=4.7,height=3.6,dpi=300*4)</pre>
 </div>
 <script>
 document.querySelectorAll('pre').forEach(e=>e.innerHTML=e.innerHTML.replace(/((^| )# [^\n]*|^#$)/mg,"<span class=comment>$1</span>"))
