@@ -1708,11 +1708,6 @@ new[SEX==0&amp;AGE%in%85:100,sum(POPESTIMATE2020)]
 <img src=i/ethical-sv40update.png width=600><img src=i/ethical-sv40update.gif width=600>
 </div>
 <p>Previously his line for week 14 of 2021 intersected with the point for the year 2021, but now the line is placed slightly after the point for the year 2020. So maybe he meant to draw the line after the point for the year 2021, but he didn't realize that in the new version of his plot the lowest ASMR was now in the year 2020 and not 2021.</p>
-<hr />
-<p>The plot by ES gave the impression that cancer mortality was stable before the introduction of the SV40-contaminated vaccines, but he started his x-axis from 1950, so you couldn't see how there was a large incraese in cancer ASMR in the first half of the 1900s. Uncle John Returns made this plot using historical mortality data published by the NVSS: [<a href=https://www.cdc.gov/nchs/nvss/mortality/hist293.htm>https://www.cdc.gov/nchs/nvss/mortality/hist293.htm</a>]</p>
-<div>
-<img src=i/ethical-sv40since1900.png width=600>
-</div>
 <h2>
 <a href=#Baseline_that_started_from_the_1970s_for_CMR_in_New_Zealand id=Baseline_that_started_from_the_1970s_for_CMR_in_New_Zealand>Baseline that started from the 1970s for CMR in New Zealand</a>
 </h2>
@@ -2164,6 +2159,81 @@ system(paste0(&quot;f=1.png;mar=100;w=`identify -format %w $f`;magick \\( $f \\)
 <p>In different versions of his plot ES has always drawn the so-called inflection point on week 14 of 2021, even though in the newest version the turning point in excess deaths seems to occur around early 2020, or possibly even in late 2019. In earlier versions the turning point seemed to occur around late 2020 or early 2021 because he had not yet shifted up the excess deaths from around week 9 of 2020 onwards. But in the new version the slope of his diagonal dashed line looks completely off compared to my magenta line here:</p>
 <div>
 <img src=i/ethical-054-4.png width=800>
+</div>
+<hr />
+<p>Added in 2025: This plot shows how the cancer ASMR in ages 0-54 also went down between 2023 and 2024. And the turning point in the mortality trend seems to have already occurred between 2019 and 2020, which is difficult to blame on the vaccines:</p>
+<div>
+<img src=i/ethical-054-asmr.png width=550>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
+
+t=fread(&quot;https://sars2.net/f/wondermalignantyearly.csv&quot;)[cause%like%&quot;UCD&quot;]
+t=t[year%in%2010:2024]
+t=t[,.(dead=sum(dead)),.(year,age,cause)]
+
+pop=fread(&quot;https://sars2.net/f/uspopdead.csv&quot;)[,dead:=NULL]
+t=merge(pop[year==2020,.(age,std=pop/sum(pop))],merge(t,pop))
+
+ages=c(0,55,75)
+xstart=2010;xend=2024
+
+p=t[,.(y=sum(dead/pop*std*1e5)),.(x=year,facet=agecut(age,ages))]
+p=rbind(p,t[,.(y=sum(dead/pop*std*1e5),facet=&quot;All ages&quot;),.(x=year)])
+
+base=p[x%in%2010:2019,.(x=xstart:xend,y=predict(lm(y~x),.(x=xstart:xend))),facet]
+p$z=&quot;Actual ASMR&quot;
+p=rbind(p,base[x&lt;=2019][,z:=&quot;2010-2019 linear trend&quot;])
+p=rbind(p,base[x&gt;=2019][,z:=&quot;Trend projection&quot;])
+p[,z:=factor(z,unique(z))]
+
+expand=p[,.(min=min(y),max=max(y)),facet]
+rat=expand[,max(max/min)]
+expand=expand[,{x=(rat*min-max)/(1+rat);.(y=c(min-x,max+x),facet)}]
+
+ggplot(p,aes(x,y))+
+facet_wrap(~facet,ncol=2,dir=&quot;v&quot;,scales=&quot;free_y&quot;)+
+geom_vline(xintercept=c(2014.5,2019.5),color=&quot;gray80&quot;,linewidth=.4)+
+geom_line(aes(linetype=z,color=z),linewidth=.6)+
+geom_point(aes(alpha=z),stroke=0,size=1.3)+
+geom_line(data=p[z==z[1]],aes(linetype=z,color=z),linewidth=.6)+
+geom_text(data=rbind(expand,p[,.(y,facet)])[,max(y),facet],aes(y=V1,label=facet,x=pmean(xstart,xend)),fontface=2,size=3.9,vjust=1.8)+
+geom_point(data=expand,x=xstart,alpha=0)+
+labs(title=&quot;CDC WONDER: Age-standardized mortality rate per 100,000 people\nfor underlying cause of death malignant neoplasms (C00-C97)&quot;,x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=xstart:xend)+
+scale_y_continuous(breaks=\(x)pretty(x,4))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+scale_color_manual(values=c(&quot;black&quot;,&quot;#4444ff&quot;,&quot;#4444ff&quot;))+
+scale_alpha_manual(values=c(1,0,0))+
+scale_linetype_manual(values=c(&quot;solid&quot;,&quot;solid&quot;,&quot;11&quot;))+
+theme(axis.text=element_text(size=11,color=&quot;black&quot;),
+  axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
+  axis.text.y=element_text(margin=margin(,1.5)),
+  axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(4,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(25,&quot;pt&quot;),
+  legend.margin=margin(,,5),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(fill=NA,linewidth=.4),
+  panel.spacing.x=unit(4,&quot;pt&quot;),
+  panel.spacing.y=unit(3,&quot;pt&quot;),
+  plot.margin=margin(5,5,5,5),
+  plot.title=element_text(size=11,face=2,hjust=.5,margin=margin(1,,2)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=5.4,height=3.6,dpi=300*4)</pre>
 </div>
 <h2>
 <a href=#Deaths_from_malignant_neoplasms_with_excess_MCD_normalization id=Deaths_from_malignant_neoplasms_with_excess_MCD_normalization>Deaths from malignant neoplasms with excess MCD normalization</a>
