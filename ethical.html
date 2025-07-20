@@ -2161,7 +2161,203 @@ system(paste0(&quot;f=1.png;mar=100;w=`identify -format %w $f`;magick \\( $f \\)
 <img src=i/ethical-054-4.png width=800>
 </div>
 <hr />
-<p>Added in 2025: This plot shows how the cancer ASMR in ages 0-54 also went down between 2023 and 2024. And the turning point in the mortality trend seems to have already occurred between 2019 and 2020, which is difficult to blame on the vaccines:</p>
+<p>Added in July 2025: In this plot that extends up to MMWR week 15 of 2025, ES now claims that his 7-week moving average of excess deaths is 44.2%. He presumably refers to the moving average on weeks 9 to 15 of 2025: [<a href=https://x.com/EthicalSkeptic/status/1946279806506615277>https://x.com/EthicalSkeptic/status/1946279806506615277</a>]</p>
+<div>
+<img src=i/ethical-054-2025.png width=600>
+</div>
+<p>I believe ES added in deaths to the end of his x-axis that he estimated to be missing because of a registration delay, because when I tried to reproduce his plot using unadjusted data from CDC WONDER, I got a drop in deaths at then end of the x-axis that is missing from his plot. But since ES hasn't documented the exact method he uses to add in the missing deaths, in the following code I used the moving average of deaths on weeks 1 to 7 of 2025 as a proxy for the deaths on weeks 9 to 15.</p>
+<p>On MMWR weeks 1 to 7 of 2025, the average number of deaths with MCD malignant neoplasms in ages 0-54 was 1059. I was not able to subtract COVID deaths because there were so few COVID deaths that they were suppressed by CDC WONDER:</p>
+<pre>t=fread(&quot;https://sars2.net/f/wondermalignant054weekly.csv&quot;) # retrieved July 20th 2025 UTC
+t[year==2025&amp;cause==&quot;mcd&quot;&amp;week%in%1:6,mean(dead)]
+# 1059</pre>
+<p>In order for 1059 deaths to correspond to about 44.2% excess deaths, the baseline number of deaths would have to be about <code>1059/1.442</code>, which is about 734.4. It's about 33% lower than the average weekly number of deaths in 2018. So is it really reasonable to expect the number of cancer deaths to drop by a third in only 7 years?</p>
+<p>ES has about 305 excess deaths at the end of his x-axis. In order for 305 excess deaths to correspond to 42.2% excess deaths, you can solve <code>305+x=1.422*x</code> to get the baseline value, which is about 722.7. It's only off by about 13 deaths from the baseline value I reverse engineered above.</p>
+<p>Earlier when I noticed that the average number of excess deaths in 2023 increased from about 150 in an older version of the plot to about 175 in a newer version of the plot, where the deaths were shifted upwards starting around week 9 of 2020, I thought it meant that ES had artificially inflated the deaths in his plot. However it might simply be that he shifted the baseline downwards instead, in case he changed the PFE adjustment curve he used in his plot. I didn't earlier realize that his plot probably included PFE adjustment, because even the text next to his excess deaths says <span class="quote">"7 wk m-avg EM with PFE"</span>.</p>
+<p>In plots for weekly excess deaths where ES does not incorporate PFE adjustment, he includes text that says <span class="quote">"Does not include: Pull Forward Effect"</span>:</p>
+<div>
+<img src=i/ethical-nopfe.png width=480>
+</div>
+<p>But the text was missing from the plot for cancer deaths in ages below 55:</p>
+<div>
+<img src=i/ethical-nopfe-2.png width=400>
+</div>
+<p>Now of course it's questionable to incorporate a large amount of PFE adjustment in a plot for deaths in ages below 55.</p>
+<p>Next in order to reverse engineer his baseline, I used WebPlotDigitizer to digitize the weekly excess deaths in his plot: <a href=https://automeris.io/wpd/.><a href="https://automeris.io/wpd/" class="uri">https://automeris.io/wpd/</a>.</a> Then I subtracted the excess deaths from the actual deaths to reverse engineer his baseline, which I showed in yellow in the next plot. His baseline was higher than my three baselines in 2018 and 2019, but his baseline had a dramatic change in slope between 2019 and 2020. By 2024 his baseline was more than twice as high as the average of my three baselines:</p>
+<div>
+<img src=i/ethical-054-2025-3.png width=600>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>library(data.table);library(ggplot2)
+
+ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
+
+t=fread(&quot;https://sars2.net/f/wondermalignant054weekly.csv&quot;)[!(year==2025&amp;week&gt;15)]
+t=dcast(t,date-3+year+week~cause,value.var=&quot;dead&quot;)
+t=t[,.(date,year,week,dead=c(mcd,mcd-nafill(and,,0)),type=rep(1:2,each=.N))]
+t=t[type==2]
+t[,dead:=ma(dead,3,2)]
+
+t=merge(t,t[year&lt;2020,.(base=mean(dead),base2=mean(dead)),week])
+slope=t[year&lt;2020,mean(dead),year][,predict(lm(V1~year),.(year=2018:2025))]
+slope2=t[year&lt;2020&amp;week%in%15:35,mean(dead),year][,predict(lm(V1~year),.(year=2018:2025))]
+t[,base:=base*(slope/mean(slope[1:2]))[factor(t$year)]]
+t[,base2:=base2*(slope2/mean(slope2[1:2]))[factor(t$year)]]
+
+t$base3=t[year&lt;2020,predict(lm(dead~date),t)]
+t$base3=t$base3+t[year&lt;2020,mean(dead-base3),week]$V1[t$week]
+
+eth=fread(&quot;https://sars2.net/f/ethical054reverseengineered.csv&quot;)
+t=t[order(date)]
+t[,ethical:=dead-eth$excess]
+
+lab=c(&quot;Actual deaths&quot;,&quot;Baseline with slope determined by total on all weeks&quot;,&quot;Baseline with slope determined by total on weeks 15 to 35&quot;,&quot;Linear regression of weekly data with week number residuals added&quot;,&quot;Reverse engineered baseline of Ethical Skeptic&quot;)
+p=t[,.(x=date,y=c(dead,base,base2,base3,ethical),z=factor(rep(lab,each=.N),lab))]
+
+p$facet=&quot;Deaths&quot;
+p=rbind(p,merge(p[z!=z[1]],p[z==z[1],.(x,actual=y)])[,.(x,y=actual-y,z,facet=&quot;Excess deaths&quot;)])
+p[,facet:=factor(facet,unique(facet))]
+
+xstart=as.Date(&quot;2018-1-1&quot;);xend=as.Date(&quot;2025-5-1&quot;)
+xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=ifelse(month(xbreak)==7,year(xbreak),&quot;&quot;)
+
+ylim=p[,{x=extendrange(y,,.03);.(ymin=x[1],ymax=x[2])},facet]
+
+ggplot(p)+
+facet_wrap(~facet,dir=&quot;v&quot;,scales=&quot;free&quot;)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray90&quot;,linewidth=.4)+
+geom_segment(data=p[.N],x=xstart,xend=xend,y=0,yend=0,linewidth=.4,color=&quot;gray75&quot;)+
+geom_rect(data=ylim,aes(ymin=ymin,ymax=ymax),xmin=xstart,xmax=xend,lineend=&quot;square&quot;,linejoin=&quot;mitre&quot;,fill=NA,color=&quot;gray72&quot;,linewidth=.4)+
+geom_line(aes(x,y,color=z),linewidth=.5)+
+geom_label(data=ylim,aes(mean(c(xstart,xend)),ymax,label=facet),vjust=1,label.r=unit(0,&quot;pt&quot;),label.padding=unit(5,&quot;pt&quot;),label.size=.4,color=&quot;gray75&quot;,size=3.8)+
+geom_label(data=ylim,aes(mean(c(xstart,xend)),ymax,label=facet),vjust=1,label.r=unit(0,&quot;pt&quot;),label.padding=unit(5,&quot;pt&quot;),label.size=0,size=3.8,fill=NA)+
+labs(x=NULL,y=NULL,title=&quot;CDC WONDER, ages 0-54: Weekly deaths with multiple cause of death\nmalignant neoplasms but not COVID (baselines fitted to 2018-2019)&quot;)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
+scale_y_continuous(breaks=\(x)pretty(x,7))+
+scale_color_manual(values=c(&quot;black&quot;,&quot;blue&quot;,&quot;#8888ff&quot;,&quot;#ff6666&quot;,&quot;#aaaa00&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=11,color=&quot;gray40&quot;),
+  axis.ticks=element_line(linewidth=.4,color=&quot;gray75&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(4,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(11,&quot;pt&quot;),
+  legend.key.width=unit(23,&quot;pt&quot;),
+  legend.margin=margin(,,4),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(color=&quot;gray75&quot;,fill=NA,linewidth=.4),
+  panel.spacing=unit(2,&quot;pt&quot;),
+  plot.title=element_text(size=11,face=2,hjust=.5,margin=margin(,,2)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=5.7,height=4.8,dpi=300*4)</pre>
+</div>
+<p>The average value of Ethical Skeptic's baseline is about 30% lower in 2024 than 2018:</p>
+<pre>t=fread(&quot;s/f/wondermalignant054weekly.csv&quot;)[!(year==2025&amp;week&gt;15)]
+t=dcast(t,year+week~cause,value.var=&quot;dead&quot;)
+t=t[,.(year,week,dead=mcd-nafill(and,,0))]
+
+t[,ethical:=dead-fread(&quot;s/f/ethical054reverseengineered.csv&quot;)$dead]
+
+round(t[,.(dead=mean(ethical)),year][,percentof2018:=dead/dead[year==2018]*100])
+# year dead percentof2018
+# 2018 1102           100
+# 2019 1074            97
+# 2020 1006            91
+# 2021  946            86
+# 2022  900            82
+# 2023  848            77
+# 2024  767            70
+# 2025  732            66</pre>
+<p>In the next plot the green baseline is probabaly the most accurate, but it's only about 16% lower in 2024 than 2018, and not about 30% like Ethical Skeptic's baseline:</p>
+<div>
+<img src=i/ethical-054-2025-4.png width=550>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>t=fread(&quot;https://sars2.net/f/wondermalignantyearly.csv&quot;)[cause==cause[1]]
+t=merge(t[,-4],fread(&quot;https://sars2.net/f/uspopdead.csv&quot;)[,-4],all=T)
+t=t[age&lt;55&amp;year%in%2000:2024]
+
+a=t[,.(dead=sum(dead)),year]
+
+# subtract COVID deaths from combined query for ages 0-54 to avoid suppression
+a[year&gt;=2020,dead:=c(53970,53326,53164,53321,53392)]
+
+a$base=a[year%in%2010:2019,predict(lm(dead~year),a)]
+a$base2=t[,.(year,base=predict(lm(dead/pop~year,.SD[year%in%2010:2019]),.SD)*pop),age][,tapply(base,year,sum)]
+
+eth=fread(&quot;https://sars2.net/f/ethical054reverseengineered.csv&quot;)
+eth=eth[,spline(ending-3,dead,xout=seq(as.Date(&quot;2018-1-1&quot;),as.Date(&quot;2024-12-31&quot;),1))]
+a=merge(a,eth[,.(ethical=sum(y)/7),year(`class&lt;-`(x,&quot;Date&quot;))],all=T)
+a[,ethical:=dead-ethical]
+
+p=a[,.(x=year,y=c(dead,base,base2,ethical),z=rep(1:4,each=.N),facet=1)]
+p=rbind(p,p[,.(x,y=(y[z==1]/y-1)*100,z,facet=2)][z!=1])
+
+p[,z:=factor(z,,c(&quot;Actual deaths&quot;,&quot;2010-2019 linear regression&quot;,&quot;2010-2019 liner trend for CMR by age times population&quot;,&quot;Reverse engineered baseline of Ethical Skeptic&quot;))]
+p[,facet:=factor(facet,,c(&quot;Deaths&quot;,&quot;Excess percentage of deaths&quot;))]
+
+xstart=min(p$x);xend=max(p$x)
+
+ylim=p[,{x=extendrange(y);.(ymin=x[1],ymax=x[2])},facet]
+
+ggplot(p)+
+facet_wrap(~facet,dir=&quot;v&quot;,scales=&quot;free_y&quot;)+
+geom_vline(xintercept=seq(xstart-.5,xend,5),color=&quot;gray90&quot;,linewidth=.4)+
+geom_rect(data=ylim,aes(ymin=ymin,ymax=ymax),xmin=xstart-.5,xmax=xend+.5,lineend=&quot;square&quot;,linejoin=&quot;mitre&quot;,fill=NA,color=&quot;gray72&quot;,linewidth=.4)+
+geom_segment(data=ylim[2],y=0,yend=0,x=xstart-.5,xend=xend+.5,linewidth=.4,color=&quot;gray70&quot;)+
+geom_line(aes(x,y,color=z),linewidth=.6)+
+geom_line(data=p[z==z[1]],aes(x,y,color=z),linewidth=.6)+
+geom_point(aes(x,y,alpha=z,color=z),stroke=0,size=1.4)+
+geom_label(data=ylim,aes(label=facet,y=ymax),x=(xstart+xend)/2,hjust=.5,vjust=1,fill=&quot;white&quot;,label.r=unit(0,&quot;pt&quot;),label.padding=unit(4,&quot;pt&quot;),label.size=.4,color=&quot;gray70&quot;,size=3.87,lineheight=.8)+
+geom_label(data=ylim,aes(label=facet,y=ymax),x=(xstart+xend)/2,hjust=.5,vjust=1,fill=NA,label.r=unit(0,&quot;pt&quot;),label.padding=unit(4,&quot;pt&quot;),label.size=0,size=3.87,lineheight=.8)+
+labs(x=NULL,y=NULL,title=&quot;Ages 0-54: Deaths with MCD malignant neoplasms but not COVID&quot;)+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=xstart:xend)+
+scale_y_continuous(breaks=\(x)pretty(x,7),labels=\(x)if(max(x,na.rm=T)&lt;1e3)paste0(x,&quot;%&quot;)else paste0(x/1e3,&quot;k&quot;))+
+scale_color_manual(values=c(&quot;black&quot;,&quot;blue&quot;,hsv(1/3,1,.7),&quot;#aaaa00&quot;))+
+scale_alpha_manual(values=c(1,0,0,0,0,0))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=11,color=&quot;gray40&quot;,margin=margin(2,2,2,2)),
+  axis.text.x=element_text(angle=90,vjust=.5,hjust=1.2),
+  axis.ticks=element_line(linewidth=.4,color=&quot;gray70&quot;),
+  axis.ticks.length=unit(4,&quot;pt&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(12,&quot;pt&quot;),
+  legend.key.width=unit(24,&quot;pt&quot;),
+  legend.margin=margin(,,4),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(1,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(linewidth=.3,fill=NA,color=&quot;gray70&quot;),
+  panel.grid.major=element_blank(),
+  panel.spacing=unit(3,&quot;pt&quot;),
+  plot.margin=margin(4,4,4,4),
+  plot.title=element_text(size=11,face=2,margin=margin(1,,2),hjust=1),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=4.93,height=4.5,dpi=300*4)</pre>
+</div>
+<p>The previous plot shows that the raw number of deaths slightly increased between 2022 and 2023, and also between 2023 and 2024. However the next plot shows that the ASMR still clearly went down regardless of whether you look at MCD with COVID subtracted or you look at UCD. And also the turning point in the mortality trend seems to have already occurred between 2019 and 2020, which is difficult to blame on the vaccines:</p>
 <div>
 <img src=i/ethical-054-asmr.png width=550>
 </div>
@@ -2171,69 +2367,78 @@ Show code
 </button>
 <pre>agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
 
-t=fread(&quot;https://sars2.net/f/wondermalignantyearly.csv&quot;)[cause%like%&quot;UCD&quot;]
-t=t[year%in%2010:2024]
-t=t[,.(dead=sum(dead)),.(year,age,cause)]
+t=fread(&quot;https://sars2.net/f/wondermalignantyearly.csv&quot;)[year%in%2000:2024]
+
+d=merge(t[cause==&quot;MCD malignant neoplasms&quot;,-4],t[cause%like%&quot;and&quot;,.(year,age,and=dead)],all=T)
+d=d[,.(year,age,dead=dead-nafill(and,,0),type=1)]
+d=rbind(d,t[cause==&quot;UCD malignant neoplasms&quot;,.(year,age,dead,type=2)])
 
 pop=fread(&quot;https://sars2.net/f/uspopdead.csv&quot;)[,dead:=NULL]
-t=merge(pop[year==2020,.(age,std=pop/sum(pop))],merge(t,pop))
+d=merge(d,pop)
 
-ages=c(0,55,75)
-xstart=2010;xend=2024
+d$std=pop[year==2020,pop/sum(pop)][d$age+1]
+d=d[,.(dead=sum(dead),pop=sum(pop,na.rm=T),std=sum(std)),.(year,age=ifelse(age&gt;=85,age%/%5*5,age),type)]
 
-p=t[,.(y=sum(dead/pop*std*1e5)),.(x=year,facet=agecut(age,ages))]
-p=rbind(p,t[,.(y=sum(dead/pop*std*1e5),facet=&quot;All ages&quot;),.(x=year)])
+d[,facet:=agecut(age,c(0,55,75))]
+d=rbind(d,copy(d)[,facet:=&quot;Total&quot;])
 
-base=p[x%in%2010:2019,.(x=xstart:xend,y=predict(lm(y~x),.(x=xstart:xend))),facet]
-p$z=&quot;Actual ASMR&quot;
-p=rbind(p,base[x&lt;=2019][,z:=&quot;2010-2019 linear trend&quot;])
-p=rbind(p,base[x&gt;=2019][,z:=&quot;Trend projection&quot;])
-p[,z:=factor(z,unique(z))]
+p=d[,.(y=sum(dead/pop*std*1e5)),.(x=year,z=type,facet)]
 
-expand=p[,.(min=min(y),max=max(y)),facet]
-rat=expand[,max(max/min)]
-expand=expand[,{x=(rat*min-max)/(1+rat);.(y=c(min-x,max+x),facet)}]
+p=rbind(p[,type:=1],p[x&lt;2020,predict(smooth.spline(x,y,spar=.7),2000:2024),.(z,facet)][,type:=2])
 
-ggplot(p,aes(x,y))+
+p[,z:=factor(z,,c(&quot;MCD and not MCD COVID&quot;,&quot;UCD&quot;))]
+p[,type:=factor(type,,c(&quot;ASMR&quot;,&quot;2000-2019 smoothed spline&quot;))]
+
+xstart=2000;xend=2025
+
+ylim=p[,.(min=min(y),max=max(y)),facet]
+rat=ylim[,max(max/min)]
+ylim=ylim[,{x=(rat*min-max)/(1+rat);.(ymin=min-x,ymax=max+x)},facet]
+
+ggplot(p)+
 facet_wrap(~facet,ncol=2,dir=&quot;v&quot;,scales=&quot;free_y&quot;)+
-geom_vline(xintercept=c(2014.5,2019.5),color=&quot;gray80&quot;,linewidth=.4)+
-geom_line(aes(linetype=z,color=z),linewidth=.6)+
-geom_point(aes(alpha=z),stroke=0,size=1.3)+
-geom_line(data=p[z==z[1]],aes(linetype=z,color=z),linewidth=.6)+
-geom_text(data=rbind(expand,p[,.(y,facet)])[,max(y),facet],aes(y=V1,label=facet,x=pmean(xstart,xend)),fontface=2,size=3.9,vjust=1.8)+
-geom_point(data=expand,x=xstart,alpha=0)+
-labs(title=&quot;CDC WONDER: Age-standardized mortality rate per 100,000 people\nfor underlying cause of death malignant neoplasms (C00-C97)&quot;,x=NULL,y=NULL)+
-scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=xstart:xend)+
-scale_y_continuous(breaks=\(x)pretty(x,4))+
+geom_vline(xintercept=seq(xstart,xend,5),color=&quot;gray90&quot;,linewidth=.4)+
+geom_rect(data=ylim,aes(ymin=ymin,ymax=ymax),xmin=xstart,xmax=xend,lineend=&quot;square&quot;,linejoin=&quot;mitre&quot;,fill=NA,color=&quot;gray72&quot;,linewidth=.4)+
+geom_line(data=p[x&lt;=2019],aes(x,y,color=z,linewidth=type),alpha=.6)+
+geom_line(data=p[x&gt;=2019],aes(x,y,color=z,linewidth=type),linetype=&quot;11&quot;,alpha=.6,show.legend=F)+
+geom_point(aes(x,y,color=z,shape=type),stroke=.6,size=1.5)+
+geom_label(data=ylim,aes(xend,ymax,label=facet),hjust=1,vjust=1,label.r=unit(0,&quot;pt&quot;),label.padding=unit(5,&quot;pt&quot;),label.size=.4,color=&quot;gray72&quot;,size=3.87)+
+geom_label(data=ylim,aes(xend,ymax,label=facet),hjust=1,vjust=1,label.r=unit(0,&quot;pt&quot;),label.padding=unit(5,&quot;pt&quot;),label.size=0,fill=NA,size=3.87)+
+labs(title=&quot;CDC WONDER: ASMR for malignant neoplasms (C00-C97)&quot;,x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart,xend),breaks=seq(xstart,xend-1,5))+
+scale_y_continuous(breaks=\(x)pretty(x,4,3))+
 coord_cartesian(clip=&quot;off&quot;,expand=F)+
-scale_color_manual(values=c(&quot;black&quot;,&quot;#4444ff&quot;,&quot;#4444ff&quot;))+
-scale_alpha_manual(values=c(1,0,0))+
-scale_linetype_manual(values=c(&quot;solid&quot;,&quot;solid&quot;,&quot;11&quot;))+
-theme(axis.text=element_text(size=11,color=&quot;black&quot;),
-  axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
-  axis.text.y=element_text(margin=margin(,1.5)),
-  axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
+scale_color_manual(values=c(&quot;#ff5555&quot;,&quot;black&quot;))+
+scale_linewidth_manual(values=c(0,.6))+
+scale_shape_manual(values=c(1,NA))+
+guides(shape=guide_legend(order=1),linewidth=guide_legend(order=1),color=guide_legend(order=2))+
+theme(axis.text=element_text(size=11,color=&quot;gray50&quot;),
+  axis.ticks=element_line(linewidth=.4,color=&quot;gray72&quot;),
   axis.ticks.length.x=unit(0,&quot;pt&quot;),
   axis.ticks.length.y=unit(4,&quot;pt&quot;),
-  legend.background=element_blank(),
+  legend.background=element_rect(color=&quot;gray72&quot;,linewidth=.4),
+  legend.box=&quot;vertical&quot;,
+  legend.box.just=&quot;center&quot;,
+  legend.box.margin=margin(,,3),
   legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;horizontal&quot;,
   legend.key=element_blank(),
-  legend.key.height=unit(13,&quot;pt&quot;),
-  legend.key.width=unit(25,&quot;pt&quot;),
-  legend.margin=margin(,,5),
+  legend.key.height=unit(12,&quot;pt&quot;),
+  legend.key.width=unit(22,&quot;pt&quot;),
+  legend.margin=margin(3,5,3,2),
   legend.position=&quot;top&quot;,
-  legend.spacing.x=unit(2,&quot;pt&quot;),
-  legend.text=element_text(size=11,vjust=.5),
+  legend.spacing.x=unit(3,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11),
   legend.title=element_blank(),
   panel.background=element_blank(),
-  panel.border=element_rect(fill=NA,linewidth=.4),
-  panel.spacing.x=unit(4,&quot;pt&quot;),
-  panel.spacing.y=unit(3,&quot;pt&quot;),
+  panel.spacing=unit(3,&quot;pt&quot;),
   plot.margin=margin(5,5,5,5),
-  plot.title=element_text(size=11,face=2,hjust=.5,margin=margin(1,,2)),
+  plot.subtitle=element_text(size=11,margin=margin(,,3),hjust=1),
+  plot.title=element_text(size=11,face=2,margin=margin(1,,4),hjust=.5),
   strip.background=element_blank(),
   strip.text=element_blank())
-ggsave(&quot;1.png&quot;,width=5.4,height=3.6,dpi=300*4)</pre>
+ggsave(&quot;1.png&quot;,width=5.1,height=4,dpi=300*4)</pre>
 </div>
 <h2>
 <a href=#Deaths_from_malignant_neoplasms_with_excess_MCD_normalization id=Deaths_from_malignant_neoplasms_with_excess_MCD_normalization>Deaths from malignant neoplasms with excess MCD normalization</a>
