@@ -11,8 +11,8 @@ h2{font-size:1.7em}
 h3{font-size:1.3em}
 blockquote h2,blockquote h3{margin:.5em 0}
 blockquote ul,blockquote ol{margin:.4em 0}
-a{color:hsl(220,100%,75%)}
-a:visited{color:hsl(270,100%,75%)}
+a,a .quote{color:hsl(220,100%,75%)}
+a:visited,a .quote{color:hsl(270,100%,75%)}
 pre,code{white-space:pre-wrap;word-wrap:break-word;font:14px Menlo,'DejaVu Sans Mono','Liberation Mono',Consolas,monospace;background:#4a4a4a;color:white}
 pre{padding:4px}
 code{padding:1px}
@@ -4224,6 +4224,76 @@ $ awk -F, &#39;$2==&quot;United States&quot;&amp;&amp;$10&gt;=2020&amp;&amp;$10&
 <p>There's also another problem with Housatonic's theory that the spike in deaths in August to September 2021 was caused by opioids, which is that the spike also occurred in elderly age groups even though elderly age groups have only a small percentage of opioid deaths out of all deaths:</p>
 <div>
 <img src=i/nopandemic-housatonic-rosejail-2.png width=600>
+</div>
+<p>Added later: Vilma Betancourt told me that traffic and firearm deaths were falsely classified as COVID deaths. <span class="citation" data-cites="vilmabetancourt/posts/AwO4o9oCnyOu70HzA8">[&lt;a href=https://gigaohm.bio/@vilmabetancourt/posts/AwO4o9oCnyOu70HzA8&gt;https://gigaohm.bio/@vilmabetancourt/posts/AwO4o9oCnyOu70HzA8&lt;/a&gt;]</span> But I showed her the plot below, which shows that during the spike in deaths in August to September 2021, ages below 45 didn't have any massive depression in deaths from non-drug external causes, so the spike in COVID deaths is hard to blame on deaths from external causes being misclassified as COVID deaths:</p>
+<div>
+<img src=i/nopandemic-housatonic-rosejail-3.png width=550>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>v=fread(&quot;curl -Ls https://sars2.net/f/vital.csv.xz|xz -dc&quot;)
+
+a=v[,.(dead=sum(ucd)),.(year,month,cause,age=pmin(age,100))]
+a[,type:=4]
+a[cause==&quot;U071&quot;,type:=1]
+a[ua(cause,like,&quot;[V-Y]&quot;),type:=3]
+a[ua(cause,like,&quot;X4[0-4]|X6[0-4]|Y1[0-4]&quot;),type:=2]
+
+a=a[,.(dead=sum(dead)),.(year,month,type,age)]
+pop=fread(&quot;https://sars2.net/f/uspopdeadmonthly.csv&quot;)
+a=merge(a,pop[,.(year,month,age,pop=persondays)])[year&gt;=2011]
+a[,agebin:=age%/%10*10]
+
+p=a[,.(year,month,type,z=1,y=dead,age)]
+p[,agegroup:=factor(age&gt;=45,,c(&quot;Age 0-44&quot;,&quot;Age 45+&quot;))]
+p=p[,.(y=sum(y)),.(year,month,z,type,agegroup)]
+
+p[,x:=as.Date(paste0(year,&quot;-&quot;,month,&quot;-15&quot;))]
+p[,y:=y/days_in_month(x)]
+p[,type:=factor(type,,c(&quot;COVID (U07.1)&quot;,&quot;Drugs (X40-44/X60-64/Y10-14)&quot;,&quot;Other external causes (V-Y)&quot;,&quot;Other&quot;))]
+
+xstart=as.Date(&quot;2018-1-1&quot;);xend=as.Date(&quot;2024-1-1&quot;);xbreak=seq(xstart+182,xend,&quot;year&quot;)
+ylim=p[,.(y=max(y)),agegroup]
+
+ggplot(p)+
+facet_wrap(~agegroup,ncol=1,dir=&quot;v&quot;,scales=&quot;free&quot;,strip.position=&quot;right&quot;)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray90&quot;,linewidth=.4)+
+geom_rect(data=ylim,aes(ymax=y),ymin=0,xmin=xstart,xmax=xend,lineend=&quot;square&quot;,linejoin=&quot;mitre&quot;,fill=NA,color=&quot;gray72&quot;,linewidth=.4)+
+geom_line(aes(x,y,color=type),linewidth=.6)+
+geom_point(aes(x,y,color=type),stroke=0,size=1.2)+
+labs(title=&quot;NVSS: Monthly deaths in United States by underlying cause\nof death, divided by number of days in month&quot;,caption=&quot;Source: cdc.gov/nchs/nvss/mortality_public_use_data.htm&quot;,x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=year(xbreak))+
+scale_y_continuous(limits=c(0,NA),breaks=pretty,labels=\(x)ifelse(x&gt;=1e3,paste0(x/1e3,&quot;k&quot;),x))+
+scale_color_manual(values=c(&quot;#7700cc&quot;,&quot;#229900&quot;,&quot;gray60&quot;,&quot;black&quot;))+
+guides(color=guide_legend(ncol=2,byrow=F))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=11,color=&quot;gray40&quot;,margin=margin(2,2,2,2)),
+  axis.ticks=element_line(linewidth=.4,color=&quot;gray72&quot;),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(4,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(23,&quot;pt&quot;),
+  legend.margin=margin(,,4),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.grid=element_blank(),
+  panel.spacing=unit(2,&quot;pt&quot;),
+  plot.caption=element_text(size=11,hjust=.5,margin=margin(3)),,
+  plot.margin=margin(4,5,4,5),
+  plot.subtitle=element_text(size=11,hjust=.5,margin=margin(,,3)),
+  plot.title=element_text(size=11,hjust=.5,face=&quot;bold&quot;,margin=margin(1,,4)),
+  strip.background=element_blank(),
+  strip.text=element_text(size=11,margin=margin(3,3,3,3)))
+ggsave(&quot;1.png&quot;,width=5,height=4,dpi=300*4)</pre>
 </div>
 <h2>
 <a href=#Jikkyleaks id=Jikkyleaks>Jikkyleaks</a>
