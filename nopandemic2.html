@@ -11,8 +11,8 @@ h2{font-size:1.7em}
 h3{font-size:1.3em}
 blockquote h2,blockquote h3{margin:.5em 0}
 blockquote ul,blockquote ol{margin:.4em 0}
-a{color:hsl(220,100%,75%)}
-a:visited{color:hsl(270,100%,75%)}
+a,a .quote{color:hsl(220,100%,75%)}
+a:visited,a .quote{color:hsl(270,100%,75%)}
 pre,code{white-space:pre-wrap;word-wrap:break-word;font:14px Menlo,'DejaVu Sans Mono','Liberation Mono',Consolas,monospace;background:#4a4a4a;color:white}
 pre{padding:4px}
 code{padding:1px}
@@ -913,6 +913,25 @@ system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
 </h2>
 <p>Housatonic has been saying that the only reason why US life expectancy has gone down since 2020 is because of extra deaths from drug overdoses.</p>
 <p>However I calculated that the reduction in life expectancy between 2019 and 2021 was about 2.4 years. But when I replaced the number of drug deaths for each age with the number of drug deaths in 2019, it only increased the life expectancy in 2021 by about 0.3 years. So the extra drug deaths accounted for only about 12% of the reduction in life expectancy between 2019 and 2021:</p>
+<pre>lifex=\(mx){n=length(mx);qx=mx/(1+mx/2);weighted.mean(1:n-.5,cumprod(c(1,1-qx[-n]))*qx)}
+
+v=fread(&quot;curl -Ls sars2.net/f/vital.csv.xz|xz -dc&quot;)[year&gt;=2019]
+
+v[,drug:=cause%like%&quot;X4[0-4]|X6[0-4]|Y1[0-4]&quot;]
+a=v[,.(all=sum(ucd),drug=sum(ucd[drug])),.(year,age=pmin(age,100))]
+a[,drug2:=drug[year==2019][age+1]]
+a=merge(a,fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)[,.(year,age,pop)])
+
+o=a[,.(lifex=lifex(dead/pop),lifex_with_2019_drug_deaths=lifex((dead-drug+drug2)/pop)),year]
+o[,difference:=lifex_with_2019_drug_deaths-lifex]
+round(o,2)
+# year lifex lifex_with_2019_drug_deaths difference
+# 2019 78.56                       78.56       0.00
+# 2020 76.85                       77.03       0.18
+# 2021 76.15                       76.43       0.28
+# 2022 77.23                       77.52       0.29
+# 2023 78.11                       78.36       0.25</pre>
+<p>Here's a plot of the same data:</p>
 <div>
 <img src=i/np-housatonic-lifex.png width=500>
 </div>
@@ -920,13 +939,7 @@ system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)
-
-lifex=\(mx){qx=mx/(1+mx/2)
-  n=length(mx);pop=rep(1,n);dead=rep(0,n)
-  for(i in 1:(n-1)){dead[i]=pop[i]*qx[i];pop[i+1]=max(0,pop[i]-dead[i])}
-  dead[n]=pop[n]*qx[n]
-  weighted.mean(0:(length(mx)-1)+.5,dead)}
+<pre>lifex=\(mx){n=length(mx);qx=mx/(1+mx/2);weighted.mean(1:n-.5,cumprod(c(1,1-qx[-n]))*qx)}
 
 pop=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)[year%in%2010:2022]
 
