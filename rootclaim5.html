@@ -2395,18 +2395,78 @@ ggsave(&quot;1.png&quot;,width=5,height=4.5,dpi=300*4)</pre>
 <p>Remember, in the 80+, a huge % was vaccinated. If we say 90%, then 0.8 is still well a covid % mortality well below average</p>
 <p>Also, the study excluded care settings which have a much higher mortality than the general public</p>
 <p>So: this data is not <span class="quote">"bad"</span>, on the contrary!</p>
-<p>Conclusion</p>
-<p>/ I could deduce that covid % of AC mortality is way worse among unvaxed than mRNA vaxed in FL</p>
-<p>/ this means that unless the authors can prove that the whole difference is a HVE, the mortality diff between Pfizer and Moderna is fully compatible with vax efficacy</p>
 </blockquote>
-<p>Levi et al. wrote: <span class="quote">"Deaths were attributed to COVID-19 if a corresponding ICD-10 code was listed either as the primary or underlying cause of death on the death certificate."</span> [<a href=https://www.medrxiv.org/content/10.1101/2025.04.25.25326460v2.full.pdf>https://www.medrxiv.org/content/10.1101/2025.04.25.25326460v2.full.pdf</a>] By <span class="quote">"primary cause"</span> of death, they probably meant that the cause appears on the first line of the first part of the death certificate, which is what the CDC calls the <span class="quote">"immediate cause of death"</span>. [<a href=https://www.cdc.gov/nchs/data/nvss/vsrg/vsrg03-508.pdf>https://www.cdc.gov/nchs/data/nvss/vsrg/vsrg03-508.pdf</a>] But it's not clear if they meant the first item on the first line or any item on the first line, because usually there's only one item on the first line but sometimes there's multiple items. But in any case, CDC WONDER doesn't support retrieving deaths by primary cause of death but only by underlying cause of death, so it's not possible to retrieve data from CDC WONDER using the same definition of COVID death that was used in Levi's paper.</p>
-<p>Fisch replied to me: <span class="quote">"Yes, but in practice <span class="quote">'primary'</span> is larger than <span class="quote">'underlying'</span> so it just makes the difference bigger (if anything)"</span>. [<a href=https://x.com/Jean&#x5f;&#x5f;Fisch/status/1948071368831938700>https://x.com/Jean__Fisch/status/1948071368831938700</a>] I pointed out that often in death certificates for COVID deaths, the immediate/primary cause is something like cardiac arrest or acute respiratory failure. In 2021 in the whole US, there were over twice as many deaths with underlying cause COVID as deaths with immediate cause COVID.</p>
-<p>In the fixed-width files for the NVSS data, each multiple cause of death has a field that is 6 characters wide, where the first character shows the line of the death certificate and the last 4 characters show the ICD code. Depending on which definition of immediate cause of death you use, you can either select causes that appear at any position of the first line of part I, or causes that appear as the first item on the first line of part I. I used the latter definition here:</p>
+<p>Levi et al. wrote: <span class="quote">"Deaths were attributed to COVID-19 if a corresponding ICD-10 code was listed either as the primary or underlying cause of death on the death certificate."</span> [<a href=https://www.medrxiv.org/content/10.1101/2025.04.25.25326460v2.full.pdf>https://www.medrxiv.org/content/10.1101/2025.04.25.25326460v2.full.pdf</a>] By the primary cause of death, they probably meant that the cause appears on the first line of the first part of the death certificate, which is what the CDC calls the <span class="quote">"immediate cause of death"</span>. [<a href=https://www.cdc.gov/nchs/data/nvss/vsrg/vsrg03-508.pdf>https://www.cdc.gov/nchs/data/nvss/vsrg/vsrg03-508.pdf</a>] It's not clear if they meant the first item on the first line or any item on the first line, because usually there's only one item on the first line but sometimes there's multiple items. But in any case, CDC WONDER doesn't support retrieving deaths by immediate cause of death, so it's not possible to retrieve data from CDC WONDER using the same definition of COVID death that was used in Levi's paper.</p>
+<p>In the fixed-width files for the NVSS data, each multiple cause of death has a field that is 6 characters wide, where the first character shows the part and line of the death certificate, and the last 4 characters show the ICD code. [<a href=https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/mortality/Multiple-Cause-Record-Layout-2021.pdf>https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/mortality/Multiple-Cause-Record-Layout-2021.pdf</a>] Depending on which definition of immediate cause of death you use, you can either select causes that appear at any position of the first line of part I, or causes that appear as the first item on the first line of part I. I used the latter definition here:</p>
 <pre>wget ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/mortality/mort2021us.zip;unzip mort2021us.zip
 awk &#39;substr($0,20,1)!=4{isucd=substr($0,146,4)==&quot;U071&quot;;ismcd=0;isimm=0;for(i=1;i&lt;=20;i++)if(substr($0,167+(i-1)*7,4)==&quot;U071&quot;){ismcd=1;if(i==1)isimm=1}ucd+=isucd;imm+=isimm;mcd+=ismcd;ucdorimm+=isucd||isimm}END{print ucd,mcd,imm,ucdorimm}&#39; VS21MORT.DUSMCPUB_r20230320.txt</pre>
 <p>The output shows the number of COVID deaths by underlying cause, multiple cause, immediate cause, and immediate or underlying cause:</p>
 <pre>416893 462193 145379 417049</pre>
 <p>The number of deaths by immediate or underlying cause is nearly the same as the number of deaths by underlying cause alone. So it won't make much difference if you only retrieve deaths with underlying cause COVID at CDC WONDER but you don't additionally include deaths with immediate cause COVID.</p>
+<p>I got similar results as Jean Fisch here:</p>
+<div>
+<img src=i/rootclaim-levifisch.png width=550>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>levi=CJ(age=c(18,4:8*10))
+levi$all=c(2141,2804,7829,18477,30254,52760)
+levi$covid=c(98,176,533,1280,2314,4054)
+
+t=fread(&quot;https://sars2.net/f/wonderfloridalevi.csv&quot;)
+t=t[,x:=.GRP,.(year,month)][,cbind(.SD,i=rep(1:8,each=.N))]
+
+a=t[x&gt;=i&amp;x&lt;i+12,.(flo=sum(covid)/sum(all)),.(age,i)]
+a=merge(a,levi[,.(age,levi=covid/all)])
+
+p=a[,.(age,x=i,y=c(c(flo,levi)*100),z=rep(1:2,each=.N))]
+
+p[,z:=factor(z,,c(&quot;CDC WONDER (vaccinated and unvaccinated)&quot;,&quot;Levi study (vaccinated)&quot;))]
+p[,age:=factor(age,,levi[,paste0(age,c(paste0(&quot;-&quot;,age[-1]-1),&quot;+&quot;))])]
+
+lab=format(seq(as.Date(&quot;2021-1-1&quot;),,&quot;month&quot;,8),&quot;%b %y&quot;)
+lab=paste0(lab,&quot;-&quot;,format(seq(as.Date(&quot;2021-12-1&quot;),,&quot;month&quot;,8),&quot;%b %y&quot;))
+
+xstart=1;xend=8;0:5*5;yend=25
+
+ggplot(p)+
+facet_wrap(~age,ncol=2,dir=&quot;v&quot;)+
+geom_rect(data=p[rowid(age)==1],ymin=0,ymax=yend,xmin=xstart-.5,xmax=xend+.5,lineend=&quot;square&quot;,linejoin=&quot;mitre&quot;,fill=NA,color=&quot;gray72&quot;,linewidth=.4)+
+geom_line(aes(x,y,color=z),linewidth=.6)+
+geom_point(aes(x,y,color=z),stroke=0,size=1.5)+
+geom_text(data=p[rowid(age)==1],aes(xend+.35,22.5,label=age),hjust=1,size=3.87)+
+labs(title=&quot;Percentage of COVID deaths out of all deaths in Florida&quot;,x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=xstart:xend,labels=month.abb[1:8])+
+scale_y_continuous(limits=c(0,yend),breaks=ybreak,labels=ifelse(ybreak==yend,&quot;&quot;,paste0(ybreak,&quot;%&quot;)))+
+scale_color_manual(values=c(&quot;black&quot;,&quot;#ff5555&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=11,color=&quot;gray40&quot;,margin=margin(2,2,2,2)),
+  axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(23,&quot;pt&quot;),
+  legend.margin=margin(,,4),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(color=&quot;gray80&quot;,fill=NA,linewidth=.4),
+  panel.grid=element_blank(),
+  panel.grid.major.y=element_line(linewidth=.4,color=&quot;gray90&quot;),
+  panel.spacing=unit(3,&quot;pt&quot;),
+  plot.title=element_text(size=11,hjust=.5,face=&quot;bold&quot;,margin=margin(,,2)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=4.5,height=3.6,dpi=300*4)</pre>
+</div>
 <script>
 document.querySelectorAll('pre').forEach(e=>e.innerHTML=e.innerHTML.replace(/((^| )# [^\n]*|^#$)/mg,"<span class=comment>$1</span>"))
 
