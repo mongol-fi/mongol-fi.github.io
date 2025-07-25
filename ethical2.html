@@ -77,6 +77,7 @@ blockquote h3{color:inherit}
 <li><a href="#Increase_in_raw_cancer_deaths_since_2020">Increase in raw cancer deaths since 2020</a></li>
 <li><a href="#Pre_COVID_linear_trend_in_deaths_compared_to_population_projections_by_Census_Bureau">Pre-COVID linear trend in deaths compared to population projections by Census Bureau</a></li>
 <li><a href="#Cancer_incidence_in_ages_below_50_in_Australia">Cancer incidence in ages below 50 in Australia</a></li>
+<li><a href="#Cancer_incidence_in_ages_30_44_in_the_Netherlands">Cancer incidence in ages 30-44 in the Netherlands</a></li>
 </ul>
 
 
@@ -191,7 +192,7 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
 ggsave(&quot;1.png&quot;,width=4,height=3,dpi=350*4)
 system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 </div>
-<p>In the next plot I adjusted the 2010-2020 population estimates using the same method as in the gray lines in my plot above. It reduced my total excess ASMR in 2024 from about 0.7% to about -4.9% (Edit: plot updated in February 2025 when mortality data for 2024 had become nearly complete):</p>
+<p>In the next plot I adjusted the 2010-2020 population estimates using the same method as in the gray lines in my plot above. It reduced my total excess ASMR in 2024 from about 2.6% to about -3.0%. (The plot was updated in July 2025 to use new resident population estimates instead of population projections for 2024.)</p>
 <div>
 <img src=i/ethical-allcause-3.png width=700>
 </div>
@@ -199,42 +200,30 @@ system(&quot;magick 1.png -resize 25% 1.png&quot;)</pre>
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)
+<pre>u=&quot;https://www2.census.gov/programs-surveys/popest/datasets/&quot;
+t1=do.call(rbind,lapply(sprintf(&quot;%s2010-2020/national/asrh/NC-EST2020-ALLDATA-R-File%02d.csv&quot;,u,1:24),fread))
+t2=do.call(rbind,lapply(sprintf(&quot;%s2020-2024/national/asrh/nc-est2024-alldata-r-file%02d.csv&quot;,u,1:12),fread))
 
-url=&quot;https://www2.census.gov/programs-surveys/popest/datasets/&quot;
-new=do.call(rbind,lapply(paste0(url,&quot;2020-2023/national/asrh/nc-est2023-alldata-r-file0&quot;,1:8,&quot;.csv&quot;),\(x)fread(x)))
-old=do.call(rbind,lapply(paste0(url,&quot;2010-2020/national/asrh/NC-EST2020-ALLDATA-R-File&quot;,sprintf(&quot;%02d&quot;,1:24),&quot;.csv&quot;),\(x)fread(x)))
+old=t1[YEAR!=2021&amp;MONTH!=4.2&amp;AGE!=999,.(year=YEAR,month=floor(MONTH),age=AGE,pop=TOT_POP)]
+new=t2[AGE!=999,.(year=YEAR,month=floor(MONTH),age=AGE,pop=TOT_POP)]
 
-mult=new[YEAR==2020&amp;MONTH==4.2,.(age=AGE,new=TOT_POP)]
-mult=merge(mult,old[YEAR==2020&amp;MONTH==4,.(age=AGE,old=TOT_POP)])[,.(mult=new/old,age)]
+mult=new[year==2020&amp;month==4,pop]/old[year==2020&amp;month==4,pop]
+old=old[!(year==2020&amp;month&gt;=4)]
+old2=copy(old)[,pop:={x=rleid(year,month);x=(x-1)/max(x);round(pop*(x*mult[age+1]+1-x))}]
 
-oldpop=old[YEAR!=2021&amp;MONTH!=4.2&amp;AGE!=999,.(year=YEAR,month=floor(MONTH),pop=TOT_POP,age=AGE)]
-newpop=new[AGE!=999,.(year=YEAR,month=floor(MONTH),pop=TOT_POP,age=AGE)]
+a=rbind(rbind(old,new)[,group:=1],rbind(old2,new)[,group:=2])
 
-proj=fread(&quot;https://www2.census.gov/programs-surveys/popproj/datasets/2023/2023-popproj/np2023_d1_mid.csv&quot;)
-proj=proj[SEX==0&amp;ORIGIN==0&amp;RACE==0&amp;YEAR%in%2023:2025,.(x=c(7,19,31),age=rep(0:100,each=.N),pop=unlist(.SD[,-(1:5)]))]
-projmult=newpop[year==2023&amp;month==7,pop]/proj[x==7,pop]
-proj[,pop:=pop*projmult[age+1]]
-newpop=rbind(newpop,proj[,spline(x,pop,xout=25:36),age][,.(age,year=2024,month=x-24,pop=y)])
+a=merge(a,fread(&quot;https://sars2.net/f/usdeadmonthly.csv&quot;))[!(year==2025&amp;month&gt;5)]
 
-oldmod=oldpop[!(year==2020&amp;month&gt;4)]
-oldmod=merge(mult,oldmod[,.(year,month,pop,slope=seq(0,1,,.N)),age])
-oldmod=oldmod[,.(age,year,month,pop=pop*(slope*mult+(1-slope)*1))]
+a=merge(new[year==2020&amp;month==7,.(age,std=pop/sum(pop))],a)
 
-a=cbind(rbind(oldpop[!(year==2020&amp;month&gt;=4)],newpop),group=&quot;Original unmodified population estimates&quot;)
-a=rbind(a,cbind(rbind(oldmod[!(year==2020&amp;month==4)],newpop),group=&quot;Population estimates based on 2010 census multiplied by linear slope&quot;))
-
-a=merge(a,fread(&quot;http://sars2.net/f/usdeadmonthly.csv&quot;)[year&lt;2025])
-
-std=fread(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/national/asrh/nc-est2023-agesex-res.csv&quot;)
-a=merge(std[SEX==0&amp;AGE!=999,.(age=AGE,std=POPESTIMATE2020)][,std:=std/sum(std)],a)
+a[,group:=factor(group,,c(&quot;Original unmodified population estimates&quot;,&quot;Population estimates based on 2010 census multiplied by linear slope (DIY intercensal)&quot;))]
 a[,date:=as.Date(paste(year,month,1,sep=&quot;-&quot;))]
-a[,group:=factor(group,unique(group))]
 a[,pop:=pop*lubridate::days_in_month(date)]
 
 p=a[,.(asmr=sum(dead/pop*std*365e5)),.(date,group)]
 
-p=merge(p[year(date)%in%2011:2019&amp;month(date)%in%5:9,.(date=unique(p$date),base=predict(lm(asmr~date),.(date=unique(p$date)))),group],p)
+p=merge(p[year(date)%in%2011:2019&amp;month(date)%in%4:10,.(date=unique(p$date),base=predict(lm(asmr~date),.(date=unique(p$date)))),group],p)
 p[,month:=month(date)]
 p=merge(p[year(date)%in%2011:2019,.(monthly=mean(asmr-base)),month],p)
 
@@ -242,14 +231,13 @@ yearly=a[,.(pop=sum(pop),dead=sum(dead)),.(age,std,group,year=year(date))]
 yearly=yearly[,.(asmr=sum(dead/pop*std*365e5)),.(year,group)]
 yearly=merge(yearly[year%in%2011:2019,.(year=2011:2024,base=predict(lm(asmr~year),.(year=2011:2024))),group],yearly)
 
-pct=yearly[,.(pct=(sum(asmr)/sum(base)-1)*100),.(year,group)][,x:=as.Date(paste0(year,&quot;-7-1&quot;))]
-
 lab=c(&quot;Actual ASMR&quot;,&quot;2011-2019 linear baseline&quot;,&quot;Baseline adjusted for seasonality&quot;,&quot;Difference from seasonality-adjusted baseline&quot;)
 p=p[,.(x=date,y=c(asmr,base,base+monthly,asmr-base-monthly),z=factor(rep(lab,each=.N),lab),group)]
 
+pct=yearly[,.(pct=(sum(asmr)/sum(base)-1)*100),.(year,group)][,x:=as.Date(paste0(year,&quot;-7-1&quot;))]
 pct=merge(p[,.(y=min(y)),group],pct)
 
-xstart=as.Date(&quot;2017-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;)
+xstart=as.Date(&quot;2017-1-1&quot;);xend=as.Date(&quot;2026-1-1&quot;)
 xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=ifelse(month(xbreak)==7,year(xbreak),&quot;&quot;)
 
 ggplot(p,aes(x=x+14,y))+
@@ -271,6 +259,7 @@ scale_alpha_manual(values=c(1,0,0,0),guide=&quot;none&quot;)+
 guides(fill=guide_legend(order=3,keyheight=unit(1,&quot;pt&quot;)),color=guide_legend(order=1),linetype=guide_legend(order=1))+
 coord_cartesian(clip=&quot;off&quot;)+
 theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+  axis.text.y=element_text(margin=margin(,1.5)),
   axis.ticks.x=element_line(color=alpha(&quot;black&quot;,c(1,0))),
   axis.ticks=element_line(linewidth=.3,color=&quot;black&quot;),
   axis.ticks.length=unit(3,&quot;pt&quot;),
@@ -281,7 +270,6 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   legend.key.height=unit(9,&quot;pt&quot;),
   legend.key.width=unit(19,&quot;pt&quot;),
   legend.position=&quot;top&quot;,
-  legend.justification=&quot;left&quot;,
   legend.spacing.x=unit(2,&quot;pt&quot;),
   legend.box.margin=margin(),
   legend.spacing.y=unit(0,&quot;pt&quot;),
@@ -296,20 +284,18 @@ theme(axis.text=element_text(size=7,color=&quot;black&quot;),
   panel.border=element_rect(fill=NA,linewidth=.3),
   panel.spacing.y=unit(2,&quot;pt&quot;),
   plot.margin=margin(4,4,2,4),
-  plot.subtitle=element_text(size=6.5,margin=margin(,,4)),
-  plot.title=element_text(size=7.4,face=2,margin=margin(1,,3)),
+  plot.title=element_text(size=7.4,hjust=.5,face=2,margin=margin(1,,3)),
   strip.background=element_blank(),
   strip.text=element_text(size=7,face=2,margin=margin(,,2)))
 ggsave(&quot;1.png&quot;,width=4.7,height=3.9,dpi=400*4)
 
 sub=&quot;\u00a0     The yearly total excess mortality percentage is shown above the year.
-      The data for deaths was retrieved from CDC WONDER on February 22nd 2025 UTC, so only few deaths in 2024 are missing because of a registration delay.
-      ASMR was calculated by single year of age so that the vintage 2023 mid-2020 resident population estimates were used as the standard population.
-      The baseline was calculated by doing a linear regression for monthly data in 2011 to 2019. Only May to September were included in the linear regression. In order to calculate the seasonality-adjusted baseline, the average difference between the actual ASMR and baseline during each January of 2011 to 2019 was added to the baseline for each January, and similarly for other months.
+      The data for deaths was retrieved from CDC WONDER in July 2025 UTC.
+      ASMR was calculated by single year of age so that the vintage 2024 resident population estimates for July 2020 were used as the standard population.
+      The baseline was calculated by doing a linear regression for monthly data in 2011 to 2019. Only April to October were included in the linear regression. In order to calculate the seasonality-adjusted baseline, the average difference between the actual ASMR and baseline during each January of 2011 to 2019 was added to the baseline for each January, and similarly for other months.
       Monthly resident population estimates by single year of age were downloaded from www2.census.
-gov/programs-surveys/popest/datasets/2020-2023/national/asrh/nc-est2023-alldata-r-file0{1..8}.csv, and from the corresponding files in the 2010-2020 directory.
-      Vintage 2023 population estimates based on the 2020 census are used for April 2020 to December 2023, and vintage 2020 population estimates based on the 2010 census are used for January 2011 to March 2020. In the bottom panel the 2010-based estimates were multiplied by a linear slope so that they were equal to the 2020-based estimates in April 2020 when the two sets of estimates were merged. The 2010-based estimates cover a total of 121 months from April 2010 until April 2020, and for example for the age 80 the ratio between the 2020-based and 2010-based estimates was about 0.946 in April 2020, so the population estimate for age 80 was multiplied by about 1/121*0.946+120/121 in May 2010, by about 2/121*0.946+119/121 in June 2010, and so on. A similar adjustment is incorporated in the Census Bureau&#39;s intercensal population estimates, but the intercensal estimates for 2010-2020 are only scheduled to be published in 2025.
-      Monthly population estimates for 2024 were calculated as a spline interpolation of the mid-year population projections for 2023-2025, where the population projections for each age were first multiplied by the ratio of mid-2023 resident population estimates divided by the mid-2023 population projections: www2.census.gov/programs-surveys/popproj/datasets/2023/2023-popproj/np2023_d1_mid.csv.&quot;
+gov/programs-surveys/popest/datasets/2020-2024/national/asrh/nc-est2024-alldata-r-file{01..12}.csv, and from the corresponding files in the 2010-2020 directory.
+      Vintage 2024 population estimates based on the 2020 census are used for April 2020 to December 2024, and vintage 2020 population estimates based on the 2010 census are used for January 2011 to March 2020. In the bottom panel the 2010-based estimates were multiplied by a linear slope so that they were equal to the 2020-based estimates in April 2020 when the two sets of estimates were merged. The 2010-based estimates cover a total of 121 months from April 2010 until April 2020, and for example for the age 80 the ratio between the 2020-based and 2010-based estimates was about 0.946 in April 2020, so the population estimate for age 80 was multiplied by about 1/121*0.946+120/121 in May 2010, by about 2/121*0.946+119/121 in June 2010, and so on. A similar adjustment is incorporated in the Census Bureau&#39;s intercensal population estimates, but the intercensal estimates for 2010-2020 are only scheduled to be published in 2025.&quot;
 
 system(paste0(&quot;mar=120;w=`identify -format %w 1.png`;magick 1.png \\( -size $[w-mar*2]x -font Arial -interline-spacing -4 -pointsize 152 caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&#39;&quot;,sub),&quot;&#39; -gravity southwest -splice $[mar]x70 \\) -append -resize 25% -colorspace gray -colors 16 1.png&quot;))</pre>
 </div>
@@ -2964,6 +2950,22 @@ ggsave(&quot;1.png&quot;,width=5,height=3,dpi=300*4)</pre>
 <p>The 200% increase in pancreatic cancer seems to be an increase from about 0.5 cases per 100,000 in 2000 to about 1.5 in 2024 (but the raw number of cases increased from 15 to 60, which would be a 300% and not 200% increase):</p>
 <div>
 <img src=i/ethical-aucancer-4.png width=600>
+</div>
+<h2>
+<a href=#Cancer_incidence_in_ages_30_44_in_the_Netherlands id=Cancer_incidence_in_ages_30_44_in_the_Netherlands>Cancer incidence in ages 30-44 in the Netherlands</a>
+</h2>
+<p>ES posted this plot that shows the yearly raw number of new cancer cases in Netherlands in ages 30-44: [<a href=https://x.com/EthicalSkeptic/status/1946579573916742142>https://x.com/EthicalSkeptic/status/1946579573916742142</a>]</p>
+<div>
+<img src=i/ethical-dutchcancer-1.png width=600>
+</div>
+<p>His image was an English translation of a plot that was included in this blog post: <a href=https://virusvaria.nl/en/sterfte-naar-doodsoorzaak-nieuwvormingen-kanker/.><a href="https://virusvaria.nl/en/sterfte-naar-doodsoorzaak-nieuwvormingen-kanker/" class="uri">https://virusvaria.nl/en/sterfte-naar-doodsoorzaak-nieuwvormingen-kanker/</a>.</a> The post cited this page as their source: <a href=https://nkr-cijfers.iknl.nl/viewer/incidentie-per-jaar?language=nl_NL&viewerId=8fda5a06-e543-4f4c-ac02-22f853e5802a.><a href="https://nkr-cijfers.iknl.nl/viewer/incidentie-per-jaar?language=nl_NL&amp;viewerId=8fda5a06-e543-4f4c-ac02-22f853e5802a" class="uri">https://nkr-cijfers.iknl.nl/viewer/incidentie-per-jaar?language=nl_NL&amp;viewerId=8fda5a06-e543-4f4c-ac02-22f853e5802a</a>.</a></p>
+<p>Jean Fisch pointed out that if you look at the age-standardized incidence rate from the same source, it has roughly followed the pre-COVID trend since 2020 or even fallen below the trend: [<a href=https://nkr-cijfers.iknl.nl/viewer/incidentie-per-jaar?language=en_GB&viewerId=3b381d94-315c-4be6-8450-c3f98e62a870>https://nkr-cijfers.iknl.nl/viewer/incidentie-per-jaar?language=en_GB&amp;viewerId=3b381d94-315c-4be6-8450-c3f98e62a870</a>]</p>
+<div>
+<img src=i/ethical-dutchcancer-2.png width=500>
+</div>
+<p>ES responded to Fisch by saying that he was not a professional, and that his plot showed was a <span class="quote">"diluted and manipulated index"</span>:</p>
+<div>
+<img src=i/ethical-dutchcancer-3.png width=560>
 </div>
 <script>
 document.querySelectorAll('pre').forEach(e=>e.innerHTML=e.innerHTML.replace(/((^| )# [^\n]*|^#$)/mg,"<span class=comment>$1</span>"))
