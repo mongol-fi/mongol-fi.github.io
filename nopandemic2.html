@@ -918,7 +918,7 @@ system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
 v=fread(&quot;curl -Ls sars2.net/f/vital.csv.xz|xz -dc&quot;)[year&gt;=2019]
 
 v[,drug:=cause%like%&quot;X4[0-4]|X6[0-4]|Y1[0-4]&quot;]
-a=v[,.(all=sum(ucd),drug=sum(ucd[drug])),.(year,age=pmin(age,100))]
+a=v[,.(dead=sum(ucd),drug=sum(ucd[drug])),.(year,age=pmin(age,100))]
 a[,drug2:=drug[year==2019][age+1]]
 a=merge(a,fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)[,.(year,age,pop)])
 
@@ -939,9 +939,15 @@ round(o,2)
 <button>
 Show code
 </button>
-<pre>lifex=\(mx){n=length(mx);qx=mx/(1+mx/2);weighted.mean(1:n-.5,cumprod(c(1,1-qx[-n]))*qx)}
+<pre>library(data.table);library(ggplot2)
 
-pop=fread(&quot;http://sars2.net/f/uspopdead.csv&quot;)[year%in%2010:2022]
+lifex=\(mx){qx=mx/(1+mx/2)
+  n=length(mx);pop=rep(1,n);dead=rep(0,n)
+  for(i in 1:(n-1)){dead[i]=pop[i]*qx[i];pop[i+1]=max(0,pop[i]-dead[i])}
+  dead[n]=pop[n]*qx[n]
+  weighted.mean(0:(length(mx)-1)+.5,dead)}
+
+pop=fread(&quot;https://sars2.net/f/uspopdead.csv&quot;)[year%in%2010:2023]
 
 v=fread(&quot;curl -Ls sars2.net/f/vital.csv.xz|xz -dc&quot;)[year&gt;=2010]
 
@@ -987,10 +993,8 @@ theme(axis.text=element_text(size=11,color=&quot;black&quot;),
   panel.background=element_blank(),
   panel.border=element_rect(fill=NA,linewidth=.4),
   plot.margin=margin(7,6,6,6),
-  plot.title=element_text(size=11.5,face=&quot;bold&quot;,margin=margin(,,4)))
-ggsave(&quot;1.png&quot;,width=4.9,height=3,dpi=300*4)
-sub=&quot;Source: cdc.gov/nchs/nvss/mortality_public_use_data.htm (yearly deaths by underlying cause and single year of age) and www2.census.gov/programs-surveys/popest/datasets (mid-year resident population estimates). Drug deaths are deaths with underlying cause X40-44, X60-64, or Y10-14. Ages 100 and above were aggregated together. Vintage 2023 population estimates were used for 2020-2022 and vintage 2020 estimates were used for 2010-2019. In order to get rid of a sudden jump after the switch from 2010-based to 2020-based population estimates, the 2010-based estimates were multiplied by a linear slope so that they were equal to the 2020-based estimates in 2020.&quot;
-system(paste0(&quot;mogrify -trim 1.png;w=`identify -format %w 1.png`;magick 1.png \\( -size $[w]x -font Arial -interline-spacing -3 -pointsize $[44*4] caption:&#39;&quot;,gsub(&quot;&#39;&quot;,&quot;&#39;\\\\&#39;&quot;,sub),&quot;&#39; -splice x90 \\) -append -trim -resize 25% -bordercolor white -border 30 -colors 256 1.png&quot;))</pre>
+  plot.title=element_text(size=11.5,face=&quot;bold&quot;,hjust=.5,margin=margin(,,4)))
+ggsave(&quot;1.png&quot;,width=4.9,height=3,dpi=300*4)</pre>
 </div>
 <h2>
 <a href=#If_excess_deaths_in_2020_were_due_to_hospital_protocols_or_treatments_then_why_did_deaths_at_home_also_increase id=If_excess_deaths_in_2020_were_due_to_hospital_protocols_or_treatments_then_why_did_deaths_at_home_also_increase>If excess deaths in 2020 were due to hospital protocols or treatments then why did deaths at home also increase?</a>
