@@ -79,6 +79,7 @@ blockquote h3{color:inherit}
 <li><a href="#Cancer_incidence_in_ages_below_50_in_Australia">Cancer incidence in ages below 50 in Australia</a></li>
 <li><a href="#Cancer_incidence_in_ages_30_44_in_the_Netherlands">Cancer incidence in ages 30-44 in the Netherlands</a></li>
 <li><a href="#Plot_for_weekly_cancer_mortality_by_Truth_in_Numbers">Plot for weekly cancer mortality by Truth in Numbers</a></li>
+<li><a href="#Excess_deaths_from_natural_causes_in_ages_0_5">Excess deaths from natural causes in ages 0-5</a></li>
 </ul>
 
 
@@ -3089,6 +3090,152 @@ round(a[,pctchange:=(cmr/c(NA,cmr[-.N])-1)*100][],1)
 # 2022 353555 334017321 105.8      -0.9
 # 2023 357403 336806231 106.1       0.3
 # 2024 359854 340110988 105.8      -0.3</pre>
+<h2>
+<a href=#Excess_deaths_from_natural_causes_in_ages_0_5 id=Excess_deaths_from_natural_causes_in_ages_0_5>Excess deaths from natural causes in ages 0-5</a>
+</h2>
+<p>ES made this plot where for some reason he gets about 68% excess deaths from natural causes in ages 0-5: [<a href=https://theethicalskeptic.com/2025/07/29/gen-v-the-vaccinials/>https://theethicalskeptic.com/2025/07/29/gen-v-the-vaccinials/</a>]</p>
+<div>
+<img src=i/ethical-vaccinial.png width=800>
+</div>
+<p>I don't know what ICD codes he included in his plot. But when I simply looked at chapters A-Q, I got only about 3% excess ASMR in 2024 relative to a 2010-2019 linear trend:</p>
+<div>
+<img src=i/ethical-vaccinial-2.png width=600>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>t=fread(&quot;https://sars2.net/f/wondernaturalsingle.csv&quot;)
+a=t[age%in%1:5,.(dead=sum(dead)),.(age,year=as.integer(substr(date,1,4)))][year%in%2000:2024]
+a=merge(a,fread(&quot;https://sars2.net/f/uspopdead.csv&quot;)[,.(age,year,pop,dead)])
+
+a=fread(&quot;https://sars2.net/f/uspopdead.csv&quot;)[,.(age,year,pop,dead)][age%in%0:5&amp;year%in%2000:2024]
+a=merge(a[year==2020,sum(pop),age][,.(age,std=V1/sum(V1))],a)
+
+p=a[,.(y=c(sum(dead),sum(pop),sum(dead)/sum(pop)*1e5,sum(dead/pop*std*1e5)),facet=1:4,z=1),.(x=year)]
+
+p=rbind(p,p[,.(x,y=predict(lm(y~x,.SD[x%in%2010:2019]),.SD),z=2),facet])
+
+p[,facet:=factor(facet,,c(&quot;Deaths&quot;,&quot;Population&quot;,&quot;CMR per 100,000&quot;,&quot;ASMR per 100,000&quot;))]
+p[,z:=factor(z,,c(&quot;Actual&quot;,&quot;2010-2019 linear trend&quot;))]
+
+xstart=2000;xend=2024;xbreak=seq(xstart,xend,5)
+ybreak=pretty(c(0,p$y));ystart=0;yend=max(ybreak)
+
+ggplot(p)+
+facet_wrap(~facet,ncol=2,dir=&quot;v&quot;,scales=&quot;free_y&quot;)+
+geom_rect(data=p[,max(y),facet],aes(ymax=V1),ymin=0,xmin=xstart,xmax=xend,lineend=&quot;square&quot;,linejoin=&quot;mitre&quot;,fill=NA,color=&quot;gray75&quot;,linewidth=.4)+
+geom_line(data=p[!(rleid(z)==2&amp;!x%in%2010:2019)],aes(x,y,color=z),linewidth=.6)+
+geom_line(data=p[rleid(z)==2],aes(x,y,color=z),linetype=&quot;11&quot;,linewidth=.6)+
+geom_line(data=p[rleid(z)==1],aes(x,y,color=z),linewidth=.6)+
+geom_point(aes(x,y,alpha=z),stroke=0,size=1.4)+
+geom_label(data=p[,max(y)/2,facet],aes(y=V1,label=facet),x=pmean(xstart,xend),size=3.87,label.r=unit(0,&quot;pt&quot;),label.padding=unit(4,&quot;pt&quot;),label.size=.4,fill=&quot;white&quot;,color=&quot;gray75&quot;)+
+geom_label(data=p[,max(y)/2,facet],aes(y=V1,label=facet),x=pmean(xstart,xend),size=3.87,label.r=unit(0,&quot;pt&quot;),label.padding=unit(4,&quot;pt&quot;),label.size=0,fill=NA,)+
+labs(title=&quot;CDC WONDER, ages 0-5: Deaths with underlying cause A-Q (natural\ncauses without COVID or R or X codes)&quot;,x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xbreak)+
+scale_y_continuous(limits=\(x)c(0,max(x)),breaks=\(x)pretty(c(0,x)),labels=\(x)ifelse(x==0,&quot;&quot;,kim(x)))+
+scale_color_manual(values=c(&quot;black&quot;,&quot;#3333ff&quot;))+
+scale_alpha_manual(values=1:0)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=11,color=&quot;gray40&quot;),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;horizontal&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(11,&quot;pt&quot;),
+  legend.key.width=unit(23,&quot;pt&quot;),
+  legend.margin=margin(,,6),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.grid.major=element_line(linewidth=.4,color=&quot;gray90&quot;),
+  panel.spacing=unit(3,&quot;pt&quot;),
+  plot.title=element_text(size=11,hjust=.5,face=&quot;bold&quot;,margin=margin(,,4)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=5.4,height=3.8,dpi=300*4)</pre>
+</div>
+<p>Next I tried using WebPlotDigitizer to digitize the excess deaths in his plot, which was able to closely approximate the weekly number of excess deaths: <a href=https://automeris.io/wpd/.><a href="https://automeris.io/wpd/" class="uri">https://automeris.io/wpd/</a>.</a> Then I reverse engineered his baseline by subtracting the approximated excess deaths from the actual weekly deaths for UCD A-Q. The yellow lines here show that Ethical Skeptic's baseline roughly overlapped with my three baselines in 2019, but the slope of his baseline changed dramatically after 2019:</p>
+<div>
+<img src=i/ethical-vaccinial-3.png width=600>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
+
+t=fread(&quot;https://sars2.net/f/wondervaccinial.csv&quot;)
+t[,dead:=ma(dead,3,2)]
+t=na.omit(t)
+t[,date:=MMWRweek2Date(year,week,4)]
+
+t=merge(t,t[year&lt;2020,.(base=mean(dead),base2=mean(dead)),week])
+slope=t[year&lt;2020,mean(dead),year][,predict(lm(V1~year),.(year=2018:2025))]
+slope2=t[year&lt;2020&amp;week%in%15:35,mean(dead),year][,predict(lm(V1~year),.(year=2018:2025))]
+t[,base:=base*(slope/mean(slope[1:2]))[factor(t$year)]]
+t[,base2:=base2*(slope2/mean(slope2[1:2]))[factor(t$year)]]
+
+t$base3=t[year&lt;2020,predict(lm(dead~date),t)]
+t$base3=t$base3+t[year&lt;2020,mean(dead-base3),week]$V1[t$week]
+
+lab=c(&quot;Actual deaths&quot;,&quot;Baseline with slope determined by total on all weeks&quot;,&quot;Baseline with slope determined by total on weeks 15 to 35&quot;,&quot;Linear regression of weekly data with week number residuals added&quot;,&quot;Reverse engineered baseline of Ethical Skeptic&quot;)
+p=t[,.(x=date,y=c(dead,base,base2,base3,dead-excess),z=factor(rep(lab,each=.N),lab))]
+
+p$facet=&quot;Deaths&quot;
+p=rbind(p,merge(p[z!=z[1]],p[z==z[1],.(x,actual=y)])[,.(x,y=(actual/y-1)*100,z,facet=&quot;Excess percentage of deaths&quot;)])
+p[,facet:=factor(facet,unique(facet))]
+
+xstart=as.Date(&quot;2018-1-1&quot;);xend=as.Date(&quot;2025-5-1&quot;)
+xbreak=seq(xstart,xend,&quot;6 month&quot;);xlab=ifelse(month(xbreak)==7,year(xbreak),&quot;&quot;)
+
+ylim=p[,{x=extendrange(y,,.03);.(ymin=x[1],ymax=x[2])},facet]
+
+ggplot(p)+
+facet_wrap(~facet,dir=&quot;v&quot;,scales=&quot;free&quot;)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray90&quot;,linewidth=.4)+
+geom_segment(data=p[.N],x=xstart,xend=xend,y=0,yend=0,linewidth=.4,color=&quot;gray75&quot;)+
+geom_rect(data=ylim,aes(ymin=ymin,ymax=ymax),xmin=xstart,xmax=xend,lineend=&quot;square&quot;,linejoin=&quot;mitre&quot;,fill=NA,color=&quot;gray72&quot;,linewidth=.4)+
+geom_line(aes(x,y,color=z),linewidth=.5)+
+geom_label(data=ylim,aes(xstart+50,(ymin+ymax)/2,label=facet),hjust=0,label.r=unit(0,&quot;pt&quot;),label.padding=unit(5,&quot;pt&quot;),label.size=.4,color=&quot;gray75&quot;,size=3.8)+
+geom_label(data=ylim,aes(xstart+50,(ymin+ymax)/2,label=facet),hjust=0,label.r=unit(0,&quot;pt&quot;),label.padding=unit(5,&quot;pt&quot;),label.size=0,size=3.8,fill=NA)+
+labs(x=NULL,y=NULL,title=&quot;CDC WONDER, ages 0-5: Deaths with underlying cause A-Q\n(natural causes excluding COVID and R and X codes)&quot;)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
+scale_y_continuous(breaks=\(x)pretty(x,7))+
+scale_color_manual(values=c(&quot;black&quot;,&quot;blue&quot;,&quot;#8888ff&quot;,&quot;#ff6666&quot;,&quot;#aaaa00&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=11,color=&quot;gray40&quot;),
+  axis.ticks=element_line(linewidth=.4,color=&quot;gray75&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(4,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(11,&quot;pt&quot;),
+  legend.key.width=unit(23,&quot;pt&quot;),
+  legend.margin=margin(,,4),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.border=element_rect(color=&quot;gray75&quot;,fill=NA,linewidth=.4),
+  panel.spacing=unit(2,&quot;pt&quot;),
+  plot.title=element_text(size=11,face=2,hjust=.5,margin=margin(,,2)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=5.7,height=4.8,dpi=300*4)</pre>
+</div>
+<p>The plot by ES might have included R99 deaths where the cause has not yet been specified, because my yellow line has a massive increase in excess deaths in 2025. It might be because I didn't include R codes in my plot, because in July 2025 when I retrieved the data, the percentage of R99 deaths out of A-Q deaths in ages 0-5 was about 10% in January 2025, 12% in February, 19% in March, and 20% in April.</p>
+<p>My red and blue baselines are attempts to replicate the methodology used by ES, but they are not accurate measures of the actual trend in mortality, because I also attempted to emulate the flaws of his methodology, so my baselines are fitted against deaths from 2018 and 2019 only, and they are not adjusted for the population size of each age. ES told me that in his plots that display weekly data from 2018 onwards, he fits the baseline using data for only 2018 and 2019. He presumably excludes winter months from the baseline fitting period, but as far as I can tell, he has not mentioned which specific week numbers he excludes from the fitting period, or if he excludes different weeks in different plots.</p>
+<p>But in either case, none of my three baselines look anything like his yellow baseline I reverse engineered. My baselines have close to 0% excess deaths on average in 2024, but his baseline has about 50% excess deaths in 2024.</p>
+<p>My yellow baseline has on average about 377 deaths per week in the MMWR year 2018 but about 232 deaths per week in the MMWR year 2024. So ES seems to have assumed that deaths in ages 0-5 would've dropped by about 40% between 2018 and 2024.</p>
 <script>
 document.querySelectorAll('pre').forEach(e=>e.innerHTML=e.innerHTML.replace(/((^| )# [^\n]*|^#$)/mg,"<span class=comment>$1</span>"))
 
