@@ -2084,7 +2084,7 @@ dev.off()</pre>
 <h3>
 <a href=#Monthly_excess_ASMR id=Monthly_excess_ASMR>Monthly excess ASMR</a>
 </h3>
-<p>The next plot shows monthly cancer ASMR I calculated myself. I took cancer deaths by 5-year age groups from table 6 for each month here: <a href=https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00450011&tstat=000001028897&cycle=1&tclass1=000001053058&tclass2=000001053060&cycle_facet=tclass1&tclass3val=0.><a href="https://www.e-stat.go.jp/stat-search/files?page=1&amp;layout=datalist&amp;toukei=00450011&amp;tstat=000001028897&amp;cycle=1&amp;tclass1=000001053058&amp;tclass2=000001053060&amp;cycle_facet=tclass1&amp;tclass3val=0" class="uri">https://www.e-stat.go.jp/stat-search/files?page=1&amp;layout=datalist&amp;toukei=00450011&amp;tstat=000001028897&amp;cycle=1&amp;tclass1=000001053058&amp;tclass2=000001053060&amp;cycle_facet=tclass1&amp;tclass3val=0</a>.</a> I took yearly population estimates from here and I interpolated them to monthly population estimates: <a href=https://www.e-stat.go.jp/en/stat-search/files?page=1&toukei=00200524&tstat=000000090001>https://www.e-stat.go.jp/en/stat-search/files?page=1&amp;toukei=00200524&amp;tstat=000000090001</a> (where I combined annual reports for 2021-2023 with the 2000-2020 time series reports). I used the 2015 Japanese standard population like Gibo et al.: <a href=https://www.mhlw.go.jp/content/10700000/000557741.pdf.><a href="https://www.mhlw.go.jp/content/10700000/000557741.pdf" class="uri">https://www.mhlw.go.jp/content/10700000/000557741.pdf</a>.</a></p>
+<p>The next plot shows monthly cancer ASMR I calculated myself. I took cancer deaths by 5-year age groups from table 6-1 for each month here: <a href=https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00450011&tstat=000001028897&cycle=1&tclass1=000001053058&tclass2=000001053060&cycle_facet=tclass1&tclass3val=0.><a href="https://www.e-stat.go.jp/stat-search/files?page=1&amp;layout=datalist&amp;toukei=00450011&amp;tstat=000001028897&amp;cycle=1&amp;tclass1=000001053058&amp;tclass2=000001053060&amp;cycle_facet=tclass1&amp;tclass3val=0" class="uri">https://www.e-stat.go.jp/stat-search/files?page=1&amp;layout=datalist&amp;toukei=00450011&amp;tstat=000001028897&amp;cycle=1&amp;tclass1=000001053058&amp;tclass2=000001053060&amp;cycle_facet=tclass1&amp;tclass3val=0</a>.</a> I took yearly population estimates from here and I interpolated them to monthly population estimates: <a href=https://www.e-stat.go.jp/en/stat-search/files?page=1&toukei=00200524&tstat=000000090001>https://www.e-stat.go.jp/en/stat-search/files?page=1&amp;toukei=00200524&amp;tstat=000000090001</a> (where I combined annual reports for 2021-2023 with the 2000-2020 time series reports). I used the 2015 Japanese standard population like Gibo et al.: <a href=https://www.mhlw.go.jp/content/10700000/000557741.pdf.><a href="https://www.mhlw.go.jp/content/10700000/000557741.pdf" class="uri">https://www.mhlw.go.jp/content/10700000/000557741.pdf</a>.</a></p>
 <div>
 <img src=i/stat-japancancer-4.png width=700>
 </div>
@@ -3587,10 +3587,14 @@ ggsave(&quot;1.png&quot;,width=4.7,height=2.8,dpi=300*4)</pre>
 <button>
 Show code
 </button>
-<pre>dead=fread(&quot;WHO-COVID-19-global-daily-data.csv&quot;)[Country==&quot;Japan&quot;&amp;year(Date_reported)&lt;=2022]
-dead=dead[,.(coviddead=sum(New_deaths)),.(date=as.Date(`day&lt;-`(Date_reported,1)))]
-dead2=c(12713,4511,1868,1011,986,1154,1878,3852,4049,2496,1628,1934,3911,4569,3623,2506,1722,1734,3356,4881,3155,1919,1387,3012)
-dead=rbind(dead,list(seq(as.Date(&quot;2023-1-1&quot;),as.Date(&quot;2024-12-1&quot;),&quot;month&quot;),dead2))
+<pre>ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
+
+d21=c(2669,2159,1139,1554,3090,1669,579,1568,1617,471,151,90)
+d22=c(668,6503,4630,1705,1030,566,1941,9293,5216,2319,3977,9787)
+d23=c(12713,4511,1868,1011,986,1154,1878,3852,4049,2496,1628,1934)
+d24=c(3911,4569,3623,2506,1722,1734,3356,4881,3155,1919,1387,3012)
+d25=c(5104,3311)
+dead=CJ(x=seq(as.IDate(&quot;2021-1-1&quot;),as.IDate(&quot;2025-2-1&quot;),&quot;month&quot;))[,y:=c(d21,d22,d23,d24,d25)]
 
 t=fread(&quot;jp132101_Koganei-Tokyo_all.csv&quot;,fill=T)
 t[,dose:=(date_lot1&lt;=&quot;2021-09-14&quot;)%in%T*1]
@@ -3604,15 +3608,15 @@ doses=t[age&gt;=60,.(date=as.IDate(unlist(.SD,,F))),.SDcols=patterns(&quot;^date
 doses=doses[!is.na(date),.(y=.N),.(x=date)]
 doses=merge(doses[,.(x=seq(min(x),max(x),1))],doses,all=T)[is.na(y),y:=0]
 
-p=rbind(p,doses[,z:=2])[,y:=as.double(y)][,y:=ma(y,30),z]
-p=rbind(p,dead[,.(x=as.IDate(date),y=coviddead,z=3)])
+p=p[,.(x,y=ma(y,30)),z]
+p=rbind(p,doses[,.(x,y=ma(y,3),z=2)])
+p=rbind(p,dead[,z:=3])
 p[,y:=y/max(y)*100,z]
 
-lab=c(&quot;Unvaccinated deaths (±30-day MA)&quot;,&quot;Vaccinated deaths (±30-day MA)&quot;,&quot;Monthly COVID deaths (whole Japan)&quot;,&quot;Vaccine doses in ages 60+&quot;)
+lab=c(&quot;Unvaccinated deaths (±30-day MA)&quot;,&quot;Vaccinated deaths (±30-day MA)&quot;,&quot;Monthly COVID deaths (whole Japan)&quot;,&quot;Vaccine doses in ages 60+ (±3-day MA)&quot;)
 p[,z:=factor(z,,lab)]
 
-xstart=as.Date(&quot;2021-1-1&quot;);xend=as.Date(&quot;2025-7-1&quot;)
-xbreak=as.Date(c(&quot;2021-7-1&quot;,paste0(2022:2024,&quot;-7-1&quot;),&quot;2025-4-1&quot;))
+xstart=as.Date(&quot;2021-1-1&quot;);xend=as.Date(&quot;2025-7-1&quot;);xbreak=seq(xstart,xend,&quot;year&quot;)
 ystart=0;yend=100;ybreak=0:5*20
 
 ggplot(p)+
@@ -3630,6 +3634,7 @@ scale_fill_manual(label=lab[3:4],values=c(&quot;gray80&quot;,&quot;#ffaaaa&quot;
 coord_cartesian(clip=&quot;off&quot;,expand=F)+
 guides(fill=guide_legend(override.aes=list(linewidth=0,keyheight=unit(1,&quot;pt&quot;))))+
 theme(axis.text=element_text(size=11,color=&quot;gray50&quot;,margin=margin(2,2,2,2)),
+  axis.text.x=element_text(hjust=0),
   axis.ticks.length=unit(0,&quot;pt&quot;),
   legend.background=element_blank(),
   legend.box.spacing=unit(0,&quot;pt&quot;),
@@ -3651,6 +3656,162 @@ theme(axis.text=element_text(size=11,color=&quot;gray50&quot;,margin=margin(2,2,
 ggsave(&quot;1.png&quot;,width=5.5,height=3.4,dpi=300*4)</pre>
 </div>
 <p>Unvaccinated people have such a small sample size in the plot above that it's not easy to see spikes in deaths that coincide with COVID waves, even though in the full FOI data for different municipalities combined, the spikes in deaths during COVID waves are clearly bigger in unvaccinated people than vaccinated people.</p>
+<p>Here's also an ASMR version of the same data, where this time I didn't use fixed cohorts like Kirsch:</p>
+<div>
+<img src=i/statistic-koganei-steveline-asmr.png width=600>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>t=fread(&quot;jp132101_Koganei-Tokyo_all.csv&quot;,fill=T)
+for(i in which(sapply(t,inherits,&quot;IDate&quot;)))t[[i]]=as.Date(t[[i]])
+
+set.seed(0);t$born=as.Date(&quot;2025-5-16&quot;)-years(t$age)-sample(0:364,nrow(t),T)
+
+mindate=as.Date(&quot;2021-2-1&quot;);maxdate=as.Date(&quot;2025-3-31&quot;)
+d=t[,.(start=pmax(born,mindate,na.rm=T),end=pmin(date_death,maxdate,na.rm=T),born)]
+d$dead=t$date_death;d$vax=t$date_lot1
+d=d[born&lt;=maxdate]
+
+e=d[,.(age=age(born,start),date=start,dose=0,pop=1)]
+vax=d[!is.na(vax)]
+e=rbind(e,vax[,.(age=age(born,vax),date=vax,dose=1,pop=1)])
+e=rbind(e,vax[born!=vax,.(age=age(born,vax-1),date=vax,dose=0,pop=-1)])
+
+bday=cbind(d,date=c(outer(d$born,2021:2025,`year&lt;-`)))
+bday[,age:=age(born,date)][,dose:=(date&gt;=vax)%in%T*1]
+bday=bday[!(date==vax%in%T)&amp;date&gt;start&amp;date&lt;=end]
+e=rbind(e,bday[,.(age,dose,pop=1,date)],bday[,.(age=age-1,dose,pop=-1,date)])
+
+dead=d[!is.na(dead),.(date=dead,dose=(!vax%in%NA)*1,age=age(born,dead))]
+e=rbind(e,dead[,.(date=date+1,dose,age,pop=-1)])
+
+b=e[,.(pop=sum(pop)),.(date,age=pmin(age,100),dose)]
+b=merge(b,dead[,.(dead=.N),.(age=pmin(age,100),dose,date)],all=T)
+b=rbind(b,b[,.(dead=sum(dead,na.rm=T),pop=sum(pop,na.rm=T),dose=2),.(date,age)])
+b=merge(CJ(date=seq(mindate,maxdate,1),age=0:100,dose=0:2),b,all=T)
+b[is.na(b)]=0
+b[,pop:=cumsum(pop),.(dose,age)]
+
+a=b[,.(dead=sum(dead),pop=sum(pop)),,.(age=pmax(age,0)%/%5*5,date,dose)]
+a=merge(do.call(CJ,lapply(a[,1:3],unique)),a,all=T);a[is.na(a)]=0
+a$std=a[dose==2,tapply(pop,age,sum)/sum(pop)][factor(a$age)]
+a=a[,.(date,dead=ma(dead,30),pop=ma(pop,30)),.(age,dose,std)]
+
+p1=a[pop&gt;0,.(y=sum(dead/pop*std*365e5),facet=1),.(x=date,z=dose)]
+
+d21=c(2669,2159,1139,1554,3090,1669,579,1568,1617,471,151,90)
+d22=c(668,6503,4630,1705,1030,566,1941,9293,5216,2319,3977,9787)
+d23=c(12713,4511,1868,1011,986,1154,1878,3852,4049,2496,1628,1934)
+d24=c(3911,4569,3623,2506,1722,1734,3356,4881,3155,1919,1387,3012)
+d25=c(5104,3311)
+dead=CJ(x=seq(as.Date(&quot;2021-1-1&quot;),as.Date(&quot;2025-2-1&quot;),&quot;month&quot;))[,y:=c(d21,d22,d23,d24,d25)]
+
+t=fread(&quot;jp132101_Koganei-Tokyo_all.csv&quot;,fill=T)
+doses=t[age&gt;=60,.(date=as.IDate(unlist(.SD,,F))),.SDcols=patterns(&quot;^date_lot&quot;)]
+doses=doses[!is.na(date),.(y=.N),.(x=date)]
+doses=merge(doses[,.(x=seq(min(x),max(x),1))],doses,all=T)[is.na(y),y:=0]
+
+p2=doses[,.(x=as.Date(x),y=ma(y,3),z=3)]
+p2=rbind(p2,dead[,z:=4])
+p2[,y:=y/max(y)*100,z]
+p=rbind(p1,p2[,facet:=2])
+
+lab=c(&quot;Unvaccinated&quot;,&quot;Vaccinated&quot;,&quot;Total&quot;,&quot;New vaccine doses in ages 60+ (±3-day MA)&quot;,&quot;COVID deaths in whole Japan&quot;)
+color=c(&quot;#5555ff&quot;,&quot;#ff5555&quot;,&quot;black&quot;,&quot;#ff9999&quot;,&quot;gray50&quot;)
+
+p[,z:=factor(z,,lab)]
+p[,facet:=factor(facet,,c(&quot;ASMR per 100,000 person-years (±30-day moving average)&quot;,&quot;Other variables (percentage of maximium)&quot;))]
+
+xstart=as.Date(&quot;2021-1-1&quot;);xend=as.Date(&quot;2025-4-1&quot;);xbreak=seq(xstart,xend,&quot;year&quot;)
+ystart=0;yend=100;ybreak=0:5*20
+ylim=p[,.(max=max(y,na.rm=T)),facet]
+
+leg=cbind(ylim[,.(y=max*seq(.90,,-.14,3)),facet][-6],color,label=lab)
+
+ggplot(p)+
+facet_wrap(~facet,ncol=1,scales=&quot;free&quot;)+
+geom_rect(data=ylim,aes(ymax=max),xmin=xstart,xmax=xend,ymin=ystart,lineend=&quot;square&quot;,linejoin=&quot;mitre&quot;,fill=NA,color=&quot;gray80&quot;,linewidth=.4)+
+geom_rect(data=p[z==lab[5]],aes(xmin=x,xmax=x%m+%months(1),ymin=0,ymax=y,fill=lab[3]),color=&quot;gray50&quot;,linewidth=.2)+
+geom_line(data=p[z!=lab[5]],aes(x,y,color=z),linewidth=.65)+
+geom_text(data=leg,aes(xend-18,y,label=label),color=color,hjust=1,size=3.87)+
+labs(x=NULL,y=NULL,title=&quot;Age-standardized mortality rate in Koganei, Japan&quot;)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=year(xbreak))+
+scale_y_continuous(limits=c(0,NA),breaks=pretty,labels=\(x)if(max(x,na.rm=T)==100)paste0(x,&quot;%&quot;)else x)+
+scale_color_manual(values=color)+
+scale_fill_manual(label=lab[3:4],values=c(&quot;gray80&quot;,&quot;#ffaaaa&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(fill=guide_legend(override.aes=list(linewidth=0,keyheight=unit(1,&quot;pt&quot;))))+
+theme(axis.text=element_text(size=11,color=&quot;gray50&quot;),
+  axis.text.x=element_text(hjust=0),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  legend.position=&quot;none&quot;,
+  panel.background=element_blank(),
+  panel.grid.major=element_line(linewidth=.4,color=&quot;gray90&quot;),
+  panel.spacing=unit(2,&quot;pt&quot;),
+  plot.title=element_text(size=11,hjust=.5,face=2,margin=margin(,,2)),
+  strip.background=element_blank(),
+  strip.text=element_text(size=11,margin=margin(,,2)))
+ggsave(&quot;1.png&quot;,width=5.5,height=3.4,dpi=300*4)</pre>
+</div>
+<p>If you look at the aggregate data for different municipalities combined, the spikes in deaths during COVID waves are more pronounced in unvaccinated people than vaccinated people:</p>
+<div>
+<img src=i/statistic-hudikaha-vs-covid.png width=600>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>t=fread(&quot;https://sars2.net/f/japanfoihudikaha.csv&quot;)
+p1=t[location==location[1]&amp;age==&quot;all&quot;,.(y=sum(dead)),.(z=pmin(dose,1),x=as.Date(paste0(month,&quot;-15&quot;)))]
+p1[,y:=y/days_in_month(x)]
+p1[,y:=y/p1[year(x)==2023,tapply(y,z,mean)][z+1]*100]
+p1=p1[y&lt;200]
+
+d20=c(0,10,56,450,336,59,46,275,249,192,401,1392)
+d21=c(2669,2159,1139,1554,3090,1669,579,1568,1617,471,151,90)
+d22=c(668,6503,4630,1705,1030,566,1941,9293,5216,2319,3977,9787)
+d23=c(12713,4511,1868,1011,986,1154,1878,3852,4049,2496,1628,1934)
+d24=c(3911,4569,3623,2506,1722,1734,3356,4881,3155,1919,1387,3012)
+d25=c(5104,3311)
+dead=CJ(x=seq(as.Date(&quot;2020-1-1&quot;),as.Date(&quot;2025-2-1&quot;),&quot;month&quot;))[,y:=c(d20,d21,d22,d23,d24,d25)]
+
+p=rbind(p1,dead[,z:=3])
+
+lab=c(&quot;Unvaccinated&quot;,&quot;Vaccinated&quot;,&quot;COVID deaths in whole Japan&quot;)
+color=c(&quot;#5555ff&quot;,&quot;#ff5555&quot;,&quot;gray50&quot;)
+
+p[,z:=factor(z,,lab)]
+
+xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2025-5-1&quot;);xbreak=seq(xstart,xend,&quot;year&quot;)
+ystart=0;yend=p[z!=lab[3],max(y)];ybreak=pretty(c(ystart,yend))
+
+leg=data.table(y=yend*seq(.93,,-.09,2)[c(1,2,1)],hjust=c(0,0,1),x=rep(c(xstart+30,xend-30),2:1),label=lab,color)
+
+ggplot(p)+
+annotate(&quot;rect&quot;,xmin=xstart,xmax=xend,ymin=0,ymax=yend,lineend=&quot;square&quot;,linejoin=&quot;mitre&quot;,fill=NA,color=&quot;gray80&quot;,linewidth=.4)+
+geom_rect(data=p[z==lab[3]],aes(xmin=x,xmax=x%m+%months(1),ymin=0,ymax=y/100),fill=&quot;gray80&quot;,color=&quot;gray50&quot;,linewidth=.2)+
+geom_line(data=p[z!=lab[3]],aes(x,y,color=z),linewidth=.65)+
+geom_text(data=leg,aes(x,y,label=label,hjust=hjust),color=color,size=3.87)+
+labs(x=NULL,y=NULL,title=&quot;Monthly deaths in Japan FOI data divided by days in month&quot;,subtitle=&quot;Shown as percentage of average value in 2023&quot;)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=year(xbreak))+
+scale_y_continuous(limits=c(0,NA),breaks=pretty,labels=\(x)paste0(x,&quot;%&quot;),sec.axis=sec_axis(trans=~.+0,breaks=ybreak,labels=\(x)ifelse(x&gt;0,paste0(x*100/1e3,&quot;k&quot;),x*100)))+
+scale_color_manual(values=color)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(fill=guide_legend(override.aes=list(linewidth=0,keyheight=unit(1,&quot;pt&quot;))))+
+theme(axis.text=element_text(size=11,color=&quot;gray50&quot;),
+  axis.text.x=element_text(hjust=0),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  axis.title=element_text(size=11,margin=margin()),
+  legend.position=&quot;none&quot;,
+  panel.background=element_blank(),
+  panel.grid.major=element_line(linewidth=.4,color=&quot;gray90&quot;),
+  panel.spacing=unit(2,&quot;pt&quot;),
+  plot.subtitle=element_text(hjust=.5,margin=margin(,,2)),
+  plot.title=element_text(size=11,hjust=.5,face=2,margin=margin(,,2)))
+ggsave(&quot;1.png&quot;,width=5.1,height=2.7,dpi=300*4)</pre>
+</div>
 <h2>
 <a href=#canceledmouse_Fertility_rate_by_age_group_in_Sweden id=canceledmouse_Fertility_rate_by_age_group_in_Sweden>canceledmouse: Fertility rate by age group in Sweden</a>
 </h2>
