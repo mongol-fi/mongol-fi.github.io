@@ -90,6 +90,7 @@ blockquote h3{color:inherit}
 <li><a href="#Ratio_of_COVID_deaths_to_all_cause_deaths_in_Levi_study_relative_to_general_population_of_Florida">Ratio of COVID deaths to all-cause deaths in Levi study relative to general population of Florida</a></li>
 <li><a href="#Assumption_of_75_efficacy_before_Omicron_and_50_after_Omicron_by_Ioannides">Assumption of 75% efficacy before Omicron and 50% after Omicron by Ioannides</a></li>
 <li><a href="#Unvaccinated_and_vaccinated_CMR_of_people_born_in_1940_1949">Unvaccinated and vaccinated CMR of people born in 1940-1949</a></li>
+<li><a href="#KCORv3">KCORv3</a></li>
 </ul>
 </ul>
 
@@ -2754,6 +2755,160 @@ ggsave(&quot;1.png&quot;,width=5,height=4.4,dpi=300*4)</pre>
 <img src=i/rootclaim-1940cmr-3.png width=550>
 </div>
 <p>However the paper he linked said: <span class="quote">"With time from vaccination, the differences in ACM between groups with different vaccination statuses dwindled."</span> [<a href=https://link.springer.com/article/10.1186/s12889-025-23619-x>https://link.springer.com/article/10.1186/s12889-025-23619-x</a>] It's not reasonable to assume that unvaccinated people would continue to have 3 to 5 times higher mortality than vaccinated people indefinitely.</p>
+<h3>
+<a href=#KCORv3 id=KCORv3>KCORv3</a>
+</h3>
+<p>Kirsch described a new version of his KCOR formula here: <a href=https://github.com/skirsch/KCOR/blob/main/KCORv3.xlsx.><a href="https://github.com/skirsch/KCOR/blob/main/KCORv3.xlsx" class="uri">https://github.com/skirsch/KCOR/blob/main/KCORv3.xlsx</a>.</a> His spreadsheet that demonstrated the new method included this note:</p>
+<blockquote>
+<p><strong>The problem with KCORv2</strong></p>
+<p>The problem with the KCORv2 original formula: we have perfect data for both cohorts, no harm, and the slope should be =1 but it isn't if the cohorts are on significantly different parts of the Gompertz curve. You only get no drift in the cum ratio if the slopes are identical.</p>
+<p>What I assumed was frailty due to static HVE would impact only the scalar term in Gompertz, not the slope. That was an incorrect assumption in the full Gompertz model. Two cohorts, vaxxed v. unvaxxed, with the exact same age will have dramatically different slopes if static HVE is strong, which it is for the COVID vax.</p>
+<p>Two cohorts of different ages, works fine. They have nearly identical slopes.</p>
+<p>But two cohorts where one is vaxxed and other other isn't, is a completely different story. MASSIVE slope differences due to HVE even if the same age.</p>
+<p>My big mistake: I thought the vaxxed and unvaxxed would essentially act like different ages (e.g., similar increase in slope over a year)</p>
+<p>This is why KCOR curve kept climbing over time when it should have asymptoted to a flat slope. This observation is nonsensical since the total Czech population deaths were NOT climbing significantly (net harm was small).</p>
+<p><strong>KCORv3 simply adds a slope normalization step to the raw data. That's it.</strong></p>
+<p>if we adjust the death per week by removing the slope caused by the static HVE differences between the cohorts, each cohort will die with slope 0 over time. Then we apply normal KCOR to those adjusted death counts.</p>
+<p>NOTE the side benefit that the normalization is that it PROVES statis HVE is static because we can normalize the unvaxxed (with high HVE) to a straight line death slope using a fitted simple exponential.</p>
+<p>Also, incorporated in this new version is an updated Czech input data where dupllicate deaths were removed by removing all lines with infection &gt;1. The Czech dataset had full records if you got &gt;1 infection so if you got 3 infections and died, you died 3 times instead of 1.</p>
+<p><strong>The three step correction approach to fix the slopes</strong></p>
+<ol type="1">
+<li>We measure the unvaxxed slope post vaccine rollout by fitting an exponential to death minimums on an 8 week moving avg death/wk curve<br></li>
+<li>We measure the whole population slope pre-vaccine (this is generally 0 for a full population due to Gompertz)<br></li>
+<li>We derive the vaxxed slope from the two values above (see param derivation tab for the simple formula). The reason we can't measure the slope is because the vaccine itself can cause harm so we want to only correct for the expected slope for a safe vaccine which is the population slope-the unvaxxed slope as described in the formula on the param derivation tab.</li>
+</ol>
+<p>So:<br> population deaths per week pre vax = A*exp(a1*t)<br> unvaxxed deaths/week = B*exp(a2*t)<br> vaxxed slope is a3 which is derived from A, B, a1, and a2 in a simple slope equation. See param derivation for details</p>
+<p>In Czech, for all ages, we have A=2000, B=900, a1=0, a2= -.00213 (a declining deaths/week for fixed cohorts from fitting the unvaxxed deaths/week).</p>
+<p>Using the formula, we get a3=.001739 (see param derivations).</p>
+<p>To do the <span class="quote">"correction"</span> of raw values in the spreadsheet we use the opposite sign, e.g., we increase the deaths in the unvaccinted cohort and reduce the deaths in the vaccinated. That's why the opposite sign is entered in the tables here.</p>
+<p>unvaxxed slope (start is 6/14/21; end is Cutoff is 5/27/24 for the ). Get <strong>-0.00213</strong> for the slope per week where t is in weeks.</p>
+<p><strong>Curve fitting details</strong></p>
+<p>For the unvaxxed curve fit, only select local minimums that are LOWER than the previous local minimum and were the point is the lowest in a +- 2 week period before and after the point.</p>
+<p>For pre-vax, use 2020 from 4/20/2020 to 8/24/2020 but that's going to be inaccurate so eyeball it in this case since not a log of data. looks like 0 over the long term and that make perfect sense (see plots tab). For all ages, the slope =0.</p>
+<p><strong>Sanity checks:</strong></p>
+<ol type="1">
+<li>KCOR should stabilize with an <strong>asymptote</strong> to <strong>approaching 1 at the far end</strong> (vax harm/benefit wears off and back to normal relative mortality). This is true no matter if the vaccine was a net harm or benefit; <strong>it should asymptote to 1 from below (e.g., vaccine beneficial) or from above (if vaccine temporarily harmful).</strong></li>
+<li>In Czechia, the KCOR total effect should be modest because the total population death rate increase was modest.</li>
+<li>The unvaxxed after adjustment should be relatively flat over time for the line through the troughs</li>
+<li>The total deaths before vax rollout vs. shortly after shouldn't be lower than baseline population deaths</li>
+<li>The vaccine should never progressively lower your risk of death during non-COVID so the vaccinated adjusted deaths/week curve should never decline over time (it doesn't make you healthier).</li>
+<li>Similarly, the unvaccinated deaths/week should be flat over time</li>
+<li>same sum: <strong>Total adjusted deaths for the population (vaxxed + unvaxxed) = actual unadjusted sum (we are just adjusting slope). This is a powerful sanity check. KCOR can't be showing growing harm if the raw total population deaths aren't growing.</strong></li>
+<li>if there is a large net benefit from dose 1 vs. 2, it's like harm as the differences in <span class="quote">"benefit"</span> from one vs. 2 shots is a fraction of the total benefit wchich is a fraction of ACM benefit</li>
+<li>Fit of the unvaxxed curve should be strong (r2 of 95% or better)</li>
+<li>Baseline can now be set at the start by measuring unvaxxed deaths/week and subtracting from baseline deaths. This is the ratio. No more 8 week period needed!! Just a good stable unvaxxed number which can be easily seen from the trendline through troughs</li>
+<li>Note that the slope will be more negative for frailer cohorts. So in all ages Czech, the unvaxxed have the negative slope so will have an NPH issue (will look like it harmed them).</li>
+<li>if you go out long enough, if you got everything right, it will asymptote back to no harm (1 line) after the shots wear off their damage. This is a very powerful sanity test.</li>
+<li>To get static HVE, use CMR ratio of individual age ranges since those are the most likely to die. This shows no vax benefit (3x HVE will give 1.7 expected ratio which is what we observe.</li>
+<li>the most important factor is the baseline adjustment factor...where to set the <span class="quote">"no change"</span> line. Ideally this should be set at the ratios at t=0 to capture everything but that datapoint can be noisy. If we got it right, the dose 1 shot should normalize at 1 at the end of 2024 because there would be just the minor protection during covid that would fade away and asymptote to 1. <strong>so it's a great sanity check.</strong></li>
+<li>There really isn't much of an HVE effect when we wait 3 weeks from cohort definition. Dose 2 people, if there was HVE, would be leaving the deaths with the Dose 1 group and since Dose 1 group is small, it would be VERY noticeable if that happened.</li>
+<li>There are only two slope parameters: one for the vaxxed, one for the unvaxxed. If we got it right, all THREE lines have flat slopes of the troughs. The differences will be in the middle, e.g., after shot given.</li>
+</ol>
+</blockquote>
+<p>He demonstrated the problem with this calculation, where both unvaccinated and vaccinated deaths followed an exponential curve with the formula <code>b*exp(a*t)</code>.</p>
+<div>
+<img src=i/rootclaim-kcor3-1.png width=900>
+</div>
+<p>Both curves in his plot are concave, but the vaccinated curve should be convex. After adjusting for seasonal variation and excluding COVID waves, the mortality of vaccinated people roughly follows an exponential decay subtracted from a constant term: [<a href=#HVE_test_for_KCOR>#HVE_test_for_KCOR</a>]</p>
+<div>
+<img src=i/rootclaim-hvetest-6.png width=540>
+</div>
+<p>Therefore he should've added a constant term <code>c</code> to his formula: <code>c+b*exp(a*t)</code>. So his curves should've looked something like this:</p>
+<div>
+<img src=i/rootclaim-kcor3-2.png width=500>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>p=CJ(x=0:100)[,.(x,y=55+25*exp(-.05*x),y2=45-25*exp(-.05*x))]
+
+ybreak=0:5*20;ylim=c(0,100)
+xstart=0;xend=100;xbreak=0:10*10
+
+tit=&quot;Model of deaths as percentage of total deaths&quot;
+leg=c(&quot;Unvaccinated: 55+25*exp(-.05*x)&quot;,&quot;Vaccinated: 45-25*exp(-.05*x)&quot;)
+col=c(&quot;#5555ff&quot;,&quot;#ff5555&quot;)
+
+png(&quot;1.png&quot;,1400,900,res=300)
+par(mar=c(2.9,3,1.8,1.1),mgp=c(0,.5,0),lend=&quot;square&quot;)
+plot(rep(p$x,2),c(p$y2,p$y),type=&quot;n&quot;,main=tit,xlab=NA,ylab=NA,xaxs=&quot;i&quot;,yaxs=&quot;i&quot;,yaxt=&quot;n&quot;,xaxt=&quot;n&quot;,ylim=ylim,xlim=c(xstart,xend),cex.main=1)
+axis(2,at=ybreak,las=1,tck=-.035,labels=paste0(ybreak,&quot;%&quot;))
+axis(1,at=xbreak,las=1,tck=-.035,labels=NA)
+mtext(xbreak,side=1,line=.35,at=xbreak)
+mtext(&quot;Week&quot;,side=1,font=2,line=1.4)
+lines(p$x,p$y,,col=col[1],lwd=1.5)
+lines(p$x,p$y2,col=col[2],lwd=1.5)
+legend(&quot;topright&quot;,legend=leg,col=col,lwd=1.5)</pre>
+</div>
+<p>In this plot Kirsch fitted an exponential function against the local minima:</p>
+<div>
+<img src=i/rootclaim-kcor3-4.png width=650>
+</div>
+<p>His x-axis started around mid-July 2021, when the curve for unvaccinated ASMR had already dropped a lot from the peak which was around mid-March (even though it was partially because unvaccinated people had a lot of COVID deaths during the Alpha wave, and the ratio between unvaccinated and vaccinated ASMR only peaked around May 2021). So the exponential function he fitted to the data looks close to a line.</p>
+<p>His plot had a fairly big drop in unvacinated deaths between the low points in 2023 and 2024, but it's because the NZIP data is missing more deaths in 2024 than 2023:</p>
+<div>
+<img src=i/rootclaim-kcor3-3.png width=550>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>download.file(&quot;https://mortality.org/File/GetDocument/Public/STMF/Outputs/stmf.csv&quot;,&quot;stmf.csv&quot;)
+
+t=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv.gz&quot;)
+t=t[Infekce%in%c(NA,1)]
+t[,date:=Datum_Prvni_davka]
+t[,vax:=date!=&quot;&quot;&amp;date&lt;=&quot;2021-24&quot;]
+x=t[vax==F,.N,,.(x=DatumUmrtiLPZ)][x!=&quot;&quot;]
+x2=t[Datum_Prvni_davka!=&quot;&quot;,.N,,.(x=DatumUmrtiLPZ)][x!=&quot;&quot;]
+
+p=t[,.(y=.N),.(x=DatumUmrtiLPZ,z=vax*1)][x!=&quot;&quot;]
+p=rbind(p,p[,.(y=sum(y),z=2),x])
+
+d=fread(&quot;stmf.csv&quot;)[Sex==&quot;b&quot;&amp;CountryCode==&quot;CZE&quot;]
+p=rbind(p,d[,.(x=sprintf(&quot;%d-%02d&quot;,Year,Week),y=DTotal,z=3)])
+iso=as.IDate(0:1e4*7);names(iso)=format(iso,&quot;%G-%V&quot;)
+p[,x:=iso[x]]
+
+p[,z:=factor(z,,c(&quot;NZIP (unvaccinated)&quot;,&quot;NZIP (vaccinated)&quot;,&quot;NZIP (total)&quot;,&quot;STMF&quot;))]
+
+xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;);xbreak=seq(xstart+182,xend,&quot;year&quot;)
+ybreak=pretty(p$y);ystart=0;yend=max(ybreak)
+
+ggplot(p)+
+geom_vline(xintercept=seq(xstart,xend,&quot;3 month&quot;),color=&quot;gray90&quot;,linewidth=.4)+
+geom_hline(yintercept=ybreak,color=&quot;gray90&quot;,linewidth=.4)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray70&quot;,linewidth=.4)+
+annotate(&quot;rect&quot;,xmin=xstart,xmax=xend,ymin=ystart,ymax=yend,linewidth=.4,lineend=&quot;square&quot;,fill=NA,color=&quot;gray70&quot;)+
+geom_line(aes(x,y,color=z),linewidth=.6)+
+labs(x=NULL,y=NULL,title=&quot;Weekly deaths in Czech Republic&quot;,subtitle=&quot;Source: nzip.cz/data/2135-covid-19-prehled-populace and
+mortality.org/File/GetDocument/Public/STMF/Outputs/stmf.csv&quot;)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=year(xbreak))+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
+scale_color_manual(values=c(&quot;#8888ff&quot;,&quot;#ff8888&quot;,&quot;black&quot;,&quot;gray60&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(color=guide_legend(ncol=2,byrow=F))+
+theme(axis.text=element_text(size=11,color=&quot;gray40&quot;,margin=margin(2,2,2,2)),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  legend.background=element_rect(color=&quot;gray70&quot;,linewidth=.4),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.justification=c(1,1),
+  legend.key=element_blank(),
+  legend.key.height=unit(12,&quot;pt&quot;),
+  legend.key.width=unit(22,&quot;pt&quot;),
+  legend.margin=margin(3,5,3,3),
+  legend.position=c(1,1),
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  plot.subtitle=element_text(hjust=.5,margin=margin(,,3)),
+  plot.title=element_text(size=11,hjust=.5,face=2,margin=margin(1,,3)))
+ggsave(&quot;1.png&quot;,width=5.1,height=2.8,dpi=300*4)</pre>
+</div>
 <script>
 document.querySelectorAll('pre').forEach(e=>e.innerHTML=e.innerHTML.replace(/((^| )# [^\n]*|^#$)/mg,"<span class=comment>$1</span>"))
 
