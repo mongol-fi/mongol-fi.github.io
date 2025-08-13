@@ -62,7 +62,7 @@ blockquote h3{color:inherit}
 <li><a href="#Lombardy_had_a_lower_peak_in_weekly_excess_deaths_than_two_NUTS2_regions_of_Spain">Lombardy had a lower peak in weekly excess deaths than two NUTS2 regions of Spain</a></li>
 <li><a href="#Hugh_Akston_Pre_vaccine_mortality_waves_with_NYC_metropolitan_area_excluded">Hugh Akston: Pre-vaccine mortality waves with NYC metropolitan area excluded</a></li>
 <li><a href="#Housatonic_Effect_of_drug_overdose_deaths_on_US_life_expectancy_since_2020">Housatonic: Effect of drug overdose deaths on US life expectancy since 2020</a></li>
-<li><a href="#If_excess_deaths_in_2020_were_due_to_hospital_protocols_or_treatments_then_why_did_deaths_at_home_also_increase">If excess deaths in 2020 were due to hospital protocols or treatments then why did deaths at home also increase?</a></li>
+<li><a href="#If_excess_deaths_in_2020_were_due_to_hospital_protocols_then_why_did_deaths_at_home_also_increase">If excess deaths in 2020 were due to hospital protocols then why did deaths at home also increase?</a></li>
 <li><a href="#Fenton_and_Neil_COVID_only_deaths_in_Northern_Ireland">Fenton and Neil: COVID-only deaths in Northern Ireland</a></li>
 </ul>
 
@@ -810,9 +810,9 @@ system(&quot;w=`identify -format %w 1.png`;convert \\( -size $[w-44]x -pointsize
 <h2>
 <a href=#Lombardy_had_a_lower_peak_in_weekly_excess_deaths_than_two_NUTS2_regions_of_Spain id=Lombardy_had_a_lower_peak_in_weekly_excess_deaths_than_two_NUTS2_regions_of_Spain>Lombardy had a lower peak in weekly excess deaths than two NUTS2 regions of Spain</a>
 </h2>
-<p>Bergamo is a NUTS3-level region within Lombardy which is a NUTS2-level region. But on Eurostat when I sorted NUTS2 regions by the peak weekly excess deaths in 2020, the two highest-ranking regions were Madrid and Castilla-La Mancha which are both in central Spain, and Lombardy only came on third place:</p>
+<p>Bergamo is a NUTS3-level region within Lombardy which is a NUTS2-level region. On Eurostat when I sorted NUTS2 regions by the peak weekly excess deaths in 2020, the two highest-ranking regions were Madrid and Castilla-La Mancha which are both in central Spain, and Lombardy only came on third place:</p>
 <div>
-<img src=i/np-nuts2.png width=1100>
+<img src=i/np-nuts2.png width=950>
 </div>
 <div class="spoiler">
 <button>
@@ -822,12 +822,12 @@ Show code
 download.file(&quot;https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/demo_r_mwk2_ts?format=TSV&quot;,&quot;estat_demo_r_mwk2_ts.tsv&quot;)
 download.file(&quot;https://ec.europa.eu/eurostat/documents/345175/629341/NUTS2021.xlsx&quot;,&quot;NUTS2021.xlsx&quot;)
 
-library(data.table);library(ggplot2)
+library(data.table);library(ggplot2);library(readxl)
 
 ua=\(x,y,...){u=unique(x);y(u,...)[match(x,u)]}
 isoweek=\(year,week,weekday=7){d=as.Date(paste0(year,&quot;-1-4&quot;));d-(as.integer(format(d,&quot;%w&quot;))+6)%%7-1+7*(week-1)+weekday}
 
-nuts=setDT(readxl::read_excel(&quot;NUTS2021.xlsx&quot;,sheet=2))
+nuts=setDT(read_excel(&quot;NUTS2021.xlsx&quot;,sheet=2))
 nuts=na.omit(nuts[,.(name=unlist(.SD[,2:4],,F),nuts=.SD[[1]])])[!name%like%&quot;Extra-Regio&quot;]
 
 euro=fread(&quot;estat_demo_r_mwk2_ts.tsv&quot;,na=&quot;:&quot;)
@@ -845,11 +845,9 @@ p=eu[nuts%in%pick][,nuts:=factor(nuts,pick)]
 p[,pct:=dead/base*100]
 
 xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2021-1-1&quot;);xbreak=seq(xstart,xend,&quot;month&quot;)
-ybreak=p[,pretty(c(0,dead))]
-
 p=p[week&gt;=xstart&amp;week&lt;=xend]
 
-colors=read.csv(text=&quot;country,color
+colors=fread(&quot;country,color
 ES,c6111a
 IT,009246
 FR,0055a4
@@ -864,36 +862,31 @@ LI,8888ff&quot;)
 
 p[,country:=factor(substr(nuts,1,2),colors$country)]
 
-label=p[,.(pct=max(pct),hjust=as.integer(week[which.max(dead/base)]&lt;=as.Date(&quot;2020-7-1&quot;))),.(nuts,name,country)]
-
-ggplot(p,aes(x=week,y=pct))+
+ggplot(p)+
 facet_wrap(~nuts,ncol=4,strip.position=&quot;top&quot;,scales=&quot;free&quot;)+
-geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),linewidth=.25,color=&quot;gray85&quot;,lineend=&quot;square&quot;)+
-geom_hline(yintercept=100,linetype=&quot;22&quot;,linewidth=.3,color=&quot;gray50&quot;)+
-geom_line(aes(color=country),linewidth=.35)+
-geom_label(data=label,aes(hjust=hjust,x=c(xstart+3,xend-3)[hjust+1],label=name,color=country,y=pct),vjust=1.2,fill=alpha(&quot;white&quot;,.85),label.r=unit(0,&quot;pt&quot;),label.padding=unit(1,&quot;pt&quot;),label.size=0,size=2.4)+
-labs(title=&quot;Weekly deaths in 2020 as percentage of average weekly deaths in 2019 (Eurostat dataset demo_r_mwk2_ts)&quot;,subtitle=&quot;Sorted by peak weekly percentage. Two small regions were excluded because they had peaks due to noise caused by a small sample size.&quot;,x=NULL,y=NULL)+
-scale_x_date(limits=c(xstart,xend),breaks=xbreak)+
-scale_y_continuous(limits=c(0,NA),breaks=\(x)pretty(x,7)[-1])+
+geom_hline(yintercept=100,linetype=&quot;22&quot;,linewidth=.4,color=&quot;gray50&quot;)+
+annotate(&quot;rect&quot;,xmin=xstart,xmax=xend,ymin=0,ymax=yend,linewidth=.4,lineend=&quot;square&quot;,linejoin=&quot;mitre&quot;,fill=NA,color=&quot;black&quot;)+
+geom_line(aes(week,pct,color=country),linewidth=.6)+
+geom_label(data=p[rowid(nuts)==1],aes(xend-3,yend*.98,label=str_wrap(name,20),color=country),hjust=1,vjust=1,fill=alpha(&quot;white&quot;,.85),label.r=unit(0,&quot;pt&quot;),label.padding=unit(1,&quot;pt&quot;),label.size=0,size=3.5,lineheight=.8)+
+labs(title=&quot;Weekly deaths in 2020 as percentage of average weekly deaths in 2019 (Eurostat dataset demo_r_mwk2_ts)&quot;,subtitle=&quot;Sorted by peak weekly percentage. Two small regions were excluded due to peaks caused by a small sample size.&quot;,x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak)+
+scale_y_continuous(breaks=pretty(p$pct))+
 scale_color_manual(values=paste0(&quot;#&quot;,colors$color))+
 coord_cartesian(clip=&quot;off&quot;,expand=F)+
-theme(axis.text=element_text(size=7,color=&quot;black&quot;),
+theme(axis.text=element_text(size=10.5,color=&quot;black&quot;),
   axis.text.x=element_blank(),
   axis.text.y=element_text(margin=margin(,1)),
-  axis.ticks=element_line(linewidth=.3),
-  axis.ticks.length=unit(-2,&quot;pt&quot;),
+  axis.ticks=element_line(linewidth=.4),
+  axis.ticks.length=unit(-3,&quot;pt&quot;),
   legend.position=&quot;none&quot;,
   panel.background=element_blank(),
-  panel.border=element_rect(fill=NA,linewidth=.3),
   panel.spacing.x=unit(2,&quot;pt&quot;),
   panel.spacing.y=unit(2,&quot;pt&quot;),
-  plot.margin=margin(4,4,2,4),
-  plot.subtitle=element_text(size=7,margin=margin(,,3)),
-  plot.title=element_text(size=7.5,face=&quot;bold&quot;,margin=margin(1,,2)),
+  plot.subtitle=element_text(hjust=.5,margin=margin(,,3)),
+  plot.title=element_text(size=11,face=&quot;bold&quot;,hjust=.5,margin=margin(,,3)),
   strip.background=element_blank(),
   strip.text=element_blank())
-ggsave(&quot;1.png&quot;,width=7.4,height=6,dpi=380*4)
-system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
+ggsave(&quot;1.png&quot;,width=8.8,height=7,dpi=300*4)</pre>
 </div>
 <h2>
 <a href=#Hugh_Akston_Pre_vaccine_mortality_waves_with_NYC_metropolitan_area_excluded id=Hugh_Akston_Pre_vaccine_mortality_waves_with_NYC_metropolitan_area_excluded>Hugh Akston: Pre-vaccine mortality waves with NYC metropolitan area excluded</a>
@@ -994,30 +987,26 @@ theme(axis.text=element_text(size=11,color=&quot;black&quot;),
 ggsave(&quot;1.png&quot;,width=4.9,height=3,dpi=300*4)</pre>
 </div>
 <h2>
-<a href=#If_excess_deaths_in_2020_were_due_to_hospital_protocols_or_treatments_then_why_did_deaths_at_home_also_increase id=If_excess_deaths_in_2020_were_due_to_hospital_protocols_or_treatments_then_why_did_deaths_at_home_also_increase>If excess deaths in 2020 were due to hospital protocols or treatments then why did deaths at home also increase?</a>
+<a href=#If_excess_deaths_in_2020_were_due_to_hospital_protocols_then_why_did_deaths_at_home_also_increase id=If_excess_deaths_in_2020_were_due_to_hospital_protocols_then_why_did_deaths_at_home_also_increase>If excess deaths in 2020 were due to hospital protocols then why did deaths at home also increase?</a>
 </h2>
 <p>Go here: <a href=https://wonder.cdc.gov/mcd-icd10-provisional.html.><a href="https://wonder.cdc.gov/mcd-icd10-provisional.html" class="uri">https://wonder.cdc.gov/mcd-icd10-provisional.html</a>.</a> Click <span class="quote">"I agree"</span>, Set <span class="quote">"Group Results By"</span> to <span class="quote">"Year"</span> and <span class="quote">"Place of Death"</span>, and click <span class="quote">"Send"</span>.</p>
-<p>The results show that the number of deaths where the place of death was listed as decedent's home increased from about 0.90 million in 2019 to about 1.13 million in 2020. How is it possible if people were not dying of COVID but the excess deaths in 2020 were due to hospital protocols or treatments?</p>
-<p>This plot also shows that the number of deaths where the place of death was listed as the decendent's home was more than 20% higher in 2020 than 2019:</p>
+<p>The results show that the number of deaths where the place of death was listed as decedent's home increased from about 0.90 million in 2019 to about 1.13 million in 2020. How is it possible if people were not really dying of COVID, but the excess deaths in 2020 were due to hospital protocols?</p>
+<p>This plot also shows that the number of deaths where the place of death was listed as the decendent's home was about 25% higher in 2020 than 2019:</p>
 <div>
-<img src=i/np-placedeath.png width=600>
+<img src=i/np-placedeath.png width=650>
 </div>
 <div class="spoiler">
 <button>
 Show code
 </button>
-<pre>library(data.table);library(ggplot2)
-
-t=fread(&quot;http://sars2.net/f/wonderplacedeath.csv&quot;)[year&lt;2025&amp;!place%like%&quot;unknown|Other&quot;]
+<pre>t=fread(&quot;https://sars2.net/f/wonderplacedeath.csv&quot;)[year&lt;2025&amp;!place%like%&quot;unknown|Other&quot;]
 t=t[place%in%place[year==2019]]
 t[,place:=factor(place,t[rowid(place)==1,place[order(placecode)]])]
 
 p=merge(t[year%in%2019,.(mean=mean(dead)),place],t)
 
 levels(p$place)=p[rowid(place)==1,sprintf(&quot;%s (%.0fk)&quot;,place,mean/1e3)]
-p=p[,.(x=year,y=dead/mean*100,z=place,type=1)]
-p=rbind(p,p[x%in%2013:2019,.(x=unique(p$x),y=predict(lm(y~x),.(x=unique(p$x))),type=2),z])
-p[,type:=factor(type,,c(&quot;Deaths&quot;,&quot;2013-2019 linear trend&quot;))]
+p=p[,.(x=year,y=dead/mean*100,z=place)]
 
 xstart=2010;xend=2024;xbreak=seq(xstart,xend,2)
 p=p[x%in%xstart:xend]
@@ -1025,43 +1014,60 @@ ylim=extendrange(p$y,,.03);ybreak=pretty(ylim,7)
 
 ggplot(p,aes(x,y))+
 geom_hline(yintercept=100,linewidth=.4)+
-geom_line(aes(color=z,linetype=type),linewidth=.6)+
-geom_point(aes(color=z,alpha=type),size=1.1)+
+geom_line(aes(color=z),linewidth=.6)+
+geom_point(aes(color=z),size=1.1)+
 labs(x=NULL,y=NULL,title=&quot;CDC WONDER: Yearly deaths by place of death&quot;,subtitle=&quot;Shown as percentage of 2019 value which is displayed in parentheses&quot;)+
 scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=xbreak)+
 scale_y_continuous(limits=ylim,breaks=ybreak,labels=\(x)paste0(x,&quot;%&quot;))+
 scale_color_manual(values=c(&quot;#ff0000&quot;,&quot;#ff9999&quot;,&quot;#880000&quot;,&quot;#33aa33&quot;,&quot;gray40&quot;,&quot;#aa7744&quot;,&quot;gray80&quot;))+
-scale_linetype_manual(values=c(&quot;solid&quot;,&quot;42&quot;))+
-scale_alpha_manual(values=c(1,0))+
 coord_cartesian(clip=&quot;off&quot;,expand=F)+
-guides(color=guide_legend(ncol=1,byrow=F))+
+guides(color=guide_legend(ncol=2,byrow=F))+
 theme(axis.text=element_text(size=11,color=&quot;black&quot;),
-  axis.text.x=element_text(margin=margin(3)),
+  axis.text.y=element_text(margin=margin(,1)),
   axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
   axis.ticks.length.x=unit(0,&quot;pt&quot;),
   axis.ticks.length.y=unit(4,&quot;pt&quot;),
   legend.background=element_blank(),
   legend.box.spacing=unit(0,&quot;pt&quot;),
-  legend.direction=&quot;vertical&quot;,
-  legend.justification=&quot;center&quot;,
+  legend.justification=&quot;right&quot;,
   legend.key=element_blank(),
-  legend.key.height=unit(13,&quot;pt&quot;),
-  legend.key.width=unit(26,&quot;pt&quot;),
-  legend.margin=margin(3),
+  legend.key.height=unit(12,&quot;pt&quot;),
+  legend.key.width=unit(24,&quot;pt&quot;),
+  legend.margin=margin(4),
   legend.position=&quot;bottom&quot;,
-  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.x=unit(1,&quot;pt&quot;),
   legend.spacing.y=unit(0,&quot;pt&quot;),
-  legend.text=element_text(size=11,vjust=.5),
+  legend.text=element_text(size=10.6),
   legend.title=element_blank(),
   panel.background=element_blank(),
   panel.border=element_rect(fill=NA,linewidth=.4),
-  panel.spacing=unit(2,&quot;pt&quot;),
-  plot.margin=margin(5,5,2,5),
-  plot.subtitle=element_text(size=11,margin=margin(,,5)),
-  plot.title=element_text(size=11.3,face=2,margin=margin(2,,4)))
-ggsave(&quot;1.png&quot;,width=5.8,height=3.9,dpi=300*4)
+  plot.subtitle=element_text(size=11,margin=margin(,,4),hjust=.5),
+  plot.title=element_text(size=11,face=2,hjust=.5,margin=margin(,,3)))
+ggsave(&quot;1.png&quot;,width=6,height=3.9,dpi=300*4)
 system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
 </div>
+<p>In 2020 there were about 200,000 excess deaths that occurred at home relative to the 2010-2019 linear trend:</p>
+<pre>t=fread(&quot;https://sars2.net/f/wonderplacedeath.csv&quot;)
+s=t[year%in%2010:2024&amp;place==&quot;Decedent&#39;s home&quot;,.(year,dead)]
+s$base=predict(lm(dead~year,s[year&lt;2020]),s)
+s[,excess:=dead-base]
+print(round(s),r=F)
+# year    dead    base excess
+# 2010  672338  668728   3610
+# 2011  691849  696033  -4184
+# 2012  719857  723339  -3482
+# 2013  752217  750645   1572
+# 2014  773609  777950  -4341
+# 2015  807579  805256   2323
+# 2016  836348  832561   3787
+# 2017  866237  859867   6370
+# 2018  891407  887172   4235
+# 2019  904588  914478  -9890
+# 2020 1127967  941784 186183
+# 2021 1163770  969089 194681
+# 2022 1124397  996395 128002
+# 2023 1060064 1023700  36364
+# 2024 1044523 1051006  -6483</pre>
 <h2>
 <a href=#Fenton_and_Neil_COVID_only_deaths_in_Northern_Ireland id=Fenton_and_Neil_COVID_only_deaths_in_Northern_Ireland>Fenton and Neil: COVID-only deaths in Northern Ireland</a>
 </h2>
@@ -1076,18 +1082,10 @@ system(&quot;magick 1.png -resize 25% -colors 256 1.png&quot;)</pre>
 <li>Line 2: J18.9 - Pneumonia, unspecified (intermediate cause)</li>
 <li>Line 3: U07.1 - COVID-19 (underlying cause)</li>
 </ul>
-<p>The same problem was pointed out by canceledmouse and Jessica Hockett:</p>
-<div>
-<img src=i/np-covidonly-2.png width=600>
-</div>
-<div>
-<img src=i/np-covidonly-3.png width=600>
-</div>
-<p>Hockett linked to an interview of Robert Anderson, who is the chief of mortality statistics at National Center for Health Statistics. He said: <span class="quote">"So you have Part One about <span class="quote">'cause of death'</span> section which asks the certifier to provide the causal sequence. And so you would start on the top line and you would put the immediate cause of death. To use a COVID-19 example, you might have <span class="quote">'respiratory distress syndrome'</span> which is a common complication of COVID-19. And then you would work backwards from that immediate cause of death. And let's suppose that respiratory distress was brought on by pneumonia, viral pneumonia, and so you would put on the second line <span class="quote">'viral pneumonia.'</span> And then on the third line - because we want to know what the cause of viral pneumonia was - if it was COVID-19, then you would write COVID-19 on the third line. So you'd have respiratory distress due to viral pneumonia due to COVID-19. That's a logical causal sequence from the immediate cause working back to the underlying cause. And then in Part Two, you could put any other conditions that might have contributed to death but weren't part of that causal pathway in Part One. Now with a disease like COVID-19, it should be fairly unusual to see only COVID-19 reported - I mean normally we should at least see the complications caused by the disease, such as pneumonia or respiratory distress. In cases where only COVID-19 is reported, the certifier is indicating that COVID-19 was the cause of death, but really they left it - the cause of death statement - somewhat incomplete. They neglected to provide the entire causal pathway. Now with regard to the other 94% which mentioned other diseases or conditions, it's important to understand that in the overwhelming majority of these cases the additional diseases or conditions are either complications of COVID-19 - they are in the causal pathway, like pneumonia or respiratory distress - or they're reported in Part Two as contributing conditions. So for about 92% of the deaths involving COVID-19 that mention other conditions - 91 or 92% - the certifiers indicated that COVID-19 is the primary or underlying cause. This is not a situation where the certifier is writing all of the diseases that the person had equally; they're actually reporting it in this causal sequence. And in the overwhelming majority of cases, COVID-19 has been indicated as the cause of the death. It's the cause that started that causal pathway, that causal sequence leading to death."</span> [<a href=https://web.archive.org/web/20210320054146/https://www.cdc.gov/nchs/pressroom/podcasts/2021/20210312/20210312.htm>https://web.archive.org/web/20210320054146/https://www.cdc.gov/nchs/pressroom/podcasts/2021/20210312/20210312.htm</a>]</p>
 <p>There are 66 death records in 2021 with the underlying cause Y59.0 (<span class="quote">"Viral vaccines"</span>). [<a href=rootclaim3.html#Yearly_deaths_at_NVSS_with_underlying_cause_possibly_related_to_vaccination>rootclaim3.html#Yearly_deaths_at_NVSS_with_underlying_cause_possibly_related_to_vaccination</a>] However all of the records also include some other cause of death, like T88.1 (Other complications following immunization, not elsewhere classified) or T80.5 (Anaphylactic shock due to serum). So does that mean that there were zero deaths that were caused by vaccines alone?</p>
 <pre>system(&quot;wget https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/mortality/mort2021us.zip;unzip mort2021us.zip&quot;)
 
-t=setDT(readr::read_fwf(&quot;VS21MORT.DUSMCPUB_r20230320.txt&quot;,fwf_cols(restatus=c(20,20),age=c(70,73),ucod=c(146,149),cause1=c(165,170),cause2=c(172,177),cause3=c(179,184),cause4=c(186,191),cause5=c(193,198),cause6=c(200,205),cause7=c(207,212),cause8=c(214,219),cause9=c(221,226),cause10=c(228,233),cause11=c(235,240),cause12=c(242,247),cause13=c(249,254),cause14=c(256,261),cause15=c(263,268),cause16=c(270,275),cause17=c(277,282),cause18=c(284,289),cause19=c(291,296),cause20=c(298,303)),col_types=cols(cause14=col_character())))
+t=setDT(read_fwf(&quot;VS21MORT.DUSMCPUB_r20230320.txt&quot;,fwf_cols(restatus=c(20,20),age=c(70,73),ucod=c(146,149),cause1=c(165,170),cause2=c(172,177),cause3=c(179,184),cause4=c(186,191),cause5=c(193,198),cause6=c(200,205),cause7=c(207,212),cause8=c(214,219),cause9=c(221,226),cause10=c(228,233),cause11=c(235,240),cause12=c(242,247),cause13=c(249,254),cause14=c(256,261),cause15=c(263,268),cause16=c(270,275),cause17=c(277,282),cause18=c(284,289),cause19=c(291,296),cause20=c(298,303)),col_types=cols(cause14=col_character())))
 
 t=t[restatus!=4]
 l=na.omit(t[,.(id=.I,age,pos=rep(1:20,each=.N),ucod,cause=unlist(.SD,,F)),.SDcols=patterns(&quot;cause&quot;)])
@@ -1123,6 +1121,14 @@ s[,.(count=.N),.(code,name=icd[code])][order(-count)][1:10]
 # R68.8         Other specified general symptoms and signs     5
 # F17.9 Mental and behavioural disorders due to use of ...     5
 # E78.5                       Hyperlipidaemia, unspecified     5</pre>
+<p>I posted a comment to the Substack post where I pointed out the issues above, but my comment got deleted. Similar comments were also posted by canceledmouse and Jessica Hockett, but the authors of the Substack post have not yet addressed the comments:</p>
+<div>
+<img src=i/np-covidonly-2.png width=600>
+</div>
+<div>
+<img src=i/np-covidonly-3.png width=600>
+</div>
+<p>Hockett linked to an interview of Robert Anderson, who is the chief of mortality statistics at National Center for Health Statistics. He said: <span class="quote">"So you have Part One about <span class="quote">'cause of death'</span> section which asks the certifier to provide the causal sequence. And so you would start on the top line and you would put the immediate cause of death. To use a COVID-19 example, you might have <span class="quote">'respiratory distress syndrome'</span> which is a common complication of COVID-19. And then you would work backwards from that immediate cause of death. And let's suppose that respiratory distress was brought on by pneumonia, viral pneumonia, and so you would put on the second line <span class="quote">'viral pneumonia.'</span> And then on the third line - because we want to know what the cause of viral pneumonia was - if it was COVID-19, then you would write COVID-19 on the third line. So you'd have respiratory distress due to viral pneumonia due to COVID-19. That's a logical causal sequence from the immediate cause working back to the underlying cause. And then in Part Two, you could put any other conditions that might have contributed to death but weren't part of that causal pathway in Part One. Now with a disease like COVID-19, it should be fairly unusual to see only COVID-19 reported - I mean normally we should at least see the complications caused by the disease, such as pneumonia or respiratory distress. In cases where only COVID-19 is reported, the certifier is indicating that COVID-19 was the cause of death, but really they left it - the cause of death statement - somewhat incomplete. They neglected to provide the entire causal pathway. Now with regard to the other 94% which mentioned other diseases or conditions, it's important to understand that in the overwhelming majority of these cases the additional diseases or conditions are either complications of COVID-19 - they are in the causal pathway, like pneumonia or respiratory distress - or they're reported in Part Two as contributing conditions. So for about 92% of the deaths involving COVID-19 that mention other conditions - 91 or 92% - the certifiers indicated that COVID-19 is the primary or underlying cause. This is not a situation where the certifier is writing all of the diseases that the person had equally; they're actually reporting it in this causal sequence. And in the overwhelming majority of cases, COVID-19 has been indicated as the cause of the death. It's the cause that started that causal pathway, that causal sequence leading to death."</span> [<a href=https://web.archive.org/web/20210320054146/https://www.cdc.gov/nchs/pressroom/podcasts/2021/20210312/20210312.htm>https://web.archive.org/web/20210320054146/https://www.cdc.gov/nchs/pressroom/podcasts/2021/20210312/20210312.htm</a>]</p>
 <script>
 document.querySelectorAll('pre').forEach(e=>e.innerHTML=e.innerHTML.replace(/((^| )# [^\n]*|^#$)/mg,"<span class=comment>$1</span>"))
 

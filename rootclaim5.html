@@ -2913,19 +2913,283 @@ theme(axis.text=element_text(size=11,color=&quot;gray40&quot;,margin=margin(2,2,
   plot.title=element_text(size=11,hjust=.5,face=2,margin=margin(1,,3)))
 ggsave(&quot;1.png&quot;,width=5.1,height=2.8,dpi=300*4)</pre>
 </div>
+<hr />
+<p>In the KCORv3 spreadsheet Kirsch wrote: <span class="quote">"KCOR can't be showing growing harm if the raw total population deaths aren't growing"</span>. In his initial KCOR analysis he found that among people born in 1950-1954, the ratio of vaccinated to unvaccinated deaths was about 1.23 times higher between week 23 of 2021 and week 34 of 2022 than between week 23 of 2021 and week 25 of 2021, so he declared it meant that <span class="quote">"the vaccines caused a 23% net mortality increase in the first year"</span>. [<a href=https://kirschsubstack.com/p/czech-data-clearly-shows-covid-vaccines>https://kirschsubstack.com/p/czech-data-clearly-shows-covid-vaccines</a>]</p>
+<p>People born in 1950-1954 were 71-75 years old at the end of 2021, which was close to the middle of Kirsch's observation period. In my buckets file for the Czech FOI data, ages 71-75 have only about 0.5% higher CMR in June-July 2022 than June-July 2021:</p>
+<pre>b=fread(&quot;https://sars2.net/f/czbuckets.csv.gz&quot;)
+s=b[month%like%&quot;0[67]&quot;&amp;age%in%71:75]
+s[,year:=as.integer(substr(month,1,4))]
+round(s[,.(cmr=sum(dead)/sum(alive)*365e5),year])
+# year  cmr
+# 2020 2696
+# 2021 2562
+# 2022 2575</pre>
+<hr />
+<p>In a ChatGPT conversation Kirsch wrote: <span class="quote">"NOTE the side benefit that the normalization is that it PROVES statis HVE is static because we can normalize the unvaxxed (with high HVE) to a straight line death slope using a fitted simple exponential."</span> [<a href=https://chatgpt.com/share/6897e1f9-3d94-8009-98b1-2dfdbd0a6a56>https://chatgpt.com/share/6897e1f9-3d94-8009-98b1-2dfdbd0a6a56</a>] However <code>a*exp(b*x)</code> ended up being close to a line even in the next plot. That doesn't prove that HVE is static, but it shows that you need to add a constant term to model the unvaccinated curve:</p>
+<div>
+<img src=i/rootclaim-stevesim-fitted.png width=500>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>p=CJ(x=0:100)[,.(x,y=55+25*exp(-.05*x),y2=45-25*exp(-.05*x))]
+
+ybreak=0:5*20;ylim=c(0,100);xstart=0;xend=100;xbreak=0:10*10
+
+tit=&quot;Model of deaths as percentage of total deaths&quot;
+leg=c(&quot;Unvaccinated: 55+25*exp(-.05*x)&quot;,&quot;Vaccinated: 45-25*exp(-.05*x)&quot;,&quot;`a*exp(b*x)` fitted to unvaccinated&quot;)
+col=c(&quot;#5555ff&quot;,&quot;#ff5555&quot;,&quot;#000088&quot;)
+
+p$fit=predict(nls(y~a*exp(b*x),p,start=list(a=80,b=-.001)),p)
+
+png(&quot;1.png&quot;,1500,1100,res=300)
+par(mar=c(2.9,3,1.8,1.1),mgp=c(0,.5,0),lend=&quot;square&quot;)
+plot(rep(p$x,2),c(p$y2,p$y),type=&quot;n&quot;,main=tit,xlab=NA,ylab=NA,xaxs=&quot;i&quot;,yaxs=&quot;i&quot;,yaxt=&quot;n&quot;,xaxt=&quot;n&quot;,ylim=ylim,xlim=c(xstart,xend),cex.main=1)
+axis(2,at=ybreak,las=1,tck=-.035,labels=paste0(ybreak,&quot;%&quot;))
+axis(1,at=xbreak,las=1,tck=-.035,labels=NA)
+mtext(xbreak,side=1,line=.35,at=xbreak)
+mtext(&quot;Week&quot;,side=1,font=2,line=1.4)
+lines(p$x,p$y,,col=col[1],lwd=1.5)
+lines(p$x,p$y2,col=col[2],lwd=1.5)
+lines(p$x,p$fit,col=col[3],lwd=1.5)
+legend(&quot;topright&quot;,legend=leg,col=col,lwd=1.5)
+dev.off()</pre>
+</div>
+<hr />
+<p>The green exponential curve Kirsch fitted against his local minima seems to have been missing a constant term. With a constant term the curve would've been less close to a line:</p>
+<div>
+<img src=i/rootclaim-kcor3-5.png width=550>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>t=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv.gz&quot;)
+
+ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
+
+s=t[DatumUmrtiLPZ!=&quot;&quot;][Infekce%in%c(1,NA)]
+a=s[!(Datum_Prvni_davka!=&quot;&quot;&amp;Datum_Prvni_davka&lt;=&quot;2021-24&quot;),.(dead=.N),,.(week=DatumUmrtiLPZ)]
+a[,dead:=ma(dead,4,3)]
+a=a[week&gt;=&quot;2021-24&quot;&amp;week&lt;=&quot;2024-18&quot;]
+
+iso=as.IDate(0:1e4*7);names(iso)=format(iso,&quot;%G-%V&quot;)
+a[,x:=rleid(week)][,date:=iso[week]]
+
+p=a[,.(x,y=dead,z=1)]
+
+mini=p[y==apply(p[,embed(c(rep(NA,2),y,rep(NA,2)),5)],1,min)][,.(x,y,z=2)]
+mini=rbind(mini,p[.N][,z:=2])[!x%in%a[year(date)==2022&amp;month(date)&gt;7,x]]
+p=rbind(p,mini)
+
+exp1=predict(nls(y~a*exp(b*x),mini,list(a=900,b=-.001)),p[z==1])
+exp2=predict(nls(y~c+a*exp(b*x),mini,list(c=500,a=400,b=-.01)),p[z==1])
+p=rbind(p,p[z==1,.(x,y=c(exp1,exp2),z=rep(3:4,each=.N))])
+
+p[,x:=a$date[x]]
+p[,z:=factor(z,,c(&quot;Deaths (8-week moving average)&quot;,&quot;Local minima&quot;,&quot;a*exp(b*x) fitted to local minima&quot;,&quot;c+a*exp(b*x) fitted to local minima&quot;))]
+
+xstart=as.Date(&quot;2021-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;);xbreak=seq(xstart+182,xend,&quot;year&quot;)
+ybreak=pretty(p$y);ystart=min(ybreak);yend=max(ybreak)
+
+ggplot(p)+
+geom_vline(xintercept=seq(xstart,xend,&quot;3 month&quot;),color=&quot;gray90&quot;,linewidth=.4)+
+geom_hline(yintercept=ybreak,color=&quot;gray90&quot;,linewidth=.4)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray70&quot;,linewidth=.4)+
+annotate(&quot;rect&quot;,xmin=xstart,xmax=xend,ymin=ystart,ymax=yend,linewidth=.4,lineend=&quot;square&quot;,fill=NA,color=&quot;gray70&quot;)+
+geom_line(aes(x,y,color=z,linewidth=z,linetype=z))+
+geom_point(aes(x,y,color=z,shape=z),stroke=.5,size=1.7)+
+labs(x=NULL,y=NULL,title=&quot;Deaths in people not vaccinated by end of week 24 of 2021&quot;)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=year(xbreak))+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
+scale_color_manual(values=c(&quot;gray30&quot;,&quot;red&quot;,hsv(c(12,22)/36,1,.8)))+
+scale_shape_manual(values=c(NA,4,NA,NA))+
+scale_linewidth_manual(values=c(.7,0,.6,.6))+
+scale_linetype_manual(values=c(&quot;solid&quot;,NA,&quot;42&quot;,&quot;42&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(color=guide_legend(ncol=1,byrow=F))+
+theme(axis.text=element_text(size=11,color=&quot;gray50&quot;,margin=margin(2,2,2,2)),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  legend.background=element_rect(color=&quot;gray70&quot;,linewidth=.4),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.justification=c(1,1),
+  legend.key=element_blank(),
+  legend.key.height=unit(12,&quot;pt&quot;),
+  legend.key.width=unit(25,&quot;pt&quot;),
+  legend.margin=margin(3,5,3,3),
+  legend.position=c(1,1),
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  plot.title=element_text(size=11,hjust=.5,face=2,margin=margin(,,3)))
+ggsave(&quot;1.png&quot;,width=5.1,height=2.8,dpi=300*4)</pre>
+</div>
+<p>However the fit to the local minima is not a good representation of the exponential decay in deaths due to the HVE. The unvaccinated deaths had already dropped a lot before they reached the minimum in 2021. And mortality displacement explains a part of the drop between the minima in 2021 and 2022, because unvaccinated people had high COVID deaths in the winter of 2021-2022.</p>
+<p>In my plot the red cross in 2024 is about 7% lower than the average of the two red crosses in 2023, but most of the decrease is because about 5% of deaths are missing in the second quarter of 2024.</p>
+<p>Even when I plotted unvaccinated deaths as a percentage of total deaths, <code>c+a*exp(b*x)</code> still had a poor fit to the curve during the first weeks:</p>
+<div>
+<img src=i/rootclaim-kcor3-6.png width=550>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>t=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv.gz&quot;)[Infekce%in%c(1,NA)]
+
+s=t[DatumUmrtiLPZ!=&quot;&quot;]
+a=s[,.(dead=mean(!(Datum_Prvni_davka!=&quot;&quot;&amp;Datum_Prvni_davka&lt;=&quot;2021-24&quot;))*100),,.(week=DatumUmrtiLPZ)]
+a=merge(a,t[,.(covid=.N),.(week=Umrti)],all=T)[,covid:=nafill(covid,,0)]
+a=a[week&gt;=&quot;2021-24&quot;&amp;week&lt;=&quot;2024-18&quot;]
+
+iso=as.IDate(0:1e4*7);names(iso)=format(iso,&quot;%G-%V&quot;)
+a[,x:=rleid(week)][,date:=iso[week]]
+
+p=rbind(a[,.(x,y=ifelse(covid&lt;100,dead,NA),z=2)],a[,.(x,y=dead,z=1)])
+
+exp1=predict(nls(y~a*exp(b*x),mini,list(a=80,b=-.005)),na.omit(p[z==1]))
+exp2=predict(nls(y~c+a*exp(b*x),mini,list(c=50,a=30,b=-.05)),na.omit(p[z==1]))
+p=rbind(p,p[z==1,.(x,y=c(exp1,exp2),z=rep(3:4,each=.N))])
+
+p[,x:=a$date[x]]
+p[,z:=factor(z,,c(&quot;Deaths (high-COVID weeks)&quot;,&quot;Deaths (low-COVID weeks)&quot;,&quot;a*exp(b*x) fitted to low-COVID weeks&quot;,&quot;c+a*exp(b*x) fitted to low-COVID weeks&quot;))]
+
+xstart=as.Date(&quot;2021-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;);xbreak=seq(xstart+182,xend,&quot;year&quot;)
+ybreak=pretty(p$y);ystart=min(ybreak);yend=max(ybreak)
+
+ggplot(p)+
+geom_vline(xintercept=seq(xstart,xend,&quot;3 month&quot;),color=&quot;gray90&quot;,linewidth=.4)+
+geom_hline(yintercept=ybreak,color=&quot;gray90&quot;,linewidth=.4)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray70&quot;,linewidth=.4)+
+annotate(&quot;rect&quot;,xmin=xstart,xmax=xend,ymin=ystart,ymax=yend,linewidth=.4,lineend=&quot;square&quot;,fill=NA,color=&quot;gray70&quot;)+
+geom_line(aes(x,y,color=z,linewidth=z,linetype=z))+
+labs(x=NULL,y=NULL,title=&quot;Unvaccinated deaths as percentage of total deaths&quot;)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=year(xbreak))+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,labels=\(x)paste0(x,&quot;%&quot;))+
+scale_color_manual(values=c(&quot;gray70&quot;,&quot;black&quot;,hsv(c(12,22)/36,1,.8)))+
+scale_linewidth_manual(values=c(.7,.7,.6,.6))+
+scale_linetype_manual(values=c(&quot;solid&quot;,&quot;solid&quot;,&quot;42&quot;,&quot;42&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(color=guide_legend(ncol=1,byrow=F))+
+theme(axis.text=element_text(size=11,color=&quot;gray50&quot;,margin=margin(2,2,2,2)),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  legend.background=element_rect(color=&quot;gray70&quot;,linewidth=.4),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.justification=c(1,1),
+  legend.key=element_blank(),
+  legend.key.height=unit(12,&quot;pt&quot;),
+  legend.key.width=unit(25,&quot;pt&quot;),
+  legend.margin=margin(3,5,3,3),
+  legend.position=c(1,1),
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  plot.title=element_text(size=11,hjust=.5,face=2,margin=margin(,,3)))
+ggsave(&quot;1.png&quot;,width=5.1,height=2.8,dpi=300*4)</pre>
+</div>
+<p>The next plot shows that Kirsch's method of adjusting for the slope of unvaccinated deaths is confounded by mortality displacement, because unvaccinated people have a big drop in expected deaths between mid-2021 and mid-2022. The drop during the first week is because the cohorts are defined at the end of week 24 but the observation period starts on the first day of week 24:</p>
+<div>
+<img src=i/rootclaim-kcor3-7.png width=550>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>t=fread(&quot;CR_records.csv&quot;)
+
+set.seed(0);t$born=ua(paste0(t$Rok_narozeni,&quot;-1-1&quot;),as.Date)+sample(0:364,nrow(t),T)
+
+mindate=as.Date(&quot;2020-1-1&quot;);maxdate=as.Date(&quot;2022-12-31&quot;)
+d=t[,.(start=pmax(born,mindate,na.rm=T),end=pmin(DatumUmrti,maxdate,na.rm=T),born)]
+d$dead=as.Date(t$DatumUmrti)
+d[,vax:=as.Date(t$Datum_1)][vax&gt;&quot;2021-06-21&quot;,vax:=NA]
+d=d[born&lt;=maxdate]
+
+e=d[,.(age=age(born,start),date=start,dose=0,pop=1)]
+vax=d[!is.na(vax)]
+e=rbind(e,vax[,.(age=age(born,vax),date=vax,dose=1,pop=1)])
+e=rbind(e,vax[born!=vax,.(age=age(born,vax-1),date=vax,dose=0,pop=-1)])
+
+bday=cbind(d,date=c(outer(d$born,2020:2022,`year&lt;-`)))
+bday[,age:=age(born,date)][,dose:=(date&gt;=vax)%in%T*1]
+bday=bday[!(date==vax%in%T)&amp;date&gt;start&amp;date&lt;=end]
+e=rbind(e,bday[,.(age,dose,pop=1,date)],bday[,.(age=age-1,dose,pop=-1,date)])
+
+dead=d[!is.na(dead),.(date=dead,dose=(!vax%in%NA)*1,age=age(born,dead))]
+e=rbind(e,dead[,.(date=date+1,dose,age,pop=-1)])
+
+b=e[,.(pop=sum(pop)),.(date,age=pmin(age,100),dose)]
+b=merge(b,dead[,.(dead=.N),.(age=pmin(age,100),dose,date)],all=T)
+b=merge(CJ(date=seq(mindate,maxdate,1),age=0:100,dose=0:1),b,all=T)
+b[is.na(b)]=0
+b[,pop:=cumsum(pop),.(dose,age)]
+
+b=merge(fread(&quot;https://sars2.net/f/czpopdead.csv&quot;)[year==2019,.(age,base=dead/pop/365.25)],b)
+p=b[,.(y=sum(pop*base)),.(x=date,z=dose)]
+p=p[x&gt;=&quot;2021-6-14&quot;&amp;x&lt;=&quot;2022-12-31&quot;]
+
+p[,y:=y/mean(y)*100,z]
+
+p[,z:=factor(z,,c(&quot;Unvaccinated&quot;,&quot;Vaccinated&quot;))]
+
+xstart=as.Date(&quot;2021-1-1&quot;);xend=as.Date(&quot;2023-1-1&quot;);xbreak=seq(xstart+182,xend,&quot;year&quot;)
+ybreak=pretty(p$y);ystart=min(ybreak);yend=max(ybreak)
+
+ggplot(p)+
+geom_vline(xintercept=seq(xstart,xend,&quot;3 month&quot;),color=&quot;gray90&quot;,linewidth=.4)+
+geom_hline(yintercept=ybreak,color=&quot;gray90&quot;,linewidth=.4)+
+geom_hline(yintercept=100,color=&quot;gray70&quot;,linewidth=.4)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray70&quot;,linewidth=.4)+
+annotate(&quot;rect&quot;,xmin=xstart,xmax=xend,ymin=ystart,ymax=yend,linewidth=.4,lineend=&quot;square&quot;,fill=NA,color=&quot;gray70&quot;)+
+geom_line(aes(x,y,color=z))+
+labs(x=NULL,y=NULL,title=&quot;Expected deaths in fixed cohorts assuming 2019 mortality rates&quot;,subtitle=&quot;Shown as percentage of average daily deaths&quot;)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=year(xbreak))+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,labels=\(x)paste0(x,&quot;%&quot;))+
+scale_color_manual(values=c(&quot;#5555ff&quot;,&quot;#ff5555&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=11,color=&quot;gray50&quot;,margin=margin(2,2,2,2)),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  legend.background=element_rect(color=&quot;gray70&quot;,linewidth=.4),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.justification=c(.5,1),
+  legend.key=element_blank(),
+  legend.key.height=unit(12,&quot;pt&quot;),
+  legend.key.width=unit(24,&quot;pt&quot;),
+  legend.margin=margin(3,5,3,3),
+  legend.position=c(.5,.97),
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  plot.subtitle=element_text(size=11,hjust=.5,margin=margin(,,4)),
+  plot.title=element_text(size=11,hjust=.5,face=2,margin=margin(,,2)))
+ggsave(&quot;1.png&quot;,width=5.2,height=3,dpi=300*4)</pre>
+</div>
 <h3>
 <a href=#Kirsch_fooled_himself_with_his_dose_3_vs_dose_2_plot id=Kirsch_fooled_himself_with_his_dose_3_vs_dose_2_plot>Kirsch fooled himself with his dose 3 vs dose 2 plot</a>
 </h3>
 <p>Kirsch posted this plot, where he showed that the ratio mortality rate for people with three doses relative to people with two but not more doses increased by a factor of about 2.5 between early 2022 and early 2023, where the way he expected people to interpret the plot is that dose 3 was killing more people over time, which would've explained the increase in the ratio: [<a href=https://x.com/stkirsch/status/1953345748348588424>https://x.com/stkirsch/status/1953345748348588424</a>]</p>
 <div>
-<img src=i/rootclaim-fooled-1.png width=550>
+<img src=i/rootclaim-fooled-1.png width=600>
 </div>
 <p>The spreadsheet in his GitHub repository shows why he said there was nothing to see in his plot, because in fact the number of deaths under doses 2 and 3 combined remained stable over time, but if the reason why the ratio went up was that dose 3 was killing more people over time, you'd expect the number of deaths under doses 2 and 3 combined to also go up over time: [<a href=https://github.com/skirsch/Czech/blob/main/analysis/fixed_cohort_HR.xlsx>https://github.com/skirsch/Czech/blob/main/analysis/fixed_cohort_HR.xlsx</a>]</p>
 <div>
 <img src=i/rootclaim-fooled-2.png width=550>
 </div>
 <p>Kirsch tried to fool his followers, but I told Kirsch that he was fooling himself. He says that <span class="quote">"dynamic HVE"</span> or short-term HVE or HVE proper lasts only 3 weeks, but after there remains <span class="quote">"static HVE"</span> which he also calls the <span class="quote">"selection bias"</span>, which he says has a roughly constant magnitude over time. However his plot shows that the ratio between dose 3 and dose 2 follows a curve that takes several months to flatten out. So how can that be <span class="quote">"static HVE"</span>?</p>
-<p>Also it's not technically correct to say that the ratio of CMR for dose 3 divided by dose 2 is a hazard ratio, but it's rather a rate ratio:</p>
+<p>I guess the increase here is also because of dynamic HVE on weeks 0-2 but static HVE from week 3 onwards: [<a href=#HVE_test_for_KCOR>#HVE_test_for_KCOR</a>]</p>
+<div>
+<img src=i/rootclaim-hvetest-7.png width=550>
+</div>
+<p>Also it's not correct to say that the ratio of CMR for dose 3 divided by dose 2 is a hazard ratio, but it's rather a rate ratio:</p>
 <div>
 <img src=i/rootclaim-fooled-3.png width=650>
 </div>
