@@ -92,6 +92,7 @@ blockquote h3{color:inherit}
 <li><a href="#Unvaccinated_and_vaccinated_CMR_of_people_born_in_1940_1949">Unvaccinated and vaccinated CMR of people born in 1940-1949</a></li>
 <li><a href="#KCORv3">KCORv3</a></li>
 <li><a href="#Kirsch_fooled_himself_with_his_dose_3_vs_dose_2_plot">Kirsch fooled himself with his dose 3 vs dose 2 plot</a></li>
+<li><a href="#COVID_ASMR_by_vaccine_brand_in_Czech_data">COVID ASMR by vaccine brand in Czech data</a></li>
 </ul>
 </ul>
 
@@ -3093,7 +3094,7 @@ theme(axis.text=element_text(size=11,color=&quot;gray50&quot;,margin=margin(2,2,
   plot.title=element_text(size=11,hjust=.5,face=2,margin=margin(,,3)))
 ggsave(&quot;1.png&quot;,width=5.1,height=2.8,dpi=300*4)</pre>
 </div>
-<p>In the adjustment that Kirsch did for KCORv3, he derived the slope for vaccinated people from the slope for unvaccinated people by assuming that the total deaths in unvaccinated and vaccinated people combined would've remained constant. However if he would've fitted the exponential curve against the local minima in vaccinated people, his curve would've had a completely different slope (even though the curve without a constant term would've still looked roughly linear):</p>
+<p>In the adjustment that Kirsch did for KCORv3, he derived the slope for vaccinated people from the slope for unvaccinated people by assuming that the total deaths in unvaccinated and vaccinated people combined would've remained constant. However if he would've fitted the exponential curve against the local minima in vaccinated people, his curve would've had a completely different slope (even though the curve without a constant term would've still been close to linear):</p>
 <div>
 <img src=i/rootclaim-kcor3-8.png width=550>
 </div>
@@ -3261,6 +3262,123 @@ ggsave(&quot;1.png&quot;,width=5.2,height=3,dpi=300*4)</pre>
 <p>Also it's not correct to say that the ratio of CMR for dose 3 divided by dose 2 is a hazard ratio, but it's rather a rate ratio:</p>
 <div>
 <img src=i/rootclaim-fooled-3.png width=650>
+</div>
+<h3>
+<a href=#COVID_ASMR_by_vaccine_brand_in_Czech_data id=COVID_ASMR_by_vaccine_brand_in_Czech_data>COVID ASMR by vaccine brand in Czech data</a>
+</h3>
+<p>Kirsch claimed that Moderna vaccines had no benefit on all-cause mortality based on the clinical trial, where both the vaccine group and placebo group had 16 deaths: [<a href=https://x.com/stkirsch/status/1958236828420772340>https://x.com/stkirsch/status/1958236828420772340</a>]</p>
+<div>
+<img src=i/rootclaim-modernabenefit-1.png width=550>
+</div>
+<p>However the trial was not powered to detect a difference in all-cause mortality.</p>
+<p>The Czech NZIP data shows that during the Delta peak in December 2021, COVID ASMR as a percentage of total ASMR was the lowest for Moderna, and it was the highest for the two non-mRNA vaccine brands:</p>
+<div>
+<img src=i/rootclaim-modernabenefit-2.png width=550>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>agecut=\(x,y)cut(x,c(y,Inf),paste0(y,c(paste0(&quot;-&quot;,y[-1]-1),&quot;+&quot;)),T,F)
+
+t=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv.gz&quot;)
+t=t[RokNarozeni!=&quot;-&quot;]
+t[Umrti!=&quot;&quot;&amp;DatumUmrtiLPZ==&quot;&quot;,DatumUmrtiLPZ:=Umrti]
+t[Umrti!=&quot;&quot;&amp;DatumUmrtiLPZ!=Umrti,Umrti:=DatumUmrtiLPZ]
+t=t[!(DatumUmrtiLPZ!=&quot;&quot;&amp;Datum_Prvni_davka&gt;DatumUmrtiLPZ)]
+t[,vax:=Datum_Prvni_davka!=&quot;&quot;]
+t[,born:=agecut(as.integer(substr(RokNarozeni,1,4)),seq(1925,1990,5))]
+
+brand=setNames(rep(&quot;Other&quot;,24),sprintf(&quot;CO%02d&quot;,1:24))
+brand[c(1,8,9,16,20,21,23,24)]=&quot;Pfizer&quot;
+brand[c(2,12,15)]=&quot;Moderna&quot;
+brand[3]=&quot;AstraZeneca&quot;;brand[4]=&quot;Janssen&quot;
+t$brand=brand[t$OckovaciLatkaKod_Prvni_davka]
+t[is.na(brand),brand:=&quot;&quot;]
+
+t2=t[Infekce%in%c(1,NA)]
+dead=t2[,.(unvaxdead=sum(!vax),vaxdead=sum(vax)),.(week=DatumUmrtiLPZ,born,brand)]
+coviddead=t[,.(unvaxcoviddead=sum(!vax),vaxcoviddead=sum(vax)),.(week=Umrti,born,brand)]
+vax=t2[,.(newvax=.N),.(week=Datum_Prvni_davka,born,brand)]
+
+a=merge(dead,merge(coviddead,vax,all=T),all=T)[week!=&quot;&quot;&amp;!is.na(born)]
+a=merge(do.call(CJ,lapply(a[,1:3],unique)),a,all=T)
+a[is.na(a)]=0
+
+a2=setDT(aggregate(a[,4:8],a[,1:2],sum))
+a2=merge(t2[,.(startpop=.N),born],a2)
+a2[,unvaxpop:=startpop-cumsum(unvaxdead)-cumsum(newvax),born]
+a2[,vaxpop:=cumsum(newvax)-cumsum(vaxdead),born]
+
+a[,vaxpop:=cumsum(newvax)-cumsum(vaxdead),.(born,brand)]
+
+a3=a[brand!=&quot;&quot;,.(week,born,brand,pop=vaxpop,dead=vaxdead,covid=vaxcoviddead)]
+a4=a2[,.(week,dead=c(unvaxdead,vaxdead),covid=c(unvaxcoviddead,vaxcoviddead),pop=c(unvaxpop,vaxpop),brand=rep(c(&quot;Unvaccinated&quot;,&quot;Vaccinated&quot;),each=.N),born)]
+a4=rbind(a4,a4[,.(dead=sum(dead),covid=sum(covid),pop=sum(pop),brand=&quot;All people&quot;),.(week,born)])
+
+l=rbind(a3,a4[brand==&quot;Unvaccinated&quot;])
+std=l[week==&quot;2022-01&quot;,sum(pop),born][,.(std=V1/sum(V1),born)]
+l=l[,.(pop=ma(pop,2),dead=ma(dead,2),covid=ma(covid,2),week),.(born,brand)]
+l=merge(l,std)
+
+p=na.omit(l)[,.(y=c(sum(dead/pop*std),sum((dead-covid)/pop*std))/7*365e5,type=1:2,facet=1),.(week,brand)]
+
+p=rbind(p,p[,.(y=(y[type==1]-y[type==2])/y[type==1]*100,facet=2,type=1),.(week,brand)])
+
+p=p[brand!=&quot;Other&quot;]
+p$brand=factor(p$brand,c(&quot;Unvaccinated&quot;,&quot;Pfizer&quot;,&quot;Moderna&quot;,&quot;AstraZeneca&quot;,&quot;Janssen&quot;))
+color=c(&quot;black&quot;,hsv(c(240,355,120,204)/360,c(.94,.75,.9,.67),c(.76,.82,.7,.87)))
+
+p[,type:=factor(type,,c(&quot;All causes&quot;,&quot;Not COVID&quot;))]
+p[,facet:=factor(facet,,c(&quot;ASMR per 100,000 person-years&quot;,&quot;COVID ASMR as per-\ncentage of total ASMR&quot;))]
+
+iso=as.IDate(0:1e4*7);names(iso)=format(iso,&quot;%G-%V&quot;)
+p[,x:=iso[week]]
+
+xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;);xbreak=seq(xstart+182,xend,&quot;year&quot;);xlab=year(xbreak)
+ylim=p[,.(max=max(y,na.rm=T)*1.03),facet]
+
+ggplot(p)+
+facet_wrap(~facet,ncol=1,dir=&quot;v&quot;,scales=&quot;free_y&quot;)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray87&quot;,linewidth=.4,lineend=&quot;square&quot;)+
+geom_rect(data=ylim,aes(ymax=max),ymin=0,xmin=xstart,xmax=xend,lineend=&quot;square&quot;,linejoin=&quot;mitre&quot;,fill=NA,color=&quot;gray87&quot;,linewidth=.4)+
+geom_line(aes(x,y,color=brand,alpha=type),linewidth=.6)+
+geom_label(data=ylim,aes(xend,max,label=facet),hjust=1,vjust=1,fill=&quot;white&quot;,label.r=unit(0,&quot;pt&quot;),label.padding=unit(3,&quot;pt&quot;),label.size=.4,size=3.87,color=&quot;gray87&quot;,lineheight=.8)+
+geom_label(data=ylim,aes(xend,max,label=facet),hjust=1,vjust=1,fill=NA,label.r=unit(0,&quot;pt&quot;),label.padding=unit(3,&quot;pt&quot;),label.size=0,size=3.87,lineheight=.8)+
+labs(x=NULL,y=NULL,title=&quot;Mortality by type of first vaccine dose in Czech Republic&quot;)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
+scale_y_continuous(breaks=\(x)pretty(x,4),labels=\(x)if(max(x,na.rm=T)&lt;100)paste0(x,&quot;%&quot;)else ifelse(x&gt;=1e3,paste0(x/1e3,&quot;k&quot;),x))+
+scale_color_manual(values=color)+
+scale_alpha_manual(values=c(1,.3))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(color=guide_legend(ncol=3,byrow=F))+
+theme(axis.text=element_text(size=11,color=&quot;gray50&quot;,margin=margin(3,3,3,3)),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  legend.background=element_rect(color=&quot;gray87&quot;,linewidth=.4),
+  legend.box=&quot;vertical&quot;,
+  legend.box.just=&quot;center&quot;,
+  legend.box.margin=margin(,,3),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;horizontal&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.margin=margin(2.5,5.5,2.5,2.5),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(3,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.grid.major.x=element_blank(),
+  panel.grid.major.y=element_line(linewidth=.4,color=&quot;gray87&quot;),
+  panel.spacing=unit(3,&quot;pt&quot;),
+  plot.title=element_text(size=11,face=2,hjust=.5,margin=margin(2,,4)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=4.7,height=4,dpi=300*4)
+
+#sub 1.png &#39;ASMR was calculated by using ±2-week moving averages for deaths and population size within each age group. The population included in the dataset on week 1 of 2022 was used as the standard population. ASMR was calculated by 5-year groups for year of birth, so that people born in 2000 or later were grouped together, and people born in 1925 or earlier were grouped together. Many unvaccinated deaths are missing from 2020 and early 2021. Source: nzip.cz/data/2135-covid-19-prehled-populace.&#39;;qp</pre>
 </div>
 <script>
 document.querySelectorAll('pre').forEach(e=>e.innerHTML=e.innerHTML.replace(/((^| )# [^\n]*|^#$)/mg,"<span class=comment>$1</span>"))
