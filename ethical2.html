@@ -3457,9 +3457,9 @@ dev.off()</pre>
 <p>He didn't actually describe how he calculated the baseline. But he wrote: <span class="quote">"No adjustments are made to this data. It is exactly as extracted from the CDC Wonder Query."</span> I'm still not sure if the change in the slope of his baseline between 2019 and 2020 is because of PFE adjustment, but ES hasn't mentioned doing any PFE adjustment.</p>
 <p>ES included this plot from an NVSS report in his blog post: [<a href=https://theethicalskeptic.com/2025/08/19/houston-we-have-another-problem/>https://theethicalskeptic.com/2025/08/19/houston-we-have-another-problem/</a>, <a href=https://www.cdc.gov/nchs/data/nvsr/nvsr74/nvsr74-07.pdf>https://www.cdc.gov/nchs/data/nvsr/nvsr74/nvsr74-07.pdf</a>]</p>
 <div>
-<img src=i/ethical-vaccinial-infantmortality.png width=888>
+<img src=i/ethical-vaccinial-infantmortality.png width=750>
 </div>
-<p>By 2024 the ratio of infant deaths per thousand births was still elevated, but it was lower than in 2023: [<a href=https://wonder.cdc.gov/natality.html>https://wonder.cdc.gov/natality.html</a>]</p>
+<p>The plot was missing 2024, but the next plot shows that the ratio of infant deaths per thousand live births was slightly lower in 2024 than 2023. The decreasing trend in infant mortality in the 2010s seems to have flattened out in the 2020s, but it's not clear if it has anything to do with vaccines, and there were previously a similar flat period around the years 2000 to 2005: [<a href=https://wonder.cdc.gov/natality.html>https://wonder.cdc.gov/natality.html</a>]</p>
 <div>
 <img src=i/ethical-vaccinial-infantmortality-2.png width=550>
 </div>
@@ -3469,12 +3469,15 @@ Show code
 </button>
 <pre>t=fread(&quot;https://sars2.net/f/wondernatality.csv&quot;)
 t=t[,.(born=sum(born)),year]
-d=fread(&quot;https://sars2.net/f/uspopdead.csv&quot;)[age==0,.(dead,year)]
+t=rbind(t,list(1995:2002,c(3899589,3891494,3880894,3941553,3959417,4058814,4025933,4021726)))
+
+d=fread(&quot;https://sars2.net/f/uspopdead.csv&quot;)[age==0,.(year,dead)]
+d=rbind(d,list(1995:1998,c(29583,28487,28045,28371)))
 
 p=merge(t,d)[year&lt;2025,.(x=year,y=c(dead,born,dead/born*1e3),z=rep(1:3,each=.N))]
 p[,z:=factor(z,,c(&quot;Infant deaths&quot;,&quot;Live births&quot;,&quot;Infant deaths per thousand live births&quot;))]
 
-xstart=2008;xend=2024;xbreak=seq(xstart,xend,2)
+xstart=1995;xend=2024;xbreak=seq(xstart,xend,5)
 p=p[x%in%xstart:xend]
 
 ylim=p[,{x=extendrange(y);.(min=x[1],max=x[2])},z]
@@ -3483,7 +3486,7 @@ ggplot(p)+
 facet_wrap(~z,ncol=1,dir=&quot;v&quot;,scales=&quot;free&quot;)+
 geom_rect(data=ylim,aes(ymin=min,ymax=max),xmin=xstart-.5,xmax=xend+.5,lineend=&quot;square&quot;,linejoin=&quot;mitre&quot;,fill=NA,color=&quot;gray75&quot;,linewidth=.4)+
 geom_line(aes(x,y),linewidth=.6)+
-geom_point(aes(x,y),stroke=0,size=1.2)+
+geom_point(aes(x,y),stroke=0,size=1.5)+
 geom_label(data=ylim,aes(xend+.5,max,label=z),vjust=1,hjust=1,label.r=unit(0,&quot;pt&quot;),label.padding=unit(5,&quot;pt&quot;),label.size=.4,size=3.87,fill=&quot;white&quot;,color=&quot;gray80&quot;)+
 geom_label(data=ylim,aes(xend+.5,max,label=z),vjust=1,hjust=1,label.r=unit(0,&quot;pt&quot;),label.padding=unit(5,&quot;pt&quot;),label.size=0,size=3.87,fill=NA)+
 labs(title=&quot;Infant mortality at CDC WONDER&quot;,x=NULL,y=NULL)+
@@ -3493,29 +3496,15 @@ scale_alpha_manual(values=c(1,0))+
 coord_cartesian(clip=&quot;off&quot;,expand=F)+
 theme(axis.text=element_text(size=11,color=&quot;gray40&quot;,margin=margin(2,2,2,2)),
   axis.ticks=element_line(linewidth=.4,color=&quot;gray75&quot;),
-  axis.ticks.length=unit(0,&quot;pt&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
   axis.ticks.length.y=unit(4,&quot;pt&quot;),
-  legend.background=element_blank(),
-  legend.box.spacing=unit(0,&quot;pt&quot;),
-  legend.direction=&quot;horizontal&quot;,
-  legend.justification=&quot;right&quot;,
-  legend.key=element_blank(),
-  legend.key.height=unit(13,&quot;pt&quot;),
-  legend.key.width=unit(23,&quot;pt&quot;),
-  legend.margin=margin(,,4),
-  legend.position=&quot;top&quot;,
-  legend.spacing.x=unit(2,&quot;pt&quot;),
-  legend.spacing.y=unit(0,&quot;pt&quot;),
-  legend.text=element_text(size=11,vjust=.5),
-  legend.title=element_blank(),
   panel.background=element_blank(),
   panel.grid=element_blank(),
-  panel.spacing=unit(3,&quot;pt&quot;),
-  plot.subtitle=element_text(size=11,hjust=.5,margin=margin(,,4)),
+  panel.spacing=unit(2,&quot;pt&quot;),
   plot.title=element_text(size=11,hjust=.5,face=&quot;bold&quot;,margin=margin(1,,4)),
   strip.background=element_blank(),
   strip.text=element_blank())
-ggsave(&quot;1.png&quot;,width=5,height=4,dpi=300*4)</pre>
+ggsave(&quot;1.png&quot;,width=4.6,height=4,dpi=300*4)</pre>
 </div>
 <hr />
 <p>Clare Craig posted this thread: [<a href=https://x.com/ClareCraigPath/status/1958564816877916348>https://x.com/ClareCraigPath/status/1958564816877916348</a>]</p>
