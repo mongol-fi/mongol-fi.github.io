@@ -636,6 +636,102 @@ theme(axis.text=element_text(size=11,color=&quot;gray40&quot;),
   strip.text=element_blank())
 ggsave(&quot;1.png&quot;,width=5,height=4.6,dpi=300*4)</pre>
 </div>
+<hr />
+<p>In EU the excess infant mortality rate relative to a 2012-2019 trend was about -2% in 2021, 3% in 2022, and 4% in 2023. But many of the countries with the highest excess infant mortality rate in 2021-2023 were Eastern European countries with a low vaccination rate:</p>
+<div>
+<img src=i/ethical-eurostat-infant-mortality.png width=600>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>download.file(&quot;https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/tps00027?format=TSV&quot;,&quot;tps00027.tsv&quot;)
+
+country=fread(&quot;code,name
+NO,Norway
+SE,Sweden
+FI,Finland
+DK,Denmark
+NL,Netherlands
+BE,Belgium
+IE,Ireland
+DE,Germany
+CH,Switzerland
+AT,Austria
+FR,France
+PT,Portugal
+ES,Spain
+IT,Italy
+LT,Lithuania
+PL,Poland
+CZ,Czechia
+SK,Slovakia
+HU,Hungary
+HR,Croatia
+RS,Serbia
+RO,Romania
+BG,Bulgaria
+EL,Greece
+EU27_2020,EU27&quot;)
+
+t=fread(&quot;tps00027.tsv&quot;,na=&quot;:&quot;,head=T)
+t=t[,.(z=sub(&quot;.*,&quot;,&quot;&quot;,t[[1]]),y=unlist(.SD[,-1]),x=rep(2012:2023,each=.N))]
+t[,y:=as.double(sub(&quot; .*&quot;,&quot;&quot;,y))]
+
+t=na.omit(t)
+p=t[z%in%t[,.N,z][N==max(N),z]]
+
+p=p[z%in%country$code]
+p[,z:=factor(z,country$code,country$name)]
+
+p=p[,.(x,y,base=predict(lm(y~x,.SD[x%in%2012:2019]),.SD)),z]
+
+xstart=2012;xend=2023;xbreak=seq(xstart,xend,2)
+yend=p[,max(y,base,na.rm=T)];ybreak=1:5*2
+
+ggplot(p)+
+facet_wrap(~z,ncol=5,dir=&quot;v&quot;)+
+geom_line(aes(x,base,linetype=&quot;2012-2019 linear trend&quot;),linewidth=.5)+
+geom_point(aes(x,y,color=pmax(pmin(y-base,1),-1),shape=&quot;Infant mortality rate&quot;),stroke=.6,size=1.5)+
+geom_text(data=p[rowid(z)==1],aes(label=z),vjust=1.4,hjust=1,color=&quot;black&quot;,x=xend,y=yend,size=3.7)+
+labs(title=&quot;Eurostat: Infant mortality rate (deaths at age 0 per 1,000 live births)&quot;,caption=&quot;Source: Eurostat dataset tps00027. Countries with data missing\nfor any year or population size below 3 million were omitted.&quot;,x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=xbreak)+
+scale_y_continuous(breaks=ybreak)+
+scale_color_gradientn(colors=c(&quot;red&quot;,&quot;white&quot;,&quot;#00bb00&quot;),breaks=c(-1,0,1),limits=c(-1,1),guide=&quot;none&quot;)+
+scale_linetype_manual(values=1)+
+scale_shape_manual(values=1)+
+coord_cartesian(ylim=c(0,yend),clip=&quot;off&quot;,expand=F)+
+guides(shape=guide_legend(order=1),keywidth=unit(10,&quot;pt&quot;))+
+theme(axis.text=element_text(size=11,color=&quot;gray40&quot;,margin=margin(2,2,2,2)),
+  axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
+  axis.text.y=element_text(margin=margin(,3)),
+  axis.ticks=element_line(linewidth=.4),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  axis.title=element_text(size=11,face=2),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;horizontal&quot;,
+  legend.justification=&quot;center&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(24,&quot;pt&quot;),
+  legend.margin=margin(,,4),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_rect(fill=&quot;gray75&quot;),
+  panel.grid=element_blank(),
+  panel.grid.major=element_line(linewidth=.4,color=&quot;gray70&quot;),
+  panel.spacing=unit(1.5,&quot;pt&quot;),
+  plot.margin=margin(5,5,5,5),
+  plot.caption=element_text(size=11,hjust=.5,margin=margin(5),lineheight=.9),
+  plot.title=element_text(size=11,hjust=.5,face=&quot;bold&quot;,margin=margin(1,,2)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=5.1,height=5,dpi=300*4)</pre>
+</div>
 <h2>
 <a href=#ES_versus_Grok_on_cancer_mortality id=ES_versus_Grok_on_cancer_mortality>ES versus Grok on cancer mortality</a>
 </h2>
