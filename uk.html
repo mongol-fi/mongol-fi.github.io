@@ -538,6 +538,58 @@ d$expected=predict(lm,d,type=&quot;response&quot;)</pre>
 <div>
 <img src=i/statistic-scotlandinfant-3.png width=400>
 </div>
+<hr />
+<p>The new version of the Scottish dashboard now shows quarterly data, but the rate of neonatal deaths was lower in July to September 2021 than in two other quarters: [<a href=https://scotland.shinyapps.io/phs-pregnancy-births-neonatal/>https://scotland.shinyapps.io/phs-pregnancy-births-neonatal/</a>]</p>
+<div>
+<img src=i/statistic-scotlandinfant-4.png width=800>
+</div>
+<p>It's hard to see any clear pattern in the yearly data either: [<a href=https://scotland.shinyapps.io/phs-pregnancy-births-neonatal/>https://scotland.shinyapps.io/phs-pregnancy-births-neonatal/</a>]</p>
+<div>
+<img src=i/statistic-scotlandinfant-5.png width=550>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>t=setDT(read_excel(&quot;c/stillbirths_and_infant_deaths_2025-06-12.xlsx&quot;,skip=6))
+
+s=t[!Date%like%&quot;2020-&quot;&amp;!`Sub-category`%like%&quot;total|extended|infant&quot;]
+s=merge(s,s[`Sub-category`==&quot;neonatal deaths&quot;,.(births=Denominator),Date])
+
+p=s[,.(y=sum(Numerator)/sum(births)*1000),.(x=as.integer(substr(Date,1,4)),facet=`Sub-category`)]
+p[,facet:=paste0(toupper(substr(facet,1,1)),sub(&quot;^.&quot;,&quot;&quot;,facet))]
+p[,facet:=factor(facet,unique(facet))]
+p=rbind(p,p[,.(y=sum(y),facet=&quot;Total&quot;),x])
+
+xstart=2016;xend=2025;xbreak=seq(xstart,xend,2)
+
+ylim=p[,.(min=min(y),max=max(y)),facet]
+rat=ylim[,max(max/min)]
+ylim=ylim[,{x=(rat*min-max)/(1+rat);.(min=min-x,max=max+x,facet)}]
+
+ggplot(p)+
+facet_wrap(~facet,ncol=2,dir=&quot;v&quot;,scales=&quot;free&quot;)+
+geom_rect(data=ylim,aes(ymin=min,ymax=max),xmin=xstart-.5,xmax=xend+.5,lineend=&quot;square&quot;,linejoin=&quot;mitre&quot;,fill=NA,color=&quot;gray75&quot;,linewidth=.4)+
+geom_line(aes(x,y),linewidth=.6)+
+geom_point(aes(x,y),stroke=0,size=1.5)+
+labs(title=&quot;Stillbirths and infant deaths per thousand live births in Scotland&quot;,x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart-.5,xend+.5),breaks=xbreak)+
+scale_y_continuous(breaks=pretty,labels=\(x)sprintf(&quot;%.1f&quot;,x))+
+scale_alpha_manual(values=c(1,0))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=11,color=&quot;gray45&quot;),
+  axis.text.y=element_text(margin=margin(,1)),
+  axis.ticks=element_line(linewidth=.4,color=&quot;gray75&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(4,&quot;pt&quot;),
+  panel.background=element_blank(),
+  panel.grid=element_blank(),
+  panel.spacing=unit(2,&quot;pt&quot;),
+  plot.title=element_text(size=11,hjust=.5,face=&quot;bold&quot;,margin=margin(1,,4)),
+  strip.background=element_blank(),
+  strip.text=element_text(margin=margin(,,2),size=11))
+ggsave(&quot;1.png&quot;,width=5.1,height=3.3,dpi=300*4)</pre>
+</div>
 <h2>
 <a href=#Clare_Craig_May_2024_UKHSA_FOI_response_for_deaths_in_vaccinated_people id=Clare_Craig_May_2024_UKHSA_FOI_response_for_deaths_in_vaccinated_people>Clare Craig: May 2024 UKHSA FOI response for deaths in vaccinated people</a>
 </h2>
@@ -2769,17 +2821,11 @@ theme(axis.text=element_text(size=11,color=&quot;black&quot;),
 ggsave(&quot;1.png&quot;,width=6,height=5,dpi=300*4)
 system(&quot;convert 1.png -resize 25% -colors 256 1.png&quot;)</pre>
 </div>
-<p>Fenton and Neil published a Substack post about the same English data. They downloaded the data and made their own plot that only included whites and blacks, but for some reason they didn't include the confidence intervals in their plot even though the spreadsheet for the data also included confidence intervals, and Fenton and Neil also didn't even explain that the decrease in mortality rate in blacks might have been due to the wide confidence intervals: [<a href=https://web.archive.org/web/20250115024255/https://wherearethenumbers.substack.com/p/why-did-maternal-mortality-in-white>https://web.archive.org/web/20250115024255/https://wherearethenumbers.substack.com/p/why-did-maternal-mortality-in-white</a>]</p>
+<p>Fenton and Neil published a Substack post about the same English data. They downloaded the data and made their own plot that only included whites and blacks, but for some reason they omitted the confidence intervals from their plot. Fenton and Neil didn't even explain that the decrease in mortality rate in blacks might have been due to the wide confidence intervals: [<a href=https://web.archive.org/web/20250115024255/https://wherearethenumbers.substack.com/p/why-did-maternal-mortality-in-white>https://web.archive.org/web/20250115024255/https://wherearethenumbers.substack.com/p/why-did-maternal-mortality-in-white</a>]</p>
 <div>
 <img src=i/statistic-maternal-8.png width=500>
 </div>
-<p>In the comments of the Substack post, Fenton claimed that whites had a statistically significant increase in maternal mortality rate between the years 2019-2021 and 2020-2022. Me and another user in the comments asked Fenton how he determined if the increase was significant or not, but he didn't answer. However I found the number of maternities and deaths by race from Table 2.10 of these PDF reports: <a href=https://www.npeu.ox.ac.uk/mbrrace-uk/reports/maternal-reports/maternal-report-2019-2021>https://www.npeu.ox.ac.uk/mbrrace-uk/reports/maternal-reports/maternal-report-2019-2021</a>, <a href=https://www.npeu.ox.ac.uk/mbrrace-uk/reports/maternal-reports/maternal-report-2020-2022.><a href="https://www.npeu.ox.ac.uk/mbrrace-uk/reports/maternal-reports/maternal-report-2020-2022" class="uri">https://www.npeu.ox.ac.uk/mbrrace-uk/reports/maternal-reports/maternal-report-2020-2022</a>.</a> Whites had 131 deaths out of 1,352,794 maternities in 2019-2021 and 152 deaths out of 1,291,758 maternities in 2020-2022. The p-value of the ratios is about 0.11 using a two-sided chi-squared test or 0.06 using a one-sided test, so neither is statistically significant:</p>
-<pre>prop.test(c(131,152),c(1352794,1291758),alternative=&quot;less&quot;)$p.value
-# 0.05732356 (one-sided)
-
-prop.test(c(131,152),c(1352794,1291758))$p.value
-# 0.1146471 (two-sided)</pre>
-<p>However the increase might still be significant based on other methods of evaluating significance, like whether the mortality rate crossed above a 95% prediction interval or not, so Fenton should've answered how he determined whether the increase was significant or not.</p>
+<p>In the comments of the Substack post, Fenton claimed that whites had a statistically significant increase in maternal mortality rate between the years 2019-2021 and 2020-2022. Me and another user in the comments asked Fenton how he determined if the increase was significant or not, but he didn't answer. However I found the number of maternities and deaths by race from these PDF files: <a href=https://www.npeu.ox.ac.uk/mbrrace-uk/reports/maternal-reports/maternal-report-2019-2021>https://www.npeu.ox.ac.uk/mbrrace-uk/reports/maternal-reports/maternal-report-2019-2021</a>, <a href=https://www.npeu.ox.ac.uk/mbrrace-uk/reports/maternal-reports/maternal-report-2020-2022>https://www.npeu.ox.ac.uk/mbrrace-uk/reports/maternal-reports/maternal-report-2020-2022</a> (Table 2.10). Whites had 131 deaths out of 1,352,794 maternities in 2019-2021 and 152 deaths out of 1,291,758 maternities in 2020-2022. The p-value of the ratios is about 0.11 using a two-sided chi-squared test or half as big using a one-sided test, so neither is statistically significant. However the increase might still be significant based on other methods of evaluating significance, like whether the mortality rate crossed above a 95% prediction interval or not, so Fenton should've answered how he determined whether the increase was significant or not.</p>
 <p>In this plot from the UK report, the green line shows that COVID explains the increase in indirect deaths since the three-year period centered in 2020:</p>
 <div>
 <img src=i/statistic-maternal-5.png width=600>
