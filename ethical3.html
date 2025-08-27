@@ -56,13 +56,13 @@ blockquote h3{color:inherit}
 <p>Other parts: <a href=ethical.html>ethical.html</a>, <a href=ethical2.html>ethical2.html</a>.</p>
 <h2 id=Contents><a href=#Contents>Contents</a></h2>
 <ul class=toc>
-<li><a href="#Excess_deaths_from_natural_causes_in_ages_0_5">Excess deaths from natural causes in ages 0-5</a></li>
+<li><a href="#Excess_deaths_from_natural_causes_in_ages_0_5_or_0_4">Excess deaths from natural causes in ages 0-5 or 0-4</a></li>
 <li><a href="#ES_versus_Grok_on_cancer_mortality">ES versus Grok on cancer mortality</a></li>
 </ul>
 
 
 <h2>
-<a href=#Excess_deaths_from_natural_causes_in_ages_0_5 id=Excess_deaths_from_natural_causes_in_ages_0_5>Excess deaths from natural causes in ages 0-5</a>
+<a href=#Excess_deaths_from_natural_causes_in_ages_0_5_or_0_4 id=Excess_deaths_from_natural_causes_in_ages_0_5_or_0_4>Excess deaths from natural causes in ages 0-5 or 0-4</a>
 </h2>
 <p>ES made this plot where for some reason he gets about 68% excess deaths from natural causes in ages 0-5: [<a href=https://theethicalskeptic.com/2025/07/29/gen-v-the-vaccinials/>https://theethicalskeptic.com/2025/07/29/gen-v-the-vaccinials/</a>]</p>
 <div>
@@ -974,6 +974,69 @@ labs(title=&quot;CDC WONDER: Deaths at age 0 per thousand children aged 0&quot;,
 scale_x_continuous(limits=c(xstart,xend),breaks=xbreak)+
 scale_color_manual(values=c(&quot;black&quot;,&quot;blue&quot;,&quot;#ff88ff&quot;))+
 scale_alpha_manual(values=c(1,0,0))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=11,color=&quot;gray40&quot;,margin=margin(2,2,2,2)),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  legend.background=element_rect(color=&quot;gray70&quot;,linewidth=.4),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.justification=c(1,1),
+  legend.key=element_blank(),
+  legend.key.height=unit(12,&quot;pt&quot;),
+  legend.key.width=unit(24,&quot;pt&quot;),
+  legend.margin=margin(3,5,3,3),
+  legend.position=c(1,1),
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.grid=element_blank(),
+  panel.grid.major=element_line(linewidth=.4,color=&quot;gray90&quot;),
+  plot.subtitle=element_text(hjust=.5,margin=margin(,,4)),
+  plot.title=element_text(size=11,hjust=.5,face=&quot;bold&quot;,margin=margin(,,4)))
+ggsave(&quot;1.png&quot;,width=5,height=3,dpi=300*4)</pre>
+</div>
+<p>Clare Craig posted this tweet when I showed her the plot above: [<a href=https://x.com/ClareCraigPath/status/1960621848384651566>https://x.com/ClareCraigPath/status/1960621848384651566</a>]</p>
+<div>
+<img src=i/ethical-vaccinial-long-term-2.png width=550>
+</div>
+<p>In fact she was right that I should've fitted an exponential function to the data. But she made the mistake of leaving out a constant term from her exponential function, so her function was of the form <code>a*exp(b*x)</code> and not <code>c+a*exp(b*x)</code>. When I added a constant term, the mortality rate in 2021-2024 was below the exponential trend regardless of whether I started the trend from 1968 or from 1979 like Craig. I treated the first year of the fitting period as year 0:</p>
+<div>
+<img src=i/ethical-vaccinial-long-term-3.png width=550>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>t=fread(&quot;https://sars2.net/f/wonderinfantdeadpop.csv&quot;)
+
+p1=t[,.(x=year,y=dead/pop*1e3,z=1,fit=T)]
+
+p2=copy(p1)[,z:=2][,fit:=x&lt;2020]
+p3=copy(p1)[,z:=4][,fit:=x%in%1979:2019]
+exp=rbind(p2,p3)
+
+exp1=exp[,.(x,y=predict(nls(y~c+a*exp(b*(x-.SD[fit==T,x][1])),.SD[fit==T],.SD[fit==T,.(a=y[.N]-y[1],b=-.08,c=min(y))]),.SD),fit),z]
+exp2=exp[,.(x,y=predict(nls(y~a*exp(b*(x-.SD[fit==T,x][1])),.SD[fit==T],.SD[fit==T,.(a=y[1],b=-.08)]),.SD),fit),z]
+
+p=rbind(p1,exp1,copy(exp2)[,z:=z+1])
+
+p[,z:=factor(z,,c(&quot;Deaths per population&quot;,&quot;1968-2019 with constant term: c+a*exp(b*x)&quot;,&quot;1968-2019 without constant term: a*exp(b*x)&quot;,&quot;1979-2019 with constant term: c+a*exp(b*x)&quot;,&quot;1979-2019 without constant term: a*exp(b*x)&quot;))]
+
+xstart=1968-.5;xend=2024+.5;xbreak=seq(1970,xend,10)
+ylim=p[,{x=extendrange(y);.(min=x[1],max=x[2])}]
+
+ggplot(p)+
+geom_rect(data=ylim,aes(ymin=min,ymax=max),xmin=xstart,xmax=xend,lineend=&quot;square&quot;,linejoin=&quot;mitre&quot;,fill=NA,color=&quot;gray72&quot;,linewidth=.4)+
+geom_line(aes(x,y,color=z,linewidth=z),linetype=&quot;11&quot;)+
+geom_line(data=p[fit==T],aes(x,y,color=z,linewidth=z))+
+geom_point(aes(x,y,color=z,alpha=z),stroke=0,size=1.2)+
+labs(title=&quot;CDC WONDER: Deaths at age 0 per thousand children aged 0&quot;,x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak)+
+scale_color_manual(values=c(&quot;black&quot;,hsv(c(30,30,21,21)/36,c(.7,.5,.7,.5),c(1,.6,1,.6))))+
+scale_alpha_manual(values=c(1,0,0,0,0))+
+scale_linewidth_manual(values=c(.7,.7,.5,.7,.5))+
 coord_cartesian(clip=&quot;off&quot;,expand=F)+
 theme(axis.text=element_text(size=11,color=&quot;gray40&quot;,margin=margin(2,2,2,2)),
   axis.ticks.length=unit(0,&quot;pt&quot;),
