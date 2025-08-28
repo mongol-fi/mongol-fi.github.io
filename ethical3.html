@@ -1025,7 +1025,7 @@ p=rbind(p1,exp1,copy(exp2)[,z:=z+1])
 p[,z:=factor(z,,c(&quot;Deaths per population&quot;,&quot;1968-2019 with constant term: c+a*exp(b*x)&quot;,&quot;1968-2019 without constant term: a*exp(b*x)&quot;,&quot;1979-2019 with constant term: c+a*exp(b*x)&quot;,&quot;1979-2019 without constant term: a*exp(b*x)&quot;))]
 
 xstart=1968-.5;xend=2024+.5;xbreak=seq(1970,xend,10)
-ylim=p[,{x=extendrange(y);.(min=x[1],max=x[2])}]
+ylim=p[,{x=extendrange(y);.(min=0,max=x[2])}]
 
 ggplot(p)+
 geom_rect(data=ylim,aes(ymin=min,ymax=max),xmin=xstart,xmax=xend,lineend=&quot;square&quot;,linejoin=&quot;mitre&quot;,fill=NA,color=&quot;gray72&quot;,linewidth=.4)+
@@ -1059,6 +1059,62 @@ theme(axis.text=element_text(size=11,color=&quot;gray40&quot;,margin=margin(2,2,
   plot.subtitle=element_text(hjust=.5,margin=margin(,,4)),
   plot.title=element_text(size=11,hjust=.5,face=&quot;bold&quot;,margin=margin(,,4)))
 ggsave(&quot;1.png&quot;,width=5,height=3,dpi=300*4)</pre>
+</div>
+<p>The natality data at CDC WONDER only extends back to 1995, but I now found historical data for births from here: <a href=https://cdc.gov/nchs/data-visualization/natality-trends/index.htm.><a href="https://cdc.gov/nchs/data-visualization/natality-trends/index.htm" class="uri">https://cdc.gov/nchs/data-visualization/natality-trends/index.htm</a>.</a> When I used it to plot the yearly ratio of deaths per live births since 1968, and I fitted an exponential function to the ratio, I got about -4% excess infant mortality in 2020, -4% in 2021, 0% in 2022, 0% in 2023, and 0% in 2024:</p>
+<div>
+<img src=i/ethical-infant-exponential.png width=550>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>t=t[,.(year=1968:2017,born=c(2718000,2777000,2809000,2840000,2869000,2986000,2965000,2964000,2944000,2948000,2740000,2950000,3055000,2882000,2910000,2979000,2909000,2839000,2802000,2674000,2582000,2618000,2506000,2440000,2307000,2396000,2377000,2355000,2413000,2496000,2466000,2559000,2703000,2989000,3104000,2939000,2858000,3411000,3817000,3637000,3649000,3632000,3820000,3909000,3959000,4071000,4097000,4210000,4300000,4246000,4244796,4257850,4268326,4167362,4098020,4027490,3760358,3606274,3520959,3501564,3600206,3731386,3555970,3258411,3136965,3159958,3144198,3167788,3326632,3333279,3494398,3612258,3629238,3680537,3638933,3669141,3760561,3756547,3809394,3909510,4040958,4158212,4110907,4065014,4000240,3952767,3899589,3891494,3880894,3941553,3959417,4058814,4025933,4021726,4089950,4112052,4138349,4265555,4316233,4247694,4130665,3999386,3953590,3952841,3932181,3988076,3978497,3945875,3855500,3791712))]
+t=rbind(t,fread(&quot;https://sars2.net/f/wondernatality.csv&quot;)[year%in%2019:2024,.(born=sum(born)),year])
+
+t=merge(fread(&quot;https://sars2.net/f/wonderinfantdeadpop.csv&quot;)[,.(year,dead)],t)
+
+p1=t[,.(x=year,y=dead/born*1e3,z=1,fit=T)]
+
+p2=copy(p1)[,z:=2][,fit:=x&lt;2020]
+p2=p2[,.(x,y=predict(nls(y~c+a*exp(b*(x-.SD[fit==T,x][1])),.SD[fit==T],.SD[fit==T,.(a=y[.N]-y[1],b=-.08,c=min(y))]),.SD),fit,z=2)]
+p=rbind(p1,p2)
+
+p[,z:=factor(z,,c(&quot;Infant mortality rate&quot;,&quot;1968-2019 exponential trend&quot;))]
+
+xstart=1968-.5;xend=2024+.5;xbreak=seq(1970,xend,10)
+ylim=p[,{x=extendrange(y);.(min=0,max=x[2])}]
+
+ggplot(p)+
+geom_rect(data=ylim,aes(ymin=min,ymax=max),xmin=xstart,xmax=xend,lineend=&quot;square&quot;,linejoin=&quot;mitre&quot;,fill=NA,color=&quot;gray72&quot;,linewidth=.4)+
+geom_line(aes(x,y,color=z),linewidth=.6)+
+geom_point(aes(x,y,color=z,alpha=z),stroke=0,size=1.2)+
+geom_line(data=p[z==z[1]],aes(x,y,color=z),linewidth=.6)+
+labs(title=&quot;CDC WONDER: Infant deaths per thousand live births&quot;,x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak)+
+scale_color_manual(values=c(&quot;black&quot;,hsv(5/6,.7,1)))+
+scale_alpha_manual(values=1:0)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=11,color=&quot;gray40&quot;,margin=margin(2,2,2,2)),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  legend.background=element_rect(color=&quot;gray70&quot;,linewidth=.4),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.justification=c(1,1),
+  legend.key=element_blank(),
+  legend.key.height=unit(12,&quot;pt&quot;),
+  legend.key.width=unit(24,&quot;pt&quot;),
+  legend.margin=margin(3,5,3,3),
+  legend.position=c(1,1),
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.grid=element_blank(),
+  panel.grid.major=element_line(linewidth=.4,color=&quot;gray90&quot;),
+  plot.subtitle=element_text(hjust=.5,margin=margin(,,4)),
+  plot.title=element_text(size=11,hjust=.5,face=&quot;bold&quot;,margin=margin(,,4)))
+ggsave(&quot;1.png&quot;,width=4.7,height=3,dpi=300*4)</pre>
 </div>
 <hr />
 <p>Here among women aged 15-49, the percentage increase in drug overdose deaths between 2018 and 2023 was about 166% in American Indians, 144% in blacks, 87% in Hispanics, 50% in Asians and Pacific Islanders, and 16% in whites:</p>
@@ -1197,6 +1253,15 @@ theme(axis.text=element_text(size=11,color=&quot;gray40&quot;,margin=margin(2,2,
   strip.background=element_blank(),
   strip.text=element_blank())
 ggsave(&quot;1.png&quot;,width=4.6,height=3.3,dpi=300*4)</pre>
+</div>
+<hr />
+<p>When I showed Kevin McCairn that I got negative excess infant mortality with the 1968-2019 exponential baseline, he argued that my analysis was trumped my Clare Craig's plots, where she relied on a 2015-2019 linear baseline to suggest that vaccines had caused excess infant deaths in 2021-2024: [<a href=https://x.com/KevinMcCairnPhD/status/1960934734915363052>https://x.com/KevinMcCairnPhD/status/1960934734915363052</a>, <a href=https://drclarecraig.substack.com/p/battle-of-the-baselines>https://drclarecraig.substack.com/p/battle-of-the-baselines</a>]</p>
+<div>
+<img src=i/ethical-mccairn.png width=550>
+</div>
+<p>But I told McCairn that a 2015-2019 linear baseline produces positive excess births each year in 2021-2024. So did vaccines cause a baby boom?</p>
+<div>
+<img src=i/ethical-mccairn-2.png width=550>
 </div>
 <h2>
 <a href=#ES_versus_Grok_on_cancer_mortality id=ES_versus_Grok_on_cancer_mortality>ES versus Grok on cancer mortality</a>

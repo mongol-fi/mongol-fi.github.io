@@ -84,6 +84,7 @@ blockquote h3{color:inherit}
 <li><a href="#Clare_Craig_Difference_in_unvaccinated_population_size_for_cases_and_deaths_in_a_Scottish_report">Clare Craig: Difference in unvaccinated population size for cases and deaths in a Scottish report</a></li>
 <li><a href="#Clare_Craig_Maternal_mortality_rate_by_race_in_England">Clare Craig: Maternal mortality rate by race in England</a></li>
 <li><a href="#David_Dickson_Cumulative_excess_deaths_in_England_and_Wales_with_a_2010_2019_average_baseline">David Dickson: Cumulative excess deaths in England and Wales with a 2010-2019 average baseline</a></li>
+<li><a href="#Clare_Craig_Stillbirth_rate_in_UK">Clare Craig: Stillbirth rate in UK</a></li>
 </ul>
 
 
@@ -3172,6 +3173,78 @@ system(paste0(&quot;magick 0.png -resize 25% -trim 1.png;magick 1.png \\( -size 
 <img src=i/uk-dickson-3.png width=500>
 </div>
 <p>Faceles007 posted a thread about Dickson's plot where he wrote <span class="quote">"362k excess deaths since 🧬💉 in England and Wales and counting"</span>. [<a href=https://x.com/Faceles007/status/1885640272157249804>https://x.com/Faceles007/status/1885640272157249804</a>] But Dickson's figure of 362,249 wasn't the number of excess deaths since the vaccine rollout but since the first week of 2019. Faceles007 also wrote that <span class="quote">"Rancourt's 17 million number is garbage btw"</span>. But 362,249 excess deaths in England and Wales would be the equivalent of about 50 million excess deaths worldwide if the whole world had the same excess crude mortality rate as England and Wales (from <code>362249/6e7*8e9</code>).</p>
+<h2>
+<a href=#Clare_Craig_Stillbirth_rate_in_UK id=Clare_Craig_Stillbirth_rate_in_UK>Clare Craig: Stillbirth rate in UK</a>
+</h2>
+<p>Clare Craig posted this tweet: [<a href=https://x.com/henjin256/status/1960826649777258794>https://x.com/henjin256/status/1960826649777258794</a>]</p>
+<div>
+<img src=i/uk-stillbirth-1.png width=550>
+</div>
+<p>I told her that the ONS bulletin <span class="quote">"Births in England and Wales: 2022"</span> includes this plot of stillbirths and live births going back to 1927, even though the historical data was omitted from the 2023 and 2024 editions: [<a href=https://ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths/bulletins/birthsummarytablesenglandandwales/2022>https://ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths/bulletins/birthsummarytablesenglandandwales/2022</a>]</p>
+<div>
+<img src=i/uk-stillbirth-2.png width=550>
+</div>
+<p>The number of stillbirths and live births is included in Table 1 of the linked spreadsheet: <a href=https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths/datasets/birthsummarytables.><a href="https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths/datasets/birthsummarytables" class="uri">https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths/datasets/birthsummarytables</a>.</a> I took the stillbirth rates in 2023 and 2024 from these spreadsheets: <a href=https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths/datasets/birthsinenglandandwalesbirthregistrations.><a href="https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths/datasets/birthsinenglandandwalesbirthregistrations" class="uri">https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths/datasets/birthsinenglandandwalesbirthregistrations</a>.</a></p>
+<p>The definition of stillbirth was changed between 1992 and 1993, so in the next plot I used the 1993-2019 linear trend as the baseline, but the stillbirth rate was below the baseline each year in 2021-2024:</p>
+<div>
+<img src=i/uk-stillbirth-3.png width=550>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>download.file(&quot;https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths/datasets/birthsummarytables/2022/birthssummary2022refreshedpopulations.xlsx&quot;,&quot;birthssummary2022refreshedpopulations.xlsx&quot;)
+
+t=setDT(read_excel(&quot;birthssummary2022refreshedpopulations.xlsx&quot;,sheet=4,skip=8,na=&quot;[x]&quot;))
+
+t=na.omit(t[,.(x=Year,still=`Number of stillbirths\r\nTotal\r\n[note 5]`,live=`Number of live births\r\nTotal`)])
+t=rbind(t,list(2023:2024,c(2355,2319),c(590774,594426)))
+
+p=t[,.(x,y=still/(still+live)*1e3)]
+
+p=p[,.(x,y=c(y,predict(lm(y~x,p[x%in%1993:2019]),p)),z=rep(1:2,each=.N))]
+
+p[,z:=factor(z,,c(&quot;Stillbirths per 1,000 live births and stillbirths&quot;,&quot;1993-2019 linear trend&quot;))]
+
+p=p[x%in%xstart:xend]
+xstart=1926;xend=2025;xbreak=seq(1900,xend,10)
+ylim=p[,.(min=0,max=max(y))]
+
+annoy=p[x==1993&amp;z==z[1],y]
+
+ggplot(p)+
+geom_rect(data=ylim,aes(ymin=min,ymax=max),xmin=xstart,xmax=xend,lineend=&quot;square&quot;,linejoin=&quot;mitre&quot;,fill=NA,color=&quot;gray72&quot;,linewidth=.4)+
+annotate(&quot;segment&quot;,x=1993,xend=1993,y=annoy+4,yend=annoy+.5,color=&quot;black&quot;,linewidth=.6,arrow=arrow(type=&quot;closed&quot;,length=unit(4,&quot;pt&quot;)))+
+annotate(&quot;text&quot;,x=1993,xend=1993,y=annoy+5,size=3.87,vjust=0,label=&quot;Change in\nstillbirth definition&quot;,lineheight=.8)+
+geom_line(aes(x,y,color=z),linewidth=.6)+
+geom_point(aes(x,y,color=z,alpha=z),stroke=0,size=1.2)+
+geom_line(data=p[z==z[1]],aes(x,y,color=z),linewidth=.6)+
+labs(title=&quot;Stillbirth rate in England and Wales&quot;,x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak)+
+scale_color_manual(values=c(&quot;black&quot;,hsv(22/36,.7,1)))+
+scale_alpha_manual(values=1:0)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=11,color=&quot;gray40&quot;,margin=margin(2,2,2,2)),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  legend.background=element_rect(color=&quot;gray70&quot;,linewidth=.4),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.justification=c(1,1),
+  legend.key=element_blank(),
+  legend.key.height=unit(12,&quot;pt&quot;),
+  legend.key.width=unit(24,&quot;pt&quot;),
+  legend.margin=margin(3,5,3,3),
+  legend.position=c(1,1),
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.grid=element_blank(),
+  panel.grid.major=element_line(linewidth=.4,color=&quot;gray90&quot;),
+  plot.title=element_text(size=11,hjust=.5,face=&quot;bold&quot;,margin=margin(,,4)))
+ggsave(&quot;1.png&quot;,width=4.6,height=3,dpi=300*4)</pre>
+</div>
 <script>
 document.querySelectorAll('pre').forEach(e=>e.innerHTML=e.innerHTML.replace(/((^| )# [^\n]*|^#$)/mg,"<span class=comment>$1</span>"))
 
