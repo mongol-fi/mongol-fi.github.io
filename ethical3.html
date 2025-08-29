@@ -1263,6 +1263,119 @@ ggsave(&quot;1.png&quot;,width=4.6,height=3.3,dpi=300*4)</pre>
 <div>
 <img src=i/ethical-mccairn-2.png width=550>
 </div>
+<hr />
+<p>Clare Craig pointed out that the percentage of infant deaths in females out of total infant deaths had increased since 2021: [<a href=https://drclarecraig.substack.com/p/battle-of-the-baselines>https://drclarecraig.substack.com/p/battle-of-the-baselines</a>]</p>
+<div>
+<img src=i/ethical-femalepercent-1.png width=600>
+</div>
+<p>However there's been an increasing trend in the percentage since at least the 1970s. The ratio fell close to the long-term trend in 2022 and 2023, even though by several measures excess infant mortality was higher in 2022 and 2023 than 2021. There wasn't a clear increase in the ratio above the long-term trend until 2024-2025, but by then the effect of COVID vaccines should've presumably been weaker than in 2021-2023:</p>
+<div>
+<img src=i/ethical-femalepercent-2.png width=550>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>t=fread(&quot;https://sars2.net/f/wonderinfantsexyearly.csv&quot;)
+p=t[,.(y=dead[sex==&quot;F&quot;]/sum(dead)*100),.(x=year)]
+
+pred=p[,.(x,predict(lm(y~x,.SD[x&lt;2020]),.SD,interval=&quot;prediction&quot;))]
+
+p=p[,.(x,y=c(y,pred$fit),z=rep(1:2,each=.N))]
+p[,z:=factor(z,,c(&quot;Percentage&quot;,&quot;1968-2019 linear trend with 95% PI&quot;))]
+
+xstart=1968-.5;xend=2025+.5;xbreak=seq(1970,xend,10)
+ylim=extendrange(c(p$y,pred$lwr,pred$upr));ybreak=0:100
+
+ggplot(p)+
+geom_hline(yintercept=0,color=&quot;gray70&quot;,linewidth=.4)+
+geom_ribbon(data=pred,aes(x,ymin=lwr,ymax=upr),fill=&quot;blue&quot;,color=&quot;blue&quot;,alpha=.2,linewidth=.2)+
+annotate(&quot;rect&quot;,xmin=xstart,xmax=xend,ymin=ylim[1],ymax=ylim[2],linewidth=.4,lineend=&quot;square&quot;,linejoin=&quot;mitre&quot;,fill=NA,color=&quot;gray70&quot;)+
+geom_line(aes(x,y,color=z),linewidth=.6)+
+geom_point(aes(x,y,alpha=z),size=1.1)+
+geom_line(data=p[z==z[1]],aes(x,y,color=z),linewidth=.6)+
+labs(x=NULL,y=NULL,title=&quot;CDC WONDER: Female infant deaths as percentage of total infant deaths&quot;)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak)+
+scale_y_continuous(limits=ylim,breaks=ybreak,labels=\(x)paste0(x,&quot;%&quot;))+
+scale_color_manual(values=c(&quot;black&quot;,&quot;blue&quot;))+
+scale_alpha_manual(values=1:0)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=11,color=&quot;gray45&quot;),
+  axis.ticks=element_line(linewidth=.4,color=&quot;black&quot;),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  legend.background=element_rect(color=&quot;gray70&quot;,linewidth=.4),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.justification=c(0,1),
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.margin=margin(3,5,3,3),
+  legend.position=c(.02,.97),
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.grid.major=element_line(linewidth=.4,color=&quot;gray90&quot;),
+  plot.title=element_text(size=11,hjust=1,face=2,margin=margin(,,4)))
+ggsave(&quot;1.png&quot;,width=5.5,height=3.3,dpi=300*4)</pre>
+</div>
+<hr />
+<p>A lot of the extra infant deaths in 2022-2024 seem to have viral diseases or respiratory conditions as the underlying cause:</p>
+<div>
+<img src=i/ethical-infantcause.png width=700>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>t=fread(&quot;https://sars2.net/f/wonderinfantcausesex.csv&quot;)[year&lt;2025]
+
+p=t[,.(y=sum(dead)),.(x=year,facet=sub(&quot; \\([^(]*\\)$&quot;,&quot;&quot;,cause))]
+p=p[facet%in%p[,.N,facet][N==max(N),facet]]
+p[,y:=y-mean(y[x&lt;2020]),facet]
+
+p[,facet:=sub(&quot;, not elsewhere classified&quot;,&quot;&quot;,facet)]
+
+sum=p[x%in%2022:2024,.(y=sum(y)),facet][order(-y)][1:12]
+p=p[facet%in%sum$facet][,facet:=factor(facet,sum$facet,str_wrap(sum[,paste0(facet,&quot; (&quot;,y,&quot;)&quot;)],27))]
+
+xstart=2018;xend=2024;xbreak=seq(2019,2024,2)
+ylim=p[,{x=extendrange(y);.(min=x[1],max=x[2])}]
+
+ggplot(p)+
+facet_wrap(~facet,ncol=4,dir=&quot;h&quot;)+
+geom_hline(yintercept=0,color=&quot;gray75&quot;,linewidth=.4)+
+geom_rect(data=ylim,aes(ymin=min,ymax=max),xmin=xstart,xmax=xend,lineend=&quot;square&quot;,linejoin=&quot;mitre&quot;,fill=NA,color=&quot;gray75&quot;,linewidth=.4)+
+geom_line(aes(x,y),linewidth=.6)+
+geom_point(aes(x,y),size=1.1)+
+labs(x=NULL,y=NULL,title=&quot;Yearly excess infant deaths in United States by underlying cause (2018-2019 average baseline)&quot;,subtitle=&quot;Top 12 causes sorted by total excess deaths in 2022-2024 (shown in parentheses)&quot;)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak)+
+scale_y_continuous(breaks=pretty)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=11,color=&quot;gray45&quot;),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.key=element_blank(),
+  legend.key.height=unit(12,&quot;pt&quot;),
+  legend.key.width=unit(24,&quot;pt&quot;),
+  legend.margin=margin(,,4),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.grid=element_blank(),
+  panel.grid.major.y=element_line(linewidth=.4,color=&quot;gray92&quot;),
+  panel.spacing=unit(3,&quot;pt&quot;),
+  plot.subtitle=element_text(size=11,hjust=.5,margin=margin(,,4)),
+  plot.title=element_text(size=11,hjust=.5,face=2,margin=margin(,,3)),
+  strip.background=element_blank(),
+  strip.text=element_text(hjust=.5,size=10,margin=margin(-2,,3),vjust=0))
+ggsave(&quot;1.png&quot;,width=7.4,height=5.4,dpi=300*4)</pre>
+</div>
 <h2>
 <a href=#ES_versus_Grok_on_cancer_mortality id=ES_versus_Grok_on_cancer_mortality>ES versus Grok on cancer mortality</a>
 </h2>
