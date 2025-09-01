@@ -1453,6 +1453,73 @@ theme(axis.text=element_text(size=11,color=&quot;gray45&quot;),
   strip.text=element_text(hjust=.5,size=10,margin=margin(-2,,3),vjust=0))
 ggsave(&quot;1.png&quot;,width=7.4,height=5.4,dpi=300*4)</pre>
 </div>
+<hr />
+<p>About two thirds of deaths at age 0 are neonatal deaths, which means deaths in the first 28 days of life, but there was low neonatal mortality in 2021 (apart from January and February when few women of childbearing age had been vaccinated):</p>
+<div>
+<img src=i/ethical-neonatal.png width=550>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>t=fread(&quot;https://sars2.net/f/wonderinfantagegroup.csv&quot;)
+t=t[age!=&quot;28-364 days&quot;,.(dead=sum(dead)),.(year,month)]
+born=fread(&quot;https://sars2.net/f/wonderinfantsexmonthly.csv&quot;)[,.(born=sum(born)),.(year,month)]
+t=merge(t,born)
+t[,dead:=ma(dead,1)][,born:=ma(born,1)]
+t=t[!(year==2025&amp;month&gt;6)]
+
+t$base=predict(glm(dead~year+factor(month),poisson,t[year&lt;2020],offset=log(born)),t,type=&quot;response&quot;)
+
+p=t[,.(x=as.Date(paste(year,month,16,sep=&quot;-&quot;)),y=c(dead,base)/born*1e3,z=rep(1:2,each=.N))]
+p=rbind(p[,facet:=1],p[,.(y=(y[1]/y[2]-1)*100,z=1,facet=2),x])
+
+p[,z:=factor(z,,c(&quot;Actual&quot;,&quot;2003-2019 Poisson regression&quot;))]
+p[,facet:=factor(facet,,c(&quot;Deaths per 1,000 live births&quot;,&quot;Excess percentage&quot;))]
+
+xstart=as.Date(&quot;2003-1-1&quot;);xend=as.Date(&quot;2026-1-1&quot;);xbreak=seq(xstart+182,xend,&quot;year&quot;)
+ylim=p[,.(min=min(y),max=max(y)),facet]
+
+ggplot(p)+
+facet_wrap(~facet,ncol=1,dir=&quot;v&quot;,scales=&quot;free_y&quot;)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray91&quot;,linewidth=.4)+
+geom_segment(data=ylim[2],aes(xstart,0),xend=xend,yend=0,color=&quot;gray75&quot;,linewidth=.4)+
+geom_rect(data=ylim,aes(ymin=min,ymax=max),xmin=xstart,xmax=xend,lineend=&quot;square&quot;,linejoin=&quot;mitre&quot;,fill=NA,color=&quot;gray75&quot;,linewidth=.4)+
+geom_line(aes(x,y,color=z),linewidth=.6)+
+geom_label(data=ylim,aes(mean(c(xstart,xend)),max,label=facet),vjust=1,label.r=unit(0,&quot;pt&quot;),label.padding=unit(5,&quot;pt&quot;),label.size=.4,color=&quot;gray75&quot;,size=3.87)+
+geom_label(data=ylim,aes(mean(c(xstart,xend)),max,label=facet),vjust=1,label.r=unit(0,&quot;pt&quot;),label.padding=unit(5,&quot;pt&quot;),label.size=0,fill=NA,size=3.87)+
+labs(x=NULL,y=NULL,title=&quot;Monthly neonatal deaths per live births in United States&quot;,subtitle=&quot;Deaths during days 0-27 of life, ±1-month moving average&quot;)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=year(xbreak))+
+scale_y_continuous(breaks=pretty,labels=\(x)if(min(x,na.rm=T)&lt;0)paste0(x,&quot;%&quot;)else sprintf(&quot;%.1f&quot;,x))+
+scale_color_manual(values=c(&quot;black&quot;,hsv(22/36,.7,1)))+
+scale_alpha_manual(values=c(1,.4))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=11,color=&quot;gray50&quot;),
+  axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
+  axis.text.y=element_text(margin=margin(,1)),
+  axis.ticks=element_line(linewidth=.4,color=&quot;gray75&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(4,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;horizontal&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(11,&quot;pt&quot;),
+  legend.key.width=unit(22,&quot;pt&quot;),
+  legend.margin=margin(,,5),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(1,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.spacing=unit(3,&quot;pt&quot;),
+  plot.subtitle=element_text(hjust=.5,margin=margin(,,3)),
+  plot.title=element_text(size=11,hjust=.5,face=2,margin=margin(,,3)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=4.6,height=3.7,dpi=300*4)</pre>
+</div>
 <h2>
 <a href=#ES_versus_Grok_on_cancer_mortality id=ES_versus_Grok_on_cancer_mortality>ES versus Grok on cancer mortality</a>
 </h2>
