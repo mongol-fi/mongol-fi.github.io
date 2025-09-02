@@ -1397,6 +1397,82 @@ theme(axis.text=element_text(size=11,color=&quot;gray40&quot;,margin=margin(2,2,
   strip.text=element_blank())
 ggsave(&quot;1.png&quot;,width=4.86,height=3.6,dpi=300*4)</pre>
 </div>
+<p>Clare Craig also made the plot below which shows a ratio between whites and blacks for infant deaths divided by mid-year resident population estimates. She got a sudden change in the slope between 2019 and 2020:</p>
+<div>
+<img src=i/ethical-craig-male-female.png width=550>
+</div>
+<p>In the top left panel of the next plot, I used the population estimates returned by CDC WONDER like Clare Craig. CDC WONDER uses population estimates based on the 2010 census for 2011-2020 and population estimates based on the 2020 census for 2021-2024, but the 2010-based estimates are not adjusted to get rid of a sudden jump in population size after the switch of census base. CDC WONDER also uses vintage 2021 population estimates for 2021, even though the vintage 2024 estimates for 2021 are likely more accurate, and the Census Bureau recommends using latest-vintage estimates for each year. In the top right panel I used the latest-vintage estimates for each year, and I generated DIY intercensal estimates for 2010-2019 to get rid of the jump after the census base, which got rid of the sudden change in the slope of the ratio between the late 2010s and early 2020s:</p>
+<div>
+<img src=i/ethical-craig-male-female-2.png width=700>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>u=&quot;https://www2.census.gov/programs-surveys/popest/datasets/&quot;
+pop1=fread(paste0(u,&quot;2000-2010/intercensal/national/us-est00int-alldata.csv&quot;))
+pop2=do.call(rbind,lapply(sprintf(&quot;%s2010-2020/national/asrh/NC-EST2020-ALLDATA-R-File%02d.csv&quot;,u,1:24),fread))
+pop3=do.call(rbind,lapply(sprintf(&quot;%s2020-2024/national/asrh/nc-est2024-alldata-r-file%02d.csv&quot;,u,1:12),fread))
+
+pop=rbind(pop1[YEAR&lt;2010,1:10][,type:=1],pop2[,2:11][,type:=2],pop3[,2:11][,type:=3])
+pop=pop[AGE==0&amp;MONTH==7,.(pop=c(WA_MALE,WA_FEMALE,BA_MALE,BA_FEMALE),race=rep(c(&quot;White&quot;,&quot;Black&quot;),each=.N*2),sex=rep(c(&quot;Male&quot;,&quot;Female&quot;),each=.N),year=YEAR,type)]
+
+pop=merge(pop,pop[year==2020,.(ratio=pop[type==3]/pop[type==2]),.(race,sex)])
+pop=pop[!(type==2&amp;year==2020)][,pop:=as.double(pop)]
+pop[type==2,pop:={x=(year-2010)/10;pop*(x*ratio+1-x)}]
+
+t=fread(&quot;https://sars2.net/f/wonderinfantyearracesex.csv&quot;)
+t[race==&quot;Black or African American&quot;,race:=&quot;Black&quot;]
+t=rbind(t,merge(t[type==&quot;pop&quot;,.(year,sex,race,dead,type=&quot;newpop&quot;)],pop[,.(year,sex,race,pop)]))
+
+t=rbind(cbind(t,z=1),t[sex==&quot;Female&quot;][,z:=2])
+
+p=t[,.(sum(dead)/sum(pop)),.(race,year,z,type)]
+p=p[,.(y=V1[race==&quot;White&quot;]/V1[race==&quot;Black&quot;]),.(z,facet=type,x=year)]
+
+p[,z:=factor(z,,c(&quot;Both sexes&quot;,&quot;Females&quot;))]
+p[,facet:=factor(facet,c(&quot;pop&quot;,&quot;newpop&quot;,&quot;born&quot;,&quot;linked&quot;),str_wrap(c(&quot;Deaths by infant race per resident population estimate by infant race (CDC WONDER)&quot;,&quot;Deaths by infant race per resident population estimate by infant race (improved)&quot;,&quot;Deaths by infant race per births by mother&#39;s race&quot;,&quot;Deaths by mother&#39;s race per births by mother&#39;s race (linked birth-death records)&quot;),45))]
+
+p=na.omit(p[x%in%2000:2024])
+xmin=1999.5;xmax=2024.5;xbreak=2000:2024
+ylim=cbind(facet=p[rowid(facet)==1,facet],p[,.(min=min(y),max=max(y))])
+ybreak=pretty(p$y);ymin=min(ybreak);ymax=max(ybreak)
+
+ggplot(p)+
+facet_wrap(~facet,ncol=2,dir=&quot;h&quot;)+
+geom_vline(xintercept=seq(xmin,xmax,5),color=&quot;gray90&quot;,linewidth=.4)+
+geom_hline(yintercept=ybreak,color=&quot;gray90&quot;,linewidth=.4)+
+annotate(&quot;rect&quot;,ymin=ymin,ymax=ymax,xmin=xmin,xmax=xmax,lineend=&quot;square&quot;,linejoin=&quot;mitre&quot;,fill=NA,color=&quot;gray72&quot;,linewidth=.4)+
+geom_line(aes(x,y,color=z),linewidth=.6)+
+geom_point(aes(x,y,color=z),stroke=0,size=1.2)+
+labs(title=&quot;CDC WONDER: White-to-black ratio of infant mortality&quot;,x=NULL,y=NULL)+
+scale_x_continuous(breaks=xbreak)+
+scale_y_continuous(breaks=ybreak)+
+scale_color_manual(values=c(&quot;black&quot;,hsv(0,.4,1)))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=11,color=&quot;gray40&quot;,margin=margin(2,2,2,2)),
+  axis.text.x=element_text(angle=90,vjust=.5,hjust=1),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;horizontal&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.width=unit(23,&quot;pt&quot;),
+  legend.margin=margin(,,4),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.grid=element_blank(),
+  panel.spacing=unit(3,&quot;pt&quot;),
+  plot.title=element_text(size=11,hjust=.5,face=&quot;bold&quot;,margin=margin(,,2)),
+  strip.background=element_blank(),
+  strip.text=element_text(size=11,margin=margin(,,3)))
+ggsave(&quot;1.png&quot;,width=7,height=5,dpi=300*4)</pre>
+</div>
 <hr />
 <p>A lot of the extra infant deaths in 2022-2024 seem to have viral diseases or respiratory conditions as the underlying cause:</p>
 <div>
