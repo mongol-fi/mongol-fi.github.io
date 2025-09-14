@@ -59,8 +59,9 @@ blockquote h3{color:inherit}
 <li><a href="#Excess_deaths_in_the_vaccinial_generation">Excess deaths in the vaccinial generation</a></li>
 <ul class=toc>
 <li><a href="#Weekly_excess_deaths_from_natural_causes_in_ages_0_4">Weekly excess deaths from natural causes in ages 0-4</a></li>
-<li><a href="#What_ICD_codes_are_included_in_the_plot">What ICD codes are included in the plot</a></li>
+<li><a href="#What_ICD_codes_are_included_in_the_plot">What ICD codes are included in the plot?</a></li>
 <li><a href="#Plot_with_legacy_trend_and_emergent_trend">Plot with legacy trend and emergent trend</a></li>
+<li><a href="#2010_2019_linear_trend_for_deaths_and_ASMR_with_95_PI">2010-2019 linear trend for deaths and ASMR with 95% PI</a></li>
 <li><a href="#Did_ES_use_a_2018_2019_or_2018_2020_baseline">Did ES use a 2018-2019 or 2018-2020 baseline?</a></li>
 <li><a href="#CDC_plot_of_infant_mortality">CDC plot of infant mortality</a></li>
 <li><a href="#Thread_by_Clare_Craig">Thread by Clare Craig</a></li>
@@ -187,7 +188,7 @@ ggsave(&quot;1.png&quot;,width=5.6,height=4.8,dpi=300*4)</pre>
 </div>
 <p>In the next plot I converted Ethical Skeptic's baseline to yearly data by taking the average baseline value for each MMWR year, dividing it by 7, and multiplying it by the number of days in the year. It shows even more clearly how his baseline had a reasonable slope between 2018 and 2019, but his baseline took an unrealistic dive downwards after 2019:</p>
 <div>
-<img src=i/ethical-vaccinial-yearly-0to4.png width=550>
+<img src=i/ethical-vaccinial-yearly-0to4.png width=530>
 </div>
 <div class="spoiler">
 <button>
@@ -266,7 +267,7 @@ ggsave(&quot;1.png&quot;,width=4.7,height=4.2,dpi=300*4)</pre>
 t[year==2025&amp;week%in%14:20,mean(dead-excess)]
 # 246.1207</pre>
 <h3>
-<a href=#What_ICD_codes_are_included_in_the_plot id=What_ICD_codes_are_included_in_the_plot>What ICD codes are included in the plot</a>
+<a href=#What_ICD_codes_are_included_in_the_plot id=What_ICD_codes_are_included_in_the_plot>What ICD codes are included in the plot?</a>
 </h3>
 <p>ES made this image that showed what ICD codes were included in his plot: [<a href=https://theethicalskeptic.com/2025/08/19/houston-we-have-another-problem/>https://theethicalskeptic.com/2025/08/19/houston-we-have-another-problem/</a>]</p>
 <div>
@@ -464,7 +465,7 @@ t[year%in%2018:2024&amp;age&lt;5,.(dead=sum(dead)),,year]
 # 2022 20944
 # 2023 20758
 # 2024 20560</pre>
-<p>The next plot shows how the real slope of the 2022-2024 trend is fairly similar to the 2014-2019 trend, even though I didn't even adjust the plot for population size or the number of births:</p>
+<p>The next plot shows how the real slope of the trend in 2022-2024 is fairly similar to the trend in 2014-2019, even though I didn't even adjust for population size or the number of births:</p>
 <div>
 <img src=i/ethical-legacy-emergent-true.png width=600>
 </div>
@@ -528,6 +529,75 @@ theme(axis.text=element_text(size=11,color=&quot;gray50&quot;),
 ggsave(&quot;1.png&quot;,width=5.1,height=2.8,dpi=300*4)</pre>
 </div>
 <h3>
+<a href=#2010_2019_linear_trend_for_deaths_and_ASMR_with_95_PI id=2010_2019_linear_trend_for_deaths_and_ASMR_with_95_PI>2010-2019 linear trend for deaths and ASMR with 95% PI</a>
+</h3>
+<p>Ethical Skeptic got 25 sigma excess deaths on weeks 14-20 in his plot. He uses a seasonality-adjusted baseline that is fitted against only 2 years of data, which tends to overestimate excess deaths expressed as z-scores, because his baseline ends up adapting to whatever the deaths happen to be during the baseline period. If he used his method to fit a seasonality-adjusted baseline against only one year of data, he would get a residual of zero during each week of the fitting period, and therefore he would get infinite z-scores outside of his fitting period.</p>
+<p>So even if ES wouldn't have fraudulently introduced an extreme downward bend to his baseline after 2019, it can be misleading to express excess deaths as z-scores relative to his very short 2-year baseline.</p>
+<p>In the next plot I did a linear regression fitted against yearly data in 2010-2019, and I calculated the 95% prediction interval which shows the range where 95% of values are expected to fall assuming that the linear trend remains in place. The number of deaths in 2024 did not even cross above the 95% PI, even though the ASMR in 2024 did reach slightly above the PI. But the ASMR in 2024 was still lower than any year before 2020:</p>
+<div>
+<img src=i/ethical-vaccinial-facets.png width=620>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>t=fread(&quot;https://sars2.net/f/wondervaccinial0to4ator999monthly.csv&quot;)
+a=t[age&lt;5&amp;year%in%2000:2024,.(dead=sum(dead)),.(year,age)]
+a=merge(a,fread(&quot;https://sars2.net/f/uspopdead.csv&quot;)[,.(age,year,pop)])
+
+a=merge(a[year==2020,sum(pop),age][,.(age,std=V1/sum(V1))],a)
+
+p=a[,.(y=c(sum(dead),sum(pop),sum(dead)/sum(pop)*1e5,sum(dead/pop*std*1e5)),facet=1:4),.(x=year)]
+p=p[,cbind(.SD,predict(lm(y~x,.SD[x%in%2010:2019]),.SD,interval=&quot;prediction&quot;,level=.95)),facet]
+
+p[,facet:=factor(facet,,c(&quot;Deaths&quot;,&quot;Population&quot;,&quot;CMR per 100,000&quot;,&quot;ASMR per 100,000&quot;))]
+
+lab=c(&quot;Actual&quot;,&quot;2010-2019 linear trend with 95% PI&quot;)
+lab=factor(lab,unique(lab))
+
+xstart=2000;xend=2025;xbreak=seq(2005,2020,5)
+ybreak=pretty(c(0,p[,c(y,lwr,upr)]));ystart=0;yend=max(ybreak)
+ylim=p[,.(max=max(y,upr)),facet]
+
+ggplot(p)+
+facet_wrap(~facet,ncol=2,dir=&quot;v&quot;,scales=&quot;free_y&quot;)+
+geom_rect(data=ylim,aes(ymax=max),ymin=0,xmin=xstart,xmax=xend,lineend=&quot;square&quot;,linejoin=&quot;mitre&quot;,fill=NA,color=&quot;gray75&quot;,linewidth=.4)+
+geom_ribbon(aes(x,ymin=lwr,ymax=upr),fill=&quot;blue&quot;,color=&quot;blue&quot;,alpha=.2,linewidth=.2)+
+geom_line(aes(x,y,color=lab[1]),linewidth=.6)+
+geom_line(aes(x,fit,color=lab[2]),linewidth=.6,show.legend=F,linetype=&quot;11&quot;)+
+geom_line(data=p[x%in%2010:2019],aes(x,fit,color=lab[2]),linewidth=.6)+
+geom_line(aes(x,y,color=lab[1]),linewidth=.6)+
+geom_point(aes(x,y,color=lab[1]),stroke=0,size=1.4,show.legend=F)+
+geom_label(data=ylim,aes(mean(c(xstart,xend)),max/2,label=facet),size=3.87,label.r=unit(0,&quot;pt&quot;),label.padding=unit(4,&quot;pt&quot;),label.size=.4,fill=&quot;white&quot;,color=&quot;gray75&quot;)+
+geom_label(data=ylim,aes(mean(c(xstart,xend)),max/2,label=facet),size=3.87,label.r=unit(0,&quot;pt&quot;),label.padding=unit(4,&quot;pt&quot;),label.size=0,fill=NA,)+
+labs(title=&quot;Ages 0-4: Deaths with underlying cause A-R or 999--999\n(non-COVID natural causes and R, excluding external causes)&quot;,x=NULL,y=NULL)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak)+
+scale_y_continuous(limits=\(x)c(0,max(x)),breaks=\(x)pretty(c(0,x)),labels=\(x)ifelse(x&gt;=1e3,ifelse(x&gt;=1e6,paste0(x/1e6,&quot;M&quot;),paste0(x/1e3,&quot;k&quot;)),x))+
+scale_color_manual(labels=lab,values=c(&quot;black&quot;,&quot;blue&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=11,color=&quot;gray40&quot;,margin=margin(8,8,8,8)),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;horizontal&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(11,&quot;pt&quot;),
+  legend.key.width=unit(23,&quot;pt&quot;),
+  legend.margin=margin(,,6),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.grid.major=element_line(linewidth=.4,color=&quot;gray90&quot;),
+  panel.spacing=unit(3,&quot;pt&quot;),
+  plot.title=element_text(size=11,hjust=.5,face=&quot;bold&quot;,margin=margin(,,4)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=5,height=3.8,dpi=300*4)</pre>
+</div>
+<h3>
 <a href=#Did_ES_use_a_2018_2019_or_2018_2020_baseline id=Did_ES_use_a_2018_2019_or_2018_2020_baseline>Did ES use a 2018-2019 or 2018-2020 baseline?</a>
 </h3>
 <p>In this tweet ES wrote that the baseline in his vaccinial plot was fitted against week 1 of 2018 to week 50 of 2019: [<a href=https://x.com/EthicalSkeptic/status/1950916264928358512>https://x.com/EthicalSkeptic/status/1950916264928358512</a>]</p>
@@ -538,12 +608,12 @@ ggsave(&quot;1.png&quot;,width=5.1,height=2.8,dpi=300*4)</pre>
 <div>
 <img src=i/ethical-vaccinial-method.png width=650>
 </div>
-<p>But on the other hand in the caption for the plot below, ES wrote that his <span class="quote">"analysis does not rely solely upon 2018/19 as is claimed by dishonest parties"</span>. I don't know if he referred only to the plot below, where the <span class="quote">"legacy trend"</span> appears to approximate the trend in 2018 to 2020, or if he also referred to the plot that showed the excess deaths. By <span class="quote">"dishonest parties"</span> he might have referred to me, but I never claimed that the plot below had a 2018-2019 baseline, but only that the plot for excess deaths was supposed to have a 2018-2019 baseline: [<a href=https://theethicalskeptic.com/2025/08/19/houston-we-have-another-problem/>https://theethicalskeptic.com/2025/08/19/houston-we-have-another-problem/</a>]</p>
+<p>But on the other hand in the caption for the plot below, ES wrote that his <span class="quote">"analysis does not rely solely upon 2018/19 as is claimed by dishonest parties"</span>. I don't know if he referred only to the plot below, where the <span class="quote">"legacy trend"</span> appears to approximate the trend in 2018 to 2020, or if he also referred to the plot that showed the weekly excess deaths. By <span class="quote">"dishonest parties"</span> he might have referred to me, but I never claimed that the plot below had a 2018-2019 baseline, but only that the plot for excess deaths was supposed to have a 2018-2019 baseline: [<a href=https://theethicalskeptic.com/2025/08/19/houston-we-have-another-problem/>https://theethicalskeptic.com/2025/08/19/houston-we-have-another-problem/</a>]</p>
 <div>
 <img src=i/ethical-solely-baseline.png width=550>
 </div>
 <p>In his blog post ES also wrote: <span class="quote">"The brief spike visible in late 2019 and early 2020 reflects a dry-tinder effect - mortality rising among already-vulnerable populations - occurring during a period when the virus was either not yet formally detected or not yet recognized as having reached U.S. shores. This is followed by a subtle pull-forward effect (PFE) visible in the variance data over the subsequent eight months. Neither of these 2020 artifacts is incorporated into the baseline trend alignment of the chart, which, as the reader will note, remains anchored to the more stable 2018-2019 period."</span> [<a href=https://theethicalskeptic.com/2025/08/19/houston-we-have-another-problem/>https://theethicalskeptic.com/2025/08/19/houston-we-have-another-problem/</a>]</p>
-<p>But if he did not consider data from 2020 when he calculated the baseline, then why does the baseline take such a steep turn downwards between 2019 and 2020?</p>
+<p>But if he did not consider data from 2020 when he calculated his baseline, then why does his baseline take such a steep turn downwards between 2019 and 2020?</p>
 <h3>
 <a href=#CDC_plot_of_infant_mortality id=CDC_plot_of_infant_mortality>CDC plot of infant mortality</a>
 </h3>
