@@ -80,6 +80,7 @@ blockquote h3{color:inherit}
 <li><a href="#Cancer_incidence_in_ages_30_44_in_the_Netherlands">Cancer incidence in ages 30-44 in the Netherlands</a></li>
 <li><a href="#Plot_for_weekly_cancer_mortality_by_Truth_in_Numbers">Plot for weekly cancer mortality by Truth in Numbers</a></li>
 <li><a href="#ES_versus_Grok_on_cancer_mortality">ES versus Grok on cancer mortality</a></li>
+<li><a href="#Cancer_diagnoses_in_England_per_population_aged_65_and_above">Cancer diagnoses in England per population aged 65 and above</a></li>
 </ul>
 
 
@@ -3184,6 +3185,97 @@ round(a[,pctchange:=(cmr/c(NA,cmr[-.N])-1)*100][],1)
 <div>
 <img src=i/ethical-vsgrok.png width=550>
 </div>
+<h2>
+<a href=#Cancer_diagnoses_in_England_per_population_aged_65_and_above id=Cancer_diagnoses_in_England_per_population_aged_65_and_above>Cancer diagnoses in England per population aged 65 and above</a>
+</h2>
+<p>ES made this plot of cancer incidence in England: [<a href=https://x.com/EthicalSkeptic/status/1966911244859842912/photo/3>https://x.com/EthicalSkeptic/status/1966911244859842912/photo/3</a>]</p>
+<div>
+<img src=i/ethical-englandincidence-1.png width=800>
+</div>
+<p>Based on the next plot, there wasn't any clear increase in the age-standardized cancer rate incidence above the pre-COVID trend in 2022, and the age-standardized incidence rate remained roughly flat in 2015-2019, so there wasn't a big drop between 2018 and 2019 like in the plot by ES: [<a href=https://researchbriefings.files.parliament.uk/documents/SN06887/SN06887.pdf>https://researchbriefings.files.parliament.uk/documents/SN06887/SN06887.pdf</a>]</p>
+<div>
+<img src=i/ethical-englandincidence-2.png width=500>
+</div>
+<p>ES used a dataset of rapid cancer registration data published by the National Disease Registration Service of England (NDRS), which only goes back to 2018. [<a href=https://nhsd-ndrs.shinyapps.io/rcrd/>https://nhsd-ndrs.shinyapps.io/rcrd/</a>] It includes one set of data adjusted for the number of working days per week and another set of unadjusted data. ES didn't specify which set he used, but I used the unadjusted data below.</p>
+<p>I believe ES got the proportion of population aged 65 and above from an interactive browser on the website of ONS. [<a href=https://www.ons.gov.uk/explore-local-statistics/indicators/percentage-of-the-population-aged-65-plus>https://www.ons.gov.uk/explore-local-statistics/indicators/percentage-of-the-population-aged-65-plus</a>] It didn't have a category for England but only for the whole UK, and even UK was missing data for 2024 and 2025. However the same population estimate data can be queried from Nomis, where you can select the region as England only, and data for 2024 is not missing. [<a href=https://www.nomisweb.co.uk/query/asv2htm>https://www.nomisweb.co.uk/query/asv2htm</a>]</p>
+<p>I used WebPlotDigitizer to digitize the data in Ethical Skeptic's plot. [<a href=https://automeris.io/wpd/>https://automeris.io/wpd/</a>] I then converted the values in his plot to the number of new cases by multiplying them with the yearly population estimates of people aged 65+ and dividing the result by 100,000.</p>
+<p>In the real data the slope of the trend in 2018-2019 was similar to the trend in 2021-2024. But ES seems to have somehow manually altered the data so that he exaggerated the decrease between 2018 and 2019, and he also exaggerated the increase between 2021 and 2024:</p>
+<div>
+<img src=i/ethical-englandincidence-3.png width=570>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>rapid=CJ(year=2018:2025,month=1:12)[!(year==2025&amp;month&gt;5)]
+rapid$cases=c(25420,22367,24346,24756,27661,26373,27063,26412,23765,26877,25734,22828,26367,23661,24873,25042,26401,24756,27422,25043,24770,27640,24966,24232,26324,24401,25990,16105,15604,19236,21692,20787,24272,24738,24274,24592,22733,22413,26691,25237,25099,27013,26909,25425,26707,25801,27161,25658,24526,25063,28286,24763,28176,26068,26549,27780,26984,26615,28584,24932,26944,25628,29243,24129,27882,28516,26845,27921,26579,27733,29447,25191,29054,27699,27453,28654,29560,27537,30900,27783,27948,30455,27565,26942,29190,26915,27960,27074,26432)
+p1=rapid[,.(x=as.Date(paste(year,month,16,sep=&quot;-&quot;)),y=cases)]
+p1$z=&quot;Raw data&quot;
+
+p2=copy(p1)
+p2[,y:=y/pop$o65[match(pmin(2024,year(x)),pop$year)]*pop[year==2020,o65]]
+p2$z=&quot;Raw data / 65+ pop of year * 65+ pop of 2020&quot;
+
+pop=CJ(year=2018:2024)
+pop$total=c(55924528,56230056,56325961,56554891,57144395,57932470,58620101)
+pop$o65=c(10082761,10243221,10332210,10469044,10630852,10787479,10981092)
+
+es=CJ(year=2018:2025,month=1:12)[!(year==2025&amp;month&gt;4)]
+es$rate=c(238.49,235.11,236.32,240.66,246.21,248.86,251.28,253.69,255.62,255.13,252.00,248.38,244.52,236.80,229.81,222.09,217.75,212.44,206.89,205.44,205.93,204.96,203.51,202.07,202.55,206.28,210.99,213.16,205.44,198.69,191.94,185.66,178.91,176.02,182.05,191.94,201.10,210.51,213.65,215.09,219.19,223.78,226.19,228.36,231.01,232.94,233.43,231.25,230.05,230.05,231.01,231.74,233.67,236.56,239.21,241.14,242.11,242.59,243.56,242.35,241.14,239.70,241.63,243.56,245.49,249.83,252.96,254.41,254.17,254.17,253.21,250.79,249.34,250.31,252.48,254.65,259.24,266.71,270.09,272.02,272.50,272.50,271.05,269.12,266.23,267.19,269.61,270.81)
+
+p3=es[,.(x=as.Date(paste(year,month,16,sep=&quot;-&quot;)),y=rate*pop$o65[match(pmin(year,2024),pop$year)]/1e5)]
+p3$z=&quot;Ethical Skeptic&#39;s plot reverse engineered with WebPlotDigitizer&quot;
+
+p=rbind(p1,p2,p3)[,z:=factor(z,unique(z))]
+
+xstart=as.Date(&quot;2018-1-1&quot;);xend=as.Date(&quot;2025-7-1&quot;);xbreak=seq(xstart+182,as.Date(&quot;2025-1-1&quot;),&quot;year&quot;)
+ybreak=pretty(c(0,p$y));ystart=0;yend=max(ybreak)
+
+ggplot(p)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray90&quot;,linewidth=.4)+
+annotate(&quot;rect&quot;,xmin=xstart,xmax=xend,ymin=ystart,ymax=yend,linewidth=.4,lineend=&quot;square&quot;,linejoin=&quot;mitre&quot;,fill=NA,color=&quot;gray75&quot;)+
+geom_line(aes(x,y,color=z),linewidth=.6)+
+labs(x=NULL,y=NULL,title=&quot;Monthly cancer diagnoses in England rapid registration data&quot;)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=year(xbreak))+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,labels=\(x)ifelse(x&gt;=1e3,paste0(x/1e3,&quot;k&quot;),x))+
+scale_color_manual(values=c(hsv(22/36,c(1,.6),c(.6,1)),&quot;#aaaa00&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(color=guide_legend(ncol=1,byrow=F))+
+theme(axis.text=element_text(size=11,color=&quot;gray40&quot;),
+  axis.text.y=element_text(margin=margin(,1.5)),
+  axis.ticks=element_line(linewidth=.4,color=&quot;gray75&quot;),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(4,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(12,&quot;pt&quot;),
+  legend.key.width=unit(24,&quot;pt&quot;),
+  legend.margin=margin(-2,,4),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  plot.title=element_text(size=11,hjust=.5,face=2,margin=margin(,,4)))
+ggsave(&quot;1.png&quot;,width=5.1,height=3.2,dpi=300*4)</pre>
+</div>
+<p>When I calculated yearly sums of the monthly data shown in the plot above, the incidence increased by about 0.5% between 2018 and 2019 in the dark blue line, decreased by about 1.0% in the light blue line, and decreased by about 11% in the yellow line.</p>
+<p>In the original data that I digitized from Ethical Skeptic's plot, the rate of new cases per 100,000 people aged 65 and above dropped by about 12% between 2018 and 2019:</p>
+<pre>es=CJ(year=2018:2025,month=1:12)[!(year==2025&amp;month&gt;4)]
+es$rate=c(238.49,235.11,236.32,240.66,246.21,248.86,251.28,253.69,255.62,255.13,252.00,248.38,244.52,236.80,229.81,222.09,217.75,212.44,206.89,205.44,205.93,204.96,203.51,202.07,202.55,206.28,210.99,213.16,205.44,198.69,191.94,185.66,178.91,176.02,182.05,191.94,201.10,210.51,213.65,215.09,219.19,223.78,226.19,228.36,231.01,232.94,233.43,231.25,230.05,230.05,231.01,231.74,233.67,236.56,239.21,241.14,242.11,242.59,243.56,242.35,241.14,239.70,241.63,243.56,245.49,249.83,252.96,254.41,254.17,254.17,253.21,250.79,249.34,250.31,252.48,254.65,259.24,266.71,270.09,272.02,272.50,272.50,271.05,269.12,266.23,267.19,269.61,270.81)
+round(es[,.(rate=mean(rate)),year][,pctchange:=(rate/shift(rate)-1)*100])
+# year rate pctchange
+# 2018  247        NA
+# 2019  216       -12
+# 2020  195       -10
+# 2021  222        14
+# 2022  237         7
+# 2023  248         5
+# 2024  263         6
+# 2025  268         2</pre>
 <script>
 document.querySelectorAll('pre').forEach(e=>e.innerHTML=e.innerHTML.replace(/((^| )# [^\n]*|^#$)/mg,"<span class=comment>$1</span>"))
 
