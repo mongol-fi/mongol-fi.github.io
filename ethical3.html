@@ -81,7 +81,7 @@ blockquote h3{color:inherit}
 <li><a href="#Are_children_dying_at_rates_never_seen_before">Are children dying at rates never seen before?</a></li>
 <li><a href="#Monthly_stillbirths">Monthly stillbirths</a></li>
 <li><a href="#Failed_attempt_to_reproduce_exponential_baseline">Failed attempt to reproduce exponential baseline</a></li>
-<li><a href="#Ethical_Skeptics_infant_mortality_spreadsheet">Ethical Skeptic&#39;s infant mortality spreadsheet</a></li>
+<li><a href="#Spreadsheet_for_weekly_deaths">Spreadsheet for weekly deaths</a></li>
 </ul>
 
 
@@ -2918,8 +2918,8 @@ round(d,4)
 # 2024     0.8458 -0.0262
 # 2025     0.8204 -0.0254</pre>
 <h2>
-<a href=#Ethical_Skeptics_infant_mortality_spreadsheet id=Ethical_Skeptics_infant_mortality_spreadsheet>Ethical
-Skeptic's infant mortality spreadsheet</a>
+<a href=#Spreadsheet_for_weekly_deaths id=Spreadsheet_for_weekly_deaths>Spreadsheet
+for weekly deaths</a>
 </h2>
 <p>In response to a Substack post by canceledmouse, ES posted this
 screenshot of his spreadsheet:
@@ -2953,10 +2953,10 @@ decrease with CAGR.</p>
 <p>So even though the blue line in the spreadsheet is clearly too steep,
 the legacy trend is even steeper. And ES falsely presents the blue line
 as representing a 4.34% decrease.</p>
-<p>The orange line decreases from about 7.18 in 2004 to 5.37 in 2022,
+<p>The orange line decreases from about 7.04 in 2004 to 5.27 in 2022,
 which is about 1.4% per year if you divide the total decrease with the
-number of years: <code>(1-5.37/7.18)/18</code>. Or it's about 2.1% with
-CAGR: <code>(5.37/7.18)^(1/18)-1</code>. But ES falsely portrays the
+number of years: <code>(1-5.27/7.04)/18</code>. Or it's about 1.6% with
+CAGR: <code>(5.27/7.04)^(1/18)-1</code>. But ES falsely portrays the
 orange line as representing a 3.02% annual decrease.</p>
 <p>And even the orange line is more steep than the 2004-2019 linear
 trend in the CDC data, which decreased by only about 1.3% per year if
@@ -2981,6 +2981,80 @@ he may have used unrounded numbers):</p>
 but it's about 5.42 in 2020. So how did ES calculate his <span
 class="quote">"normalized"</span> infant mortality rate of 4.54 in
 2020?</p>
+<p>The next plot shows how ridiculously low Ethical Skeptic's <span
+class="quote">"normalized"</span> mortality rate is compared to the real
+data:</p>
+<div>
+<img src=i/ethical-spreadsheet-4.png width=600>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>d=CJ(year=1995:2023)
+d$born=c(3899589,3891494,3880894,3941553,3959417,4058882,4026036,4021825,4090007,4112055,4138573,4265593,4316233,4247726,4130665,3999386,3953590,3952841,3932181,3988076,3978497,3945875,3855500,3791712,3747540,3613647,3664292,3667758,3596017)
+d$dead=c(29505,28419,27968,28325,27865,27961,27523,27970,27995,27860,28384,28509,29153,28075,26408,24572,24001,23654,23446,23211,23458,23157,22341,21498,20927,19578,19928,20577,20162)
+d[,rate:=dead/born*1e3]
+
+p1=d[,.(x=year,y=dead/born*1e3,fit=T)]
+p1$z=&quot;Deaths per 1,000 live births&quot;
+
+p2=copy(p1)[,fit:=x%in%2004:2019]
+p2=p2[,.(x,y=predict(lm(y~x,p2[fit==T]),p2),fit)]
+p2$z=&quot;Real 2004-2019 linear trend (-1.4% CAGR)&quot;
+
+p3=data.table(x=c(2004,2022),y=c(7.04,5.27),fit=T)
+cagr=p3[,(y[2]/y[1])^(1/(x[2]-x[1]))-1]
+p3$z=sprintf(&quot;Ethical Skeptic&#39;s orange fake -3.02%% trend (actually %.1f%% CAGR)&quot;,cagr*100)
+
+p4=data.table(x=c(2015,2022),y=c(6.29,5.08),fit=T)
+cagr=p4[,(y[2]/y[1])^(1/(x[2]-x[1]))-1]
+p4$z=sprintf(&quot;Ethical Skeptic&#39;s blue fake -4.34%% trend (actually %.1f%% CAGR)&quot;,cagr*100)
+
+eth=fread(&quot;https://sars2.net/f/wondervaccinial0to4.csv&quot;)
+p5=merge(d,na.omit(eth)[,.(y=mean(dead-excess),fit=T),.(year)])[,.(x=year,fit=T,y=y/rate)]
+p5[,y:=y*p1[x==2019,y]/p5[x==2019,y]]
+p5$z=&quot;Baseline in plot for ages 0-4 divided by births and matched to 2019&quot;
+
+p=rbind(p1,p2,p3,p4,p5)[,z:=factor(z,unique(z))]
+
+xmin=1995;xmax=2025;xbreak=seq(xmin,xmax-5,5)
+ybreak=pretty(c(p$y),8);ymin=min(p$y);ymax=max(p$y)
+
+ggplot(p)+
+geom_hline(yintercept=0,color=&quot;gray75&quot;,linewidth=.4)+
+annotate(&quot;rect&quot;,xmin=xmin,xmax=xmax,ymin=ymin,ymax=ymax,linewidth=.4,lineend=&quot;square&quot;,fill=NA,color=&quot;gray75&quot;)+
+annotate(&quot;point&quot;,x=2020,y=4.54,color=&quot;red&quot;,shape=4,size=1.3,stroke=.6)+
+annotate(&quot;text&quot;,x=2019.5,y=4.4,color=&quot;red&quot;,size=3.87,lineheight=.8,label=str_wrap(&quot;Ethical Skeptic&#39;s \&quot;normalized\&quot; infant mortality rate in 2020 (used to calculate fake 3.02% yearly decline for orange line)&quot;,35),hjust=1,vjust=0)+
+geom_line(aes(x,y,color=z),linetype=&quot;11&quot;,linewidth=.7)+
+geom_line(data=p[fit==T],aes(x,y,color=z),linewidth=.7)+
+geom_line(data=p[z==z[1]],aes(x,y,color=z),linewidth=.7)+
+geom_point(aes(x,y,color=z,alpha=z),size=1.4,stroke=0)+
+labs(x=NULL,y=NULL,title=&quot;Infant deaths per 1,000 live births in United States&quot;)+
+scale_x_continuous(limits=c(xmin,xmax),breaks=xbreak)+
+scale_y_continuous(limits=c(ymin,ymax),breaks=ybreak,labels=\(x)sprintf(&quot;%.1f&quot;,x))+
+scale_color_manual(values=c(&quot;black&quot;,&quot;gray60&quot;,&quot;#DA8A48&quot;,&quot;#3A84A7&quot;,&quot;#aaaa00&quot;))+
+scale_alpha_manual(values=c(1,0,0,0,0))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+theme(axis.text=element_text(size=11,color=&quot;gray40&quot;),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(12,&quot;pt&quot;),
+  legend.key.spacing.x=unit(0,&quot;pt&quot;),
+  legend.key.width=unit(24,&quot;pt&quot;),
+  legend.margin=margin(-2,,4),
+  legend.position=&quot;top&quot;,
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,margin=margin(,,,2)),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.grid.major=element_line(linewidth=.4,color=&quot;gray90&quot;),
+  plot.title=element_text(size=11,hjust=.5,face=2,margin=margin(,,4)))
+ggsave(&quot;1.png&quot;,width=5.3,height=3.5,dpi=300*4)</pre>
+</div>
 <script>
 document.querySelectorAll('pre').forEach(e=>e.innerHTML=e.innerHTML.replace(/((^| )# [^\n]*|^#$)/mg,"<span class=comment>$1</span>"))
 
