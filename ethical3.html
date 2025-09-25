@@ -3,7 +3,7 @@
 <meta name=viewport content=width=device-width,initial-scale=1.0>
 <style>
 body{background:#2f2f2f;color:white}
-body,td,th{font:14.5px/1.3 Arial,Helvetica,'Liberation Sans',sans-serif}
+body,td,th{font:14.5px/1.33 Arial,Helvetica,'Liberation Sans',sans-serif}
 p{max-width:530px;margin:1em auto}
 dl,pre{margin:1em auto;width:fit-content;max-width:min(100%, 1100px)}
 hr{border:none;border-top: 2px solid #bbb;margin:1em auto;max-width:1100px}
@@ -27,8 +27,7 @@ th{background:#444;text-align:left;font-weight:bold}
 img{max-width:100%;margin:0;display:block}
 dt{font-size:1.3em;margin:.4em 0}
 body>blockquote{margin:1em auto;width:500px}
-blockquote{padding-left:40px}
-blockquote{width:calc(100% - 40px);box-sizing:border-box}
+blockquote{width:calc(100% - 40px);padding-left:40px;box-sizing:border-box}
 blockquote>:first-child{margin-top:0}
 blockquote>:last-child{margin-bottom:0}
 blockquote,.quote,blockquote,blockquote{color:hsl(50,100%,85%)}
@@ -40,7 +39,8 @@ blockquote h3{color:inherit}
 .spoiler pre{display:none;margin-top:0;text-align:left}
 .red,.red .quote{color:hsl(0,100%,77%)!important}
 .comment{color:hsl(0,100%,80%)!important}
-.toc{max-width:none}
+.toc{width:calc(50% + 265px);margin:1em 0 1em max(0px, 50% - 265px)}
+.toc ul{width:min(100%, 50% + 265px - 40px);margin:0}
 @media print{
   body{background:white;color:black;margin:0px;zoom:1;print-color-adjust:exact;-webkit-print-color-adjust:exact}
   a{color:#0000EE}a:visited{color:#551A8B}
@@ -1854,8 +1854,8 @@ and 0% in 2024:</p>
 <button>
 Show code
 </button>
-<pre>t=t[,.(year=1968:2017,born=c(2718000,2777000,2809000,2840000,2869000,2986000,2965000,2964000,2944000,2948000,2740000,2950000,3055000,2882000,2910000,2979000,2909000,2839000,2802000,2674000,2582000,2618000,2506000,2440000,2307000,2396000,2377000,2355000,2413000,2496000,2466000,2559000,2703000,2989000,3104000,2939000,2858000,3411000,3817000,3637000,3649000,3632000,3820000,3909000,3959000,4071000,4097000,4210000,4300000,4246000,4244796,4257850,4268326,4167362,4098020,4027490,3760358,3606274,3520959,3501564,3600206,3731386,3555970,3258411,3136965,3159958,3144198,3167788,3326632,3333279,3494398,3612258,3629238,3680537,3638933,3669141,3760561,3756547,3809394,3909510,4040958,4158212,4110907,4065014,4000240,3952767,3899589,3891494,3880894,3941553,3959417,4058814,4025933,4021726,4089950,4112052,4138349,4265555,4316233,4247694,4130665,3999386,3953590,3952841,3932181,3988076,3978497,3945875,3855500,3791712))]
-t=rbind(t,fread(&quot;https://sars2.net/f/wondernatality.csv&quot;)[year%in%2019:2024,.(born=sum(born)),year])
+<pre>t=CJ(year=1968:2024)
+t$born=c(3501564,3600206,3731386,3555970,3258411,3136965,3159958,3144198,3167788,3326632,3333279,3494398,3612258,3629238,3680537,3638933,3669141,3760561,3756547,3809394,3909510,4040958,4158212,4110907,4065014,4000240,3952767,3899589,3891494,3880894,3941553,3959417,4058814,4025933,4021726,4089950,4112052,4138349,4265555,4316233,4247694,4130665,3999386,3953590,3952841,3932181,3988076,3978497,3945875,3855500,3791712,3747540,3613647,3664292,3667758,3596017,3618267)
 
 t=merge(fread(&quot;https://sars2.net/f/wonderinfantdeadpop.csv&quot;)[,.(year,dead)],t)
 
@@ -2813,7 +2813,7 @@ t[,dead:=ma(dead,3,2)]
 base=t[year&lt;2020&amp;!(year==2019&amp;week&gt;45)]
 
 # get average deaths for each week number during the baseline period
-# week 53 is average of weeks 52 and 1, but I don&#39;t know how ES treated week 53
+# I treated week 53 as average of weeks 52 and 1, but I don&#39;t know how ES treated week 53
 weekly=base[,tapply(dead,week,mean)]
 weekly[53]=mean(weekly[c(1,52)])
 
@@ -2862,15 +2862,15 @@ xbreak=seq(xstart,as.Date(&quot;2025-1-1&quot;),&quot;6 month&quot;);xlab=ifelse
 ylim=p[,{x=extendrange(y,,.03);.(ymin=x[1],ymax=x[2])},facet]
 
 ggplot(p)+
-facet_wrap(~facet,dir=&quot;v&quot;,scales=&quot;free_y&quot;)+
+facet_wrap(~facet,ncol=1,scales=&quot;free_y&quot;)+
 geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray90&quot;,linewidth=.4)+
 geom_segment(data=p[.N],x=xstart,xend=xend,y=0,yend=0,linewidth=.4,color=&quot;gray75&quot;)+
 geom_rect(data=ylim,aes(ymin=ymin,ymax=ymax),xmin=xstart,xmax=xend,lineend=&quot;square&quot;,linejoin=&quot;mitre&quot;,fill=NA,color=&quot;gray72&quot;,linewidth=.4)+
 geom_line(aes(x,y,color=z),linewidth=.5)+
 geom_label(data=ylim,aes(mean(c(xstart,xend)),ymax,label=facet),vjust=1,label.r=unit(0,&quot;pt&quot;),label.padding=unit(5,&quot;pt&quot;),label.size=.4,color=&quot;gray75&quot;,size=3.8)+
 geom_label(data=ylim,aes(mean(c(xstart,xend)),ymax,label=facet),vjust=1,label.r=unit(0,&quot;pt&quot;),label.padding=unit(5,&quot;pt&quot;),label.size=0,size=3.8,fill=NA)+
-labs(x=NULL,y=NULL,title=&quot;CDC WONDER, ages 0-4: Deaths with underlying cause A-R or 999--999\n(natural causes and R, excluding COVID and external causes)&quot;)+
-scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
+labs(x=NULL,y=NULL,title=&quot;CDC WONDER, ages 0-4: Deaths with underlying cause A-R or 999--999\n(6-week centered moving average)&quot;)+
+scale_x_date(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
 scale_y_continuous(breaks=\(x)pretty(x,7),labels=\(x)if(min(x,na.rm=T)&lt;0)paste0(x,&quot;%&quot;)else x)+
 scale_color_manual(values=c(&quot;black&quot;,hsv(4/36,1,.7)))+
 coord_cartesian(clip=&quot;off&quot;,expand=F)+
@@ -2884,23 +2884,25 @@ theme(axis.text=element_text(size=11,color=&quot;gray40&quot;),
   legend.direction=&quot;horizontal&quot;,
   legend.key=element_blank(),
   legend.key.height=unit(12,&quot;pt&quot;),
+  legend.key.spacing.x=unit(2,&quot;pt&quot;),
   legend.key.width=unit(23,&quot;pt&quot;),
   legend.margin=margin(-2,,4),
   legend.position=&quot;top&quot;,
   legend.spacing.x=unit(1,&quot;pt&quot;),
   legend.spacing.y=unit(0,&quot;pt&quot;),
-  legend.text=element_text(size=11,vjust=.5),
+  legend.text=element_text(size=11,vjust=.5,margin=margin(,,,1)),
   legend.title=element_blank(),
   panel.background=element_blank(),
   panel.spacing=unit(3,&quot;pt&quot;),
+  plot.subtitle=element_text(size=11,hjust=.5,margin=margin(,,4)),
   plot.title=element_text(size=11,face=2,hjust=.5,margin=margin(,,4)),
   strip.background=element_blank(),
   strip.text=element_blank())
-ggsave(&quot;1.png&quot;,width=5.8,height=4,dpi=300*4)</pre>
+ggsave(&quot;1.png&quot;,width=5.9,height=4.2,dpi=300*4)</pre>
 </div>
 <p>There's no way you can get a curve with Ethical Skeptic's formula
 that decreases more between 2019 and 2020 than between 2018 and 2019,
-like his baseline in the vaccinial plot. If you give a negative growth
+like the baseline in his vaccinial plot. If you give a negative growth
 rate to his formula <code>(1+growthrate)^(year-2018.5)</code>, you
 always get a concave curve where the absolute year-to-year decrease gets
 smaller over time:</p>
@@ -3012,24 +3014,22 @@ formula for CAGR.</p>
 the legacy trend is even steeper, which shows how the legacy trend
 exaggerates the rate of decline before COVID. And ES falsely portrays
 the blue line as representing a 4.34% decrease.</p>
-<p>The orange line is supposed to portray a 3.02% annual decrease. But
-it decreases from about 7.04 in 2004 to 5.27 in 2022, which is about
-1.4% per year if you divide the total decrease with the number of years:
-<code>(1-5.27/7.04)/18</code>. Or it's about 1.6% with CAGR:
+<p>The orange line is supposed to decrease by 3.02% per year, but
+actually it decreases from about 7.04 in 2004 to 5.27 in 2022, which is
+about 1.4% per year if you divide the total decrease with the number of
+years: <code>(1-5.27/7.04)/18</code>. Or it's about 1.6% with CAGR:
 <code>(5.27/7.04)^(1/18)-1</code>.</p>
 <p>And even the orange line is more steep than the real 2004-2019 linear
-trend in the CDC data, which decreased by only about 1.3% per year if
-you divide the total decrease between 2004 and 2022 with the number of
-years from 2004 to 2022:</p>
+trend in the CDC data, where you get a decrease of only about 1.3% per
+year if you divide the total decrease between 2004 and 2022 with the
+number of years from 2004 to 2022:</p>
 <pre># from cdc.gov/nchs/data/nvsr/nvsr74/nvsr74-07.pdf#page=8
 d=CJ(year=1995:2023)
-d$born=c(3899589,3891494,3880894,3941553,3959417,4058882,4026036,4021825,4090007,4112055,4138573,4265593,4316233,4247726,4130665,3999386,3953590,3952841,3932181,3988076,3978497,3945875,3855500,3791712,3747540,3613647,3664292,3667758,3596017)
-d$dead=c(29505,28419,27968,28325,27865,27961,27523,27970,27995,27860,28384,28509,29153,28075,26408,24572,24001,23654,23446,23211,23458,23157,22341,21498,20927,19578,19928,20577,20162)
+d$rate=c(757,730,721,719,704,689,684,695,684,678,686,668,675,661,639,614,607,598,596,582,590,587,579,567,558,542,544,561,561)/100
 
-d[,rate:=dead/born*1e3]
 d$trend=predict(lm(rate~year,d[year%in%2004:2019]),d)
 d[,(1-trend[year==2022]/trend[year==2004])/18]
-# 0.01281137 (about 1.3%)</pre>
+# 0.01282821 (about 1.3%)</pre>
 <p>The next table shows that the real infant mortality rate in the CDC
 report was about 5.42 in 2020, but for some reason ES came up with his
 own <span class="quote">"normalized"</span> infant mortality rate of
@@ -3050,7 +3050,7 @@ class="quote">"normalized"</span> infant mortality rate is that first he
 calculated the annual decline percent of his <span class="quote">"legacy
 trend"</span>, which was about 4.3%. Then he manually drew a line in the
 CDC plot that approximated the slope between 2019 and 2020, and he
-falsely declared the line to decrease by about 4.3% per year. Then he
+falsely declared that the line decreased by about 4.3% per year. Then he
 thought that the longer-term rate of decline before COVID looked about a
 third less steep than his blue line, so he picked a fake infant
 mortality rate for 2020 that gave him an annual rate of decline of about
