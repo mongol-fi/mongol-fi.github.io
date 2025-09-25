@@ -2,14 +2,16 @@
 <meta charset=utf-8>
 <meta name=viewport content=width=device-width,initial-scale=1.0>
 <style>
-body{background:#2f2f2f;color:white;margin:6px 6px 6px max(6px, min(50vw - 270px, 100vw - 900px))}
+body{background:#2f2f2f;color:white;margin:6px}
 body,td,th{font:14.5px/1.3 Arial,Helvetica,'Liberation Sans',sans-serif}
-p{max-width:540px}
-ul,ol{max-width:500px}
+p{max-width:540px;margin:1em auto}
+pre{margin:1em auto;width:fit-content;max-width:1100px}
+ul,ol{width:540px;margin:1em auto}
+div:has(img){width:fit-content;margin:0 auto}
 h1,h2,h3,h2 a,h3 a,h2 a:visited,h3 a:visited{color:white;font-weight:normal}
-h1{font-size:2.1em;margin-top:.7em}
-h2{font-size:1.7em}
-h3{font-size:1.3em}
+h1{font-size:2.1em;margin-top:.7em;text-align:center}
+h2{font-size:1.7em;text-align:center}
+h3{font-size:1.3em;text-align:center}
 blockquote h2,blockquote h3{margin:.5em 0}
 blockquote ul,blockquote ol{margin:.4em 0}
 a,a .quote{color:hsl(220,100%,75%)}
@@ -17,10 +19,10 @@ a:visited,a .quote{color:hsl(270,100%,75%)}
 pre,code{white-space:pre-wrap;word-wrap:break-word;font:14px Menlo,'DejaVu Sans Mono','Liberation Mono',Consolas,monospace;background:#4a4a4a;color:white}
 pre{padding:4px}
 code{padding:1px}
-table{border-collapse:collapse}
+table{border-collapse:collapse;margin:1em auto}
 td,th{border:1px solid #555;padding:1px 3px}
 th{background:#444;text-align:left;font-weight:bold}
-img{max-width:100%}
+img{max-width:100%;margin:0}
 hr{border: none;border-top: 2px solid #bbb;margin:1em 0}
 dt{font-size:1.3em;margin:.4em 0}
 blockquote{margin:0;padding-left:40px;margin-right:0;overflow-x:hidden}
@@ -33,8 +35,9 @@ blockquote,.quote,blockquote,blockquote{color:hsl(50,100%,85%)}
 blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(45,55%,65%)}
 blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote .quote,.quote .quote .quote{color:hsl(40,40%,50%)}
 blockquote h3{color:inherit}
-.spoiler button{width:90px;border:0;font-family:inherit;font-size:inherit;color:inherit;margin:0;background:#4a4a4a;padding:4px 0px;outline:none;cursor:pointer}
-.spoiler pre{display:none;margin-top:0}
+.spoiler{max-width:1100px;margin:0 auto;text-align:center}
+.spoiler button{width:90px;margin:0 auto;border:0;font-family:inherit;font-size:inherit;color:inherit;background:#4a4a4a;padding:4px 0px;outline:none;cursor:pointer}
+.spoiler pre{display:none;margin-top:0;text-align:left}
 .red,.red .quote{color:hsl(0,100%,77%)!important}
 .comment{color:hsl(0,100%,80%)!important}
 .toc{max-width:none}
@@ -2888,6 +2891,26 @@ theme(axis.text=element_text(size=11,color=&quot;gray40&quot;),
   strip.text=element_blank())
 ggsave(&quot;1.png&quot;,width=5.8,height=4,dpi=300*4)</pre>
 </div>
+<p>There's no way you can get a curve with Ethical Skeptic's formula
+that decreases more between 2019 and 2020 than between 2018 and 2019. If
+you give a negative growth rate to his formula
+<code>(1+growthrate)^(year-2018.5)</code>, you always get a concave
+curve where the absolute year-to-year decrease gets smaller over
+time:</p>
+<pre>d=CJ(year=2018:2025)
+growthrate=-.03 # 3% annual decrease
+d[,multiplier:=(1+growthrate)^(year-2018.5)]
+d[,diff:=c(NA,diff(multiplier))]
+round(d,4)
+# year multiplier    diff
+# 2018     1.0153      NA
+# 2019     0.9849 -0.0305 # decrese between 2018 and 2019 is bigger
+# 2020     0.9553 -0.0295 # than decrease between 2019 and 2020
+# 2021     0.9267 -0.0287
+# 2022     0.8989 -0.0278
+# 2023     0.8719 -0.0270
+# 2024     0.8458 -0.0262
+# 2025     0.8204 -0.0254</pre>
 <p>I had earlier suspected ES might use an exponential baseline in some
 of his plots, but I hadn't understood properly how he calculates the
 baseline, because he didn't explain it very clearly in two other images
@@ -2900,33 +2923,13 @@ where he described his methodology:
 <div>
 <img src=i/ethical-baseline-method-3.png width=550>
 </div>
-<p>It doesn't make sense to first calculate the slope of a linear trend
-in 2018-2019 but to then project an exponential function into the future
-based on the linear slope. If you do a linear regression against an
-exponential function, there's many different kinds of exponential
-functions that will produce the same linear slope. You can't even tell
-from the linear slope if the exponential function has a convex or
-concave curve.</p>
-<p>And anyway, there's no way you can get a decreasing curve with
-Ethical Skeptic's formula that decreases more between 2019 and 2020 than
-between 2018 and 2019. If you give a negative growth rate to his formula
-<code>(1+growthrate)^(year-2018.5)</code>, you always get a concave
-curve where the absolute year-to-year decrease gets smaller over
-time:</p>
-<pre>d=CJ(year=2018:2025)
-growthrate=-.03 # 3% annual decrease
-d[,multiplier:=(1+growthrate)^(year-2018.5)]
-d[,diff:=c(NA,diff(multiplier))]
-round(d,4)
-# year multiplier    diff
-# 2018     1.0153      NA
-# 2019     0.9849 -0.0305
-# 2020     0.9553 -0.0295
-# 2021     0.9267 -0.0287
-# 2022     0.8989 -0.0278
-# 2023     0.8719 -0.0270
-# 2024     0.8458 -0.0262
-# 2025     0.8204 -0.0254</pre>
+<p>But anyway, it doesn't make sense to first calculate the slope of a
+linear trend in 2018-2019 but to then project an exponential function
+into the future based on the linear slope. If you do a linear regression
+against an exponential function, there's many different kinds of
+exponential functions that will produce the same linear slope. You can't
+even tell from the linear slope if the exponential function has a convex
+or concave curve.</p>
 <h2>
 <a href=#Spreadsheet_with_3_02_annual_decrease_in_infant_mortality id=Spreadsheet_with_3_02_annual_decrease_in_infant_mortality>Spreadsheet
 with 3.02% annual decrease in infant mortality</a>
@@ -3120,7 +3123,7 @@ Difference divided<br>by mean divided<br>by number of years
 </tr>
 <tr>
 <td style="text-align:right">
-Real 2007-2020 infant mortality rate in CDC report
+Real infant mortality rate in CDC report
 </td>
 <td>
 2007
@@ -3149,7 +3152,7 @@ NA
 </tr>
 <tr>
 <td style="text-align:right">
-2007 rate from CDC report with fake normalized rate for 2020
+2007 CDC rate with fake normalized rate for 2020
 </td>
 <td>
 2007
