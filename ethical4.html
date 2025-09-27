@@ -507,7 +507,10 @@ adjustment for population size should make the percentage smaller and
 not bigger:</p>
 <pre>t=fread(&quot;https://sars2.net/f/Table_1_machine_readable_updated_June2025.csv.gz&quot;)
 t=t[stage_at_diagnosis==&quot;All stages&quot;&amp;imd_quintile==&quot;All quintiles&quot;&amp;gender==&quot;Persons&quot;]
-t=t[hormone_receptor%in%c(&quot;&quot;,&quot;All&quot;)&amp;hormone_receptor_status%in%c(&quot;&quot;,&quot;All&quot;)] # `All` is for breast cancer, empty is other cancers
+
+ # `All` is for breast cancer, empty is for other cancers
+t=t[hormone_receptor%in%c(&quot;&quot;,&quot;All&quot;)&amp;hormone_receptor_status%in%c(&quot;&quot;,&quot;All&quot;)]
+
 t=t[ndrs_detailed_group%like%&quot;^All|ALL&quot;]
 print(t[,.(diagnoses=sum(count)),.(year=diagnosisyear)],r=F)
 # year diagnoses
@@ -692,11 +695,11 @@ plot, I confirmed that a real linear regression of the data for
 <button>
 Show code
 </button>
-<pre># https://data.cdc.gov/National-Center-for-Health-Statistics/Weekly-Counts-of-Deaths-by-State-and-Select-Causes/3yf8-kanr
-old=fread(&quot;https://sars2.net/f/Weekly_Counts_of_Deaths_by_State_and_Select_Causes__2014-2019.csv.gz&quot;)
-old=old[`Jurisdiction of Occurrence`==&quot;United States&quot;,.(year=`MMWR Year`,week=`MMWR Week`,dead=`Malignant neoplasms (C00-C97)`)]
+<pre>old=fread(&quot;https://sars2.net/f/Weekly_Counts_of_Deaths_by_State_and_Select_Causes__2014-2019.csv.gz&quot;)
+old=old[`Jurisdiction of Occurrence`==&quot;United States&quot;]
+old=old[,.(year=`MMWR Year`,week=`MMWR Week`,dead=`Malignant neoplasms (C00-C97)`)]
 
-t=fread(&quot;https://sars2.net/f/wondermalignantweekly.csv&quot;)[year&gt;2019]
+t=fread(&quot;https://sars2.net/f/wondermalignantweekly.csv&quot;)[year&gt;2019,.(year,week,dead)]
 t=rbind(old,t)
 
 p=t[,.(x=MMWRweek::MMWRweek2Date(year,week,4),y=dead,z=&quot;Actual deaths&quot;)]
@@ -704,30 +707,28 @@ p=rbind(p,p[,.(x,y=predict(lm(y~x,p[year(x)&lt;2020]),p),z=&quot;2014-2019 linea
 p[,z:=factor(z,unique(z))]
 
 xstart=as.Date(&quot;2014-1-1&quot;);xend=as.Date(&quot;2025-7-1&quot;);xbreak=seq(xstart,xend-1,&quot;6 month&quot;)
-xlab=ifelse(month(xbreak)==7,year(xbreak),&quot;&quot;)
 ystart=10e3;yend=13e3;ybreak=seq(ystart,yend,500)
 
 ggplot(p)+
-geom_point(aes(x,y,color=z,alpha=z),shape=3,stroke=.4,size=1.5)+
 geom_line(aes(x,y,color=z,linewidth=z))+
 labs(x=NULL,y=NULL)+
-scale_x_date(limits=c(xstart,xend),breaks=xbreak,labels=xlab)+
+scale_x_date(limits=c(xstart,xend),breaks=xbreak,labels=ifelse(month(xbreak)==7,year(xbreak),&quot;&quot;))+
 scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
 scale_color_manual(values=c(&quot;black&quot;,&quot;#ff6666&quot;))+
-scale_alpha_manual(values=1:0)+
-scale_linewidth_manual(values=c(0,.6))+
+scale_linewidth_manual(values=c(.3,.6))+
 coord_cartesian(clip=&quot;off&quot;,expand=F)+
 theme(axis.text=element_text(size=9,color=&quot;black&quot;),
+  axis.text.y=element_blank(),
   axis.ticks=element_line(color=&quot;black&quot;,linewidth=.3),
   axis.ticks.length=unit(3,&quot;pt&quot;),
   axis.ticks.x=element_line(color=alpha(&quot;black&quot;,1:0)),
   legend.background=element_blank(),
   legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.justification=c(.5,0),
   legend.key=element_blank(),
   legend.key.height=unit(12,&quot;pt&quot;),
   legend.key.width=unit(23,&quot;pt&quot;),
-  legend.margin=margin(-2,,14),
-  legend.position=&quot;top&quot;,
+  legend.position=c(.5,.86),
   legend.spacing.x=unit(2,&quot;pt&quot;),
   legend.spacing.y=unit(0,&quot;pt&quot;),
   legend.text=element_text(size=10,vjust=.5),
@@ -738,12 +739,28 @@ theme(axis.text=element_text(size=9,color=&quot;black&quot;),
   plot.title=element_text(size=11,hjust=.5))
 ggsave(&quot;1.png&quot;,width=6,height=3.2,dpi=300*4)</pre>
 </div>
+<p>The text in Ethical Skeptic's plot says that <span
+class="quote">"Weekly cancer death rates are up above the 2014 - 2019
+regression baseline"</span>. The way he appears to have accomplished the
+feat was to first fake his regression line, and then to manually move
+points upwards when the points happened to fall below his fake
+regression line.</p>
 <p>In the plot above, my black line otherwise matches Ethical Skeptic's
-blue line, except there's clusters of weeks in 2022 and 2023 where my
-line is lower. I think it's because ES manually shifted points that were
-below his dashed baseline upwards. His plot has only 4 points in 2022
-and 2023 that are below his dashed baseline, but my plot has 12
+blue line, except there are clusters of weeks in 2022 and 2023 where my
+line is much lower. I think it's because ES manually shifted points that
+were below his dashed baseline upwards. His plot has only 4 points in
+2022 and 2023 that are below his dashed baseline, but my plot has 12
 points.</p>
+<p>Ethical Skeptic's blue line is also slightly higher than my black
+line from 2020 onwards. I took data for 2014-2019 from the same CDC
+dataset that ES uses in his plots.
+[<a href=https://data.cdc.gov/National-Center-for-Health-Statistics/Weekly-Counts-of-Deaths-by-State-and-Select-Causes/3yf8-kanr>https://data.cdc.gov/National-Center-for-Health-Statistics/Weekly-Counts-of-Deaths-by-State-and-Select-Causes/3yf8-kanr</a>]
+I took data from 2020 onwards from CDC WONDER, but I can't think of any
+explanation for why my number of deaths from CDC WONDER would be
+slightly lower than Ethical Skeptic's number of deaths, because I just
+did a simple query for weekly deaths with underlying cause malignant
+neoplasms (C00-C97). So ES might have manually applied a slight upwards
+adjustment to all weeks in 2020-2023.</p>
 <script>
 document.querySelectorAll('pre').forEach(e=>e.innerHTML=e.innerHTML.replace(/((^| )# [^\n]*|^#$)/mg,"<span class=comment>$1</span>"))
 

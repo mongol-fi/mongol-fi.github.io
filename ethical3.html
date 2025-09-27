@@ -12,8 +12,8 @@ ul ul,ul ol,ol ol,ol ul{margin-top:0;margin-bottom:0}
 div:has(img){width:fit-content;margin:0 auto}
 h1,h2,h3,h2 a,h3 a,h2 a:visited,h3 a:visited{color:white;font-weight:normal}
 h1{font-size:2.1em;margin-top:.7em;text-align:center}
-h2{font-size:1.7em;text-align:center}
-h3{font-size:1.3em;text-align:center}
+h2{font-size:1.75em;text-align:center}
+h3{font-size:1.35em;text-align:center}
 blockquote h2,blockquote h3{margin:.5em 0}
 blockquote ul,blockquote ol{margin:.4em 0}
 a,a .quote{color:hsl(220,100%,75%)}
@@ -86,7 +86,7 @@ blockquote h3{color:inherit}
 <li><a href="#Failed_attempt_to_reproduce_exponential_baseline">Failed attempt to reproduce exponential baseline</a></li>
 <li><a href="#New_version_of_plot_with_only_53_5_excess_deaths">New version of plot with only 53.5% excess deaths</a></li>
 <li><a href="#Spreadsheet_with_3_02_annual_decrease_in_infant_mortality">Spreadsheet with 3.02% annual decrease in infant mortality</a></li>
-<li><a href="#Does_a_downturn_in_birth_rate_justify_the_steep_legacy_trend">Does a downturn in birth rate justify the steep legacy trend?</a></li>
+<li><a href="#Is_the_steep_legacy_trend_justified_by_a_downturn_in_births">Is the steep legacy trend justified by a downturn in births?</a></li>
 </ul>
 
 
@@ -886,15 +886,20 @@ ggsave(&quot;1.png&quot;,width=5,height=3.8,dpi=300*4)</pre>
 <a href=#Did_ES_use_a_2018_2019_or_2018_2020_baseline id=Did_ES_use_a_2018_2019_or_2018_2020_baseline>Did
 ES use a 2018-2019 or 2018-2020 baseline?</a>
 </h2>
-<p>In this tweet ES wrote that the baseline in his vaccinial plot was
-fitted against week 1 of 2018 to week 50 of 2019:
+<p>The title of the plot that shows excess deaths in ages 0-4 says <span
+class="quote">"Mortality Deviation From 2018/19 Trend"</span>:</p>
+<div>
+<img src=i/ethical-vaccinial-updated-title.png width=700>
+</div>
+<p>In this tweet ES wrote that the baseline in his plot was fitted
+against week 1 of 2018 to week 50 of 2019:
 [<a href=https://x.com/EthicalSkeptic/status/1950916264928358512>https://x.com/EthicalSkeptic/status/1950916264928358512</a>]</p>
 <div>
 <img src=i/ethical-vaccinial-5.png width=550>
 </div>
 <p>The methodology image in his blog post also says that <span
 class="quote">"Legacy years 2018-2019 serve as stable pre-Covid
-benchmarks, contrasted with 2023-2024 outcomes"</span>:
+benchmarks"</span>:
 [<a href=https://theethicalskeptic.com/wp-content/uploads/2025/08/Methods-and-Data-Considerations.png>https://theethicalskeptic.com/wp-content/uploads/2025/08/Methods-and-Data-Considerations.png</a>]</p>
 <div>
 <img src=i/ethical-vaccinial-method.png width=650>
@@ -904,7 +909,7 @@ that his <span class="quote">"analysis does not rely solely upon 2018/19
 as is claimed by dishonest parties"</span>. I don't know if he referred
 only to the plot below, where the <span class="quote">"legacy
 trend"</span> appears to approximate the trend in 2018 to 2020, or if he
-also referred to the plot that showed the weekly excess deaths. By <span
+also referred to the plot for the excess deaths. By <span
 class="quote">"dishonest parties"</span> he might have referred to me,
 but I never claimed that the plot below had a 2018-2019 baseline, but
 only that the plot for excess deaths was supposed to have a 2018-2019
@@ -936,7 +941,7 @@ supposed to not have applied PFE adjustment in the plot:
 <div>
 <img src=i/ethical-054-2025-3.png width=600>
 </div>
-<p>The baseline in the plot above has a similar step pattern as the
+<p>The baseline in the plot above also has a similar step pattern as the
 baseline in the vaccinial plot, where there's a sudden drop in the
 baseline between late 2023 and early 2024, and between late 2024 and
 early 2025.</p>
@@ -2828,16 +2833,28 @@ weekly[53]=mean(weekly[c(1,52)])
 slope=coef(lm(dead~year,base[year&lt;2020]))[&quot;year&quot;]
 
 # annual growth rate relative to average deaths in 2018-2019 (about -0.0295 or -3%)
-# I don&#39;t know how ES actually converted the slope to an annual growth rate
 growthrate=slope/base[year&lt;2020,mean(dead)]
 
 # get exponential baseline adjusted for seasonal variation
 t[,baseline:=weekly[week]*(1+growthrate)^(year-2018.5)]</pre>
-<p>However I was still not successful in reproducing his baseline,
-because I only got about 26% excess deaths on weeks 14-20 of 2025, and
-not 77%:</p>
+<p>If you do a linear regression of weekly deaths in 2018-2019 against a
+year variable, where there's 52 weeks with the year 2018 and 52 weeks
+with the year 2019, it's equivalent to doing a linear regression of
+average weekly deaths in 2018 and average weekly deaths in 2019, which
+is equivalent to simply subtracting the average deaths in 2018 from the
+average deaths in 2019:</p>
+<pre>t=fread(&quot;https://sars2.net/f/wondervaccinial0to4.csv&quot;)
+coef(lm(dead~year,t[year&lt;2020]))[2]
+# -12.42308
+t[,.(dead=mean(dead)),year][year&lt;2020,coef(lm(dead~year))[2]]
+# -12.42308 (same result)
+t[,.(dead=mean(dead)),year][,dead[year==2019]-dead[year==2018]]
+# -12.42308 (same result)</pre>
+<p>However I was still not successful in reproducing Ethical Skeptic's
+baseline, because I only got about 26% excess deaths on weeks 14-20 of
+2025, and not 77%:</p>
 <div>
-<img src=i/ethical-scalloping-fail.png width=650>
+<img src=i/ethical-scalloping-fail.png width=640>
 </div>
 <div class="spoiler">
 <button>
@@ -2938,6 +2955,13 @@ where he described his methodology:
 <div>
 <img src=i/ethical-baseline-method-3.png width=550>
 </div>
+<p>In the first image above, ES wrote that he determined <span
+class="quote">"the first derivative dx/dy slope of 2014 - 2019 records
+for each ICD-10 code"</span>, and then factored <span
+class="quote">"this slope as a percentage of the average 2014 - 2019
+week"</span>. So in my code above I also converted the slope of the
+linear regression to an annual growth percent by dividing the slope with
+the average weekly deaths in the baseline period.</p>
 <p>But anyway, it doesn't make sense to first calculate the slope of a
 linear trend in 2018-2019 but to then project an exponential function
 into the future based on the linear slope. If you do a linear regression
@@ -3289,8 +3313,8 @@ Blue line
 </tr>
 </table>
 <h2>
-<a href=#Does_a_downturn_in_birth_rate_justify_the_steep_legacy_trend id=Does_a_downturn_in_birth_rate_justify_the_steep_legacy_trend>Does
-a downturn in birth rate justify the steep legacy trend?</a>
+<a href=#Is_the_steep_legacy_trend_justified_by_a_downturn_in_births id=Is_the_steep_legacy_trend_justified_by_a_downturn_in_births>Is
+the steep legacy trend justified by a downturn in births?</a>
 </h2>
 <p>Ethical Skeptic posted the plots below and wrote: <span
 class="quote">"You completely ignored the 2017 downturn in birth rate
