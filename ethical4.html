@@ -95,34 +95,36 @@ to click on each point manually to extract the data correctly:
 <div>
 <img src=i/ethical-englandincidence-11.png width=700>
 </div>
-<p>I tried to replicate Ethical Skeptic's methodology, so I used his
-circuitious method of calculating the number of people aged 65 and above
-by multiplying the yearly population estimates of England with the
-proportion of people aged 65 and above. I took yearly population
-estimates from the Statista page titled <span class="quote">"Population
+<p>ES seems to have calculated the number of people aged 65 and above
+through a circuitious method of multiplying yearly population estimates
+of England with the yearly proportion of people aged 65 and above:</p>
+<div>
+<img src=i/ethical-englandincidence-15.png width=600>
+</div>
+<p>I tried to replicate his methodology, so I took yearly population
+estimates from a page at Statista titled <span class="quote">"Population
 of England from 1971 to 2023"</span>:
 <a href=https://www.statista.com/statistics/975956/population-of-england/.><a
 href="https://www.statista.com/statistics/975956/population-of-england/"
 class="uri">https://www.statista.com/statistics/975956/population-of-england/</a>.</a>
 I used 2023 estimates for 2024 and 2025, but I'm not sure if for example
 ES used a linear projection of the 2022 and 2023 population sizes as the
-population for 2024. I multiplied the population estimates by the
+population size for 2024. I multiplied the population estimates by the
 proportion of people aged 65 and above in England from here (where I
 used the 2024 proportion for 2025):
 <a href=https://www.ons.gov.uk/explore-local-statistics/indicators/percentage-of-the-population-aged-65-plus>https://www.ons.gov.uk/explore-local-statistics/indicators/percentage-of-the-population-aged-65-plus</a>
 (<span class="quote">"Line chart &gt; Change areas &gt; Other areas &gt;
 All countries &gt; England &gt; Download line chart data
 (CSV)"</span>).</p>
-<p>The result I got by emulating Ethical Skeptic's methodology was close
-to the yearly population estimate of ages 65+ returned by Nomis, apart
-from the years 2023 and 2024:
+<p>The result I got was close to the yearly population estimate of ages
+65+ returned by Nomis, apart from the years 2023 and 2024:
 [<a href=https://www.nomisweb.co.uk/datasets/pestsyoala>https://www.nomisweb.co.uk/datasets/pestsyoala</a>]</p>
 <div>
 <img src=i/ethical-englandincidence-5.png width=550>
 </div>
 <p>Then in order to calculate the yellow line in the next plot, I
-multiplied the rate I digitized from Ethical Skeptic's plot by the
-yearly number of people aged 65 and above, and I divided the result by
+multiplied the monthly rates in Ethical Skeptic's plot by the yearly
+number of people aged 65 and above, and I divided the result by
 100,000.</p>
 <p>I downloaded the rapid cancer registration data from here:
 <a href=https://nhsd-ndrs.shinyapps.io/rcrd/.><a
@@ -234,10 +236,10 @@ horizontally:</p>
 of months that had irregular horizontal spacing. It's also weird how
 there's several segments of months in 2019 and 2020 that look almost
 like straight lines, but there are sudden discontinuities in slope
-before or after the lines, which are anomalous for a moving average. In
+before or after the lines, which is anomalous for a moving average. In
 the real data there are only two clear discontinuities in the slope,
 which are between March and April of 2020 because the incidence dropped
-dramatically in April, and between September and October 2020 because
+dramatically in April, and between September and October of 2020 because
 April 2020 fell out of the window of the moving average:</p>
 <div>
 <img src=i/ethical-englandincidence-13.png width=700>
@@ -291,66 +293,6 @@ theme(axis.text=element_text(size=9,color=&quot;black&quot;,lineheight=.8),
   plot.background=element_rect(fill=&quot;transparent&quot;,color=NA),
   plot.title=element_text(size=11,hjust=.5))
 ggsave(&quot;1.png&quot;,width=6,height=3,dpi=300*4)</pre>
-</div>
-<p>In the next plot I calculated age-standardize incidence rates by
-downloading age-stratified from here under <span
-class="quote">"Demographic factors &gt; Downloads &gt; Download time
-trend data for all cancer groups and demographic factors"</span>:
-<a href=https://nhsd-ndrs.shinyapps.io/rcrd/.><a
-href="https://nhsd-ndrs.shinyapps.io/rcrd/"
-class="uri">https://nhsd-ndrs.shinyapps.io/rcrd/</a>.</a> I took yearly
-population estimates by age from Nomis.
-[<a href=https://www.nomisweb.co.uk/datasets/pestsyoala>https://www.nomisweb.co.uk/datasets/pestsyoala</a>]
-The age-standardized incidence increased by about 6% between 2021 and
-2024, but it's partially because the number of diagnoses was lower than
-usual in early 2021, and if you compare 2024 to 2022 instead of 2021,
-then the incidence increased by only about 3%:</p>
-<div>
-<img src=i/ethical-englandincidence-9.png width=570>
-</div>
-<div class="spoiler">
-<button>
-Show code
-</button>
-<pre>t=r(&quot;Incidence_Treatment_statistics_England.csv.gz&quot;)
-t=t[`Cancer group`==&quot;All sites combined&quot;]
-t=t[Metric==&quot;New cancer diagnoses (working day adjusted)&quot;]
-t=t[Breakdown==&quot;Age-group&quot;]
-t[,age:=as.integer(sub(&quot;\\D.*&quot;,&quot;&quot;,Demographic))]
-t=t[,.(year=Year,month=match(Month,month.name),diagnoses=Statistic,age)]
-
-pop=fread(&quot;https://sars2.net/f/englandpop.csv&quot;)
-ages=c(0,5:8*10)
-pop=pop[,.(pop=sum(pop)),.(year,age=ages[findInterval(age,ages)])]
-pop=rbind(pop,pop[year==2024][,year:=2025])
-t=merge(t,pop)
-t=merge(pop[year==2020,.(age,std=pop/sum(pop))],t)
-
-p=t[,.(y=sum(diagnoses/pop*std*1e5)),.(x=as.Date(paste(year,month,16,sep=&quot;-&quot;)))]
-
-xstart=as.Date(&quot;2018-1-1&quot;);xend=as.Date(&quot;2025-7-1&quot;);xbreak=seq(xstart+182,as.Date(&quot;2025-1-1&quot;),&quot;year&quot;)
-ybreak=pretty(c(0,p$y));ystart=0;yend=max(p$y*1.03)
-
-ggplot(p)+
-geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray90&quot;,linewidth=.4)+
-annotate(&quot;rect&quot;,xmin=xstart,xmax=xend,ymin=ystart,ymax=yend,linewidth=.4,lineend=&quot;square&quot;,linejoin=&quot;mitre&quot;,fill=NA,color=&quot;gray75&quot;)+
-geom_point(aes(x,y),size=1.3,stroke=0)+
-geom_line(aes(x,y),linewidth=.6)+
-labs(x=NULL,y=NULL,title=&quot;Age-adjusted rate of monthly new cancer diagnoses per\n100,000 people in England rapid registration data&quot;)+
-scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=year(xbreak))+
-scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
-scale_color_manual(values=c(hsv(0,.7,1),&quot;black&quot;))+
-coord_cartesian(clip=&quot;off&quot;,expand=F)+
-guides(color=guide_legend(ncol=1,byrow=F))+
-theme(axis.text=element_text(size=11,color=&quot;gray40&quot;),
-  axis.text.y=element_text(margin=margin(,1)),
-  axis.ticks=element_line(linewidth=.4,color=&quot;gray75&quot;),
-  axis.ticks.length=unit(0,&quot;pt&quot;),
-  axis.ticks.length.y=unit(4,&quot;pt&quot;),
-  panel.background=element_blank(),
-  plot.subtitle=element_text(hjust=.5,margin=margin(,,4)),
-  plot.title=element_text(size=11,hjust=.5,face=2,margin=margin(,,4)))
-ggsave(&quot;1.png&quot;,width=5.2,height=3,dpi=300*4)</pre>
 </div>
 <p>The next plot also shows how the difference between the pre-2020 and
 post-2020 slopes is greatly exaggerated by Ethical Skeptic's fake
@@ -422,6 +364,68 @@ theme(axis.text=element_text(size=11,color=&quot;gray40&quot;),
   strip.background=element_rect(fill=&quot;gray90&quot;,color=&quot;gray75&quot;,linewidth=.4),
   strip.text=element_text(size=11,margin=margin(3,,3)))
 ggsave(&quot;1.png&quot;,width=5,height=4,dpi=300*4)</pre>
+</div>
+<p>In the next plot I calculated age-standardized incidence rates by
+downloading age-stratified from here under <span
+class="quote">"Demographic factors &gt; Downloads &gt; Download time
+trend data for all cancer groups and demographic factors"</span>:
+<a href=https://nhsd-ndrs.shinyapps.io/rcrd/.><a
+href="https://nhsd-ndrs.shinyapps.io/rcrd/"
+class="uri">https://nhsd-ndrs.shinyapps.io/rcrd/</a>.</a> I took yearly
+population estimates by age from Nomis:
+<a href=https://www.nomisweb.co.uk/datasets/pestsyoala.><a
+href="https://www.nomisweb.co.uk/datasets/pestsyoala"
+class="uri">https://www.nomisweb.co.uk/datasets/pestsyoala</a>.</a> The
+age-standardized incidence increased by about 6% between 2021 and 2024,
+but it's partially because the number of diagnoses was lower than usual
+in early 2021, and if you compare 2024 to 2022 instead of 2021, then the
+incidence increased by only about 3%:</p>
+<div>
+<img src=i/ethical-englandincidence-9.png width=570>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>t=r(&quot;Incidence_Treatment_statistics_England.csv.gz&quot;)
+t=t[`Cancer group`==&quot;All sites combined&quot;]
+t=t[Metric==&quot;New cancer diagnoses (working day adjusted)&quot;]
+t=t[Breakdown==&quot;Age-group&quot;]
+t[,age:=as.integer(sub(&quot;\\D.*&quot;,&quot;&quot;,Demographic))]
+t=t[,.(year=Year,month=match(Month,month.name),diagnoses=Statistic,age)]
+
+pop=fread(&quot;https://sars2.net/f/englandpop.csv&quot;)
+ages=c(0,5:8*10)
+pop=pop[,.(pop=sum(pop)),.(year,age=ages[findInterval(age,ages)])]
+pop=rbind(pop,pop[year==2024][,year:=2025])
+t=merge(t,pop)
+t=merge(pop[year==2020,.(age,std=pop/sum(pop))],t)
+
+p=t[,.(y=sum(diagnoses/pop*std*1e5)),.(x=as.Date(paste(year,month,16,sep=&quot;-&quot;)))]
+
+xstart=as.Date(&quot;2018-1-1&quot;);xend=as.Date(&quot;2025-7-1&quot;);xbreak=seq(xstart+182,as.Date(&quot;2025-1-1&quot;),&quot;year&quot;)
+ybreak=pretty(c(0,p$y));ystart=0;yend=max(p$y*1.03)
+
+ggplot(p)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray90&quot;,linewidth=.4)+
+annotate(&quot;rect&quot;,xmin=xstart,xmax=xend,ymin=ystart,ymax=yend,linewidth=.4,lineend=&quot;square&quot;,linejoin=&quot;mitre&quot;,fill=NA,color=&quot;gray75&quot;)+
+geom_point(aes(x,y),size=1.3,stroke=0)+
+geom_line(aes(x,y),linewidth=.6)+
+labs(x=NULL,y=NULL,title=&quot;Age-adjusted rate of monthly new cancer diagnoses per\n100,000 people in England rapid registration data&quot;)+
+scale_x_continuous(limits=c(xstart,xend),breaks=xbreak,labels=year(xbreak))+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
+scale_color_manual(values=c(hsv(0,.7,1),&quot;black&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(color=guide_legend(ncol=1,byrow=F))+
+theme(axis.text=element_text(size=11,color=&quot;gray40&quot;),
+  axis.text.y=element_text(margin=margin(,1)),
+  axis.ticks=element_line(linewidth=.4,color=&quot;gray75&quot;),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(4,&quot;pt&quot;),
+  panel.background=element_blank(),
+  plot.subtitle=element_text(hjust=.5,margin=margin(,,4)),
+  plot.title=element_text(size=11,hjust=.5,face=2,margin=margin(,,4)))
+ggsave(&quot;1.png&quot;,width=5.2,height=3,dpi=300*4)</pre>
 </div>
 <p>Yearly cancer incidence data is available from the NHS publication
 <span class="quote">"Cancer Registration Statistics, England,
