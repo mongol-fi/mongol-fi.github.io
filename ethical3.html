@@ -120,7 +120,7 @@ correction"</span>.</li>
 <li>Under <span class="quote">"Mask"</span>, select the <span
 class="quote">"Pen"</span> tool and highlight the area of the blue line,
 and select the <span class="quote">"Erase"</span> tool and erase the
-area of other lines.</li>
+area of the other lines.</li>
 <li>Select the color of the blue line from the color picker in the
 sidebar.</li>
 <li>Change <span class="quote">"Algorithm"</span> to <span
@@ -218,12 +218,12 @@ theme(axis.text=element_text(size=11,color=&quot;gray40&quot;),
   strip.text=element_blank())
 ggsave(&quot;1.png&quot;,width=5.6,height=4.8,dpi=300*4)</pre>
 </div>
-<p>In the next plot I converted Ethical Skeptic's baseline to yearly
-data by taking the average baseline value on each MMWR year, dividing it
-by 7, and multiplying it by the number of days in the year. It shows
-even more clearly how his baseline matched the pre-COVID trend between
-2018 and 2019, but his baseline took an unrealistic dive downwards after
-2019:</p>
+<p>In the next plot I converted Ethical Skeptic's baseline from weekly
+to yearly deaths. I took the average baseline value on each MMWR year,
+divided it by 7, and multiplied it by the number of days in the year.
+Now you can see even more clearly how his baseline matched the pre-COVID
+trend between 2018 and 2019, but his baseline took an unrealistic dive
+downwards after 2019:</p>
 <div>
 <img src=i/ethical-vaccinial-yearly-0to4.png width=520>
 </div>
@@ -2814,8 +2814,8 @@ methodology was different from the image above.</p>
 <pre># get weekly deaths in ages 0-4 with the underlying cause A-R or 999--999
 t=fread(&quot;https://sars2.net/f/wondervaccinial0to4.csv&quot;)
 
-# moving average that extends up to 3 weeks backwards and up to 2 weeks forwards
-# this extends zero weeks backwards on the first week
+# moving average where the window extends up to 3 weeks backwards and up to 2 weeks forwards
+# the window extends zero weeks backwards on the first week
 ma=\(x,b=1,f=b)rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T)
 t[,dead:=ma(dead,3,2)]
 
@@ -2828,11 +2828,11 @@ base=t[year&lt;2020&amp;!(year==2019&amp;week&gt;45)]
 weekly=base[,tapply(dead,week,mean)]
 weekly[53]=mean(weekly[c(1,52)])
 
-# annual change in number of deaths (about -12.3)
+# get change in weekly average number of deaths between 2018 and 2019 (about -12.3)
 # this is similar to the SLOPE function in Excel which was probably used by ES
 slope=coef(lm(dead~year,base[year&lt;2020]))[2]
 
-# annual growth rate relative to average deaths in 2018-2019 (about -0.0295 or -3%)
+# get annual growth rate relative to average weekly deaths in 2018-2019 (about -0.0295 or -3%)
 growthrate=slope/base[year&lt;2020,mean(dead)]
 
 # get final baseline
@@ -2845,11 +2845,11 @@ weekly deaths, which is equivalent to simply subtracting the average
 deaths in 2018 from the average deaths in 2019:</p>
 <pre>t=fread(&quot;https://sars2.net/f/wondervaccinial0to4.csv&quot;)
 
-# linear regression of weekly deaths against year variable
+# linear regression of weekly deaths against a year variable
 coef(lm(dead~year,t[year&lt;2020]))[2]
 # -12.42308
 
-# linear regression of yearly average deaths against year variable
+# linear regression of yearly average deaths against a year variable
 t[,.(dead=mean(dead)),year][year&lt;2020,coef(lm(dead~year))[2]]
 # -12.42308
 
@@ -2860,16 +2860,18 @@ t[,.(dead=mean(dead)),year][,dead[year==2019]-dead[year==2018]]
 regression to an annual growth percent, but then I noticed that in
 another image where he described his methodology, he wrote that he first
 determined <span class="quote">"the first derivative dx/dy slope of 2014
-- 2019 records for each ICD-10 code"</span>, and then he factored <span
-class="quote">"this slope as a percentage of the average 2014 - 2019
+- 2019 records for each ICD-10 code"</span>, and then he factored the
+<span class="quote">"slope as a percentage of the average 2014 - 2019
 week"</span>:
 [<a href=https://theethicalskeptic.com/wp-content/uploads/2025/09/ICD-10-Code-Excess-Death-Derivation-small.jpg>https://theethicalskeptic.com/wp-content/uploads/2025/09/ICD-10-Code-Excess-Death-Derivation-small.jpg</a>]</p>
 <div>
 <img src=i/ethical-baseline-method-2.png width=600>
 </div>
-<p>However I was still not successful in reproducing Ethical Skeptic's
-baseline, because I only got about 26% excess deaths on weeks 14-20 of
-2025, and not 77%:</p>
+<p>So I think I now managed to otherwise reproduce the methodology
+described in his images, except I don't know what set of weeks he
+excluded from the baseline fitting period. But I was still not
+successful in reproducing his baseline, because I only got about 26%
+excess deaths on weeks 14-20 of 2025, and not 77%:</p>
 <div>
 <img src=i/ethical-scalloping-fail.png width=640>
 </div>
@@ -2940,12 +2942,13 @@ theme(axis.text=element_text(size=11,color=&quot;gray40&quot;),
   strip.text=element_blank())
 ggsave(&quot;1.png&quot;,width=5.9,height=4.2,dpi=300*4)</pre>
 </div>
-<p>There's no way you can get a curve with Ethical Skeptic's formula
-that decreases more between 2019 and 2020 than between 2018 and 2019,
-like the baseline in his vaccinial plot. If you give a negative growth
-rate to his formula <code>(1+growthrate)^(year-2018.5)</code>, you
-always get a concave curve where the absolute year-to-year decrease gets
-smaller over time:</p>
+<p>And anyway, there's no way you can get a baseline with Ethical
+Skeptic's formula that decreases more between 2019 and 2020 than between
+2018 and 2019, like the baseline in his plot for excess deaths in ages
+0-4. If you give a negative growth rate to his formula
+<code>(1+growthrate)^(year-2018.5)</code>, you always get a concave
+curve where the absolute year-to-year decrease gets smaller over
+time:</p>
 <pre>d=CJ(year=2018:2025)
 growthrate=-.03 # 3% annual decrease
 d[,multiplier:=(1+growthrate)^(year-2018.5)]
@@ -2960,13 +2963,11 @@ round(d,4)
 # 2023     0.8719 -0.0270
 # 2024     0.8458 -0.0262
 # 2025     0.8204 -0.0254</pre>
-<p>And anyway, it doesn't make sense to first calculate the slope of a
-linear trend in 2018-2019 but to then project an exponential function
-into the future based on the linear slope. If you do a linear regression
-against an exponential function, there are many different kinds of
-exponential functions that will produce the same linear slope. You can't
-even tell from the linear slope if the exponential function has a convex
-or concave curve.</p>
+<p>So that's yet another way I can tell that ES falsified his baseline,
+and he didn't actually employ the methodology he described in his image.
+Or it's possible that he initially employed the methodology he
+described, but then he applied an additional downward adjustment to the
+baseline that he didn't document anywhere.</p>
 <h2>
 <a href=#New_version_of_plot_with_only_53_5_excess_deaths id=New_version_of_plot_with_only_53_5_excess_deaths>New
 version of plot with only 53.5% excess deaths</a>
@@ -3013,12 +3014,19 @@ post to add this screenshot of his spreadsheet:
 <div>
 <img src=i/ethical-spreadsheet.png width=1400>
 </div>
-<p>His spreadsheet is missing the most crucial data, because it doesn't
-show how he calculated his baseline, and it doesn't even show what the
-weekly number of baseline deaths was. It doesn't even show how he
-calculated the lines for his legacy trend and emergent trend, because he
-probably just drew the lines by hand in Excel.</p>
-<p>He now also added new blue and orange trend lines to this plot for
+<p>His spreadsheet is missing the most crucial piece of information,
+which is how he calculated the baseline, and his spreadsheet doesn't
+even have a column for his weekly baseline deaths. I think ES knows
+himself that he falsified his baseline, so he cannot document the exact
+steps he followed to determine the baseline, because then he would also
+have to document the steps he took to falsify the baseline.</p>
+<p>His spreadsheet doesn't even show how he determined the lines of his
+legacy trend and emergent trend. He probably just drew the lines by hand
+in Excel, because for example the starting point of the legacy trend is
+slightly before the first week of 2018, but if he would've calculated
+the line by doing a real regression of the numeric data, you'd expect
+the line to start exactly on the first week of 2018.</p>
+<p>ES now also added new blue and orange trend lines to this plot for
 infant mortality, but he seems to have drawn the lines by hand, because
 their starting and ending points don't match the years on the x-axis,
 and the percentages he added next to the lines don't match the actual
@@ -3029,28 +3037,30 @@ slope of the lines:</p>
 <p>The blue line is supposed to represent an annual decrease of about
 4.34%. But the blue line decreased from about 6.29 in 2015 to 5.08 in
 2022, so it's an annual decrease of only about 2.8% if you divide the
-total decrease with the number of years: <code>(1-5.07/6.29)/7</code>.
-The formula for a compound annual growth rate gives an annual decrease
-of about 3.0%: <code>(5.07/6.29)^(1/7)-1</code>.</p>
+total decrease rate with the number of years:
+<code>(1-5.07/6.29)/7</code>. Or the formula for a compound annual
+growth rate gives an annual decrease of about 3.0%:
+<code>(5.07/6.29)^(1/7)-1</code>.</p>
 <p>I guess the 4.34% annual decrease is supposed to represent the slope
 of his <span class="quote">"legacy trend"</span>, which decreases from
 about 431 on week 1 of 2018 to 312 on week 1 of 2025, so it's an
-approximately 3.9% decrease if you divide the total decrease by the
+approximately 3.9% decrease if you divide the total decrease rate by the
 number of years, or an approximately 4.5% decrease if you use the
 formula for CAGR.</p>
-<p>So even though the blue line in the spreadsheet is clearly too steep,
-the legacy trend is even steeper, which shows how the legacy trend
-exaggerates the rate of decline before COVID. And ES falsely portrays
-the blue line as representing a 4.34% decrease.</p>
+<p>So even though the blue line in the spreadsheet is clearly too steep
+relative to the real pre-COVID trend, the legacy trend is even steeper,
+which shows how the legacy trend exaggerates the rate of decline before
+COVID. And ES falsely portrays the blue line as representing a 4.34%
+decrease.</p>
 <p>The orange line is supposed to decrease by 3.02% per year, but
 actually it decreases from about 7.04 in 2004 to 5.27 in 2022, which is
-about 1.4% per year if you divide the total decrease with the number of
-years: <code>(1-5.27/7.04)/18</code>. Or it's about 1.6% with CAGR:
-<code>(5.27/7.04)^(1/18)-1</code>.</p>
-<p>And even the orange line is more steep than the real 2004-2019 linear
+about 1.4% per year if you divide the total decrease rate with the
+number of years: <code>(1-5.27/7.04)/18</code>. Or it's about 1.6% with
+CAGR: <code>(5.27/7.04)^(1/18)-1</code>.</p>
+<p>And even the orange line is steeper than the real 2004-2019 linear
 trend in the CDC data, where you get a decrease of only about 1.3% per
-year if you divide the total decrease between 2004 and 2022 with the
-number of years from 2004 to 2022:</p>
+year if you divide the total decrease rate between 2004 and 2022 with
+the number of years from 2004 to 2022:</p>
 <pre># from cdc.gov/nchs/data/nvsr/nvsr74/nvsr74-07.pdf#page=8
 d=CJ(year=1995:2023)
 d$rate=c(757,730,721,719,704,689,684,695,684,678,686,668,675,661,639,614,607,598,596,582,590,587,579,567,558,542,544,561,561)/100
@@ -3061,12 +3071,12 @@ d[,(1-trend[year==2022]/trend[year==2004])/18]
 <p>The next table shows that the real infant mortality rate in the CDC
 report was about 5.42 in 2020, but for some reason ES came up with his
 own <span class="quote">"normalized"</span> infant mortality rate of
-4.54 for 2020, which he used to derive his unrealistically steep figure
-of a 3.02% annual decline in infant mortality between 2007 and 2020. I
-think ES calculated the figure of 3.02% using the formula for CAGR
-(<code>(4.54/6.75)^(1/13)-1</code>, about 3.00%) or as the difference
-between the start and end divided by the mean of the start and end and
-then divided by the number of years
+4.54 for 2020. He used his normalized rate to derive his unrealistically
+steep figure of a 3.02% annual decline in infant mortality between 2007
+and 2020. I think ES calculated the figure of 3.02% by either using the
+formula for CAGR (<code>(4.54/6.75)^(1/13)-1</code>, about 3.00%), or as
+the difference between the start and end divided by the mean of the
+start and end and then divided by the number of years
 (<code>(6.75-4.54)/((6.75+4.54)/2)/13</code>, about 3.01%). Both of
 those were slightly off from 3.02% when I used rounded numbers, but ES
 may have used unrounded numbers:</p>
@@ -3185,11 +3195,12 @@ Claimed<br>by ES
 Compound annual<br>growth rate:<br>(Y2/Y1)^(1/(X2-X1))-1
 </th>
 <th>
-Total decrease divided<br>by number of years:<br>(Y2/Y1-1)/(X2-X1)
+Total decrease<br>rate divided by<br>number of
+years:<br>(Y2/Y1-1)/(X2-X1)
 </th>
 <th>
-Difference between start and end<br>relative to mean of start and
-end:<br>(Y2-Y1)/mean(Y1,Y2)/(X2-X1)
+Difference between start and end<br>divided by mean of start and
+end<br>divided by number of years:<br>(Y2-Y1)/mean(Y1,Y2)/(X2-X1)
 </th>
 </tr>
 <tr>
@@ -3449,8 +3460,8 @@ ggsave(&quot;1.png&quot;,width=4.5,height=4.4,dpi=300*4)</pre>
 births, infant mortality rate or age-standardized fertility rate, in the
 plot above the pre-COVID trend is not as steep as a 2018-2020 trend,
 because there was an unusually low number of both births and infant
-deaths in 2020. So 2020 should not be included in the pre-COVID baseline
-fitting period.</p>
+deaths in 2020. So 2020 should not be included in the fitting period of
+the baseline.</p>
 <script>
 document.querySelectorAll('pre').forEach(e=>e.innerHTML=e.innerHTML.replace(/((^| )# [^\n]*|^#$)/mg,"<span class=comment>$1</span>"))
 
