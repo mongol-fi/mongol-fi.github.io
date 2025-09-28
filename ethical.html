@@ -1053,28 +1053,59 @@ $ egrep &#39;I4[5-9]|I5[01]|R0[01]|R09[28]|R9[69]|X44&#39; temp|egrep -v &#39;X4
 <hr />
 <p>Added in September 2025: Ethical Skeptic has now made a new version
 of his plot, where now as an uncharacteristic upgrade in honesty, he no
-longer excluded drug deaths from the blue line in 2020. However in his
-usual dishonest fashion, he now added a new line for excess mortality
-associated with fentanyl, which intersects zero in 2024, even though
-there were still a lot of extra opioid deaths in 2024 relative to the
-2018-2019 linear trend:
+longer excluded drug deaths from the blue line in 2020, so now the blue
+line followed the same pattern in 2020 as the gray line in earlier
+versions of his plot:
 [<a href=https://x.com/EthicalSkeptic/status/1955732621943824393/photo/1>https://x.com/EthicalSkeptic/status/1955732621943824393/photo/1</a>]</p>
 <div>
 <img src=i/ethical-sudden-cardiac-new.png width=800>
 </div>
-<p>His line for excess deaths associated with COVID is also much lower
-during the Delta wave than in 2020, even though ages 5-54 had a huge
-number of COVID deaths during the Delta wave. His plot doesn't say
-anywhere that COVID deaths would be excluded. The plot looks like it
-includes COVID deaths during the COVID waves in spring 2020 and summer
-2020, but there is almost no increase in deaths during the Delta wave.
-In the next plot if you compare the shape of the three lines in 2020,
-Ethical Skeptic's blue line looks similar to my black line where I
-didn't exclude COVID deaths. But in 2021 the shape of his blue line is
-more similar to my gray line where I excluded COVID deaths. So I don't
-know if he excluded COVID deaths from 2021 but not 2020. But in that
-case I think his blue line should've also been lower in 2021 than 2020,
-like how my gray line in 2021 is lower than my black line in 2020:</p>
+<p>However he compensated for his single honest change by making several
+dishonest changes:</p>
+<ol type="1">
+<li>He removed the line at the bottom of the plot which said that he
+included X44 drug deaths in his query, even though the shape of his blue
+line remained similar to the earlier versions of the plot which included
+X44 deaths, and I came much closer to reproducing his plot when I
+included X44 deaths in my query.</li>
+<li>He removed the <span class="quote">"Unknown Drug"</span> part from
+the line below the title that says <span class="quote">"Sudden Cardiac
+Death/Myocarditis-Unknown Drug"</span>.</li>
+<li>He removed the text that said <span class="quote">"with Covid and
+Lockdown Impact removed"</span>, even though he still excluded deaths
+with MCD COVID from his plot. (Even though even in the earlier version,
+it was ambiguous if the text meant that the impact of COVID was only
+removed from 2020, or if the text meant that deaths with MCD COVID were
+excluded throughout the plot.)</li>
+<li>He added a diagonal line that is meant to indicate the level of
+excess mortality associated with fentanyl, which intersects zero in
+2024, even though there were still a lot of extra opioid deaths in 2024
+relative to the 2018-2019 linear trend.</li>
+<li>He added a diagonal line to the plot that is meant to show excess
+deaths associated with COVID, but it's much lower during the Delta wave
+than in 2020, even though ages 5-54 had a huge number of COVID deaths
+during the Delta wave.</li>
+<li>He changed the text that said <span class="quote">"-2.85% Trend
+Growth"</span> in the earlier version of his plot to say <span
+class="quote">"-3.36% Trend Growth"</span>, even though the only part of
+his query he seems to have changed between the plots is that he excluded
+ages 0-4 from the new version, which shouldn't affect the slope by that
+much. I believe he artificially made the slope steeper so he could
+exaggerate the excess deaths in 2023 and 2024, because most excess
+deaths in his plot are due to drug overdoses, but the United States had
+a big reduction in drug overdose deaths starting from 2023.</li>
+<li>Even beyond the exaggerated slope of his baseline, he seems to have
+applied an additional upward shift to his excess deaths in 2024. Judging
+from how his line looks smoother in 2024 than earlier years, he seems to
+have outright inserted fake data for 2024.</li>
+</ol>
+<p>Out of the four lines I added in the next plot, I came the closest to
+reproducing Ethical Skeptic's plot with my gray line, where my list of
+ICD codes included X44 (<span class="quote">"Accidental poisoning by and
+unspecified drugs, medicaments and biological substances"</span>), and
+where I excluded deaths that had MCD COVID. But Ethical Skeptic's plot
+doesn't mention anywhere that X44 deaths would be included or COVID
+deaths would be excluded:</p>
 <div>
 <img src=i/ethical-heartdrug5to54.png width=800>
 </div>
@@ -1085,47 +1116,53 @@ Show code
 <pre>ma=\(x,b=1,f=b)rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T)
 
 t=fread(&quot;https://sars2.net/f/wonderheartdrug5to54.csv&quot;)
-d=dcast(t,year+week~type,value.var=&quot;dead&quot;)
-d=d[,.(year,week,dead=ma(all,3,2),notcovid=ma(all-nafill(andcovid,,0),3,2))]
+t[,dead:=as.double(dead)][,dead:=ma(dead,3,2),.(withx44,covidsubtracted)]
 
-base=d[year&lt;2020]
-weekly=base[,tapply(dead,week,mean)]
-weekly[53]=mean(weekly[c(1,52)])
-slope=coef(lm(dead~year,base[year&lt;2020]))[2]
-growthrate=slope/base[year&lt;2020,mean(dead)]
-# growthrate=-.0336 # force -3.36% annual growth rate
-d=d[,base:=weekly[week]*(1+growthrate)^(year-2018.5)]
+base=t[year&lt;2020&amp;covidsubtracted==F]
+weekly=base[,.(weekly=mean(dead)),.(week,withx44)]
+weekly=rbind(weekly,weekly[week%in%c(1,52),.(week=53,weekly=mean(weekly)),withx44])
+t=merge(t,base[,.(growthrate=coef(lm(dead~year))[2]/mean(dead)),withx44])
+# t=merge(t,base[,.(growthrate=-.0336),withx44]) # force -3.36% growth rate
+t=merge(weekly,t)[,base:=weekly*(1+growthrate)^(year-2018.5)]
 
-d=d[!(year==2025&amp;week&gt;2)]
-p=d[,.(x=MMWRweek::MMWRweek2Date(year,week,7),y=c(c(dead,notcovid)-base),z=rep(1:2,each=.N))]
-p[,z:=factor(z,,c(&quot;MCD COVID not subtracted&quot;,&quot;MCD COVID subtracted&quot;))]
+t=t[!(year==2025&amp;week&gt;2)]
+p=t[,.(x=MMWRweek::MMWRweek2Date(year,week,7),y=dead-base,z=factor(withx44),type=factor(covidsubtracted))]
 
 xstart=as.Date(&quot;2018-1-1&quot;);xend=as.Date(&quot;2025-7-1&quot;);xbreak=seq(xstart,xend,&quot;year&quot;)
-ystart=-200;yend=900;ybreak=seq(ystart,yend,100)
+ystart=-200;yend=max(p$y);ybreak=seq(ystart,yend,100)
+
+anno=data.table(label=strsplit(&quot;Any code on left or X44
+Any code on left or X44 but not COVID
+Any code on left
+Any code on left but not COVID&quot;,&quot;\n&quot;)[[1]])
+anno$color=rep(c(&quot;black&quot;,&quot;#ff6666&quot;),each=2)
 
 ggplot(p)+
-geom_line(aes(x,y,color=z))+
+geom_line(aes(x,y,color=z,alpha=type))+
+annotate(&quot;text&quot;,x=as.Date(&quot;2025-1-1&quot;),y=seq(-280,,-70,4),hjust=1,size=5,label=anno$label,color=anno$color,alpha=rep(c(1,.4),2))+
 labs(x=NULL,y=NULL)+
 scale_x_date(limits=c(xstart,xend),breaks=xbreak)+
-scale_y_continuous(limits=c(ystart,yend),breaks=ybreak)+
-scale_color_manual(values=c(&quot;black&quot;,&quot;gray60&quot;))+
-coord_cartesian(clip=&quot;off&quot;,expand=F)+
+scale_y_continuous(breaks=ybreak)+
+scale_color_manual(values=c(&quot;#ff6666&quot;,&quot;black&quot;))+
+scale_alpha_manual(values=c(1,.4))+
+coord_cartesian(clip=&quot;off&quot;,expand=F,ylim=c(ystart,yend))+
 theme(axis.text=element_blank(),
   axis.ticks=element_line(color=&quot;black&quot;,linewidth=.4),
   axis.ticks.length=unit(4,&quot;pt&quot;),
   legend.position=&quot;none&quot;,
   panel.background=element_blank(),
   panel.grid=element_blank(),
-  plot.background=element_rect(fill=&quot;transparent&quot;,color=NA))
-ggsave(&quot;1.png&quot;,width=9.5,height=4,dpi=300*2)</pre>
+  plot.background=element_rect(fill=&quot;transparent&quot;,color=NA),
+  plot.margin=margin(,,90))
+ggsave(&quot;1.png&quot;,width=9.5,height=6.5,dpi=300*2)</pre>
 </div>
 <p>The text in Ethical Skeptic's plot indicates that his baseline has an
 annual growth rate of -3.36%, but I got an annual growth rate of only
-about -2.7% for my baseline. Part of the difference might be if ES
-excluded some weeks from his baseline fitting period, because I simply
-included all weeks of the MMWR years 2018 and 2019 in my baseline
-fitting period. I calculated my baseline following the methodology ES
-described in this image:
+about -1.3% for my baseline when I included X44 deaths. Part of the
+difference might be if ES excluded some weeks from his baseline fitting
+period, because I simply included all weeks of the MMWR years 2018 and
+2019 in my baseline fitting period. I calculated my baseline following
+the methodology ES described in this image:
 [<a href=https://theethicalskeptic.com/2025/08/19/houston-we-have-another-problem/>https://theethicalskeptic.com/2025/08/19/houston-we-have-another-problem/</a>]</p>
 <div>
 <img src=i/ethical-baseline-method-1.png width=500>
@@ -1133,27 +1170,27 @@ described in this image:
 <p>The SLOPE function in Excel returns the second coefficient of a
 linear regression, like <code>coef(lm(dead~year))[2]</code> in R. If you
 do a linear regression of weekly deaths in 2018-2019 against a year
-variable, where there's 52 weeks where the value of the year variable is
-2018 and 52 weeks where the value of the year variable is 2019, it's
+variable, where there are 52 weeks where the value of the year variable
+is 2018 and 52 weeks where the value of the year variable is 2019, it's
 equivalent to doing a linear regression of yearly averages of weekly
 deaths, which is equivalent to simply subtracting the average deaths in
 2018 from the average deaths in 2019:</p>
 <pre>t=fread(&quot;https://sars2.net/f/wonderheartdrug5to54.csv&quot;)
-
+t=t[withx44==T&amp;covidsubtracted==F]
 ma=\(x,b=1,f=b)rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T)
-t=t[type==&quot;all&quot;][,dead:=ma(dead,3,2)]
+t[,dead:=ma(dead,3,2)]
 
 # linear regression of weekly deaths against a year variable
 coef(lm(dead~year,t[year&lt;2020]))[2]
-# -28.54968
+# -18.67756
 
 # linear regression of yearly average deaths against a year variable
 t[,.(dead=mean(dead)),year][year&lt;2020,coef(lm(dead~year))[2]]
-# -28.54968
+# -18.67756
 
 # average deaths in 2019 minus average deaths in 2018
 t[,.(dead=mean(dead)),year][,dead[year==2019]-dead[year==2018]]
-# -28.54968</pre>
+# -18.67756</pre>
 <p>The image above is missing the step where the slope is converted to
 an annual rate of decline, but I believe ES divides the slope with the
 average weekly deaths in the baseline period:
@@ -1162,27 +1199,20 @@ average weekly deaths in the baseline period:
 <img src=i/ethical-baseline-method-2.png width=650>
 </div>
 <p>So when I divided the slope with the average weekly deaths in
-2018-2019, I got the annual growth rate of about -2.7%:</p>
+2018-2019, I got an annual growth rate of about -1.3%:</p>
 <pre>t[year&lt;2020,coef(lm(dead~year))[2]/mean(dead)]
-# -0.02729459</pre>
+# -0.01335137</pre>
 <p>In the next plot I manually forced the annual growth rate to be
--3.36%, but I still got much lower excess deaths than ES in
-2022-2024:</p>
+-3.36%, so now I got my gray line to match Ethical Skeptic's plot fairly
+closely in 2023. But I still got much lower excess deaths than him in
+2024:</p>
 <div>
 <img src=i/ethical-heartdrug5to54-2.png width=800>
 </div>
-<p>The plot by ES extends up to week 2 of 2025, and the caption says
-that the plot excludes a 29-week 999–999 hold period, so ES probably
-retrieved the data around MMWR week 31 of 2025. I retrieved the data on
-MMWR week 40 of 2025, so during the interval of about 9 weeks after ES
-did his query, a part of the deaths that were previously classified
-under R99 or R96 were assigned a specific cause. But it shouldn't make
-too much difference, and it mostly affects deaths in late 2024.</p>
-<p>The discrepancy between Ethical Skeptic's plot and my plot is so
-massive that ES is likely to have manually falsified his data.</p>
-<p>His line for excess deaths looks more smooth in 2024 than earlier
-years, which might be if he somehow manually faked his data for
-2024:</p>
+<p>Part of the discrepancy might be if ES attempted to impute deaths
+that he estimated to be missing because of a registration delay. But I
+suspect ES simply inserted fake data for 2024, because his line for
+excess deaths looks more smooth in 2024 than earlier years:</p>
 <div>
 <img src=i/ethical-sudden-cardiac-new-smooth.png width=500>
 </div>
