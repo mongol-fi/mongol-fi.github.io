@@ -26,14 +26,15 @@ td,th{border:1px solid #555;padding:1px 3px}
 th{background:#444;text-align:left;font-weight:bold}
 img{max-width:100%;margin:0;vertical-align:middle}
 dt{font-size:1.3em;margin:.4em 0}
-body>blockquote{margin:1em auto;padding-left:45px;width:485px}
-blockquote blockquote{width:calc(100% - 45px);margin-left:45px;box-sizing:border-box}
+body>blockquote{margin:1em auto;padding-left:50px;width:480px}
+blockquote blockquote{width:calc(100% - 50px);margin-left:50px;box-sizing:border-box}
 blockquote>:first-child{margin-top:0}
 blockquote>:last-child{margin-bottom:0}
 blockquote,.quote,blockquote,blockquote{color:hsl(50,100%,85%)}
 blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(45,55%,65%)}
 blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote .quote,.quote .quote .quote{color:hsl(40,40%,50%)}
 blockquote h3{color:inherit}
+blockquote h2,blockquote h3{text-align:left}
 .spoiler{max-width:1100px;margin:0 auto;text-align:center}
 .spoiler button{width:90px;border:0;font-family:inherit;font-size:inherit;color:inherit;background:#4a4a4a;padding:4px 0px;outline:none;cursor:pointer;margin:0 0 -.3em 0}
 .spoiler pre{display:none;margin-top:0;text-align:left}
@@ -4797,7 +4798,9 @@ didn't use fixed cohorts like Kirsch:</p>
 <button>
 Show code
 </button>
-<pre>t=fread(&quot;jp132101_Koganei-Tokyo_all.csv&quot;,fill=T)
+<pre>ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
+
+t=fread(&quot;jp132101_Koganei-Tokyo_all.csv&quot;,fill=T)
 for(i in which(sapply(t,inherits,&quot;IDate&quot;)))t[[i]]=as.Date(t[[i]])
 
 set.seed(0);t$born=as.Date(&quot;2025-5-16&quot;)-years(t$age)-sample(0:364,nrow(t),T)
@@ -4963,6 +4966,190 @@ their lower average age."</span>
 <div>
 <img src=i/statistic-yuukoku-kakeya.png width=500>
 </div>
+<hr />
+<p>Added in October 2025: There's now record-level FOI data for the
+cities of Hamamatsu (about 900,000 people) and Matsudo (about 500,000)
+people.
+[<a href=https://x.com/donkey1399/status/1962650292413178184>https://x.com/donkey1399/status/1962650292413178184</a>,
+<a href=https://covid-vaccine-jp.iwmtyss.com/VRS.zip>https://covid-vaccine-jp.iwmtyss.com/VRS.zip</a>]</p>
+<p>The Hamamatsu data has a bigger sample size than the Koganei data, so
+there's less noise in unvaccinated people, and you can see that the wave
+pattern is more pronounced in unvaccinated people than vaccinated
+people:</p>
+<div>
+<img src=i/statistic-hamamatsu.png width=570>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>system(&quot;wget covid-vaccine-jp.iwmtyss.com/VRS.zip;unzip VRS.zip&quot;)
+
+d21=c(2669,2159,1139,1554,3090,1669,579,1568,1617,471,151,90)
+d22=c(668,6503,4630,1705,1030,566,1941,9293,5216,2319,3977,9787)
+d23=c(12713,4511,1868,1011,986,1154,1878,3852,4049,2496,1628,1934)
+d24=c(3911,4569,3623,2506,1722,1734,3356,4881,3155,1919,1387,3012)
+d25=c(5104,3311)
+dead=CJ(x=seq(as.Date(&quot;2021-1-1&quot;),as.Date(&quot;2025-2-1&quot;),&quot;month&quot;))[,y:=c(d21,d22,d23,d24,d25)]
+
+t=fread(&quot;sed s,NULL,,g VRS/221309_Hamamatsu/公開文書.csv&quot;)
+names(t)=q(person,latesthistory,age,sex,dose,lot,manufacturer,vaxdate,deathdate,deathage,moveindate1,moveoutdate1,moveindate2,moveoutdate2,moveindate3,moveoutdate3,moveindate4,moveoutdate4,moveindate5,moveoutdate5)
+
+s=merge(t,t[!is.na(deathdate),.(died=deathdate,person)])
+
+cutoff=as.Date(&quot;2021-11-01&quot;)
+
+p=s[dose%in%c(&quot;&quot;,&quot;１回目&quot;)&amp;died&gt;=cutoff,.(y=.N),.(x=died,z=dose!=&quot;&quot;&amp;vaxdate&lt;cutoff)]
+p=merge(p[,.(x=seq(min(x),max(x),1),z=c(F,T))],p,all=T)[is.na(y),y:=0]
+p[,y:=cumsum(y),z]
+
+p=rbind(p,p[z==z[1],.(x,y=y*p[x==max(x),y[2]/y[1]],z=2)])
+
+p[,z:=factor(z,2:0,c(&quot;No first dose by cutoff (matched at end)&quot;,&quot;First dose by cutoff&quot;,&quot;No first dose by cutoff&quot;))]
+
+xstart=as.Date(&quot;2021-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;);xbreak=seq(xstart+182,xend,&quot;year&quot;)
+ybreak=pretty(p$y);ystart=0;yend=max(ybreak)
+
+fillab=&quot;Monthly COVID deaths in whole Japan&quot;
+
+ggplot(p)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray90&quot;,linewidth=.4)+
+annotate(&quot;rect&quot;,xmin=xstart,xmax=xend,ymin=ystart,ymax=yend,linewidth=.4,lineend=&quot;square&quot;,linejoin=&quot;mitre&quot;,fill=NA,color=&quot;gray75&quot;)+
+geom_vline(xintercept=cutoff,color=&quot;gray80&quot;,linetype=&quot;42&quot;,linewidth=.4)+
+geom_rect(data=dead,aes(xmin=x,xmax=x%m+%months(1),ymin=0,ymax=y,fill=fillab),color=&quot;gray63&quot;,linewidth=.2)+
+geom_line(aes(x,y,color=z),linewidth=.6)+
+labs(x=NULL,y=NULL,title=&quot;Cumulative deaths in fixed cohorts in Hamamatsu FOI data&quot;)+
+scale_x_date(limits=c(xstart,xend),breaks=xbreak,labels=year(xbreak))+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,labels=kim)+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+scale_color_manual(values=c(hsv(2/3,.4,1),hsv(3:2/3,.8,1)))+
+scale_fill_manual(label=fillab,values=&quot;gray80&quot;)+
+guides(color=guide_legend(order=1),fill=guide_legend(order=2,keyheight=unit(10,&quot;pt&quot;)))+
+theme(axis.text=element_text(size=11,color=&quot;gray40&quot;),
+  axis.text.x=element_text(margin=margin(2)),
+  axis.text.y=element_text(margin=margin(,1)),
+  axis.ticks=element_line(linewidth=.4,color=&quot;gray75&quot;),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(4,&quot;pt&quot;),
+  legend.background=element_rect(color=&quot;gray75&quot;,fill=&quot;white&quot;,linewidth=.4),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.justification=c(0,1),
+  legend.key=element_blank(),
+  legend.key.height=unit(12,&quot;pt&quot;),
+  legend.key.spacing.x=unit(0,&quot;pt&quot;),
+  legend.key.spacing.y=unit(0,&quot;pt&quot;),
+  legend.key.width=unit(24,&quot;pt&quot;),
+  legend.margin=margin(3,5,3,3),
+  legend.position=c(0,1),
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,margin=margin(,,,2)),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  plot.title=element_text(size=11,hjust=.5,face=2,margin=margin(,,4)))
+ggsave(&quot;1.png&quot;,width=5.2,height=2.9,dpi=300*4)
+
+system(&quot;mogrify -trim 1.png;magick 1.png \\( -size `identify -format %w 1.png`x -font Arial -interline-spacing -3 -pointsize $[41*4-2] caption:&#39;The cutoff date was November 1st 2021. Source: covid-vaccine-jp.iwmtyss.com/VRS.zip and e-stat.go.jp/stat-search/files?layout=datalist&amp;toukei=00450011&amp;tstat=000001028897&amp;cycle=1&amp;tclass1=000001053058&amp;tclass2=000001053060&amp;tclass3val=0 (table 7).&#39; -splice x$[16*4] \\) -append -trim -resize 25% -bordercolor white -border 20 -dither none -colors 256 1.png&quot;)</pre>
+</div>
+<p>In the Hamamatsu data, the difference between unvaccinated and
+vaccinated mortality is particularly pronounced during the summer 2022
+COVID wave (which happened to coincide with the rollout of the 4th
+dose):</p>
+<div>
+<img src=i/statistic-hamamatsu-2.png width=600>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>ma=\(x,b=1,f=b){x[]=rowMeans(embed(c(rep(NA,b),x,rep(NA,f)),f+b+1),na.rm=T);x}
+
+t=fread(&quot;sed s,NULL,,g c/VRS/221309_Hamamatsu/公開文書.csv&quot;)
+t=t[,c(1,3,5,8,9)]
+names(t)=c(&quot;id&quot;,&quot;age&quot;,&quot;dose&quot;,&quot;vax&quot;,&quot;dead&quot;)
+
+t[t,on=.(id),dead:=fcoalesce(dead,i.dead)]
+
+t[,age:=as.integer(sub(&quot;\\D.*&quot;,&quot;&quot;,age))]
+t[,dose:=match(dose,c(&quot;&quot;,&quot;１回目&quot;,&quot;２回目&quot;,&quot;３回目&quot;,&quot;４回目&quot;,&quot;５回目&quot;,&quot;６回目&quot;,&quot;７回目&quot;))-1]
+
+mindate=as.Date(&quot;2021-2-1&quot;);maxdate=as.Date(&quot;2024-6-30&quot;)
+
+d=t[dose&lt;2&amp;!is.na(age)&amp;!(!is.na(vax)&amp;vax&lt;mindate)]
+
+e=d[!is.na(vax),.(dose=1,pop=.N),.(age,date=vax)]
+e=rbind(e,d[,.(date=mindate,pop=.N,dose=0),age])
+e=merge(e,d[!is.na(dead),.(dead=.N),.(age,dose,date=dead)],all=T)
+
+a=merge(do.call(CJ,lapply(e[,1:3],unique)),e,all=T)
+a[is.na(a)]=0
+
+a[dose==0,pop:=pop-a[dose==1,pop]]
+a[,pop:=cumsum(pop)-cumsum(dead),.(dose,age)]
+
+a=rbind(a,a[,.(dead=sum(dead),pop=sum(pop),dose=2),.(age,date)])
+
+a[,std:=tapply(pop,age,sum)[factor(age)]/sum(pop)]
+
+a=a[,.(date,dead=ma(dead,15),pop=ma(pop,15)),.(age,dose,std)]
+
+p1=a[pop&gt;0,.(y=sum(dead/pop*std*365e5),facet=1),.(x=date,z=dose)]
+
+d21=c(2669,2159,1139,1554,3090,1669,579,1568,1617,471,151,90)
+d22=c(668,6503,4630,1705,1030,566,1941,9293,5216,2319,3977,9787)
+d23=c(12713,4511,1868,1011,986,1154,1878,3852,4049,2496,1628,1934)
+d24=c(3911,4569,3623,2506,1722,1734,3356,4881,3155,1919,1387,3012)
+d25=c(5104,3311)
+dead=CJ(x=seq(as.Date(&quot;2021-1-1&quot;),as.Date(&quot;2025-2-1&quot;),&quot;month&quot;))[,y:=c(d21,d22,d23,d24,d25)]
+
+vax=t[!is.na(vax)&amp;age&gt;=60,.(y=.N),.(x=vax)]
+vax=vax[CJ(x=seq(min(x),max(x),1)),on=&quot;x&quot;,all=T][is.na(y),y:=0]
+
+p2=rbind(vax[,.(x,y=ma(y,3),z=3)],dead[,z:=4])
+p2[,y:=y/max(y)*100,z]
+p=rbind(p1,p2[,facet:=2])
+
+lab=c(&quot;Unvaccinated&quot;,&quot;Vaccinated&quot;,&quot;Total&quot;,&quot;New vaccine doses in ages 60+ (±3-day MA)&quot;,&quot;COVID deaths in whole Japan&quot;)
+color=c(&quot;#5555ff&quot;,&quot;#ff5555&quot;,&quot;black&quot;,&quot;#ff9999&quot;,&quot;gray50&quot;)
+
+p[,z:=factor(z,,lab)]
+p[,facet:=factor(facet,,c(&quot;ASMR per 100,000 person-years (±15-day moving average)&quot;,&quot;Other variables (percentage of maximium)&quot;))]
+
+xstart=as.Date(&quot;2021-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;);xbreak=seq(xstart,xend-1,&quot;year&quot;)
+ystart=0;yend=100;ybreak=0:5*20
+ylim=p[,.(max=max(y,na.rm=T)),facet]
+
+leg=cbind(ylim[,.(y=max*seq(.90,,-.14,3)),facet][-6],color,label=lab)
+
+ggplot(p)+
+facet_wrap(~facet,ncol=1,scales=&quot;free&quot;)+
+geom_rect(data=ylim,aes(ymax=max),xmin=xstart,xmax=xend,ymin=ystart,lineend=&quot;square&quot;,linejoin=&quot;mitre&quot;,fill=NA,color=&quot;gray80&quot;,linewidth=.4)+
+geom_rect(data=p[z==lab[5]],aes(xmin=x,xmax=x%m+%months(1),ymin=0,ymax=y,fill=lab[3]),color=&quot;gray50&quot;,linewidth=.2)+
+geom_line(data=p[z!=lab[5]],aes(x,y,color=z),linewidth=.65)+
+geom_text(data=leg,aes(xend-18,y,label=label),color=color,hjust=1,size=3.87)+
+labs(x=NULL,y=NULL,title=&quot;Age-standardized mortality rate in Hamamatsu, Japan&quot;)+
+scale_x_date(limits=c(xstart,xend),breaks=xbreak,labels=year(xbreak))+
+scale_y_continuous(limits=c(0,NA),breaks=pretty,labels=\(x)if(max(x,na.rm=T)==100)paste0(x,&quot;%&quot;)else x)+
+scale_color_manual(values=color)+
+scale_fill_manual(label=lab[3:4],values=c(&quot;gray80&quot;,&quot;#ffaaaa&quot;))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(fill=guide_legend(override.aes=list(linewidth=0,keyheight=unit(1,&quot;pt&quot;))))+
+theme(axis.text=element_text(size=11,color=&quot;gray50&quot;),
+  axis.text.x=element_text(hjust=0),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  legend.position=&quot;none&quot;,
+  panel.background=element_blank(),
+  panel.grid.major=element_line(linewidth=.4,color=&quot;gray90&quot;),
+  panel.spacing=unit(2,&quot;pt&quot;),
+  plot.title=element_text(size=11,hjust=.5,face=2,margin=margin(,,2)),
+  strip.background=element_blank(),
+  strip.text=element_text(size=11,margin=margin(,,4)))
+ggsave(&quot;1.png&quot;,width=5.5,height=3.4,dpi=300*4)
+
+system(&quot;mogrify -trim 1.png;magick 1.png \\( -size `identify -format %w 1.png`x -font Arial -interline-spacing -3 -pointsize $[42*4-2] caption:&#39;Source: covid-vaccine-jp.iwmtyss.com/VRS.zip. ASMR was calculated by 5-year age groups so that the total person-days for each age group during the observation period were used as the standard population. Each person had a fixed age so that aging over time was not accounted for, which causes the ASMR to increase over time. The COVID deaths in whole Japan are from table 7 here: e-stat.go.jp/stat-search/files?layout=datalist&amp;toukei=00450011&amp;tstat=000001028897&amp;cycle=1&amp;tclass1=000001053058&amp;tclass2=000001053060&amp;tclass3val=0.&#39; -splice x$[16*4] \\) -append -trim -resize 25% -bordercolor white -border 20 -dither none -colors 256 1.png&quot;)
+</pre>
+</div>
 <h2>
 <a href=#canceledmouse_Fertility_rate_by_age_group_in_Sweden id=canceledmouse_Fertility_rate_by_age_group_in_Sweden>canceledmouse:
 Fertility rate by age group in Sweden</a>
@@ -5081,10 +5268,10 @@ nodes.forEach(node=>{
   const text=node.textContent
   if(text.split(/\s+/).some(piece=>piece.length>=20)||/\w{60}/.test(text)){
     const frag=document.createDocumentFragment()
-    text.split(/(\w{60}|[\041-\057\072-\100\133-\140\173-\176])/g).forEach(part=>{
+    text.split(/([A-Za-z0-9]{60}|[\041-\057\072-\100\133-\140\173-\176])/g).forEach(part=>{
       if(part){
         frag.appendChild(document.createTextNode(part))
-        if(/^\w{80}$/.test(part)||/^[\041-\057\072-\100\133-\140\173-\176]$/.test(part))
+        if(/^[A-Za-z0-9]{60}$/.test(part)||/^[\041-\057\072-\100\133-\140\173-\176]$/.test(part))
           frag.appendChild(document.createElement('wbr'))
       }
     })
