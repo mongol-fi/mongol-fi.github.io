@@ -100,6 +100,7 @@ blockquote h2,blockquote h3{text-align:left}
 <li><a href="#KCORv3">KCORv3</a></li>
 <li><a href="#Kirsch_fooled_himself_with_his_dose_3_vs_dose_2_plot">Kirsch fooled himself with his dose 3 vs dose 2 plot</a></li>
 <li><a href="#COVID_ASMR_by_vaccine_brand_in_Czech_data">COVID ASMR by vaccine brand in Czech data</a></li>
+<li><a href="#Mortality_in_Czech_data_for_people_with_non_zero_DCCI">Mortality in Czech data for people with non-zero DCCI</a></li>
 </ul>
 </ul>
 
@@ -4703,7 +4704,7 @@ mortality.</p>
 2021, COVID ASMR as a percentage of total ASMR was the lowest for
 Moderna, and it was the highest for the two non-mRNA vaccine brands:</p>
 <div>
-<img src=i/rootclaim-modernabenefit-2.png width=550>
+<img src=i/rootclaim-modernabenefit-2.png width=530>
 </div>
 <div class="spoiler">
 <button>
@@ -4806,9 +4807,123 @@ theme(axis.text=element_text(size=11,color=&quot;gray50&quot;,margin=margin(3,3,
   plot.title=element_text(size=11,face=2,hjust=.5,margin=margin(2,,4)),
   strip.background=element_blank(),
   strip.text=element_blank())
-ggsave(&quot;1.png&quot;,width=4.7,height=4,dpi=300*4)
+ggsave(&quot;1.png&quot;,width=4.7,height=4,dpi=300*4)</pre>
+</div>
+<h3>
+<a href=#Mortality_in_Czech_data_for_people_with_non_zero_DCCI id=Mortality_in_Czech_data_for_people_with_non_zero_DCCI>Mortality
+in Czech data for people with non-zero DCCI</a>
+</h3>
+<p>Kirsch made a plot of the Czech data where he selected people whose
+DCCI comorbidity score was 1 or higher, but he got a massive sustained
+increase in the vaccinated mortality rate starting from the Omicron
+wave. He posted the plots below (where I added the annotation to the
+plot on the left), and he wrote:
+[<a href=https://kirschsubstack.com/p/the-czech-republic-dataset-provides>https://kirschsubstack.com/p/the-czech-republic-dataset-provides</a>]</p>
+<blockquote>
+<p>Using the Czech data, we can show that <strong>if you have two
+cohorts with the same mortality</strong> rate, but one is vaccinated and
+the other is unvaccinated, <strong>their all cause mortality (ACM)
+during COVID waves was the same!!!</strong></p>
+<p><strong>It wasn't the vaccine. It was their underlying mortality rate
+differences that caused the apparent benefit. </strong></p>
+<p>Here are two different examples (one with all ages, the other with
+people with 1 or more comorbidities):</p>
+</blockquote>
+<div>
+<img src=i/rootclaim-dcci-1.webp width=750><img src=i/rootclaim-dcci-2.webp width=750>
+</div>
+<p>And Kirsch wrote: <span class="quote">"<strong>Your mortality
+increased over 6 months then plateaued.</strong> If you got vaccinated,
+your mortality rate increased to a new level over time. If you were
+unvaccinated, there was no mortality increase. You can see that from the
+charts above. The mortalities track until after peak COVID. The
+mortality rate of the unvaccinated return to baseline. The mortality
+rate of the vaccinated remains elevated. They were matched before and
+now they are suddenly not matched because the vaccine separated their
+mortalities."</span></p>
+<p>The DCCI score is only included for people with one or more cases,
+and there was a massive number of new people with a case added during
+the Omicron wave, so many people first got a DCCI score assigned during
+the Omicron wave.</p>
+<p>Kirsch ignored vaccine doses given on week 25 of 2021 or later. But
+the denominator he used to calculate his mortality rate was the number
+of people who had ever had a case, including people who had not yet had
+a case but who later ended up getting a case, which is similar to the
+value of the top right panel at the end of the x-axis in my next plot.
+He should've instead used the number of people who had had a case so far
+as the denominator, which is shown by the line in my top right panel. Or
+he should've excluded all people who didn't have a first case listed
+before on week 24 of 2021 or earlier, like in my bottom right panel:</p>
+<div>
+<img src=i/rootclaim-dcci-3.png width=600>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>t=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv.gz&quot;)
+iso=as.IDate(0:1e4*7);names(iso)=format(iso,&quot;%G-%V&quot;)
 
-#sub 1.png &#39;ASMR was calculated by using ±2-week moving averages for deaths and population size within each age group. The population included in the dataset on week 1 of 2022 was used as the standard population. ASMR was calculated by 5-year groups for year of birth, so that people born in 2000 or later were grouped together, and people born in 1925 or earlier were grouped together. Many unvaccinated deaths are missing from 2020 and early 2021. Source: nzip.cz/data/2135-covid-19-prehled-populace.&#39;;qp</pre>
+s=t[Infekce==1][,vax:=Datum_Prvni_davka][,case:=DatumPozitivity]
+s=rbind(s[,facet:=1],s[case!=&quot;&quot;&amp;case&lt;&quot;2021-25&quot;][,facet:=2])
+s=rbind(s[,facet2:=1],copy(s)[,facet2:=2][vax&gt;=&quot;2021-25&quot;,vax:=&quot;&quot;])
+
+a=s[,.(y=.N),,.(case=DatumPozitivity,vax,facet,facet2)]
+
+e=a[vax==&quot;&quot;|case&lt;vax,.(y=sum(y),z=0),.(x=case,facet,facet2)]
+e=rbind(e,a[vax!=&quot;&quot;&amp;case&gt;=vax,.(y=sum(y),z=1),.(x=case,facet,facet2)])
+
+e=rbind(e,a[vax&gt;case,.(y=sum(y)),.(x=vax,facet,facet2)][,.(x,y=c(y,-y),z=rep(1:0,each=.N),facet,facet2)])
+
+p=e[,.(y=sum(y)),.(x,z,facet,facet2)]
+
+p=merge(do.call(CJ,lapply(p[,-5],unique)),p,all=T)[,y:=nafill(y,,0)]
+p[,y:=cumsum(y),.(z,facet,facet2)]
+p[,x:=iso[x]]
+
+p[,z:=factor(z,,c(&quot;Unvaccinated&quot;,&quot;Vaccinated&quot;))]
+p[,facet:=factor(facet,,c(&quot;Cases not fixed&quot;,&quot;Cases fixed&quot;))]
+p[,facet2:=factor(facet2,,c(&quot;Vaccines not fixed&quot;,&quot;Vaccines fixed&quot;))]
+
+xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2025-1-1&quot;);xbreak=seq(xstart+182,xend,&quot;year&quot;)
+ybreak=pretty(p$y);ystart=0;yend=max(p$y)
+
+ggplot(p)+
+facet_grid(facet~facet2,scales=&quot;free&quot;)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray90&quot;,linewidth=.4)+
+geom_vline(xintercept=iso[&quot;2021-25&quot;]-3.5,linewidth=.4,linetype=&quot;22&quot;,color=&quot;gray75&quot;)+
+annotate(&quot;rect&quot;,xmin=xstart,xmax=xend,ymin=ystart,ymax=yend,linewidth=.4,lineend=&quot;square&quot;,linejoin=&quot;mitre&quot;,fill=NA,color=&quot;gray75&quot;)+
+geom_line(aes(x,y,color=z),linewidth=.6)+
+labs(x=NULL,y=NULL,title=&quot;Number of people with a case listed in NZIP data&quot;,subtitle=&quot;Fixed means cases or vaccines on week 25 of 2021 and later were ignored.&quot;)+
+scale_x_date(limits=c(xstart,xend),breaks=xbreak,labels=year(xbreak))+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,labels=\(x)ifelse(x&gt;0,paste0(x/1e6,&quot;M&quot;),x))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+scale_color_manual(values=hsv(2:3/3,.6,1))+
+theme(axis.text=element_text(size=11,color=&quot;gray40&quot;),
+  axis.text.x=element_text(margin=margin(2)),
+  axis.text.y=element_text(margin=margin(,1)),
+  axis.ticks=element_line(linewidth=.4,color=&quot;gray75&quot;),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(4,&quot;pt&quot;),
+  legend.background=element_blank(),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.key=element_blank(),
+  legend.key.height=unit(12,&quot;pt&quot;),
+  legend.key.width=unit(24,&quot;pt&quot;),
+  legend.margin=margin(-2,,2),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,margin=margin(,,,2)),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.spacing=unit(4,&quot;pt&quot;),
+  plot.subtitle=element_text(size=11,hjust=.5,margin=margin(,,4)),
+  plot.title=element_text(size=11,hjust=.5,face=2,margin=margin(,,4)),
+  strip.background=element_blank(),
+  strip.text=element_text(size=11,margin=margin(2,2,2,2)))
+ggsave(&quot;1.png&quot;,width=5.4,height=3.4,dpi=300*4)
+system(&quot;mogrify 1.png -resize 25% -dither none -colors 256 1.png&quot;)</pre>
 </div>
 <script>
 document.querySelectorAll('pre').forEach(e=>e.innerHTML=e.innerHTML.replace(/((^| )# [^\n]*|^#$)/mg,"<span class=comment>$1</span>"))
@@ -4820,10 +4935,10 @@ nodes.forEach(node=>{
   const text=node.textContent
   if(text.split(/\s+/).some(piece=>piece.length>=20)||/\w{60}/.test(text)){
     const frag=document.createDocumentFragment()
-    text.split(/(\w{60}|[\041-\057\072-\100\133-\140\173-\176])/g).forEach(part=>{
+    text.split(/([A-Za-z0-9]{60}|[\041-\057\072-\100\133-\140\173-\176])/g).forEach(part=>{
       if(part){
         frag.appendChild(document.createTextNode(part))
-        if(/^\w{80}$/.test(part)||/^[\041-\057\072-\100\133-\140\173-\176]$/.test(part))
+        if(/^[A-Za-z0-9]{60}$/.test(part)||/^[\041-\057\072-\100\133-\140\173-\176]$/.test(part))
           frag.appendChild(document.createElement('wbr'))
       }
     })
