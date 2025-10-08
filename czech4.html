@@ -31,7 +31,7 @@ blockquote blockquote{width:calc(100% - 45px);margin-left:45px;box-sizing:border
 blockquote>:first-child{margin-top:0}
 blockquote>:last-child{margin-bottom:0}
 blockquote,.quote,blockquote,blockquote{color:hsl(100,100%,88%)}
-blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(100,50%,65%)}
+blockquote .quote,blockquote blockquote,.quote .quote{color:hsl(100,50%,67%)}
 blockquote blockquote blockquote,blockquote blockquote .quote,blockquote .quote .quote,.quote .quote .quote{color:hsl(100,35%,45%)}
 blockquote h3{color:inherit}
 blockquote h2,blockquote h3{text-align:left}
@@ -42,6 +42,7 @@ blockquote h2,blockquote h3{text-align:left}
 .comment{color:hsl(0,100%,80%)!important}
 .toc{width:calc(50% + 265px);margin:1em 0 1em max(0px, 50% - 265px)}
 .toc ul{width:min(100%, 50% + 265px - 40px);margin:0}
+.images{display:inline-block;width:content-width;margin:0 auto}
 @media print{
   body{background:white;color:black;margin:0px;zoom:1;print-color-adjust:exact;-webkit-print-color-adjust:exact}
   a{color:#0000EE}a:visited{color:#551A8B}
@@ -89,6 +90,8 @@ debate include additional analysis of the Czech data:
 <li><a href="#Daily_raw_number_of_deaths_by_vaccination_status">Daily raw number of deaths by vaccination status</a></li>
 <li><a href="#Monthly_ASMR_by_vaccination_status">Monthly ASMR by vaccination status</a></li>
 <li><a href="#Kirsch_regrets_not_appreciating_the_effect_of_confounders_in_his_analysis_of_the_Czech_data">Kirsch regrets not appreciating the effect of confounders in his analysis of the Czech data</a></li>
+<li><a href="#ASMR_and_vaccine_doses_administered_by_age_group_in_NZIP_data">ASMR and vaccine doses administered by age group in NZIP data</a></li>
+<li><a href="#NZIP_deaths_as_percentage_of_FOI_deaths">NZIP deaths as percentage of FOI deaths</a></li>
 </ul>
 
 
@@ -3694,6 +3697,200 @@ from the shot) is a disaster.</strong></p>
 <p>However even though he summarized many of his earlier arguments in
 his new PDF, he no longer repeated his earlier claim that the Czech data
 showed that Moderna was more deadly than Pfizer.</p>
+<h2>
+<a href=#ASMR_and_vaccine_doses_administered_by_age_group_in_NZIP_data id=ASMR_and_vaccine_doses_administered_by_age_group_in_NZIP_data>ASMR
+and vaccine doses administered by age group in NZIP data</a>
+</h2>
+<p>USMortality posted this tweet:
+[<a href=https://x.com/USMortality/status/1975667010341425586>https://x.com/USMortality/status/1975667010341425586</a>]</p>
+<div>
+<img src=i/czech-nzip-age-facet.png width=550>
+</div>
+<p>I pointed out that the Alpha spike around March 2021 occurs around
+the same time in all age groups, even though young people got vaccinated
+later than old people. And the same thing applies to the Delta spike in
+November to December 2021, which Rancourt blamed on the vaccines:</p>
+<div>
+<img src=i/czech-nzip-age-facet-2.png width=580>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>t=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv.gz&quot;)
+
+t=t[RokNarozeni!=&quot;-&quot;]
+t=t[Infekce%in%c(1,NA)]
+
+t[,born:=pmin(pmax(1920,as.integer(substr(RokNarozeni,1,4))),2000)]
+t[,vax:=Datum_Prvni_davka]
+t[,dose:=(vax!=&quot;&quot;)*1]
+
+pop=t[vax!=&quot;&quot;,.(pop=.N,dose=1),.(week=vax,born)]
+pop=rbind(pop,t[,.(week=&quot;2020-10&quot;,pop=.N,dose=0),born])
+
+dead=t[,.(dead=.N),.(week=DatumUmrtiLPZ,dose,born)]
+covid=t[,.(covid=.N),.(week=Umrti,dose,born)]
+a=merge(covid,merge(dead,pop,all=T),all=T)[week!=&quot;&quot;]
+
+a=merge(do.call(CJ,lapply(a[,1:3],unique)),a,all=T);a[is.na(a)]=0
+a[dose==0,pop:=pop-a[dose==1,pop]]
+a[,pop:=cumsum(pop-dead),.(born,dose)]
+
+a=a[,.(type=1:2,dead=dead-c(0,covid),pop),.(week,dose,born)]
+a=rbind(a,a[,.(dead=sum(dead),pop=sum(pop),dose=2),.(week,born,type)])
+
+a=a[,.(week,dead=ma(dead,2),pop=ma(pop,2)),.(type,born,dose)]
+
+groups=c(1900,1935,1950,1970)
+a[,group:=agecut(born,groups)]
+a[,std:=tapply(pop,born,sum)[factor(born)]/sum(pop)]
+
+iso=as.IDate(0:1e4*7);names(iso)=format(iso,&quot;%G-%V&quot;)
+
+p=a[,.(y=ifelse(pop&lt;1e3,NA_real_,sum(dead/pop*std/7*365e5))),.(x=iso[week],type,dose,group)]
+
+p[,type:=factor(type,,c(&quot;All causes&quot;,&quot;Not COVID&quot;))]
+p[,dose:=factor(dose,,c(&quot;Unvaccinated&quot;,&quot;Vaccinated&quot;,&quot;Total&quot;))]
+
+xmin=as.Date(&quot;2021-1-1&quot;);xmax=as.Date(&quot;2024-1-1&quot;)
+p=p[x&gt;=xmin&amp;x&lt;=xmax]
+xbreak=seq(xmin+182,xmax,&quot;year&quot;)
+
+ylim=p[,.(max=max(y,na.rm=T)),group]
+
+vax=t[,.(born,week=unlist(.SD,,F)),.SDcols=patterns(&quot;Datum_&quot;)]
+vax=vax[,.(y=.N),.(born,week)]
+vax=vax[week!=&quot;&quot;,.(y=sum(y)),.(group=agecut(born,groups),week)]
+vax=merge(do.call(CJ,lapply(vax[,-3],unique)),vax,all=T)
+vax[,y:=as.double(ma(nafill(y,,0),2))]
+vax=merge(ylim,vax)[,.(x=iso[week],y=y/max(y)*max),group]
+
+vaxlab=&quot;New vaccine doses (panel top is maximum)&quot;
+
+ggplot(p)+
+facet_wrap(~group,ncol=2,dir=&quot;v&quot;,scales=&quot;free_y&quot;)+
+geom_ribbon(data=vax,aes(x,ymin=0,ymax=y,fill=vaxlab),linewidth=0)+
+geom_vline(xintercept=seq(xmin,xmax,&quot;year&quot;),color=&quot;gray75&quot;,linewidth=.4)+
+geom_rect(data=ylim,aes(ymin=0,ymax=max),xmin=xmin,xmax=xmax,lineend=&quot;square&quot;,linejoin=&quot;mitre&quot;,fill=NA,color=&quot;gray75&quot;,linewidth=.4)+
+geom_line(aes(x,y,color=dose,alpha=type),linewidth=.6)+
+geom_label(data=ylim,aes(xmax,max,label=group),hjust=1,vjust=1,label.r=unit(0,&quot;pt&quot;),label.padding=unit(4,&quot;pt&quot;),label.size=.4,color=&quot;gray72&quot;,fill=&quot;white&quot;,size=3.87,lineheight=.8)+
+geom_label(data=ylim,aes(xmax,max,label=group),hjust=1,vjust=1,label.r=unit(0,&quot;pt&quot;),label.padding=unit(4,&quot;pt&quot;),label.size=0,fill=NA,size=3.87,lineheight=.8)+
+labs(x=NULL,y=NULL,title=&quot;ASMR per 100,000 person-years in Czech Republic&quot;)+
+scale_x_date(limits=c(xmin,xmax),breaks=xbreak,labels=year(xbreak))+
+scale_y_continuous(breaks=\(x){y=pretty(x,4);y[y&lt;max(x)*.98]},labels=\(x)ifelse(x&gt;=1e3,paste0(x/1e3,&quot;k&quot;),x))+
+scale_color_manual(values=c(hsv(2:3/3,.6,1),&quot;black&quot;))+
+scale_fill_manual(labels=vaxlab,values=&quot;gray85&quot;)+
+scale_alpha_manual(values=c(1,.4))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(color=guide_legend(order=1),alpha=guide_legend(order=1),fill=guide_legend(order=3))+
+theme(axis.text=element_text(size=11,color=&quot;gray50&quot;),
+  axis.text.y=element_text(margin=margin(,1.5)),
+  axis.ticks=element_line(linewidth=.4,color=&quot;gray75&quot;),
+  axis.ticks.length.x=unit(0,&quot;pt&quot;),
+  axis.ticks.length.y=unit(4,&quot;pt&quot;),
+  legend.background=element_rect(color=&quot;gray70&quot;,linewidth=.4),
+  legend.box=&quot;vertical&quot;,
+  legend.box.just=&quot;center&quot;,
+  legend.box.margin=margin(,,3),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;horizontal&quot;,
+  legend.justification=&quot;center&quot;,
+  legend.key=element_blank(),
+  legend.key.height=unit(13,&quot;pt&quot;),
+  legend.key.spacing.x=unit(2,&quot;pt&quot;),
+  legend.key.width=unit(26,&quot;pt&quot;),
+  legend.margin=margin(2.5,5.5,2.5,2.5),
+  legend.position=&quot;top&quot;,
+  legend.spacing.x=unit(3,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,vjust=.5,margin=margin(,,,2)),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  panel.spacing.x=unit(2,&quot;pt&quot;),
+  panel.spacing.y=unit(3,&quot;pt&quot;),
+  plot.subtitle=element_text(size=11,hjust=.5,margin=margin(,,3)),
+  plot.title=element_text(size=11,face=2,hjust=.5,margin=margin(,,3)),
+  strip.background=element_blank(),
+  strip.text=element_blank())
+ggsave(&quot;1.png&quot;,width=5.4,height=3.8,dpi=300*4)
+system(&quot;mogrify -trim 1.png;magick 1.png \\( -size `identify -format %w 1.png`x -font Arial -interline-spacing -3 -pointsize $[42*4] caption:&#39;All lines are ±2-week moving averages. ASMR was calculated by 5-year groups for year of birth, so that aging over time was not accounted for. People born in 2000 or later were grouped together, and people born in 1924 or earlier were grouped together. The total person-weeks for each age were used as the standard population. Due to a missing date of birth, unvaccinated people are missing about 10% of deaths, with slightly more deaths missing in early 2021. Source: nzip.cz/data/2135-covid-19-prehled-populace.&#39; -splice x$[16*4] \\) -append -trim -resize 25% -bordercolor white -border 20 -dither none -colors 256 1.png&quot;)</pre>
+</div>
+<h2>
+<a href=#NZIP_deaths_as_percentage_of_FOI_deaths id=NZIP_deaths_as_percentage_of_FOI_deaths>NZIP
+deaths as percentage of FOI deaths</a>
+</h2>
+<p>If you exclude people with a year of birth missing, then even in
+2022, the NZIP data is missing more than 10% of deaths in unvaccinated
+people. The proportion of missing deaths is temporarily reduced in the
+winter of 2021 to 2022, but I think it's because in the winter many
+unvaccinated people died of COVID, so their year of birth is available
+from ISIN if they have a COVID case listed at ISIN:</p>
+<div>
+<img src=i/czech-nzip-missing-age.png width=530>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>old=fread(&quot;xz -dc CR_records.csv.xz&quot;,showProgress=F)
+a=old[,.(old=.N),.(week=format(DatumUmrti,&quot;%G-%V&quot;),dose=(!is.na(Datum_1))*1)]
+
+new=fread(&quot;Otevrena-data-NR-26-30-COVID-19-prehled-populace-2024-01.csv.gz&quot;)
+a2=new[Infekce%in%c(1,NA)&amp;RokNarozeni!=&quot;-&quot;][!(DatumUmrtiLPZ!=&quot;&quot;&amp;Datum_Prvni_davka&gt;DatumUmrtiLPZ)]
+a2=a2[,.(new=.N),.(week=DatumUmrtiLPZ,dose=(Datum_Prvni_davka!=&quot;&quot;)*1)]
+
+iso=as.IDate(0:1e4*7);names(iso)=format(iso,&quot;%G-%V&quot;)
+p=merge(a,a2)[week!=&quot;2022-52&quot;]
+p=rbind(p,p[,.(old=sum(old),new=sum(new),dose=2),week])
+
+p=p[,.(y=new/old*100,x=iso[week],z=factor(dose,c(1,2,0),c(&quot;Vaccinated&quot;,&quot;Total&quot;,&quot;Unvaccinated&quot;)))]
+
+xstart=as.Date(&quot;2020-1-1&quot;);xend=as.Date(&quot;2023-1-1&quot;);xbreak=seq(xstart+182,xend,&quot;year&quot;)
+ybreak=0:11*10;ystart=0;yend=110
+
+ggplot(p)+
+geom_vline(xintercept=seq(xstart,xend,&quot;year&quot;),color=&quot;gray91&quot;,linewidth=.4)+
+geom_hline(yintercept=ybreak,color=&quot;gray91&quot;,linewidth=.4)+
+annotate(&quot;rect&quot;,xmin=xstart,xmax=xend,ymin=ystart,ymax=yend,linewidth=.4,lineend=&quot;square&quot;,linejoin=&quot;mitre&quot;,fill=NA,color=&quot;gray75&quot;)+
+geom_line(aes(x,y,color=z),linewidth=.6)+
+labs(x=NULL,y=NULL,title=&quot;Weekly deaths with year of birth not missing in NZIP data as\npercentage of deaths in FOI data&quot;)+
+scale_x_date(limits=c(xstart,xend),breaks=xbreak,labels=year(xbreak))+
+scale_y_continuous(limits=c(ystart,yend),breaks=ybreak,labels=\(x)paste0(x,&quot;%&quot;))+
+scale_color_manual(values=c(hsv(0,.7,1),&quot;black&quot;,hsv(2/3,.7,1)))+
+coord_cartesian(clip=&quot;off&quot;,expand=F)+
+guides(color=guide_legend(ncol=1,byrow=F))+
+theme(axis.text=element_text(size=11,color=&quot;gray40&quot;),
+  axis.text.y=element_text(margin=margin(,1.5)),
+  axis.ticks.length=unit(0,&quot;pt&quot;),
+  legend.background=element_rect(color=&quot;gray75&quot;,linewidth=.4),
+  legend.box.spacing=unit(0,&quot;pt&quot;),
+  legend.direction=&quot;vertical&quot;,
+  legend.justification=c(.5,.5),
+  legend.key=element_blank(),
+  legend.key.height=unit(12,&quot;pt&quot;),
+  legend.key.width=unit(24,&quot;pt&quot;),
+  legend.margin=margin(3,5,3,3),
+  legend.position=c(.5,.5),
+  legend.spacing.x=unit(2,&quot;pt&quot;),
+  legend.spacing.y=unit(0,&quot;pt&quot;),
+  legend.text=element_text(size=11,margin=margin(,,,2)),
+  legend.title=element_blank(),
+  panel.background=element_blank(),
+  plot.subtitle=element_text(hjust=.5,margin=margin(,,4)),
+  plot.title=element_text(size=11,hjust=.5,face=2,margin=margin(,,4)))
+ggsave(&quot;1.png&quot;,width=5,height=3,dpi=300*4)</pre>
+</div>
+<p>I'm not sure why the number of unvaccinated people with no year of
+birth is smaller than the number of unvaccinated people with no case.
+But ISIN might have the year of birth for unvaccinated people who got
+tested, but who tested negative so they weren't added as a case. ISIN
+has a <span class="quote">"laboratory module"</span> which includes
+negative tests, and which includes the date of birth:
+[<a href=https://vladci.cz/archive/covid/106/UZIS_2022-02_Struktura_NZIS_106.pdf>https://vladci.cz/archive/covid/106/UZIS_2022-02_Struktura_NZIS_106.pdf</a>]</p>
+<div>
+<img src=i/czech-isin-test.png width=700>
+</div>
 <script>
 document.querySelectorAll('pre').forEach(e=>e.innerHTML=e.innerHTML.replace(/((^| )# [^\n]*|^#$)/mg,"<span class=comment>$1</span>"))
 
