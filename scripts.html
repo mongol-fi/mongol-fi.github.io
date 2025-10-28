@@ -18,7 +18,7 @@ blockquote h2,blockquote h3{margin:.5em 0}
 blockquote ul,blockquote ol{margin:.4em 0}
 a,a .quote{color:hsl(220,100%,75%)}
 a:visited,a .quote{color:hsl(270,100%,75%)}
-pre,code{white-space:pre-wrap;word-wrap:break-word;font:13.7px Menlo,'DejaVu Sans Mono','Liberation Mono',Consolas,monospace;background:#4a4a4a;color:white}
+pre,code{white-space:pre-wrap;word-wrap:break-word;font:13.6px Menlo,'DejaVu Sans Mono','Liberation Mono',Consolas,monospace;background:#4a4a4a;color:white}
 pre{padding:4px}
 code{padding:1px}
 table{border-collapse:collapse;margin:0 auto}
@@ -47,7 +47,7 @@ blockquote h3{color:inherit}
 .maxwidth{max-width:100%}
 .wide{width:min(100%, 1000px)}
 @media print{
-  body{background:white;color:black;margin:0px;zoom:.9;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+  body{background:white;color:black;margin:0px;zoom:.85;print-color-adjust:exact;-webkit-print-color-adjust:exact}
   a,a:visited{color:#0000EE}
   h1,h2,h2 a,h3 a,h2 a:visited,h3 a:visited{color:black}
   pre,code{background:#d6d6d6;color:black}
@@ -62,7 +62,7 @@ blockquote h3{color:inherit}
 }
 </style>
 <title>Shell and R code for genetic analysis of SARS-like viruses</title>
-<h1>Shell and R code for genetic analysis of SARS-like viruses - <a href=index.html>sars2.net</a></h1><div class=dates>First published 2023-04-03 UTC, last modified 2025-10-24 UTC</div><h2 id=Contents><a href=#Contents>Contents</a></h2>
+<h1>Shell and R code for genetic analysis of SARS-like viruses - <a href=index.html>sars2.net</a></h1><div class=dates>First published 2023-04-03 UTC, last modified 2025-10-28 UTC</div><h2 id=Contents><a href=#Contents>Contents</a></h2>
 <ul class=toc>
 <li><a href="#Download_FASTA_files_from_GenBank_with_curl_or_efetch">Download FASTA files from GenBank with curl or efetch</a></li>
 <li><a href="#Align_spike_protein_sequences_with_MAFFT">Align spike protein sequences with MAFFT</a></li>
@@ -2615,7 +2615,7 @@ masog()(awk -F\\t &#39;NR==1{for(i=2;i&lt;=NF;i++)if($i~x)break;next}{print$i,$1
 emu()(curl -sd &quot;id=$(paste -sd, -)&quot; &quot;https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=${1:-nuccore}&amp;rettype=${2:-fasta}&amp;retmode=$3&quot;)
 
 # align spike proteins of Tor2 and sequences with 95-98% identity to Tor2
-masog Tor2, sarbe.pid|awk &#39;$1==100||($1&lt;=98&amp;&amp;$1&gt;=95){print$2}&#39;|emu &#39;&#39; fasta_cds_na|seqkit grep -nrp &#39;gene=S|spike|surface&#39;|sed &#39;s/_cds_.*//;s/lcl|//&#39;|seqkit fx2tab|awk &#39;NR==FNR{a[$1]=$0;next}{print&quot;&gt;&quot;a[$1]&quot;\n&quot;$2}&#39; &lt;(cut -f1 sarbe.pid|cut -d, -f1) -|mafft --thread 4 --quiet -&gt;temp.fa;./pid&amp;#x3c;temp.fa&gt;temp.pid</pre>
+masog Tor2, sarbe.pid|awk &#39;$1==100||($1&lt;=98&amp;&amp;$1&gt;=95){print$2}&#39;|emu &#39;&#39; fasta_cds_na|seqkit grep -nrp &#39;gene=S|spike|surface&#39;|sed &#39;s/_cds_.*//;s/lcl|//&#39;|seqkit fx2tab|awk &#39;NR==FNR{a[$1]=$0;next}{print&quot;&gt;&quot;a[$1]&quot;\n&quot;$2}&#39; &lt;(cut -f1 sarbe.pid|cut -d, -f1) -|mafft --thread 4 --quiet -&gt;temp.fa;./pid&lt;temp.fa&gt;temp.pid</pre>
 <!-- -->
 <pre># install.packages(&quot;BiocManager&quot;);BiocManager::install(&quot;Biostrings&quot;)
 
@@ -3069,13 +3069,13 @@ of the genome</a>
 <pre># make a TSV file for percentage identity between aligned sequences
 curl -Ls sars2.net/f/pid.cpp&gt;pid.cpp;g++ pid.cpp -O3 -o pid
 curl -sL sars2.net/f/sarbe.fa.xz|gzip -dc&gt;sarbe.fa
-./pid&amp;#x3c;sarbe.fa&gt;sarbe.pid
+./pid&lt;sarbe.fa&gt;sarbe.pid
 
 # matrix sort grep (in a TSV file with row names and column names, pick the first column whose
 # name matches a substring and print the column sorted by its value along with the rownames)
 masog()(awk -F\\t &#39;NR==1{for(i=2;i&lt;=NF;i++)if($i~x)break;next}{print$i,$1}&#39; x=&quot;$1&quot; &quot;${2--}&quot;|sort -n)
 
-(masog ZC45 sarbe.pid|awk &#39;$1&gt;88{print$2}&#39;|awk &#39;NR==FNR{a[$0];next}$0 in a&#39; &lt;(awk -F\\t &#39;NR&gt;1{for(i=2;i&lt;NR;i++)if($i&gt;98&amp;&amp;$1!~/BANAL|ZC45|ZXC21/)next;print$1}&#39; sarbe.pid|cut -d\  -f1);seqkit grep -nrp &#39;GD/P79-9/2019|BANAL|Tor2|MT121216.1&#39; sarbe.fa|seqkit seq -ni)|seqkit grep -f- sarbe.fa|mafft --quiet --thread 4 -&gt;nuc.fa;./pid&amp;#x3c;nuc.fa&gt;nuc.pid</pre>
+(masog ZC45 sarbe.pid|awk &#39;$1&gt;88{print$2}&#39;|awk &#39;NR==FNR{a[$0];next}$0 in a&#39; &lt;(awk -F\\t &#39;NR&gt;1{for(i=2;i&lt;NR;i++)if($i&gt;98&amp;&amp;$1!~/BANAL|ZC45|ZXC21/)next;print$1}&#39; sarbe.pid|cut -d\  -f1);seqkit grep -nrp &#39;GD/P79-9/2019|BANAL|Tor2|MT121216.1&#39; sarbe.fa|seqkit seq -ni)|seqkit grep -f- sarbe.fa|mafft --quiet --thread 4 -&gt;nuc.fa;./pid&lt;nuc.fa&gt;nuc.pid</pre>
 <!-- -->
 <pre># install.packages(&quot;BiocManager&quot;);BiocManager::install(&quot;Biostrings&quot;)
 
@@ -3618,7 +3618,7 @@ file:</p>
 <pre>curl -Ls sars2.net/f/HIV1_REF_2023_genome_DNA.fa.xz|xz -dc&gt;HIV1_REF_2023_genome_DNA.fa
 seqkit fx2tab HIV1_REF_2023_genome_DNA.fa|shuf|awk -F. &#39;$2!~/^[0-9]/||++b&lt;=50&#39;|seqkit tab2fx&gt;subref.fa
 curl -Ls sars2.net/f/pid.cpp&gt;pid.cpp;g++ pid.cpp -O3 -o pid
-./pid&amp;#x3c;subref.fa&gt;subref.pid</pre>
+./pid&lt;subref.fa&gt;subref.pid</pre>
 <p>And then this code plots the collection year on the x-axis and the
 distance to a specified target sequence on the y-axis:</p>
 <pre>library(ggplot2)
@@ -3750,7 +3750,7 @@ shorn()(sed -E $&#39;s/(,| surface| ORF1| orf1| genomic sequence).*//;s/Severe a
 seqkit grep -nrp gene=S,spike,surface sarbe.na|seqkit seq -m3700|seqkit grep -svrp N|sed &#39;s/lcl|//;s/_cds_.*//&#39;|seqkit fx2tab|awk -F\\t &#39;NR==FNR{a[$1]=$2;next}{print&quot;&gt;&quot;$1&quot; &quot;a[$1]&quot;\n&quot;$2}&#39; &lt;(seqkit seq -n sarbe.fa|sed $&#39;s/ /\t/&#39;) -|seqkit grep -nrvp&#39;SARS coronavirus&#39;|shorn|seqkit shuffle|seqkit head -n24|coda&gt;snap.fa
 
 # run SNAP and make percentage identity matrix
-sna2 snap.fa;~/bin/pid&amp;#x3c;snap.fa&gt;snap.pid</pre>
+sna2 snap.fa;~/bin/pid&lt;snap.fa&gt;snap.pid</pre>
 <!-- -->
 <pre>t=data.table::fread(&quot;snap.tab&quot;) # this is much faster for large files than read.csv
 t=t[,.(V4=sum(V4),V5=sum(V5)),.(V1,V2)] # V4 is syn, V5 is nonsyn, V1 is seq1, V2 is seq2
