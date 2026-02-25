@@ -109,7 +109,7 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=output>101.72 anytime::anydate(v)</span>
 <span class=output>242.50 as.Date(v)</span>
 <span class=output>
-<span class=title># save the intermediate result of pipeline to a variable</span></span>
+<span class=title># save the intermediate result of a pipeline to a variable</span></span>
 <span class=prompt>&gt;</span> <span class=code>sv=\(x,y=p){do.call(&quot;=&quot;,list(substitute(y),x),,.GlobalEnv);x}</span>
 <span class=prompt>&gt;</span> <span class=code>seq(5)|&gt;sv()|&gt;mean()|&gt;c(p)</span><span class=comment> # `p` (pipe) is the default variable name used by `sv`</span>
 <span class=output>[1] 3 1 2 3 4 5</span>
@@ -156,7 +156,7 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=output>
 <span class=title># convert a vector of distances to a `dist` object</span></span>
 <span class=prompt>&gt;</span> <span class=code>v=1:6;class(v)=&quot;dist&quot;;attr(v,&quot;Size&quot;)=ceiling(sqrt(length(v)*2));v</span>
-<span class=comment># size is the number of rows in a full distance matrix</span>
+<span class=comment># the `Size` attribute is the number of rows in a full square distance matrix</span>
 <span class=output>  1 2 3</span>
 <span class=output>2 1</span>
 <span class=output>3 2 4</span>
@@ -730,9 +730,9 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=output>
 <span class=title># get indexes of up to 2 first occurrences of each unique value in a vector</span></span>
 <span class=prompt>&gt;</span> <span class=code>v=c(4,4,4,2,3,3,3,3,4,4,3)</span>
-<span class=prompt>&gt;</span> <span class=code>unname(unlist(tapply(1:length(v),v,head,2)))</span>
+<span class=prompt>&gt;</span> <span class=code>unlist(tapply(1:length(v),v,head,2),,F)</span>
 <span class=output>[1] 4 5 6 1 2</span>
-<span class=prompt>&gt;</span> <span class=code>unname(unlist(lapply(split(1:length(v),v),head,2)))</span>
+<span class=prompt>&gt;</span> <span class=code>unlist(lapply(split(1:length(v),v),head,2),,F)</span>
 <span class=output>[1] 4 5 6 1 2</span>
 <span class=prompt>&gt;</span> <span class=code>which(data.table::rowid(v)&lt;3)</span><span class=comment> # this was the fastest option in my benchmark</span>
 <span class=output>[1] 1 2 4 5 6</span>
@@ -1231,14 +1231,13 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=output>[1] 4</span>
 <span class=output>
 <span class=title># convert dataframe to vector efficiently</span></span>
-<span class=prompt>&gt;</span> <span class=code>summary(microbenchmark(times=100,unlist(mtcars),unlist(mtcars,use.names=F)))[,c(1,5)]</span>
-<span class=output>                           expr     mean</span>
-<span class=output>1                unlist(mtcars) 59.31585</span>
-<span class=output>2 unlist(mtcars, use.names = F)  2.98307</span>
+<span class=prompt>&gt;</span> <span class=code>summary(microbenchmark(unlist(mtcars),unlist(mtcars,use.names=F)))[,c(1,5)]</span>
+<span class=output>                           expr  median</span>
+<span class=output>1                unlist(mtcars) 25809.5</span>
+<span class=output>2 unlist(mtcars, use.names = F)  1066.0</span>
 <span class=output>
 <span class=title># aggregate numeric columns by non-numeric columns</span></span>
-<span class=prompt>&gt;</span> <span class=code>sum0=\(...)sum(...,na.rm=T)</span>
-<span class=prompt>&gt;</span> <span class=code>aua=\(x,fun=sum0,...){n=sapply(x,is.numeric);aggregate(x[,n,drop=F],x[,!n,drop=F],fun,...)}</span>
+<span class=prompt>&gt;</span> <span class=code>aua=\(x,fun=sum,...){n=sapply(x,is.numeric);aggregate(x[,n,drop=F],x[,!n,drop=F],fun,...)}</span>
 <span class=prompt>&gt;</span> <span class=code>aua(iris,mean)</span><span class=comment> # auto-aggregate</span>
 <span class=output>     Species Sepal.Length Sepal.Width Petal.Length Petal.Width</span>
 <span class=output>1     setosa        5.006       3.428        1.462       0.246</span>
@@ -1271,22 +1270,14 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=output>15 2024-01-15 63.00000</span>
 <span class=output>
 <span class=title># show ratios between units</span></span>
-<span class=prompt>&gt;</span> <span class=code>grid::convertUnit(unit(1,&quot;pt&quot;),&quot;lines&quot;)</span><span class=comment> # 1 pt is about 0.07 lines</span>
-<span class=output>[1] 0.06918500069185lines</span>
+<span class=prompt>&gt;</span> <span class=code>grid::convertUnit(unit(1,&quot;lines&quot;),&quot;pt&quot;)</span><span class=comment> # 1 line is about 14 pt</span>
+<span class=output>[1] 14.454points</span>
 <span class=prompt>&gt;</span> <span class=code>grid::convertUnit(unit(1,&quot;lines&quot;),&quot;in&quot;)</span><span class=comment> # 1 line is 0.2 inches</span>
 <span class=output>[1] 0.2inches</span>
 <span class=output>
-<span class=title># faster `table`</span></span>
-<span class=prompt>&gt;</span> <span class=code>v=sample(letters,1e6,T)</span>
-<span class=prompt>&gt;</span> <span class=code>tab=\(x)data.table(x)[,.N,x][,setNames(N,x)]</span>
-<span class=prompt>&gt;</span> <span class=code>summary(microbenchmark(times=10,table(v),tab(v)))[,c(1,5)]</span>
-<span class=output>      expr   median</span>
-<span class=output>1 table(v) 65.32598</span>
-<span class=output>2   tab(v) 27.96704</span>
-<span class=output>
 <span class=title># `expand.grid` for data.table</span></span>
 <span class=prompt>&gt;</span> <span class=code>CJ(month.abb[1:2],state.name[1:3],sorted=F)</span><span class=comment> # this was slightly faster than `expand.grid` but not much faster</span>
-<span class=comment># CJ stands for cross join</span>
+<span class=comment># CJ is cross join or cartesian join</span>
 <span class=output>    V1      V2</span>
 <span class=output>1: Jan Alabama</span>
 <span class=output>2: Jan  Alaska</span>
@@ -1315,13 +1306,13 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=output>[1] &quot;Jan&quot; &quot;Feb&quot; &quot;x&quot;   &quot;Mar&quot;</span>
 <span class=output>
 <span class=title># add new dataframe column after specified index</span></span>
-<span class=prompt>&gt;</span> <span class=code>d=data.frame(a=1,b=10,c=100)</span>
-<span class=prompt>&gt;</span> <span class=code>tibble::add_column(d,x=0,.after=2)</span>
-<span class=output>  a  b x   c</span>
-<span class=output>1 1 10 0 100</span>
-<span class=prompt>&gt;</span> <span class=code>cbind(d,x=0)[append(1:ncol(d),ncol(d)+1,2)]</span>
-<span class=output>  a  b x   c</span>
-<span class=output>1 1 10 0 100</span>
+<span class=prompt>&gt;</span> <span class=code>d=data.frame(a=1,b=2,d=4)</span>
+<span class=prompt>&gt;</span> <span class=code>tibble::add_column(d,c=3,.after=2)</span>
+<span class=output>  a b c d</span>
+<span class=output>1 1 2 3 4</span>
+<span class=prompt>&gt;</span> <span class=code>cbind(d,c=3)[append(1:ncol(d),ncol(d)+1,2)]</span>
+<span class=output>  a b c d</span>
+<span class=output>1 1 2 3 4</span>
 <span class=output>
 <span class=title># write gzipped CSV</span></span>
 <span class=prompt>&gt;</span> <span class=code>con=gzfile(&quot;output.csv.gz&quot;,&quot;w&quot;,compression=9);write.csv(mtcars,con);close(con)</span>
@@ -1371,7 +1362,7 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=prompt>&gt;</span> <span class=code>d=data.frame(row.names=LETTERS[c(3:7,1,8)],equal=2^(c(0,2,4,5,7,9,11)/12))</span>
 <span class=prompt>&gt;</span> <span class=code>d$just=1+c(0,1/8,1/4,1/3,1/2,2/3,7/8))</span>
 <span class=prompt>&gt;</span> <span class=code>round(d,3)</span>
-<span class=comment># in the equal-tempered scale the frequencies of notes are approximations the pure ratios in just intonation</span>
+<span class=comment># in the equal-tempered scale the frequencies of notes are approximations of the pure ratios in just intonation</span>
 <span class=output>  equal  just</span>
 <span class=output>C 1.000 1.000</span>
 <span class=output>D 1.122 1.125</span>
@@ -1414,7 +1405,7 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=prompt>&gt;</span> <span class=code>scales::breaks_extended(n=5,Q=c(1,2,5))(v)</span>
 <span class=output>[1] 15000 20000 25000 30000 35000 40000</span>
 <span class=output>
-<span class=title># filter vector in pipeline</span></span>
+<span class=title># filter a vector in a pipeline</span></span>
 <span class=prompt>&gt;</span> <span class=code>v=1:5</span>
 <span class=prompt>&gt;</span> <span class=code>v%&gt;%.[.&lt;3]</span><span class=comment> # dplyr</span>
 <span class=output>[1] 1 2</span>
@@ -1515,8 +1506,8 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=output>
 <span class=title># convert a file that has multiple keys with one shared value on each line to a named vector</span></span>
 <span class=prompt>&gt;</span> <span class=code>input=fread(&quot;region states</span>
-<span class=prompt>&gt;</span> <span class=code>Northeast CT,MA,ME,NH,NJ,NY,PA,RI,VT</span>
-<span class=prompt>&gt;</span> <span class=code>Midwest IA,IL,IN,KS,MI,MN,MO,ND,NE,OH,SD,WI&quot;)</span>
+<span class=prompt>+</span> <span class=code>Northeast CT,MA,ME,NH,NJ,NY,PA,RI,VT</span>
+<span class=prompt>+</span> <span class=code>Midwest IA,IL,IN,KS,MI,MN,MO,ND,NE,OH,SD,WI&quot;)</span>
 <span class=prompt>&gt;</span> <span class=code>input[,{x=strsplit(states,&quot;,&quot;);setNames(rep(region,lengths(x)),unlist(x))}]</span>
 <span class=output>         CT          MA          ME          NH          NJ          NY</span>
 <span class=output>&quot;Northeast&quot; &quot;Northeast&quot; &quot;Northeast&quot; &quot;Northeast&quot; &quot;Northeast&quot; &quot;Northeast&quot;</span>
@@ -1532,7 +1523,7 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=output>              rn mpg cyl disp  hp drat    wt  qsec vs am gear carb</span>
 <span class=output>1:     Mazda RX4  21   6  160 110  3.9 2.620 16.46  0  1    4    4</span>
 <span class=output>2: Mazda RX4 Wag  21   6  160 110  3.9 2.875 17.02  0  1    4    4</span>
-<span class=prompt>&gt;</span> <span class=code>rbind(d,d[,lapply(.SD,sum),.SDcols=-1][,rn:=&quot;Total&quot;])</span>
+<span class=prompt>&gt;</span> <span class=code>rbind(d,d[,-1][,lapply(.SD,sum)][,rn:=&quot;Total&quot;])</span>
 <span class=output>              rn mpg cyl disp  hp drat    wt  qsec vs am gear carb</span>
 <span class=output>1:     Mazda RX4  21   6  160 110  3.9 2.620 16.46  0  1    4    4</span>
 <span class=output>2: Mazda RX4 Wag  21   6  160 110  3.9 2.875 17.02  0  1    4    4</span>
@@ -1543,7 +1534,7 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=comment># this assumes that each row has at least one true value</span>
 <span class=output>[1] 2 1</span>
 <span class=output>
-<span class=title># find column number of last true value on each row of matrix, return 0 for rows with only false values</span></span>
+<span class=title># find column number of last true value on each row of matrix but return 0 for rows with only false values</span></span>
 <span class=prompt>&gt;</span> <span class=code>m=matrix(c(T,T,T,F,T,F,F,F,F),3,,T)</span>
 <span class=prompt>&gt;</span> <span class=code>m</span>
 <span class=output>      [,1]  [,2]  [,3]</span>
@@ -1580,7 +1571,14 @@ pre{width:fit-content;margin:6px auto;color:white;white-space:pre-wrap;word-wrap
 <span class=prompt>&gt;</span> <span class=code>exp(log(x)+(log(y)-log(x))*.2)</span><span class=comment> # same result</span>
 <span class=output>[1] 9.066115</span>
 <span class=output>
-<span class=title># ggplot default colors in plot with 3 colors</span></span>
+<span class=title># ggplot default colors in a plot with 3 colors</span></span>
 <span class=prompt>&gt;</span> <span class=code>scales::hue_pal()(3)</span>
 <span class=output>[1] &quot;#F8766D&quot; &quot;#00BA38&quot; &quot;#619CFF&quot;</span>
+<span class=output>
+<span class=title># get value from first non-NA vector</span></span>
+<span class=prompt>&gt;</span> <span class=code>v1=c(NA,NA,3);v2=c(10,NA,30);v3=c(100,200,300)</span>
+<span class=prompt>&gt;</span> <span class=code>data.table::fcoalesce(v1,v2,v3)</span>
+<span class=output>[1]  10 200   3</span>
+<span class=prompt>&gt;</span> <span class=code>dplyr::coalesce(v1,v2,v3)</span>
+<span class=output>[1]  10 200   3</span>
 </pre>
