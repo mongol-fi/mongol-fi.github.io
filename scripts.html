@@ -23,8 +23,8 @@ pre,code{white-space:pre-wrap;word-wrap:break-word;font:14px Menlo,'DejaVu Sans 
 pre{padding:4px}
 code{padding:1px}
 table{border-collapse:collapse;margin:0 auto;max-width:100%max-width:100%}
-td,th{border:1px solid #555;padding:1px 3px}
-th{background:#444;font-weight:bold}
+td,th{border:1px solid #606060;padding:1px 3px}
+th{background:#494949;font-weight:bold}
 img{max-width:100%;margin:0;vertical-align:middle}
 div:has(img){width:fit-content;margin:0 auto}
 dt{font-size:1.3em;margin:.4em 0}
@@ -70,7 +70,7 @@ blockquote blockquote blockquote blockquote,blockquote blockquote blockquote .qu
 }
 </style>
 <title>Shell and R code for genetic analysis of SARS-like viruses</title>
-<h1>Shell and R code for genetic analysis of SARS-like viruses - <a href=index.html>sars2.net</a></h1><div class=dates>First published 2023-04-03 UTC, last modified 2026-02-22 UTC</div><h2 id=Contents><a href=#Contents>Contents</a></h2>
+<h1>Shell and R code for genetic analysis of SARS-like viruses - <a href=index.html>sars2.net</a></h1><div class=dates>First published 2023-04-03 UTC, last modified 2026-03-06 UTC</div><h2 id=Contents><a href=#Contents>Contents</a></h2>
 <ul class=toc>
 <li><a href="#Download_FASTA_files_from_GenBank_with_curl_or_efetch">Download FASTA files from GenBank with curl or efetch</a></li>
 <li><a href="#Align_spike_protein_sequences_with_MAFFT">Align spike protein sequences with MAFFT</a></li>
@@ -2341,11 +2341,9 @@ masog Tor2,<wbr> sarbe.<wbr>pid|<wbr>awk &#39;$<wbr>1&lt;<wbr>100&amp;<wbr>&amp;
 
 <span class=comment>#<wbr> `pid`<wbr> ignores positions where either sequence has a gap,<wbr> so N letters and degenerate bases are replaced with gaps</span>
 seqkit grep -vf sarbe.<wbr>ignore sarbe.<wbr>fa|<wbr>seqkit replace -isp &#39;[^<wbr>ACGT-]<wbr>&#39;<wbr> -r -|./<wbr>pid&gt;<wbr>sarbe.<wbr>pid</pre>
-<p>I uploaded the output files here: <span
-class="paren">[f/sarbe.fa.xz]</span><span
-class="paren">(f/sarbe.fa.xz)</span>, <span
-class="paren">[f/sarbe.pid]</span><span
-class="paren">(f/sarbe.pid)</span>.</p>
+<p>I uploaded the output files here:
+<a href="f/sarbe.fa.xz">f/<wbr>sarbe.<wbr>fa.<wbr>xz</a>,
+<a href="f/sarbe.pid">f/<wbr>sarbe.<wbr>pid</a>.</p>
 <h2>
 <a href="#Fill_in_N_bases_from_the_consensus_sequence_of_related_viruses" id="Fill_in_N_bases_from_the_consensus_sequence_of_related_viruses">Fill
 in N bases from the consensus sequence of related viruses</a>
@@ -3555,24 +3553,33 @@ because otherwise for example there would be a huge number of different
 SARS1 sequences.</p>
 <p>There's six different codons for arginine, but the rarest one is
 <code>CGG</code> which appears twice in the FCS insertion:</p>
-<pre>$<wbr> curl -sL sars2.<wbr>net/<wbr>f/<wbr>sarbe.<wbr>fa.<wbr>xz|<wbr>gzip -dc&gt;<wbr>sarbe.<wbr>fa;<wbr>wget sars2.<wbr>net/<wbr>f/<wbr>sarbe.<wbr>pid <span class=comment>#<wbr> download sarbecoviruses and a TSV percentage indentity matrix of the sequences</span>
-$<wbr> thin()(<wbr>awk -F\\<wbr>t &#39;<wbr>NR&gt;<wbr>1{<wbr>for(<wbr>i=2;<wbr>i&lt;<wbr>NR;<wbr>i++)<wbr>if($<wbr>i&gt;<wbr>x)<wbr>next;<wbr>print$<wbr>1}<wbr>&#39;<wbr> x=&quot;${<wbr>1-<wbr>99}<wbr>&quot;<wbr> &quot;${@:<wbr>2}<wbr>&quot;)<wbr> <span class=comment>#<wbr> thin out a TSV percentage identity matrix to remove sequences with more than 99%<wbr> identity to any previous sequence</span>
-$<wbr> emu()(<wbr>curl -sd &quot;<wbr>id=$(<wbr>paste -sd,)<wbr>&quot;<wbr> &quot;<wbr>https://<wbr>eutils.<wbr>ncbi.<wbr>nlm.<wbr>nih.<wbr>gov/<wbr>entrez/<wbr>eutils/<wbr>efetch.<wbr>fcgi?<wbr>db=${<wbr>1:-<wbr>nuccore}<wbr>&amp;<wbr>rettype=${<wbr>2:-<wbr>fasta}<wbr>&amp;<wbr>retmode=$<wbr>3&quot;)<wbr> <span class=comment>#<wbr> efetch multi</span>
-$<wbr> seqkit seq -ni sarbe.<wbr>fa|<wbr>emu &#39;<wbr>&#39;<wbr> fasta_<wbr>cds_<wbr>na&gt;<wbr>sarbe.<wbr>na <span class=comment>#<wbr> download nucleotide coding sequences</span>
-$<wbr> thin&lt;<wbr>sarbe.<wbr>pid|<wbr>cut -d\<wbr>  -f1|<wbr>awk -F&#39;<wbr>lcl\\||_<wbr>cds_<wbr>&#39;<wbr> &#39;<wbr>NR==FNR{<wbr>a[$<wbr>0];<wbr>next}$<wbr>2 in a&#39;<wbr> - &lt;(<wbr>seqkit fx2tab sarbe.<wbr>na)|<wbr>cut -f2|<wbr>grep -o ...|<wbr>egrep &#39;<wbr>CG[<wbr>ACGT]|<wbr>AG[<wbr>AG]<wbr>&#39;|<wbr>LC_<wbr>ALL=C sort|<wbr>uniq -c|<wbr>sort
-   1414 CGG
-   3560 CGA
-   8316 CGC
-   8649 AGG
-  17019 CGT
-  23149 AGA</pre>
+<pre><span class=comment>#<wbr> download sarbecoviruses and a TSV percentage indentity matrix of the sequences</span>
+curl -sL sars2.<wbr>net/<wbr>f/<wbr>sarbe.<wbr>fa.<wbr>xz|<wbr>gzip -dc&gt;<wbr>sarbe.<wbr>fa;<wbr>wget sars2.<wbr>net/<wbr>f/<wbr>sarbe.<wbr>pid
+
+<span class=comment>#<wbr> thin out a TSV percentage identity matrix to remove sequences with more than 99%<wbr> identity to any previous sequence</span>
+thin()(<wbr>awk -F\\<wbr>t &#39;<wbr>NR&gt;<wbr>1{<wbr>for(<wbr>i=2;<wbr>i&lt;<wbr>NR;<wbr>i++)<wbr>if($<wbr>i&gt;<wbr>x)<wbr>next;<wbr>print$<wbr>1}<wbr>&#39;<wbr> x=&quot;${<wbr>1-<wbr>99}<wbr>&quot;<wbr> &quot;${@:<wbr>2}<wbr>&quot;)<wbr>
+
+<span class=comment>#<wbr> efetch multi (fetch all accessions from STDIN)<wbr></span>
+emu()(<wbr>curl -sd &quot;<wbr>id=$(<wbr>paste -sd,)<wbr>&quot;<wbr> &quot;<wbr>https://<wbr>eutils.<wbr>ncbi.<wbr>nlm.<wbr>nih.<wbr>gov/<wbr>entrez/<wbr>eutils/<wbr>efetch.<wbr>fcgi?<wbr>db=${<wbr>1:-<wbr>nuccore}<wbr>&amp;<wbr>rettype=${<wbr>2:-<wbr>fasta}<wbr>&amp;<wbr>retmode=$<wbr>3&quot;)<wbr>
+
+<span class=comment>#<wbr> download nucleotide coding sequences</span>
+seqkit seq -ni sarbe.<wbr>fa|<wbr>emu &#39;<wbr>&#39;<wbr> fasta_<wbr>cds_<wbr>na&gt;<wbr>sarbe.<wbr>na
+
+<span class=comment>#<wbr> count codons</span>
+thin&lt;<wbr>sarbe.<wbr>pid|<wbr>cut -d\<wbr>  -f1|<wbr>awk -F&#39;<wbr>lcl\\||_<wbr>cds_<wbr>&#39;<wbr> &#39;<wbr>NR==FNR{<wbr>a[$<wbr>0];<wbr>next}$<wbr>2 in a&#39;<wbr> - &lt;(<wbr>seqkit fx2tab sarbe.<wbr>na)|<wbr>cut -f2|<wbr>grep -o ...|<wbr>egrep &#39;<wbr>CG[<wbr>ACGT]|<wbr>AG[<wbr>AG]<wbr>&#39;|<wbr>LC_<wbr>ALL=C sort|<wbr>uniq -c|<wbr>sort
+<span class=comment>#<wbr>   1414 CGG</span>
+<span class=comment>#<wbr>   3560 CGA</span>
+<span class=comment>#<wbr>   8316 CGC</span>
+<span class=comment>#<wbr>   8649 AGG</span>
+<span class=comment>#<wbr>  17019 CGT</span>
+<span class=comment>#<wbr>  23149 AGA</span></pre>
 <h2>
 <a href="#Make_a_list_of_SNVs_in_a_sarbecovirus_in_Wuhan_Hu_1_coordinates" id="Make_a_list_of_SNVs_in_a_sarbecovirus_in_Wuhan_Hu_1_coordinates">Make
 a list of SNVs in a sarbecovirus in Wuhan-Hu-1 coordinates</a>
 </h2>
 <p>This version prints the list of SNVs in one sequence, where Khosta-1
 used as an example here:</p>
-<pre>$<wbr> curl -sL sars2.<wbr>net/<wbr>f/<wbr>sarbe.<wbr>fa.<wbr>xz|<wbr>gzip -dc&gt;<wbr>sarbe.<wbr>fa
+<pre>$<wbr> curl -sL sars2.<wbr>net/<wbr>f/<wbr>sarbe.<wbr>fa.<wbr>xz|<wbr>xz -dc&gt;<wbr>sarbe.<wbr>fa
 $<wbr> (seqkit grep -nrp Hu-<wbr>1 sarbe.<wbr>fa;<wbr>seqkit grep -nrp Khosta-<wbr>1 sarbe.<wbr>fa)|<wbr>mafft --<wbr>thread 4 --<wbr>quiet -&gt;<wbr>temp.<wbr>fa
 $<wbr> seqkit seq -s temp.<wbr>fa|<wbr>tr a-<wbr>z A-<wbr>Z|<wbr>gawk -F &#39;<wbr>&#39;<wbr> &#39;<wbr>NR==1{<wbr>for(<wbr>i=1;<wbr>i&lt;<wbr>=length;<wbr>i++){<wbr>ref[<wbr>i]<wbr>=$<wbr>i;<wbr>if($<wbr>i==&quot;-<wbr>&quot;)<wbr>gap++;<wbr>gaps[<wbr>i]<wbr>=gap}}<wbr>NR==2{<wbr>for(<wbr>i=1;<wbr>i&lt;<wbr>=length;<wbr>i++)<wbr>if($<wbr>i!<wbr>=ref[<wbr>i])<wbr>print ref[<wbr>i](<wbr>i-<wbr>gaps[<wbr>i])$<wbr>i}<wbr>&#39;|<wbr>grep -v --<wbr> -|<wbr>head
 G90A
@@ -3646,9 +3653,8 @@ class="uri">https://<wbr>www.<wbr>hiv.<wbr>lanl.<wbr>gov/<wbr>content/<wbr>seque
 Set alignment type to <span class="quote">"Subtype reference"</span>,
 change the region to <span class="quote">"GENOME"</span>, and click
 <span class="quote">"Get Alignment"</span>. Or alternatively you can
-download the file from here: <span
-class="paren">[f/HIV1_REF_2023_genome_DNA.fa.xz]</span><span
-class="paren">(f/HIV1_REF_2023_genome_DNA.fa.xz)</span>.</p>
+download the file from here:
+<a href="f/HIV1_REF_2023_genome_DNA.fa.xz">f/<wbr>HIV1_<wbr>REF_<wbr>2023_<wbr>genome_<wbr>DNA.<wbr>fa.<wbr>xz</a>.</p>
 <p>The following code slightly thins out the FASTA file so that it keeps
 only 50 random samples from the numeric subtypes, and then it makes a
 TSV percentage identity matrix for each pair of sequences in the
@@ -3772,7 +3778,7 @@ mkdir -p ~/<wbr>bin;<wbr>curl https://<wbr>www.<wbr>hiv.<wbr>lanl.<wbr>gov/<wbr>
 <span class=comment>#<wbr> compile C++<wbr> program for making a percentage identity matrix</span>
 curl -Ls sars2.<wbr>net/<wbr>f/<wbr>pid.<wbr>cpp&gt;<wbr>pid.<wbr>cpp;<wbr>g++<wbr> pid.<wbr>cpp -O3 -o ~/<wbr>bin/<wbr>pid
 
-<span class=comment>#<wbr> run SNAP for a FASTA file converted to the format used by SNAP,<wbr> where the ID is in the first column and the sequence is in the second column</span>
+<span class=comment>#<wbr> convert FASTA to format used by SNAP and run SNAP</span>
 sna()(~/<wbr>bin/<wbr>snap &lt;(<wbr>sed &#39;<wbr>s/<wbr> .*//<wbr>&#39;<wbr> &quot;$@<wbr>&quot;|<wbr>seqkit fx2tab))<wbr>
 
 <span class=comment>#<wbr> run SNAP and make a space-<wbr>delimited file for synonymous and nonsynonymous mutations in each pair of sequences</span>
