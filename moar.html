@@ -72,7 +72,7 @@ blockquote h3,blockquote h4{color:inherit}
 }
 </style>
 <title>New Zealand vaccination data released by database administrator Barry Young</title>
-<h1>New Zealand vaccination data released by database administrator Barry Young - <a href=index.html>sars2.net</a></h1><div class=dates>First published 2023-12-02 UTC, last modified 2026-05-20 UTC</div><h2 id=Contents><a href=#Contents>Contents</a></h2>
+<h1>New Zealand vaccination data released by database administrator Barry Young - <a href=index.html>sars2.net</a></h1><div class=dates>First published 2023-12-02 UTC, last modified 2026-05-21 UTC</div><h2 id=Contents><a href=#Contents>Contents</a></h2>
 <ul class=toc>
 <li><a href="#Preliminary_information">Preliminary information</a></li>
 <ul class=toc>
@@ -200,6 +200,7 @@ blockquote h3,blockquote h4{color:inherit}
 <li><a href="#Barrys_claim_that_Te_Whatu_Oras_data_for_COVID_deaths_cannot_be_found_on_the_Wayback_Machine">Barry&#39;s claim that Te Whatu Ora&#39;s data for COVID deaths cannot be found on the Wayback Machine</a></li>
 <li><a href="#Deaths_in_ages_81_in_Chris_Johnstons_OIA_response">Deaths in ages 81+ in Chris Johnston&#39;s OIA response</a></li>
 <li><a href="#Expected_deaths_calculated_starting_from_last_listed_dose_of_each_person">Expected deaths calculated starting from last listed dose of each person</a></li>
+<li><a href="#Why_were_about_89_of_COVID_deaths_in_fully_vaccinated_people">Why were about 89% of COVID deaths in fully vaccinated people?</a></li>
 </ul>
 </ul>
 
@@ -13440,6 +13441,188 @@ period from the first dose instead:</p>
 <span class=comment>#<wbr> 60-<wbr>79  -27  -31  -10  -14    6   -6  -10  -13   -9  -10    -9</span>
 <span class=comment>#<wbr> 80+<wbr>    -14  -46  -28  -19    3   -1  -13  -14   -6    3    -8</span>
 <span class=comment>#<wbr> Total  -18  -40  -20  -16    4   -4  -11  -13   -7   -3    -8</span></pre>
+<p>The baseline mortality rates in Barry's table were actually 2023 and
+not 2022 mortality rates: <span
+class="quote">[<a href=https://www.skirsch.com/covid/young/scragg.pdf>https://<wbr>www.<wbr>skirsch.<wbr>com/<wbr>covid/<wbr>young/<wbr>scragg.<wbr>pdf</a>]</span></p>
+<div>
+<img src=i/moar-redgraybar-5.webp width=600>
+</div>
+<p>Barry also posted this plot where he got higher excess mortality in
+old people than young people: <span
+class="quote">[<a href=https://x.com/BarryYoungNZ/status/2057181713512738992>https://<wbr>x.<wbr>com/<wbr>BarryYoungNZ/<wbr>status/<wbr>2057181713512738992</a>]</span></p>
+<div>
+<img src=i/moar-redgraybar-6.webp width=550>
+</div>
+<p>I pointed out to him it's because old people have less person-days
+between the last dose and the end of the data. And Barry excluded the
+person-days before the last dose from his rate, but he didn't exclude
+any deaths:</p>
+<pre>t=fread(<wbr>&quot;<wbr>nz-<wbr>record-<wbr>level-<wbr>data-<wbr>4M-<wbr>records.<wbr>csv.<wbr>gz&quot;)<wbr>
+redate=\(<wbr>x){<wbr>u=unique(<wbr>x);<wbr>as.<wbr>Date(<wbr>u,<wbr>&quot;%<wbr>m-%<wbr>d-%<wbr>Y&quot;)[<wbr>match(<wbr>x,<wbr>u)]}<wbr>
+t[,<wbr>c(<wbr>&quot;<wbr>vax&quot;,<wbr>&quot;<wbr>dead&quot;,<wbr>&quot;<wbr>born&quot;):<wbr>=lapply(.<wbr>SD,<wbr>redate),.<wbr>SDcols=patterns(<wbr>&quot;<wbr>date&quot;)]<wbr>
+
+<span class=comment>#<wbr> keep only last dose for each person</span>
+d=t[<wbr>rev(<wbr>order(<wbr>vax))][<wbr>rowid(<wbr>mrn)<wbr>==1,.(<wbr>last=vax,<wbr>dead,<wbr>born,<wbr>mrn)]<wbr>
+
+<span class=comment>#<wbr> first date of death or September 30th 2023</span>
+d[,<wbr>end:<wbr>=pmin(<wbr>dead,<wbr>as.<wbr>Date(<wbr>&quot;<wbr>2023-<wbr>9-<wbr>30&quot;),<wbr>na.<wbr>rm=T)]<wbr>
+
+age=\(<wbr>x,<wbr>y){<wbr>class(<wbr>x)<wbr>=class(<wbr>y)<wbr>=NULL;(<wbr>y-<wbr>x-(<wbr>y-<wbr>789)%/%<wbr>1461+(<wbr>x-<wbr>789)%/%<wbr>1461)%/%<wbr>365}<wbr>
+agecut=\(<wbr>x,<wbr>y)<wbr>cut(<wbr>x,<wbr>c(<wbr>y,<wbr>Inf),<wbr>paste0(<wbr>y,<wbr>c(<wbr>paste0(<wbr>&quot;-<wbr>&quot;,<wbr>y[-<wbr>1]-<wbr>1),<wbr>&quot;+<wbr>&quot;)),<wbr>T,<wbr>F)<wbr>
+d[,<wbr>age:<wbr>=agecut(<wbr>age(<wbr>born,<wbr>end),<wbr>0:<wbr>9*<wbr>10)]<wbr>
+
+<span class=comment>#<wbr> mean days between last vaccine dose and death or September 30th 2023</span>
+d[,.(<wbr>meanpersondays=mean(<wbr>as.<wbr>integer(<wbr>end-<wbr>first),<wbr>na.<wbr>rm=T)),,<wbr>age]<wbr>
+<span class=comment>#<wbr>   age meanpersondays</span>
+<span class=comment>#<wbr>   0-<wbr>9            513</span>
+<span class=comment>#<wbr> 10-<wbr>19            611</span>
+<span class=comment>#<wbr> 20-<wbr>29            616</span>
+<span class=comment>#<wbr> 30-<wbr>39            553</span>
+<span class=comment>#<wbr> 40-<wbr>49            520</span>
+<span class=comment>#<wbr> 50-<wbr>59            458</span>
+<span class=comment>#<wbr> 60-<wbr>69            383</span>
+<span class=comment>#<wbr> 70-<wbr>79            313</span>
+<span class=comment>#<wbr> 80-<wbr>89            288</span>
+<span class=comment>#<wbr>   90+<wbr>            272</span></pre>
+<h3>
+<a href="#Why_were_about_89_of_COVID_deaths_in_fully_vaccinated_people" id="Why_were_about_89_of_COVID_deaths_in_fully_vaccinated_people">Why
+were about 89% of COVID deaths in fully vaccinated people?</a>
+</h3>
+<p>This table shows that about 89% of COVID deaths were in people who
+were fully vaccinated or had received a booster: <span
+class="quote">[<a href=https://web.archive.org/web/20240201045108/https://www.tewhatuora.govt.nz/our-health-system/data-and-statistics/covid-19-data/covid-19-case-demographics>https://<wbr>web.<wbr>archive.<wbr>org/<wbr>web/<wbr>20240201045108/<wbr>https://<wbr>www.<wbr>tewhatuora.<wbr>govt.<wbr>nz/<wbr>our-<wbr>health-<wbr>system/<wbr>data-<wbr>and-<wbr>statistics/<wbr>covid-<wbr>19-<wbr>data/<wbr>covid-<wbr>19-<wbr>case-<wbr>demographics</a>]</span></p>
+<div>
+<img src=i/moar-covid-death-by-vaccination.webp width=470>
+</div>
+<p>There's a FOI response that shows the monthly number of COVID deaths
+by number of doses received, so you can separate unvaccinated people
+from people with any number of doses. <span
+class="quote">[<a href=https://fyi.org.nz/request/20120-covid-deaths-data>https://<wbr>fyi.<wbr>org.<wbr>nz/<wbr>request/<wbr>20120-<wbr>covid-<wbr>deaths-<wbr>data</a>,
+<a href=https://fyi.org.nz/request/20120/response/76691/attach/4/H2022009400%20Response.pdf>https://<wbr>fyi.<wbr>org.<wbr>nz/<wbr>request/<wbr>20120/<wbr>response/<wbr>76691/<wbr>attach/<wbr>4/<wbr>H2022009400%<wbr>20Response.<wbr>pdf</a>]</span>
+It shows that the percentage of unvaccinated COVID deaths was higher in
+February to May 2022 than the next 3 months, which it might be because
+Omicron had such high transmissibility that a large part of unvaccinated
+people had acquired natural immunity by mid-2022:</p>
+<pre><span class=comment>#<wbr> COVID deaths only,<wbr> unvaccinated doesn&#39;<wbr>t include people with 1 dose</span>
+d=data.<wbr>table(<wbr>year=2022,<wbr>month=2:<wbr>8)<wbr>
+d$<wbr>unvaxdead=c(<wbr>4,<wbr>51,<wbr>48,<wbr>36,<wbr>15,<wbr>45,<wbr>15)<wbr>
+d$<wbr>totaldead=c(<wbr>9,<wbr>280,<wbr>290,<wbr>235,<wbr>243,<wbr>492,<wbr>238)<wbr>
+d[,<wbr>unvaxpct:<wbr>=unvaxdead/<wbr>totaldead*<wbr>100]<wbr>
+print(<wbr>round(<wbr>d),<wbr>r=F)<wbr>
+<span class=comment>#<wbr> year month unvaxdead totaldead unvaxpct</span>
+<span class=comment>#<wbr> 2022     2         4         9       44 # highest percent in February</span>
+<span class=comment>#<wbr> 2022     3        51       280       18</span>
+<span class=comment>#<wbr> 2022     4        48       290       17</span>
+<span class=comment>#<wbr> 2022     5        36       235       15</span>
+<span class=comment>#<wbr> 2022     6        15       243        6 # lower percent from June onwards</span>
+<span class=comment>#<wbr> 2022     7        45       492        9</span>
+<span class=comment>#<wbr> 2022     8        15       238        6</span></pre>
+<p>In other countries the ratio of unvaccinated to vaccinated COVID
+mortality dropped between 2021 and mid-2022, and by mid-2022 many
+unvaccinated people had gained natural immunity, so vaccines made the
+biggest difference in 2021. But NZ was able to keep COVID out with
+lockdowns in 2021:</p>
+<div>
+<img src=i/moar-covid-death-by-vaccination-2.webp width=530>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>agecut=\(<wbr>x,<wbr>y)<wbr>cut(<wbr>x,<wbr>c(<wbr>y,<wbr>Inf),<wbr>paste0(<wbr>y,<wbr>c(<wbr>paste0(<wbr>&quot;-<wbr>&quot;,<wbr>y[-<wbr>1]-<wbr>1),<wbr>&quot;+<wbr>&quot;)),<wbr>T,<wbr>F)<wbr>
+
+t=fread(<wbr>&quot;<wbr>Otevrena-<wbr>data-<wbr>NR-<wbr>26-<wbr>30-<wbr>COVID-<wbr>19-<wbr>prehled-<wbr>populace-<wbr>2024-<wbr>01.<wbr>csv.<wbr>gz&quot;)<wbr>
+t=t[<wbr>RokNarozeni!<wbr>=&quot;-<wbr>&quot;]<wbr>
+t[<wbr>Umrti!<wbr>=&quot;<wbr>&quot;<wbr>&amp;<wbr>DatumUmrtiLPZ==&quot;<wbr>&quot;,<wbr>DatumUmrtiLPZ:<wbr>=Umrti]<wbr>
+t[<wbr>Umrti!<wbr>=&quot;<wbr>&quot;<wbr>&amp;<wbr>DatumUmrtiLPZ!<wbr>=Umrti,<wbr>Umrti:<wbr>=DatumUmrtiLPZ]<wbr>
+t=t[!(<wbr>DatumUmrtiLPZ!<wbr>=&quot;<wbr>&quot;<wbr>&amp;<wbr>Datum_<wbr>Prvni_<wbr>davka&gt;<wbr>DatumUmrtiLPZ)]<wbr>
+t[,<wbr>vax:<wbr>=Datum_<wbr>Prvni_<wbr>davka!<wbr>=&quot;<wbr>&quot;]<wbr>
+t[,<wbr>born:<wbr>=agecut(<wbr>as.<wbr>integer(<wbr>substr(<wbr>RokNarozeni,<wbr>1,<wbr>4)),<wbr>seq(<wbr>1925,<wbr>1990,<wbr>5))]<wbr>
+
+t2=t[!(!<wbr>is.<wbr>na(<wbr>Infekce)<wbr>&amp;<wbr>Infekce&gt;<wbr>1)]<wbr>
+dead=t2[,.(<wbr>unvaxdead=sum(!<wbr>vax),<wbr>vaxdead=sum(<wbr>vax)),.(<wbr>week=DatumUmrtiLPZ,<wbr>born)]<wbr>
+coviddead=t[,.(<wbr>unvaxcoviddead=sum(!<wbr>vax),<wbr>vaxcoviddead=sum(<wbr>vax)),.(<wbr>week=Umrti,<wbr>born)]<wbr>
+vax=t2[,.(<wbr>newvax=.<wbr>N),.(<wbr>week=Datum_<wbr>Prvni_<wbr>davka,<wbr>born)]<wbr>
+
+a=merge(<wbr>dead,<wbr>merge(<wbr>coviddead,<wbr>vax,<wbr>all=T),<wbr>all=T)[<wbr>week!<wbr>=&quot;<wbr>&quot;]<wbr>
+a[<wbr>is.<wbr>na(<wbr>a)]<wbr>=0
+
+a=merge(<wbr>t2[,.(<wbr>startpop=.<wbr>N),<wbr>born],<wbr>a)<wbr>
+a[,<wbr>unvaxpop:<wbr>=startpop-<wbr>cumsum(<wbr>unvaxdead)-<wbr>cumsum(<wbr>newvax),<wbr>born]<wbr>
+a[,<wbr>vaxpop:<wbr>=cumsum(<wbr>newvax)-<wbr>cumsum(<wbr>vaxdead),<wbr>born]<wbr>
+
+a=a[,.(<wbr>dead=c(<wbr>unvaxcoviddead,<wbr>vaxcoviddead),<wbr>pop=c(<wbr>unvaxpop,<wbr>vaxpop),<wbr>dose=0:<wbr>1),.(<wbr>born,<wbr>week)]<wbr>
+a=a[!<wbr>is.<wbr>na(<wbr>born)]<wbr>
+a[,<wbr>std:<wbr>=a[,<wbr>tapply(<wbr>pop,<wbr>born,<wbr>sum)/<wbr>sum(<wbr>pop)][<wbr>born]]<wbr>
+
+a=a[,.(<wbr>asmr=sum(<wbr>dead/<wbr>pop*<wbr>std/<wbr>7*<wbr>365e5)),.(<wbr>week,<wbr>dose)]<wbr>
+iso=as.<wbr>IDate(<wbr>0:<wbr>1e4*<wbr>7);<wbr>names(<wbr>iso)<wbr>=format(<wbr>iso,<wbr>&quot;%<wbr>G-%<wbr>V&quot;)<wbr>
+a[,<wbr>asmr:<wbr>=ma(<wbr>asmr,<wbr>1),<wbr>dose]<wbr>
+cz=na.<wbr>omit(<wbr>a[,.(<wbr>y=asmr[<wbr>dose==0]/<wbr>asmr[<wbr>dose==1]),.(<wbr>x=iso[<wbr>week])])[<wbr>y!<wbr>=Inf]<wbr>
+cz$<wbr>z=&quot;<wbr>Czech NZIP data (±1-<wbr>week MA)<wbr>&quot;<wbr>
+
+ons=fread(<wbr>&quot;<wbr>https://<wbr>sars2.<wbr>net/<wbr>f/<wbr>ons.<wbr>csv&quot;)<wbr>
+ons=rbind(<wbr>ons[<wbr>ed==9],<wbr>ons[<wbr>ed==7&amp;<wbr>month&lt;<wbr>=&quot;<wbr>2021-<wbr>03&quot;])[<wbr>age==&quot;<wbr>Total&quot;<wbr>&amp;<wbr>cause==&quot;<wbr>Deaths involving COVID-<wbr>19&quot;]<wbr>
+ons=ons[,.(<wbr>y=asmr[<wbr>status==&quot;<wbr>Unvaccinated&quot;]/<wbr>asmr[<wbr>status==&quot;<wbr>Ever vaccinated&quot;]),,.(<wbr>x=as.<wbr>Date(<wbr>paste0(<wbr>month,<wbr>&quot;-<wbr>15&quot;)))]<wbr>
+ons$<wbr>z=&quot;<wbr>English ONS data&quot;<wbr>
+
+cbs=fread(<wbr>&quot;<wbr>https://<wbr>sars2.<wbr>net/<wbr>f/<wbr>dutch_<wbr>cbs_<wbr>aukema.<wbr>csv&quot;)<wbr>
+cbs=cbs[<wbr>covid==T&amp;<wbr>long_<wbr>term_<wbr>care==F]<wbr>
+cbs[,<wbr>asmr:<wbr>=ma(<wbr>asmr,<wbr>1),<wbr>status]<wbr>
+cbs=cbs[,.(<wbr>y=asmr[<wbr>status==&quot;<wbr>Unvaccinated&quot;]/<wbr>asmr[<wbr>status==&quot;<wbr>Vaccinated&quot;]),.(<wbr>x=as.<wbr>Date(<wbr>week_<wbr>ending))]<wbr>
+cbs$<wbr>z=&quot;<wbr>Dutch CBS data (±1-<wbr>week MA)<wbr>&quot;<wbr>
+
+cdc=fread(<wbr>&quot;<wbr>https://<wbr>sars2.<wbr>net/<wbr>f/<wbr>Rates_<wbr>of_<wbr>COVID-<wbr>19_<wbr>Cases_<wbr>or_<wbr>Deaths_<wbr>by_<wbr>Age_<wbr>Group_<wbr>and_<wbr>Updated__<wbr>Bivalent__<wbr>Booster_<wbr>Status_<wbr>20241231.<wbr>csv&quot;)<wbr>
+cdc[,<wbr>x:<wbr>=MMWRweek::<wbr>MMWRweek2Date(<wbr>mmwr_<wbr>week%/%<wbr>100,<wbr>mmwr_<wbr>week%%<wbr>100,<wbr>4)]<wbr>
+cdc=cdc[<wbr>outcome==&quot;<wbr>death&quot;<wbr>&amp;<wbr>vaccination_<wbr>status==&quot;<wbr>vaccinated&quot;<wbr>&amp;<wbr>age_<wbr>group==&quot;<wbr>all_<wbr>ages&quot;,.(<wbr>x,<wbr>y=age_<wbr>adj_<wbr>unvax_<wbr>ir/<wbr>age_<wbr>adj_<wbr>vax_<wbr>ir)]<wbr>
+cdc$<wbr>z=&quot;<wbr>US CDC data&quot;<wbr>
+
+p=rbind(<wbr>ons,<wbr>cdc,<wbr>cbs,<wbr>cz)[,<wbr>z:<wbr>=factor(<wbr>z,<wbr>unique(<wbr>z))]<wbr>
+p[,<wbr>y:<wbr>=pmin(<wbr>y,<wbr>22)]<wbr>
+
+xstart=as.<wbr>Date(<wbr>&quot;<wbr>2021-<wbr>1-<wbr>1&quot;);<wbr>xend=as.<wbr>Date(<wbr>&quot;<wbr>2024-<wbr>1-<wbr>1&quot;)<wbr>
+xbreak=seq(<wbr>xstart+<wbr>182,<wbr>xend,<wbr>&quot;<wbr>year&quot;)<wbr>
+p=p[<wbr>x%<wbr>in%<wbr>xstart:<wbr>xend]<wbr>
+yend=max(<wbr>p$<wbr>y)<wbr>
+
+ggplot(<wbr>p)+<wbr>
+geom_<wbr>vline(<wbr>xintercept=seq(<wbr>xstart,<wbr>xend,<wbr>&quot;<wbr>year&quot;),<wbr>color=&quot;<wbr>gray75&quot;,<wbr>linewidth=.<wbr>4)+<wbr>
+geom_<wbr>segment(<wbr>data=CJ(<wbr>x=seq(<wbr>xstart,<wbr>xend,<wbr>&quot;<wbr>month&quot;)),<wbr>aes(<wbr>x,<wbr>0,<wbr>xend=x,<wbr>yend=yend*.<wbr>02),<wbr>color=&quot;<wbr>gray75&quot;,<wbr>linewidth=.<wbr>4)+<wbr>
+annotate(<wbr>&quot;<wbr>rect&quot;,<wbr>xmin=xstart,<wbr>xmax=xend,<wbr>ymin=0,<wbr>ymax=yend,<wbr>linewidth=.<wbr>4,<wbr>lineend=&quot;<wbr>square&quot;,<wbr>fill=NA,<wbr>color=&quot;<wbr>gray75&quot;,<wbr>linejoin=&quot;<wbr>mitre&quot;)+<wbr>
+geom_<wbr>line(<wbr>aes(<wbr>x,<wbr>y,<wbr>color=z),<wbr>linewidth=.<wbr>6)+<wbr>
+labs(<wbr>x=NULL,<wbr>y=NULL,<wbr>title=&quot;<wbr>Ratio between unvaccinated and vaccinated COVID ASMR&quot;)+<wbr>
+scale_<wbr>x_<wbr>date(<wbr>limits=c(<wbr>xstart-.<wbr>5,<wbr>xend+.<wbr>5),<wbr>breaks=xbreak,<wbr>labels=year(<wbr>xbreak))+<wbr>
+scale_<wbr>y_<wbr>continuous(<wbr>breaks=pretty)+<wbr>
+scale_<wbr>color_<wbr>manual(<wbr>values=c(<wbr>&quot;<wbr>black&quot;,<wbr>&quot;#<wbr>ff6666&quot;,<wbr>&quot;#<wbr>6666ff&quot;,<wbr>&quot;#<wbr>00aa00&quot;))+<wbr>
+coord_<wbr>cartesian(<wbr>clip=&quot;<wbr>off&quot;,<wbr>expand=F)+<wbr>
+theme(<wbr>axis.<wbr>text=element_<wbr>text(<wbr>size=11,<wbr>color=&quot;<wbr>gray40&quot;),<wbr>
+  axis.<wbr>text.<wbr>x=element_<wbr>text(<wbr>margin=margin(<wbr>3)),<wbr>
+  axis.<wbr>ticks=element_<wbr>line(<wbr>linewidth=.<wbr>4,<wbr>color=&quot;<wbr>gray75&quot;),<wbr>
+  axis.<wbr>ticks.<wbr>length.<wbr>x=unit(<wbr>0,<wbr>&quot;<wbr>pt&quot;),<wbr>
+  axis.<wbr>ticks.<wbr>length.<wbr>y=unit(<wbr>4,<wbr>&quot;<wbr>pt&quot;),<wbr>
+  legend.<wbr>background=element_<wbr>rect(<wbr>fill=&quot;<wbr>white&quot;,<wbr>color=&quot;<wbr>gray75&quot;,<wbr>linewidth=.<wbr>4),<wbr>
+  legend.<wbr>box=&quot;<wbr>vertical&quot;,<wbr>
+  legend.<wbr>box.<wbr>just=&quot;<wbr>right&quot;,<wbr>
+  legend.<wbr>box.<wbr>margin=margin(),<wbr>
+  legend.<wbr>box.<wbr>spacing=unit(<wbr>0,<wbr>&quot;<wbr>pt&quot;),<wbr>
+  legend.<wbr>direction=&quot;<wbr>vertical&quot;,<wbr>
+  legend.<wbr>justification=c(<wbr>1,<wbr>1),<wbr>
+  legend.<wbr>key.<wbr>height=unit(<wbr>13,<wbr>&quot;<wbr>pt&quot;),<wbr>
+  legend.<wbr>key.<wbr>width=unit(<wbr>21,<wbr>&quot;<wbr>pt&quot;),<wbr>
+  legend.<wbr>key=element_<wbr>rect(<wbr>fill=&quot;<wbr>white&quot;,<wbr>linewidth=0),<wbr>
+  legend.<wbr>key.<wbr>spacing.<wbr>x=unit(<wbr>2,<wbr>&quot;<wbr>pt&quot;),<wbr>
+  legend.<wbr>margin=margin(<wbr>3,<wbr>5,<wbr>3,<wbr>3),<wbr>
+  legend.<wbr>position=c(<wbr>1,<wbr>1),<wbr>
+  legend.<wbr>spacing.<wbr>x=unit(<wbr>2,<wbr>&quot;<wbr>pt&quot;),<wbr>
+  legend.<wbr>spacing.<wbr>y=unit(<wbr>0,<wbr>&quot;<wbr>pt&quot;),<wbr>
+  legend.<wbr>text=element_<wbr>text(<wbr>size=11,<wbr>margin=margin(,,,<wbr>2)),<wbr>
+  legend.<wbr>title=element_<wbr>blank(),<wbr>
+  panel.<wbr>background=element_<wbr>blank(),<wbr>
+  panel.<wbr>grid=element_<wbr>blank(),<wbr>
+  plot.<wbr>title=element_<wbr>text(<wbr>hjust=.<wbr>5,<wbr>size=11,<wbr>face=2,<wbr>margin=margin(,,<wbr>4)))<wbr>
+ggsave(<wbr>&quot;<wbr>1.<wbr>png&quot;,<wbr>width=5.<wbr>2,<wbr>height=3,<wbr>dpi=300*<wbr>4)<wbr>
+system(<wbr>&quot;<wbr>mogrify -trim 1.<wbr>png;<wbr>magick 1.<wbr>png \\(<wbr> -size `identify -format %w 1.<wbr>png`<wbr>x -font Arial -interline-<wbr>spacing -3 -pointsize $[<wbr>40*<wbr>4]<wbr> caption:<wbr>&#39;<wbr>Sources:<wbr> ONS dataset \&quot;<wbr>Deaths involving COVID-<wbr>19 by vaccination status,<wbr> England\<wbr>&quot;<wbr> (ESP2013),<wbr> CDC dataset \&quot;<wbr>Rates of COVID-<wbr>19 Cases or Deaths by Age Group and Updated (Bivalent)<wbr> Booster Status\<wbr>&quot;<wbr> (precalculated ASMR),<wbr> www.<wbr>nzip.<wbr>cz/<wbr>data/<wbr>2135-<wbr>covid-<wbr>19-<wbr>prehled-<wbr>populace (total person-<wbr>weeks used as standard population),<wbr> and www.<wbr>cbs.<wbr>nl/<wbr>nl-<wbr>nl/<wbr>longread/<wbr>rapportages/<wbr> 2024/<wbr>covid-<wbr>vaccinatiestatus-<wbr>en-<wbr>sterfte/<wbr>3-<wbr>resultaten (precalculated ASMR,<wbr> people not in long-<wbr>term care).<wbr>&#39;<wbr> -splice x$[<wbr>16*<wbr>4]<wbr> \\)<wbr> -append -trim -resize 25%<wbr> -bordercolor white -border 26 -dither none -colors 256 1.<wbr>png&quot;)<wbr></pre>
+</div>
 <div id=pagenumber></div>
 <script>
 document.querySelectorAll('.spoiler button').forEach(x=>{
