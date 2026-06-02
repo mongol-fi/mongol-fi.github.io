@@ -4,7 +4,7 @@
 <style>
 body{background:#333;color:#fff;text-align:center}
 p,pre,ul,li,blockquote,table,dl{text-align:left}
-body,td,th{font:15.5px/1.6 Arial,Helvetica,'Liberation Sans','Nimbus Sans',sans-serif}
+body,td,th{font:15px/1.5 Arial,Helvetica,'Liberation Sans','Nimbus Sans',sans-serif}
 p{max-width:470px;margin:1em auto}
 dl,pre{margin:1em auto;width:fit-content;max-width:min(100%, 1000px);box-sizing:border-box}
 hr{border:none;border-top: 2px solid #bbb;margin:1em auto;max-width:470px}
@@ -20,7 +20,7 @@ blockquote h2,blockquote h3,blockquote h4{margin:.5em 0}
 blockquote ul,blockquote ol{margin:.4em 0}
 a,a .quote{text-decoration:none;color:hsl(220,94%,75%)}
 a:visited,a .quote{color:hsl(270,94%,75%)}
-pre,code{white-space:pre-wrap;word-wrap:break-word;font:14px Menlo,'DejaVu Sans Mono','Liberation Mono',Consolas,monospace;background:#555;color:white}
+pre,code{white-space:pre-wrap;word-wrap:break-word;font:13.6px Menlo,'DejaVu Sans Mono','Liberation Mono',Consolas,monospace;background:#555;color:white}
 pre{padding:4px}
 code{padding:1px}
 table{border-collapse:collapse;margin:0 auto;max-width:100%%}
@@ -72,7 +72,7 @@ blockquote h3,blockquote h4{color:inherit}
 }
 </style>
 <title>New Zealand vaccination data released by database administrator Barry Young</title>
-<h1>New Zealand vaccination data released by database administrator Barry Young - <a href=index.html>sars2.net</a></h1><div class=dates>First published 2023-12-02 UTC, last modified 2026-05-24 UTC</div><h2 id=Contents><a href=#Contents>Contents</a></h2>
+<h1>New Zealand vaccination data released by database administrator Barry Young - <a href=index.html>sars2.net</a></h1><div class=dates>First published 2023-12-02 UTC, last modified 2026-06-01 UTC</div><h2 id=Contents><a href=#Contents>Contents</a></h2>
 <ul class=toc>
 <li><a href="#Preliminary_information">Preliminary information</a></li>
 <ul class=toc>
@@ -201,6 +201,7 @@ blockquote h3,blockquote h4{color:inherit}
 <li><a href="#Deaths_in_ages_81_in_Chris_Johnstons_OIA_response">Deaths in ages 81+ in Chris Johnston&#39;s OIA response</a></li>
 <li><a href="#Expected_deaths_calculated_starting_from_last_listed_dose_of_each_person">Expected deaths calculated starting from last listed dose of each person</a></li>
 <li><a href="#Why_were_about_89_of_COVID_deaths_in_fully_vaccinated_people">Why were about 89% of COVID deaths in fully vaccinated people?</a></li>
+<li><a href="#Plot_for_deaths_since_final_dose_by_21_day_bins">Plot for deaths since final dose by 21-day bins</a></li>
 </ul>
 </ul>
 
@@ -13753,6 +13754,127 @@ percentage of total COVID deaths in New Zealand might be that the COVID
 deaths were almost entirely in the Omicron era, and Omicron infected
 such a large number of people so fast that unvaccinated people soon
 acquired natural immunity after Omicron emerged.</p>
+<h3>
+<a href="#Plot_for_deaths_since_final_dose_by_21_day_bins" id="Plot_for_deaths_since_final_dose_by_21_day_bins">Plot
+for deaths since final dose by 21-day bins</a>
+</h3>
+<p>Barry Young posted this plot, where he plotted the number of deaths
+by time since the final dose included for each person. For some reason
+he used a fixed baseline where each bin had 481 expected deaths, even
+though the later bins have a much smaller number of person-days than the
+earlier bins, so he should've employed different baseline levels for
+different bins: <span
+class="quote">[<a href=https://x.com/BarryYoungNZ/status/2060427769771892877>https://<wbr>x.<wbr>com/<wbr>BarryYoungNZ/<wbr>status/<wbr>2060427769771892877</a>]</span></p>
+<div>
+<img src=i/moar-21week-1.jpg width=470>
+</div>
+<p>I asked him many times how he determined the baseline, but he never
+answered me.</p>
+<p>In another analysis where he similarly kept only the final dose for
+each person, he got a total SMR of about 1.51, but now his actual number
+of deaths is much more than 51% higher than his baseline number of
+deaths.</p>
+<p>In the following code I only kept the final dose for each person
+before their death, which exaggerates the SMR value for the reasons I
+explained in the previous section of this HTML file. When I used the
+2023 mortality rates as a baseline, I got an overall SMR of about 1.59,
+which is similar to the value in Barry's recent analysis:</p>
+<pre><span class=comment>#<wbr> fast floored years between pair of dates after 1900 but before 2100</span>
+age=\(<wbr>x,<wbr>y){<wbr>class(<wbr>x)<wbr>=class(<wbr>y)<wbr>=NULL;(<wbr>y-<wbr>x-(<wbr>y-<wbr>789)%/%<wbr>1461+(<wbr>x-<wbr>789)%/%<wbr>1461)%/%<wbr>365}<wbr>
+
+f1=&quot;<wbr>https://<wbr>github.<wbr>com/<wbr>skirsch/<wbr>NewZealand/<wbr>raw/<wbr>refs/<wbr>heads/<wbr>main/<wbr>data/<wbr>&quot;<wbr>
+f2=&quot;<wbr>nz-<wbr>record-<wbr>level-<wbr>data-<wbr>4M-<wbr>records.<wbr>csv.<wbr>gz&quot;<wbr>
+download.<wbr>file(<wbr>paste0(<wbr>f1,<wbr>f2),<wbr>f2)<wbr>
+t=fread(<wbr>f2)<wbr>
+redate=\(<wbr>x){<wbr>u=unique(<wbr>x);<wbr>as.<wbr>Date(<wbr>u,<wbr>&quot;%<wbr>m-%<wbr>d-%<wbr>Y&quot;)[<wbr>match(<wbr>x,<wbr>u)]}<wbr>
+t[,<wbr>c(<wbr>&quot;<wbr>vax&quot;,<wbr>&quot;<wbr>dead&quot;,<wbr>&quot;<wbr>born&quot;):<wbr>=lapply(.<wbr>SD,<wbr>redate),.<wbr>SDcols=patterns(<wbr>&quot;<wbr>date&quot;)]<wbr>
+
+<span class=comment>#<wbr> keep only last dose for each person (incorrect)<wbr></span>
+d=t[<wbr>order(-<wbr>vax)][<wbr>rowid(<wbr>mrn)<wbr>==1,.(<wbr>vax,<wbr>dead,<wbr>born)]<wbr>
+
+bday=d[,.(<wbr>vax,<wbr>dead,<wbr>born,<wbr>bday=c(<wbr>outer(<wbr>born,<wbr>2021:<wbr>2023,`<wbr>year&lt;-`)))]<wbr>
+bday=bday[<wbr>bday&gt;<wbr>vax&amp;!(!<wbr>is.<wbr>na(<wbr>dead)<wbr>&amp;<wbr>bday&gt;<wbr>dead)]<wbr>
+bday=bday[,.(<wbr>pop=.<wbr>N),.(<wbr>date=bday,<wbr>age=age(<wbr>born,<wbr>bday),<wbr>vax)]<wbr>
+bday=rbind(<wbr>bday,<wbr>bday[,.(<wbr>date,<wbr>age=age-<wbr>1,<wbr>pop=-<wbr>pop,<wbr>vax)])<wbr>
+
+a=d[,.(<wbr>pop=.<wbr>N),.(<wbr>date=vax,<wbr>vax,<wbr>age=age(<wbr>born,<wbr>vax))]<wbr>
+a=rbind(<wbr>a,<wbr>bday)[,.(<wbr>pop=as.<wbr>double(<wbr>sum(<wbr>pop))),.(<wbr>date,<wbr>age,<wbr>vax)]<wbr>
+dead=d[!<wbr>is.<wbr>na(<wbr>dead),.(<wbr>dead=.<wbr>N),.(<wbr>date=dead,<wbr>age=age(<wbr>born,<wbr>dead),<wbr>vax)]<wbr>
+a=merge(<wbr>a,<wbr>dead,<wbr>all=T)<wbr>
+
+a=merge(<wbr>do.<wbr>call(<wbr>CJ,<wbr>lapply(<wbr>a[,<wbr>1:<wbr>3],<wbr>unique)),<wbr>a,<wbr>all=T)<wbr>
+a[<wbr>is.<wbr>na(<wbr>a)]<wbr>=0
+a=a[<wbr>date&gt;<wbr>=vax][<wbr>date&lt;<wbr>&quot;<wbr>2023-<wbr>10-<wbr>1&quot;]<wbr>
+a[,<wbr>pop:<wbr>=cumsum(<wbr>pop-<wbr>dead),.(<wbr>age,<wbr>vax)]<wbr>
+a[,<wbr>bin:<wbr>=as.<wbr>integer(<wbr>date-<wbr>vax)%/%<wbr>100*<wbr>100]<wbr>
+
+a=a[,.(<wbr>pop=sum(<wbr>pop),<wbr>dead=sum(<wbr>dead)),.(<wbr>bin,<wbr>age=pmin(<wbr>age,<wbr>95))]<wbr>
+
+pop=fread(<wbr>&quot;<wbr>https://<wbr>sars2.<wbr>net/<wbr>f/<wbr>nzpopdead.<wbr>csv&quot;)<wbr> <span class=comment>#<wbr> from InfoShare</span>
+base=pop[<wbr>year==2023,<wbr>sum(<wbr>dead)/<wbr>sum(<wbr>pop,<wbr>na.<wbr>rm=T),.(<wbr>age=pmin(<wbr>age,<wbr>95))]$<wbr>V1
+a[,<wbr>base:<wbr>=pop*<wbr>base[<wbr>age+<wbr>1]/<wbr>365]<wbr>
+
+o=a[,.(<wbr>base=sum(<wbr>base),<wbr>dead=sum(<wbr>dead)),<wbr>bin]<wbr>
+o[,<wbr>bin:<wbr>=factor(<wbr>bin,,<wbr>paste0(<wbr>bin,<wbr>&quot;-<wbr>&quot;,<wbr>bin+<wbr>99))]<wbr>
+o=rbind(<wbr>o,<wbr>o[,.(<wbr>dead=sum(<wbr>dead),<wbr>base=sum(<wbr>base),<wbr>bin=&quot;<wbr>Total&quot;)])<wbr>
+print(<wbr>o[<wbr>dead&gt;<wbr>0][,.(<wbr>bin,<wbr>dead,<wbr>base=round(<wbr>base),<wbr>smr=round(<wbr>dead/<wbr>base,<wbr>2))],<wbr>r=F)<wbr>
+<span class=comment>#<wbr>     bin  dead  base  smr # deaths by days after last dose</span>
+<span class=comment>#<wbr>    0-<wbr>99 10096  7101 1.<wbr>42</span>
+<span class=comment>#<wbr> 100-<wbr>199 10252  5349 1.<wbr>92</span>
+<span class=comment>#<wbr> 200-<wbr>299  6604  3324 1.<wbr>99</span>
+<span class=comment>#<wbr> 300-<wbr>399  4275  2985 1.<wbr>43</span>
+<span class=comment>#<wbr> 400-<wbr>499  2583  2024 1.<wbr>28</span>
+<span class=comment>#<wbr> 500-<wbr>599  2060  1627 1.<wbr>27</span>
+<span class=comment>#<wbr> 600-<wbr>699   643   574 1.<wbr>12</span>
+<span class=comment>#<wbr> 700-<wbr>799   113   113 1.<wbr>00</span>
+<span class=comment>#<wbr> 800-<wbr>899     8     5 1.<wbr>52</span>
+<span class=comment>#<wbr>   Total 36634 23104 1.<wbr>59</span></pre>
+<p>If Barry wants to do the analysis even more easily, and he wants to
+properly count people under all doses and not only the final dose before
+death, he can use the <span class="quote">"buckets"</span> file I
+generated <span class="quote">(or the similar files posted by Kirsch,
+even though they don't account for people aging over time
+correctly)</span>. It should give him an overall SMR below 1, like how
+here I got an SMR of about 0.96, even though I used the 2023 mortality
+rates as a baseline, and there was higher mortality in 2022 than
+2023:</p>
+<pre>t=fread(<wbr>&quot;<wbr>https://<wbr>sars2.<wbr>net/<wbr>f/<wbr>buckets.<wbr>gz&quot;)<wbr>
+
+pop=fread(<wbr>&quot;<wbr>https://<wbr>sars2.<wbr>net/<wbr>f/<wbr>nzpopdead.<wbr>csv&quot;)[<wbr>year==2023]<wbr>
+base=pop[,.(<wbr>base=sum(<wbr>dead)/<wbr>sum(<wbr>pop,<wbr>na.<wbr>rm=T)/<wbr>365),.(<wbr>age=pmin(<wbr>age,<wbr>95))]<wbr>
+
+a=t[<wbr>dose==1,.(<wbr>dead=sum(<wbr>dead),<wbr>pop=sum(<wbr>alive)),.(<wbr>bin=week%/%<wbr>6*<wbr>6,<wbr>age=pmin(<wbr>age,<wbr>95))]<wbr>
+
+o=merge(<wbr>a,<wbr>base)[,.(<wbr>dead=sum(<wbr>dead),<wbr>base=sum(<wbr>base*<wbr>pop)),,<wbr>bin]<wbr>
+o[,<wbr>bin:<wbr>=factor(<wbr>bin,,<wbr>paste0(<wbr>bin,<wbr>&quot;-<wbr>&quot;,<wbr>bin+<wbr>5))]<wbr>
+o=rbind(<wbr>o,<wbr>o[,.(<wbr>dead=sum(<wbr>dead),<wbr>base=sum(<wbr>base),<wbr>bin=&quot;<wbr>Total&quot;)])<wbr>
+o[,<wbr>smr:<wbr>=dead/<wbr>base]<wbr>
+o[,.(<wbr>bin,<wbr>dead,<wbr>base=round(<wbr>base),<wbr>smr=round(<wbr>smr,<wbr>2))]<wbr>
+<span class=comment>#<wbr>     bin  dead  base  smr</span>
+<span class=comment>#<wbr>     0-<wbr>5  3678  5893 0.<wbr>62 # deaths on weeks 0-<wbr>5 (days 0-<wbr>41)<wbr> from newest dose</span>
+<span class=comment>#<wbr>    6-<wbr>11  4602  5521 0.<wbr>83</span>
+<span class=comment>#<wbr>   12-<wbr>17  4919  5378 0.<wbr>91</span>
+<span class=comment>#<wbr>   18-<wbr>23  4542  4670 0.<wbr>97</span>
+<span class=comment>#<wbr>   24-<wbr>29  3554  3395 1.<wbr>05 # the smr goes above 1.<wbr>0 because at this point many</span>
+<span class=comment>#<wbr>   30-<wbr>35  3011  2723 1.<wbr>11 # healthy vaccinees have already moved under a new</span>
+<span class=comment>#<wbr>   36-<wbr>41  2527  2191 1.<wbr>15 # dose</span>
+<span class=comment>#<wbr>   42-<wbr>47  2107  1681 1.<wbr>25</span>
+<span class=comment>#<wbr>   48-<wbr>53  1738  1489 1.<wbr>17</span>
+<span class=comment>#<wbr>   54-<wbr>59  1458  1343 1.<wbr>09</span>
+<span class=comment>#<wbr>   60-<wbr>65  1115  1017 1.<wbr>10</span>
+<span class=comment>#<wbr>   66-<wbr>71   893   806 1.<wbr>11</span>
+<span class=comment>#<wbr>   72-<wbr>77   941   748 1.<wbr>26</span>
+<span class=comment>#<wbr>   78-<wbr>83   831   700 1.<wbr>19</span>
+<span class=comment>#<wbr>   84-<wbr>89   558   468 1.<wbr>19</span>
+<span class=comment>#<wbr>   90-<wbr>95   236   202 1.<wbr>17</span>
+<span class=comment>#<wbr>  96-<wbr>101   100   120 0.<wbr>83</span>
+<span class=comment>#<wbr> 102-<wbr>107    70    61 1.<wbr>15</span>
+<span class=comment>#<wbr> 108-<wbr>113    20    20 1.<wbr>02</span>
+<span class=comment>#<wbr> 114-<wbr>119     9     5 1.<wbr>76</span>
+<span class=comment>#<wbr> 120-<wbr>125     0     1 0.<wbr>00</span>
+<span class=comment>#<wbr> 126-<wbr>131     0     0 0.<wbr>00</span>
+<span class=comment>#<wbr>   Total 36909 38431 0.<wbr>96</span>
+<span class=comment>#<wbr>     bin  dead  base  smr</span></pre>
 <div id=pagenumber></div>
 <script>
 document.querySelectorAll('.spoiler button').forEach(x=>{
