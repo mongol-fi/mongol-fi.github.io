@@ -72,7 +72,7 @@ blockquote h3,blockquote h4{color:inherit}
 }
 </style>
 <title>Shell and R code for genetic analysis of SARS-like viruses</title>
-<h1>Shell and R code for genetic analysis of SARS-like viruses - <a href=index.html>sars2.net</a></h1><div class=dates>First published 2023-04-03 UTC, last modified 2026-05-29 UTC</div><h2 id=Contents><a href=#Contents>Contents</a></h2>
+<h1>Shell and R code for genetic analysis of SARS-like viruses - <a href=index.html>sars2.net</a></h1><div class=dates>First published 2023-04-03 UTC, last modified 2026-06-12 UTC</div><h2 id=Contents><a href=#Contents>Contents</a></h2>
 <ul class=toc>
 <li><a href="#Download_FASTA_files_from_GenBank_with_curl_or_efetch">Download FASTA files from GenBank with curl or efetch</a></li>
 <li><a href="#Align_spike_protein_sequences_with_MAFFT">Align spike protein sequences with MAFFT</a></li>
@@ -2742,14 +2742,21 @@ in my calculation.)</span></p>
 Wuhan-Hu-1 in the RdRp, the second column shows the number of nucleotide
 changes in the RdRp, and the third column shows the nucleotide
 percentage identity with Wuhan-Hu-1 in the whole genome:</p>
-<pre>$<wbr> wget -q https://<wbr>sars2.<wbr>net/<wbr>f/<wbr>sarbe.{<wbr>pid,<wbr>fa.<wbr>xz}<wbr>
-$<wbr> range=$(<wbr>seqkit grep -nrp Wuhan-<wbr>Hu-<wbr>1 sarbe.<wbr>fa.<wbr>xz|<wbr>seqkit seq -s|<wbr>gawk -F &#39;<wbr>&#39;<wbr> &#39;{<wbr>for(<wbr>i=1;<wbr>i&lt;<wbr>=length;<wbr>i++){<wbr>if($<wbr>i==&quot;-<wbr>&quot;)<wbr>gaps++;<wbr>if(<wbr>i-<wbr>gaps==13442)<wbr>printf&quot;%<wbr>s:<wbr>&quot;,<wbr>i;<wbr>if(<wbr>i-<wbr>gaps==16237)<wbr>print i}}<wbr>&#39;)<wbr>
-$<wbr> awk -F\\<wbr>t &#39;<wbr>NR==1{<wbr>for(<wbr>i=2;<wbr>i&lt;<wbr>=NF;<wbr>i++)<wbr>if($<wbr>i~/<wbr>Hu-<wbr>1/)<wbr>break;<wbr>next}$<wbr>1!<wbr>=x{<wbr>print$<wbr>i,$<wbr>1}<wbr>&#39;<wbr> sarbe.<wbr>pid|<wbr>awk &#39;($<wbr>1&gt;<wbr>=90&amp;<wbr>&amp;$<wbr>1&lt;<wbr>100)||/<wbr>Tor2/{<wbr>print$<wbr>2}<wbr>&#39;|<wbr>seqkit grep -f-<wbr> sarbe.<wbr>fa.<wbr>xz|<wbr>cat &lt;(<wbr>seqkit grep -nrp Hu-<wbr>1 sarbe.<wbr>fa.<wbr>xz)<wbr> -|<wbr>seqkit subseq -r$<wbr>range|<wbr>mafft --<wbr>thread 4 -&gt;<wbr>temp.<wbr>fa
-[...]<wbr>
-$<wbr> x=$(<wbr>seqkit seq -n temp.<wbr>fa|<wbr>sed &#39;<wbr>s/,.*//;<wbr>s/<wbr> \(<wbr>ORF\|<wbr>surface\).*//;<wbr>s/<wbr> isolate / /&#39;|<wbr>paste - &lt;(<wbr>seqkit seq -s temp.<wbr>fa|<wbr>sed &#39;<wbr>s/./<wbr>&amp;<wbr>&amp;/<wbr>26&#39;)|<wbr>seqkit tab2fx)<wbr>
-$<wbr> dist1()(<wbr>seqkit fx2tab &quot;$@<wbr>&quot;|<wbr>awk -F\\<wbr>t &#39;<wbr>NR==1{<wbr>split($<wbr>2,<wbr>a,<wbr>&quot;<wbr>&quot;);<wbr>l=length(<wbr>a);<wbr>next}{<wbr>split($<wbr>2,<wbr>b,<wbr>&quot;<wbr>&quot;);<wbr>d=0;<wbr>for(<wbr>i=1;<wbr>i&lt;<wbr>=l;<wbr>i++)<wbr>if(<wbr>a[<wbr>i]!<wbr>=&quot;-<wbr>&quot;<wbr>&amp;<wbr>&amp;<wbr>b[<wbr>i]!<wbr>=&quot;<wbr>&quot;<wbr>&amp;<wbr>&amp;<wbr>a[<wbr>i]!<wbr>=b[<wbr>i])<wbr>d++;<wbr>print d,$<wbr>1}<wbr>&#39;)<wbr>
-$<wbr> dist1&lt;<wbr>&lt;<wbr>&lt;<wbr>&quot;$<wbr>x&quot;|<wbr>sed $&#39;<wbr>s/<wbr> /\<wbr>t/;<wbr>s/<wbr> /\<wbr>t/<wbr>&#39;|<wbr>paste &lt;(<wbr>seqkit translate&lt;<wbr>&lt;<wbr>&lt;<wbr>&quot;$<wbr>x&quot;|<wbr>dist1|<wbr>cut -d\<wbr>  -f1)<wbr> -|<wbr>sed &#39;<wbr>s/,.*//;<wbr>s/<wbr> \(<wbr>ORF\|<wbr>surface\).*//;<wbr>s/<wbr> isolate / /&#39;|<wbr>awk &#39;<wbr>NR==FNR{<wbr>a[$<wbr>2]<wbr>=$<wbr>1;<wbr>next}{$<wbr>3=sprintf(<wbr>&quot;%.<wbr>1f&quot;,<wbr>a[$<wbr>3])}<wbr>1&#39;<wbr> {,<wbr>O}<wbr>FS=\\<wbr>t &lt;(<wbr>awk -F\\<wbr>t &#39;<wbr>NR==1{<wbr>for(<wbr>i=2;<wbr>i&lt;<wbr>=NF;<wbr>i++)<wbr>if($<wbr>i~/<wbr>Hu-<wbr>1/)<wbr>break;<wbr>next}{<wbr>sub(/<wbr> .*/,<wbr>&quot;<wbr>&quot;,$<wbr>1);<wbr>print$<wbr>i FS$<wbr>1}<wbr>&#39;<wbr> sarbe.<wbr>pid)<wbr> -|<wbr>sort -nk2|<wbr>column -ts$<wbr>&#39;\<wbr>t&#39;<wbr>
-1   43   96.<wbr>0  Bat coronavirus BANAL-<wbr>20-<wbr>236/<wbr>Laos/<wbr>2020
+<pre><span class=comment>#<wbr> get range of alignment corresponding to ungapped coordinates within first sequence</span>
+gappos()(<wbr>x=`<wbr>cat`;<wbr>seqkit seq -s&lt;<wbr>&lt;<wbr>&lt;<wbr>&quot;$<wbr>x&quot;|<wbr>sed 1q|<wbr>awk -F &#39;<wbr>&#39;<wbr> &#39;{<wbr>for(<wbr>i=1;<wbr>i&lt;<wbr>=length;<wbr>i++){<wbr>gaps+<wbr>=$<wbr>i==&quot;-<wbr>&quot;;<wbr>if(<wbr>i-<wbr>gaps==start&amp;<wbr>&amp;!<wbr>startfound){<wbr>printf&quot;%<wbr>s:<wbr>&quot;,<wbr>i;<wbr>startfound=1};<wbr>if(<wbr>i-<wbr>gaps==end&amp;<wbr>&amp;!<wbr>endfound){<wbr>print i;<wbr>endfound=1}}}<wbr>&#39;<wbr> &quot;<wbr>start=$<wbr>1&quot;<wbr> &quot;<wbr>end=${<wbr>2:-$<wbr>1}<wbr>&quot;|<wbr>seqkit subseq -r`<wbr>cat`<wbr>&lt;<wbr>&lt;<wbr>&lt;<wbr>&quot;$<wbr>x&quot;)<wbr>
+
+<span class=comment>#<wbr> make a file for RdRp of sequences with over 90%<wbr> identity to Wuhan-<wbr>Hu-<wbr>1,<wbr> and also include Tor2</span>
+awk -F\\<wbr>t &#39;<wbr>NR==1{<wbr>for(<wbr>i=2;<wbr>i&lt;<wbr>=NF;<wbr>i++)<wbr>if($<wbr>i~/<wbr>Hu-<wbr>1/)<wbr>break;<wbr>next}$<wbr>1!<wbr>=x{<wbr>print$<wbr>i,$<wbr>1}<wbr>&#39;<wbr> sarbe.<wbr>pid|<wbr>awk &#39;($<wbr>1&gt;<wbr>=90&amp;<wbr>&amp;$<wbr>1&lt;<wbr>100)||/<wbr>Tor2/{<wbr>print$<wbr>2}<wbr>&#39;|<wbr>seqkit grep -f-<wbr> sarbe.<wbr>fa|<wbr>cat &lt;(<wbr>seqkit grep -nrp Hu-<wbr>1 sarbe.<wbr>fa.<wbr>xz)<wbr> -|<wbr>gappos 13442 16237|<wbr>mafft --<wbr>quiet --<wbr>thread 4 -&gt;<wbr>temp.<wbr>fa
+
+<span class=comment>#<wbr> duplicate last base of ORF1a to account for frameshift</span>
+seqkit seq -n temp.<wbr>fa|<wbr>sed &#39;<wbr>s/,.*//;<wbr>s/<wbr> \(<wbr>ORF\|<wbr>surface\).*//;<wbr>s/<wbr> isolate / /&#39;|<wbr>paste - &lt;(<wbr>seqkit seq -s temp.<wbr>fa|<wbr>sed &#39;<wbr>s/./<wbr>&amp;<wbr>&amp;/<wbr>26&#39;)|<wbr>seqkit tab2fx&gt;<wbr>rdrp.<wbr>fa
+
+<span class=comment>#<wbr> print number of different positions between first sequence in FASTA file and other sequences (ignoring gaps)<wbr></span>
+dist1()(<wbr>seqkit fx2tab &quot;$@<wbr>&quot;|<wbr>awk -F\\<wbr>t &#39;<wbr>NR==1{<wbr>split($<wbr>2,<wbr>a,<wbr>&quot;<wbr>&quot;);<wbr>l=length(<wbr>a);<wbr>next}{<wbr>split($<wbr>2,<wbr>b,<wbr>&quot;<wbr>&quot;);<wbr>d=0;<wbr>for(<wbr>i=1;<wbr>i&lt;<wbr>=l;<wbr>i++)<wbr>if(<wbr>a[<wbr>i]!<wbr>=&quot;-<wbr>&quot;<wbr>&amp;<wbr>&amp;<wbr>b[<wbr>i]!<wbr>=&quot;<wbr>&quot;<wbr>&amp;<wbr>&amp;<wbr>a[<wbr>i]!<wbr>=b[<wbr>i])<wbr>d++;<wbr>print d,$<wbr>1}<wbr>&#39;)<wbr>
+
+dist1&lt;<wbr>rdrp.<wbr>fa|<wbr>sed $&#39;<wbr>s/<wbr> /\<wbr>t/;<wbr>s/<wbr> /\<wbr>t/<wbr>&#39;|<wbr>paste &lt;(<wbr>seqkit translate&lt;<wbr>rdrp.<wbr>fa|<wbr>dist1|<wbr>cut -d\<wbr>  -f1)<wbr> -|<wbr>sed &#39;<wbr>s/,.*//;<wbr>s/<wbr> \(<wbr>ORF\|<wbr>surface\).*//;<wbr>s/<wbr> isolate / /&#39;|<wbr>awk &#39;<wbr>NR==FNR{<wbr>a[$<wbr>2]<wbr>=$<wbr>1;<wbr>next}{$<wbr>3=sprintf(<wbr>&quot;%.<wbr>1f&quot;,<wbr>a[$<wbr>3])}<wbr>1&#39;<wbr> {,<wbr>O}<wbr>FS=\\<wbr>t &lt;(<wbr>awk -F\\<wbr>t &#39;<wbr>NR==1{<wbr>for(<wbr>i=2;<wbr>i&lt;<wbr>=NF;<wbr>i++)<wbr>if($<wbr>i~/<wbr>Hu-<wbr>1/)<wbr>break;<wbr>next}{<wbr>sub(/<wbr> .*/,<wbr>&quot;<wbr>&quot;,$<wbr>1);<wbr>print$<wbr>i FS$<wbr>1}<wbr>&#39;<wbr> sarbe.<wbr>pid)<wbr> -|<wbr>sort -nk2|<wbr>column -ts$<wbr>&#39;\<wbr>t&#39;<wbr></pre>
+<p>Output:</p>
+<pre>1   43   96.<wbr>0  Bat coronavirus BANAL-<wbr>20-<wbr>236/<wbr>Laos/<wbr>2020
 1   44   97.<wbr>0  Bat coronavirus BANAL-<wbr>20-<wbr>52/<wbr>Laos/<wbr>2020
 1   46   94.<wbr>8  Betacoronavirus sp.<wbr> RpYN06 strain bat/<wbr>Yunnan/<wbr>RpYN06/<wbr>2020
 1   48   93.<wbr>9  Bat coronavirus BANAL-<wbr>20-<wbr>116/<wbr>Laos/<wbr>2020
@@ -2787,7 +2794,7 @@ SADAQSFLNGFAV*<wbr>V<wbr>Q<wbr>P<wbr>V<wbr>L<wbr>H<wbr>R<wbr>A<wbr>A<wbr>Q<wbr>A
 $<wbr> seqkit seq -s sars2.<wbr>fa|<wbr>cut -c 13442-<wbr>16237|(<wbr>echo \&gt;<wbr>a;<wbr>sed &#39;<wbr>s/./<wbr>&amp;<wbr>&amp;/<wbr>26&#39;)|<wbr>seqkit translate|<wbr>seqkit subseq -r1:<wbr>60 <span class=comment>#<wbr> insert last base of ORF1a to start of ORF1b</span>
 &gt;<wbr>a
 S<wbr>A<wbr>D<wbr>A<wbr>Q<wbr>S<wbr>F<wbr>L<wbr>K<wbr>R<wbr>V<wbr>C<wbr>G<wbr>V<wbr>S<wbr>A<wbr>A<wbr>R<wbr>L<wbr>T<wbr>P<wbr>C<wbr>G<wbr>T<wbr>G<wbr>T<wbr>S<wbr>T<wbr>D<wbr>V<wbr>V<wbr>Y<wbr>R<wbr>A<wbr>F<wbr>D<wbr>I<wbr>Y<wbr>N<wbr>D<wbr>K<wbr>V<wbr>A<wbr>G<wbr>F<wbr>A<wbr>K<wbr>F<wbr>L<wbr>K<wbr>T<wbr>N<wbr>C<wbr>C<wbr>R<wbr>F<wbr>Q<wbr>E<wbr>K<wbr>D<wbr>
-$<wbr> curl -s &#39;<wbr>https://<wbr>eutils.<wbr>ncbi.<wbr>nlm.<wbr>nih.<wbr>gov/<wbr>entrez/<wbr>eutils/<wbr>efetch.<wbr>fcgi?<wbr>db=protein&amp;<wbr>rettype=fasta&amp;<wbr>id=YP_<wbr>009725307&#39;|<wbr>seqkit subseq -r1:<wbr>60 <span class=comment>#<wbr> compare to RdRp sequence from GenBank</span>
+$<wbr> curl -s &#39;<wbr>https://<wbr>eutils.<wbr>ncbi.<wbr>nlm.<wbr>nih.<wbr>gov/<wbr>entrez/<wbr>eutils/<wbr>efetch.<wbr>fcgi?<wbr>db=protein&amp;<wbr>rettype=fasta&amp;<wbr>id=YP_<wbr>009725307&#39;|<wbr>seqkit subseq -r1:<wbr>60 <span class=comment>#<wbr> compare to RdRp sequence from GenBank (first 60 bases shown)<wbr></span>
 &gt;<wbr>YP_<wbr>009725307.<wbr>1 RNA-<wbr>dependent RNA polymerase [Severe acute respiratory syndrome coronavirus 2]<wbr>
 S<wbr>A<wbr>D<wbr>A<wbr>Q<wbr>S<wbr>F<wbr>L<wbr>N<wbr>R<wbr>V<wbr>C<wbr>G<wbr>V<wbr>S<wbr>A<wbr>A<wbr>R<wbr>L<wbr>T<wbr>P<wbr>C<wbr>G<wbr>T<wbr>G<wbr>T<wbr>S<wbr>T<wbr>D<wbr>V<wbr>V<wbr>Y<wbr>R<wbr>A<wbr>F<wbr>D<wbr>I<wbr>Y<wbr>N<wbr>D<wbr>K<wbr>V<wbr>A<wbr>G<wbr>F<wbr>A<wbr>K<wbr>F<wbr>L<wbr>K<wbr>T<wbr>N<wbr>C<wbr>C<wbr>R<wbr>F<wbr>Q<wbr>E<wbr>K<wbr>D<wbr></pre>
 <h2>
