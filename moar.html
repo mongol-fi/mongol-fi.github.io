@@ -72,7 +72,7 @@ blockquote h3,blockquote h4{color:inherit}
 }
 </style>
 <title>New Zealand vaccination data released by database administrator Barry Young</title>
-<h1>New Zealand vaccination data released by database administrator Barry Young - <a href=index.html>sars2.net</a></h1><div class=dates>First published 2023-12-02 UTC, last modified 2026-06-01 UTC</div><h2 id=Contents><a href=#Contents>Contents</a></h2>
+<h1>New Zealand vaccination data released by database administrator Barry Young - <a href=index.html>sars2.net</a></h1><div class=dates>First published 2023-12-02 UTC, last modified 2026-06-22 UTC</div><h2 id=Contents><a href=#Contents>Contents</a></h2>
 <ul class=toc>
 <li><a href="#Preliminary_information">Preliminary information</a></li>
 <ul class=toc>
@@ -13487,6 +13487,112 @@ o[,.(<wbr>fromfirstdose=round(<wbr>V1[<wbr>type==1]),<wbr>fromlastdose=round(<wb
 <span class=comment>#<wbr>  70-<wbr>79           543          313  1.<wbr>74</span>
 <span class=comment>#<wbr>  80-<wbr>89           529          288  1.<wbr>84</span>
 <span class=comment>#<wbr>    90+<wbr>           487          271  1.<wbr>79</span></pre>
+<p>This plot also shows that Barry's method of counting the person-days
+from the final dose exaggerates the ASMR of vaccinated people
+particularly in 2021:</p>
+<div>
+<img src=i/moar-asmr-earliest-final.webp width=550>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>f1=&quot;<wbr>https://<wbr>github.<wbr>com/<wbr>skirsch/<wbr>NewZealand/<wbr>raw/<wbr>refs/<wbr>heads/<wbr>main/<wbr>data/<wbr>&quot;<wbr>
+f2=&quot;<wbr>nz-<wbr>record-<wbr>level-<wbr>data-<wbr>4M-<wbr>records.<wbr>csv.<wbr>gz&quot;<wbr>
+download.<wbr>file(<wbr>paste0(<wbr>f1,<wbr>f2),<wbr>f2)<wbr>
+
+age=\(<wbr>x,<wbr>y){<wbr>class(<wbr>x)<wbr>=class(<wbr>y)<wbr>=NULL;(<wbr>y-<wbr>x-(<wbr>y-<wbr>789)%/%<wbr>1461+(<wbr>x-<wbr>789)%/%<wbr>1461)%/%<wbr>365}<wbr>
+agecut=\(<wbr>x,<wbr>y)<wbr>cut(<wbr>x,<wbr>c(<wbr>y,<wbr>Inf),<wbr>paste0(<wbr>y,<wbr>c(<wbr>paste0(<wbr>&quot;-<wbr>&quot;,<wbr>y[-<wbr>1]-<wbr>1),<wbr>&quot;+<wbr>&quot;)),<wbr>T,<wbr>F)<wbr>
+
+t=fread(<wbr>&quot;<wbr>nz-<wbr>record-<wbr>level-<wbr>data-<wbr>4M-<wbr>records.<wbr>csv.<wbr>gz&quot;)<wbr>
+redate=\(<wbr>x){<wbr>u=unique(<wbr>x);<wbr>as.<wbr>Date(<wbr>u,<wbr>&quot;%<wbr>m-%<wbr>d-%<wbr>Y&quot;)[<wbr>match(<wbr>x,<wbr>u)]}<wbr>
+t[,<wbr>c(<wbr>&quot;<wbr>vax&quot;,<wbr>&quot;<wbr>dead&quot;,<wbr>&quot;<wbr>born&quot;):<wbr>=lapply(.<wbr>SD,<wbr>redate),.<wbr>SDcols=patterns(<wbr>&quot;<wbr>date&quot;)]<wbr>
+
+d=t[<wbr>order(-<wbr>vax)]<wbr>
+d=rbind(<wbr>d[,<wbr>type:<wbr>=2],<wbr>d[.<wbr>N:<wbr>1][,<wbr>type:<wbr>=1])[<wbr>rowid(<wbr>type,<wbr>mrn)<wbr>==1]<wbr>
+e1=d[,.(<wbr>pop=.<wbr>N),.(<wbr>date=vax,<wbr>age=age(<wbr>born,<wbr>vax),<wbr>type)]<wbr>
+dead=d[!<wbr>is.<wbr>na(<wbr>dead),.(<wbr>dead=.<wbr>N),.(<wbr>date=dead,<wbr>age=age(<wbr>born,<wbr>dead),<wbr>type)]<wbr>
+e2=dead[,.(<wbr>pop=-<wbr>dead,<wbr>date=date+<wbr>1,<wbr>age,<wbr>type)]<wbr>
+
+e3=d[,.(<wbr>vax,<wbr>dead,<wbr>born,<wbr>bday=c(<wbr>outer(<wbr>born,<wbr>2021:<wbr>2023,`<wbr>year&lt;-`)),<wbr>type)]<wbr>
+e3=e3[<wbr>bday&gt;<wbr>vax&amp;!(!<wbr>is.<wbr>na(<wbr>dead)<wbr>&amp;<wbr>bday&gt;<wbr>dead)]<wbr>
+e3=e3[,.(<wbr>pop=.<wbr>N),.(<wbr>date=bday,<wbr>age=age(<wbr>born,<wbr>bday),<wbr>type)]<wbr>
+e3=rbind(<wbr>e3,<wbr>e3[,.(<wbr>date,<wbr>age=age-<wbr>1,<wbr>pop=-<wbr>pop,<wbr>type)])<wbr>
+
+e=rbind(<wbr>e1,<wbr>e2,<wbr>e3)[,.(<wbr>pop=as.<wbr>double(<wbr>sum(<wbr>pop))),.(<wbr>date,<wbr>age,<wbr>type)]<wbr>
+e=merge(<wbr>do.<wbr>call(<wbr>CJ,<wbr>lapply(<wbr>e[,<wbr>1:<wbr>3],<wbr>unique)),<wbr>e,<wbr>all=T)<wbr>
+a=merge(<wbr>e,<wbr>dead,<wbr>all=T)[<wbr>date&lt;<wbr>&quot;<wbr>2023-<wbr>10-<wbr>1&quot;];<wbr>a[<wbr>is.<wbr>na(<wbr>a)]<wbr>=0
+a[,<wbr>pop:<wbr>=cumsum(<wbr>pop),.(<wbr>age,<wbr>type)]<wbr>
+
+nz=fread(<wbr>&quot;<wbr>https://<wbr>sars2.<wbr>net/<wbr>f/<wbr>nz_<wbr>monthly_<wbr>deaths_<wbr>by_<wbr>age.<wbr>csv&quot;)[<wbr>ethnicity==&quot;<wbr>Total&quot;]<wbr>
+nz[,<wbr>age:<wbr>=as.<wbr>integer(<wbr>substr(<wbr>age_<wbr>group,<wbr>1,<wbr>2))]<wbr>
+nz=nz[,.(<wbr>dead=sum(<wbr>count)),.(<wbr>age,<wbr>year=year_<wbr>reg,<wbr>month=month_<wbr>reg)]<wbr>
+
+pop=fread(<wbr>&quot;<wbr>https://<wbr>sars2.<wbr>net/<wbr>f/<wbr>nz_<wbr>infoshare_<wbr>population_<wbr>quarterly.<wbr>csv&quot;,<wbr>head=T)<wbr>
+date=pop[,<wbr>paste0(<wbr>substr(<wbr>year,<wbr>1,<wbr>4),<wbr>&quot;-<wbr>&quot;,<wbr>as.<wbr>integer(<wbr>substr(<wbr>year,<wbr>6,<wbr>6))*<wbr>3-<wbr>1,<wbr>&quot;-<wbr>15&quot;)]<wbr>
+pop=pop[,.(<wbr>date=as.<wbr>Date(<wbr>date),<wbr>age=rep(<wbr>0:<wbr>95,<wbr>each=.<wbr>N),<wbr>pop=unlist(.<wbr>SD[,-<wbr>1]))]<wbr>
+pop=pop[,.(<wbr>pop=sum(<wbr>pop)),.(<wbr>date,<wbr>age=age%/%<wbr>5*<wbr>5)]<wbr>
+dates=seq(<wbr>as.<wbr>Date(<wbr>&quot;<wbr>2021-<wbr>1-<wbr>1&quot;),<wbr>as.<wbr>Date(<wbr>&quot;<wbr>2023-<wbr>9-<wbr>30&quot;),<wbr>1)<wbr>
+pop=pop[,<wbr>spline(<wbr>date,<wbr>pop,<wbr>xout=dates),<wbr>age]<wbr>
+pop=pop[,.(<wbr>date=dates[<wbr>factor(<wbr>x)],<wbr>pop=y,<wbr>age)]<wbr>
+pop=pop[,.(<wbr>pop=sum(<wbr>pop)),.(<wbr>age,<wbr>year=year(<wbr>date),<wbr>month=month(<wbr>date))]<wbr>
+
+espage=c(<wbr>0,<wbr>1,<wbr>1:<wbr>19*<wbr>5)<wbr>
+esp=c(<wbr>10,<wbr>40,<wbr>55,<wbr>55,<wbr>55,<wbr>60,<wbr>60,<wbr>65,<wbr>70,<wbr>70,<wbr>70,<wbr>70,<wbr>65,<wbr>60,<wbr>55,<wbr>50,<wbr>40,<wbr>25,<wbr>15,<wbr>8,<wbr>2)/<wbr>1e3
+
+a[,<wbr>age:<wbr>=espage[<wbr>findInterval(<wbr>age,<wbr>espage)]]<wbr>
+a=a[,.(<wbr>dead=sum(<wbr>dead),<wbr>pop=sum(<wbr>pop)),.(<wbr>year=year(<wbr>date),<wbr>month=month(<wbr>date),<wbr>age,<wbr>type)]<wbr>
+
+a=rbind(<wbr>a,<wbr>merge(<wbr>nz,<wbr>pop)[,<wbr>type:<wbr>=0])<wbr>
+a[,<wbr>x:<wbr>=as.<wbr>Date(<wbr>paste(<wbr>year,<wbr>month,<wbr>16,<wbr>sep=&quot;-<wbr>&quot;))]<wbr>
+p=a[<wbr>pop&gt;<wbr>0,.(<wbr>y=sum(<wbr>dead/<wbr>pop*<wbr>esp[<wbr>findInterval(<wbr>age,<wbr>espage)])*<wbr>365e5),.(<wbr>x,<wbr>z=type)]<wbr>
+
+p=rbind(<wbr>p[<wbr>z&gt;<wbr>0][,<wbr>facet:<wbr>=z][,<wbr>z:<wbr>=1],<wbr>p[<wbr>z==0,.(<wbr>x,<wbr>y,<wbr>z=2,<wbr>facet=rep(<wbr>1:<wbr>2,<wbr>each=.<wbr>N))])<wbr>
+
+p[,<wbr>z:<wbr>=factor(<wbr>z,,<wbr>c(<wbr>&quot;<wbr>Vaccinated people in Barry&#39;<wbr>s dataset&quot;,<wbr>&quot;<wbr>Total population of New Zealand&quot;))]<wbr>
+p[,<wbr>facet:<wbr>=factor(<wbr>facet,,<wbr>c(<wbr>&quot;<wbr>From earliest dose (correct)<wbr>&quot;,<wbr>&quot;<wbr>From final dose (incorrect)<wbr>&quot;))]<wbr>
+
+xmin=as.<wbr>Date(<wbr>&quot;<wbr>2021-<wbr>1-<wbr>1&quot;);<wbr>xmax=as.<wbr>Date(<wbr>&quot;<wbr>2024-<wbr>1-<wbr>1&quot;);<wbr>xbreak=seq(<wbr>xmin+<wbr>182,<wbr>xmax,<wbr>365)<wbr>
+ylim=p[,.(<wbr>ymax=max(<wbr>y)),<wbr>facet]<wbr>
+
+ggplot(<wbr>p)+<wbr>
+facet_<wbr>wrap(~<wbr>facet,<wbr>ncol=1,<wbr>scales=&quot;<wbr>free_<wbr>y&quot;)+<wbr>
+geom_<wbr>vline(<wbr>xintercept=seq(<wbr>xmin,<wbr>xmax,<wbr>&quot;<wbr>year&quot;),<wbr>linewidth=.<wbr>4,<wbr>color=&quot;<wbr>gray75&quot;)+<wbr>
+geom_<wbr>rect(<wbr>data=ylim,<wbr>aes(<wbr>ymax=ymax),<wbr>ymin=0,<wbr>xmin=xmin,<wbr>xmax=xmax,<wbr>lineend=&quot;<wbr>square&quot;,<wbr>linejoin=&quot;<wbr>mitre&quot;,<wbr>fill=NA,<wbr>color=&quot;<wbr>gray75&quot;,<wbr>linewidth=.<wbr>4)+<wbr>
+geom_<wbr>line(<wbr>aes(<wbr>x,<wbr>y,<wbr>color=z),<wbr>linewidth=.<wbr>6)+<wbr>
+geom_<wbr>label(<wbr>data=ylim,<wbr>aes(<wbr>xmax,<wbr>ymax/<wbr>2,<wbr>label=facet),<wbr>hjust=1,<wbr>label.<wbr>r=unit(<wbr>0,<wbr>&quot;<wbr>pt&quot;),<wbr>label.<wbr>padding=unit(<wbr>4,<wbr>&quot;<wbr>pt&quot;),<wbr>label.<wbr>size=.<wbr>4,<wbr>size=3.<wbr>87,<wbr>fill=&quot;<wbr>white&quot;,<wbr>color=&quot;<wbr>gray80&quot;)+<wbr>
+geom_<wbr>label(<wbr>data=ylim,<wbr>aes(<wbr>xmax,<wbr>ymax/<wbr>2,<wbr>label=facet),<wbr>hjust=1,<wbr>label.<wbr>r=unit(<wbr>0,<wbr>&quot;<wbr>pt&quot;),<wbr>label.<wbr>padding=unit(<wbr>4,<wbr>&quot;<wbr>pt&quot;),<wbr>label.<wbr>size=0,<wbr>size=3.<wbr>87,<wbr>fill=NA)+<wbr>
+labs(<wbr>x=NULL,<wbr>y=NULL,<wbr>title=&quot;<wbr>Monthly ASMR per 100,<wbr>000 person-<wbr>years in New Zealand&quot;)+<wbr>
+scale_<wbr>x_<wbr>date(<wbr>limits=c(<wbr>xmin,<wbr>xmax),<wbr>breaks=xbreak,<wbr>labels=year(<wbr>xbreak))+<wbr>
+scale_<wbr>y_<wbr>continuous(<wbr>breaks=pretty)+<wbr>
+scale_<wbr>color_<wbr>manual(<wbr>values=c(<wbr>&quot;#<wbr>ff6666&quot;,<wbr>&quot;<wbr>black&quot;))+<wbr>
+coord_<wbr>cartesian(<wbr>clip=&quot;<wbr>off&quot;,<wbr>expand=F)+<wbr>
+theme(<wbr>axis.<wbr>text=element_<wbr>text(<wbr>size=11,<wbr>color=&quot;<wbr>gray45&quot;),<wbr>
+  axis.<wbr>text.<wbr>x=element_<wbr>text(<wbr>margin=margin(<wbr>3)),<wbr>
+  axis.<wbr>ticks=element_<wbr>line(<wbr>linewidth=.<wbr>4,<wbr>color=&quot;<wbr>gray75&quot;),<wbr>
+  axis.<wbr>ticks.<wbr>length.<wbr>x=unit(<wbr>0,<wbr>&quot;<wbr>pt&quot;),<wbr>
+  axis.<wbr>ticks.<wbr>length.<wbr>y=unit(<wbr>4,<wbr>&quot;<wbr>pt&quot;),<wbr>
+  legend.<wbr>background=element_<wbr>blank(),<wbr>
+  legend.<wbr>box.<wbr>spacing=unit(<wbr>0,<wbr>&quot;<wbr>pt&quot;),<wbr>
+  legend.<wbr>direction=&quot;<wbr>vertical&quot;,<wbr>
+  legend.<wbr>key=element_<wbr>blank(),<wbr>
+  legend.<wbr>key.<wbr>height=unit(<wbr>12,<wbr>&quot;<wbr>pt&quot;),<wbr>
+  legend.<wbr>key.<wbr>spacing.<wbr>x=unit(<wbr>2,<wbr>&quot;<wbr>pt&quot;),<wbr>
+  legend.<wbr>key.<wbr>width=unit(<wbr>24,<wbr>&quot;<wbr>pt&quot;),<wbr>
+  legend.<wbr>margin=margin(,,<wbr>5),<wbr>
+  legend.<wbr>position=&quot;<wbr>top&quot;,<wbr>
+  legend.<wbr>spacing.<wbr>y=unit(<wbr>0,<wbr>&quot;<wbr>pt&quot;),<wbr>
+  legend.<wbr>text=element_<wbr>text(<wbr>size=11,<wbr>margin=margin(,,,<wbr>2)),<wbr>
+  legend.<wbr>title=element_<wbr>blank(),<wbr>
+  panel.<wbr>background=element_<wbr>blank(),<wbr>
+  panel.<wbr>grid.<wbr>major=element_<wbr>blank(),<wbr>
+  plot.<wbr>title=element_<wbr>text(<wbr>size=11,<wbr>hjust=.<wbr>5,<wbr>face=2,<wbr>margin=margin(,,<wbr>2)),<wbr>
+  strip.<wbr>background=element_<wbr>blank(),<wbr>
+  strip.<wbr>text=element_<wbr>blank())<wbr>
+ggsave(<wbr>&quot;<wbr>1.<wbr>png&quot;,<wbr>width=5.<wbr>4,<wbr>height=3.<wbr>6,<wbr>dpi=300*<wbr>4)<wbr>
+sub=&quot;<wbr>In the top panel person-<wbr>days were correctly counted starting from the date of the earliest dose included for each person,<wbr> and in the bottom panel person-<wbr>days were incorrectly counted starting from the date of the final dose included for each person.<wbr> ASMR was calculated by 5-<wbr>year age groups using ESP2013 as the standard population.<wbr> Source:<wbr> github.<wbr>com/<wbr>skirsch/<wbr>NewZealand,<wbr> stats.<wbr>govt.<wbr>nz/<wbr> information-<wbr>releases/<wbr>births-<wbr>and-<wbr>deaths-<wbr>year-<wbr>ended-<wbr>september-<wbr>2023 (deaths among whole NZ population),<wbr> and infoshare.<wbr>stats.<wbr>govt.<wbr>nz (quarterly population estimates interpolated to monthly).<wbr>&quot;<wbr>
+system(<wbr>paste0(<wbr>&quot;<wbr>mar=$[<wbr>24*<wbr>4];<wbr>w=`<wbr>identify -format %w 1.<wbr>png`;<wbr>magick \\(<wbr> 1.<wbr>png -gravity southwest -chop 0x70 \\)<wbr> \\(<wbr> -size $[<wbr>w-<wbr>mar*<wbr>2]<wbr>x -font Arial -interline-<wbr>spacing -4 -pointsize $[<wbr>44*<wbr>4]<wbr> caption:<wbr>&#39;<wbr>&quot;,<wbr>gsub(<wbr>&quot;<wbr>&#39;<wbr>&quot;,<wbr>&quot;<wbr>&#39;\\\\<wbr>&#39;<wbr>&quot;,<wbr>sub),<wbr>&quot;<wbr>&#39;<wbr> -gravity southwest -splice $[<wbr>mar]<wbr>x$[<wbr>20*<wbr>4]<wbr> \\)<wbr> -append -resize 25%<wbr> -colors 256 1.<wbr>png&quot;))<wbr></pre>
+</div>
 <h3>
 <a href="#Why_were_about_89_of_COVID_deaths_in_fully_vaccinated_people" id="Why_were_about_89_of_COVID_deaths_in_fully_vaccinated_people">Why
 were about 89% of COVID deaths in fully vaccinated people?</a>
