@@ -72,7 +72,7 @@ blockquote h3,blockquote h4{color:inherit}
 }
 </style>
 <title>New Zealand vaccination data released by database administrator Barry Young</title>
-<h1>New Zealand vaccination data released by database administrator Barry Young - <a href=index.html>sars2.net</a></h1><div class=dates>First published 2023-12-02 UTC, last modified 2026-06-22 UTC</div><h2 id=Contents><a href=#Contents>Contents</a></h2>
+<h1>New Zealand vaccination data released by database administrator Barry Young - <a href=index.html>sars2.net</a></h1><div class=dates>First published 2023-12-02 UTC, last modified 2026-06-24 UTC</div><h2 id=Contents><a href=#Contents>Contents</a></h2>
 <ul class=toc>
 <li><a href="#Preliminary_information">Preliminary information</a></li>
 <ul class=toc>
@@ -13592,6 +13592,121 @@ theme(<wbr>axis.<wbr>text=element_<wbr>text(<wbr>size=11,<wbr>color=&quot;<wbr>g
 ggsave(<wbr>&quot;<wbr>1.<wbr>png&quot;,<wbr>width=5.<wbr>4,<wbr>height=3.<wbr>6,<wbr>dpi=300*<wbr>4)<wbr>
 sub=&quot;<wbr>In the top panel person-<wbr>days were correctly counted starting from the date of the earliest dose included for each person,<wbr> and in the bottom panel person-<wbr>days were incorrectly counted starting from the date of the final dose included for each person.<wbr> ASMR was calculated by 5-<wbr>year age groups using ESP2013 as the standard population.<wbr> Source:<wbr> github.<wbr>com/<wbr>skirsch/<wbr>NewZealand,<wbr> stats.<wbr>govt.<wbr>nz/<wbr> information-<wbr>releases/<wbr>births-<wbr>and-<wbr>deaths-<wbr>year-<wbr>ended-<wbr>september-<wbr>2023 (deaths among whole NZ population),<wbr> and infoshare.<wbr>stats.<wbr>govt.<wbr>nz (quarterly population estimates interpolated to monthly).<wbr>&quot;<wbr>
 system(<wbr>paste0(<wbr>&quot;<wbr>mar=$[<wbr>24*<wbr>4];<wbr>w=`<wbr>identify -format %w 1.<wbr>png`;<wbr>magick \\(<wbr> 1.<wbr>png -gravity southwest -chop 0x70 \\)<wbr> \\(<wbr> -size $[<wbr>w-<wbr>mar*<wbr>2]<wbr>x -font Arial -interline-<wbr>spacing -4 -pointsize $[<wbr>44*<wbr>4]<wbr> caption:<wbr>&#39;<wbr>&quot;,<wbr>gsub(<wbr>&quot;<wbr>&#39;<wbr>&quot;,<wbr>&quot;<wbr>&#39;\\\\<wbr>&#39;<wbr>&quot;,<wbr>sub),<wbr>&quot;<wbr>&#39;<wbr> -gravity southwest -splice $[<wbr>mar]<wbr>x$[<wbr>20*<wbr>4]<wbr> \\)<wbr> -append -resize 25%<wbr> -colors 256 1.<wbr>png&quot;))<wbr></pre>
+</div>
+<p>Barry wrote: <span class="quote">"But if its 2.2 million you can't
+really adjust for every single persons uniqueness. Age is already
+adjusted for within age bands. And the most important thing to realise
+is that yes old people were vaccinated first - but they were also
+vaccinated last. There is a huge bias towards elderly people's <span
+class="quote">'last'</span> vaccination date being much later than
+initial roll out - ie in the latter part of 2023 <span
+class="quote">(just before cut off)</span>. Which means they are
+conservatively estimated <span class="quote">(since the average length
+of time on the study is less)</span>."</span> <span
+class="quote">[<a href=https://x.com/BarryYoungNZ/status/2069550733125713987>https://<wbr>x.<wbr>com/<wbr>BarryYoungNZ/<wbr>status/<wbr>2069550733125713987</a>]</span>
+But I posted the plot below and replied: <span class="quote">"No it's
+not conservative, because your method of counting the person-days from
+the date of the last dose exaggerates the mortality more for people who
+got the final dose later, which is why your method exaggerates the
+mortality of old people more than young people."</span></p>
+<div>
+<img src=i/barry-events-age-facet.webp width=530>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>t=fread(<wbr>&quot;<wbr>nz-<wbr>record-<wbr>level-<wbr>data-<wbr>4M-<wbr>records.<wbr>csv.<wbr>gz&quot;)<wbr>
+redate=\(<wbr>x){<wbr>u=unique(<wbr>x);<wbr>as.<wbr>Date(<wbr>u,<wbr>&quot;%<wbr>m-%<wbr>d-%<wbr>Y&quot;)[<wbr>match(<wbr>x,<wbr>u)]}<wbr>
+t[,<wbr>c(<wbr>&quot;<wbr>vax&quot;,<wbr>&quot;<wbr>dead&quot;,<wbr>&quot;<wbr>born&quot;):<wbr>=lapply(.<wbr>SD,<wbr>redate),.<wbr>SDcols=patterns(<wbr>&quot;<wbr>date&quot;)]<wbr>
+
+d=rbind(<wbr>t[<wbr>order(<wbr>vax)][,<wbr>type:<wbr>=1],<wbr>t[<wbr>order(-<wbr>vax)][,<wbr>type:<wbr>=2])<wbr>
+d=d[<wbr>rowid(<wbr>type,<wbr>mrn)<wbr>==1,.(<wbr>vax,<wbr>dead,<wbr>born,<wbr>type)]<wbr>
+
+e1=d[,.(<wbr>pop=.<wbr>N),.(<wbr>date=vax,<wbr>age=age(<wbr>born,<wbr>vax),<wbr>type)]<wbr>
+e2=d[!<wbr>is.<wbr>na(<wbr>dead),.(<wbr>pop=-.<wbr>N),.(<wbr>date=dead,<wbr>age=age(<wbr>born,<wbr>dead),<wbr>type)]<wbr>
+
+e3=d[,.(<wbr>vax,<wbr>dead,<wbr>born,<wbr>bday=c(<wbr>outer(<wbr>born,<wbr>2021:<wbr>2023,`<wbr>year&lt;-`)),<wbr>type)]<wbr>
+e3=e3[<wbr>bday&gt;<wbr>vax&amp;!(!<wbr>is.<wbr>na(<wbr>dead)<wbr>&amp;<wbr>bday&gt;<wbr>dead)]<wbr>
+e3=e3[,.(<wbr>pop=.<wbr>N),.(<wbr>date=bday,<wbr>age=age(<wbr>born,<wbr>bday),<wbr>type)]<wbr>
+e3=rbind(<wbr>e3,<wbr>e3[,.(<wbr>date,<wbr>age=age-<wbr>1,<wbr>pop=-<wbr>pop,<wbr>type)])<wbr>
+
+e=rbind(<wbr>e1,<wbr>e2,<wbr>e3)[,.(<wbr>pop=as.<wbr>double(<wbr>sum(<wbr>pop))),.(<wbr>date,<wbr>age,<wbr>type)]<wbr>
+e=merge(<wbr>do.<wbr>call(<wbr>CJ,<wbr>lapply(<wbr>e[,-<wbr>4],<wbr>unique)),<wbr>e,<wbr>all=T)<wbr>
+e[,<wbr>pop:<wbr>=cumsum(<wbr>nafill(<wbr>pop,,<wbr>0)),.(<wbr>age,<wbr>type)]<wbr>
+a=merge(<wbr>e,<wbr>e2[,.(<wbr>date,<wbr>age,<wbr>type,<wbr>dead=-<wbr>pop)],<wbr>all=T)[,<wbr>dead:<wbr>=nafill(<wbr>dead,,<wbr>0)]<wbr>
+a=a[<wbr>date&lt;<wbr>&quot;<wbr>2023-<wbr>9-<wbr>28&quot;]<wbr>
+a[,<wbr>year:<wbr>=year(<wbr>date)][,<wbr>month:<wbr>=month(<wbr>date)]<wbr>
+a[,<wbr>week:<wbr>=`<wbr>class&lt;-`(<wbr>as.<wbr>integer(<wbr>date)%/%<wbr>7*<wbr>7,<wbr>&quot;<wbr>Date&quot;)]<wbr>
+
+dead=fread(<wbr>&quot;<wbr>https://<wbr>sars2.<wbr>net/<wbr>f/<wbr>nz_<wbr>monthly_<wbr>deaths_<wbr>by_<wbr>age.<wbr>csv&quot;)[<wbr>ethnicity==&quot;<wbr>Total&quot;]<wbr>
+dead[,<wbr>age:<wbr>=as.<wbr>integer(<wbr>substr(<wbr>age_<wbr>group,<wbr>1,<wbr>2))]<wbr>
+dead=dead[,.(<wbr>dead=sum(<wbr>count)),.(<wbr>age,<wbr>year=year_<wbr>reg,<wbr>month=month_<wbr>reg)]<wbr>
+
+pop=fread(<wbr>&quot;<wbr>https://<wbr>sars2.<wbr>net/<wbr>f/<wbr>nz_<wbr>infoshare_<wbr>population_<wbr>quarterly.<wbr>csv&quot;,<wbr>head=T)<wbr>
+date=pop[,<wbr>as.<wbr>Date(<wbr>paste0(<wbr>substr(<wbr>year,<wbr>1,<wbr>4),<wbr>&quot;-<wbr>&quot;,<wbr>as.<wbr>integer(<wbr>substr(<wbr>year,<wbr>6,<wbr>6))*<wbr>3-<wbr>1,<wbr>&quot;-<wbr>15&quot;))]<wbr>
+pop=pop[,.(<wbr>date,<wbr>age=rep(<wbr>0:<wbr>95,<wbr>each=.<wbr>N),<wbr>pop=unlist(.<wbr>SD[,-<wbr>1]))]<wbr>
+pop=pop[,.(<wbr>pop=sum(<wbr>pop)),.(<wbr>date,<wbr>age=age%/%<wbr>5*<wbr>5)]<wbr>
+dates=seq(<wbr>as.<wbr>Date(<wbr>&quot;<wbr>2021-<wbr>1-<wbr>16&quot;),<wbr>as.<wbr>Date(<wbr>&quot;<wbr>2023-<wbr>12-<wbr>16&quot;),<wbr>&quot;<wbr>month&quot;)<wbr>
+pop=pop[,<wbr>spline(<wbr>date,<wbr>pop,<wbr>xout=dates),<wbr>age]<wbr>
+pop=pop[,.(<wbr>date=dates[<wbr>factor(<wbr>x)],<wbr>pop=y,<wbr>age)]<wbr>
+pop[,<wbr>year:<wbr>=year(<wbr>date)][,<wbr>month:<wbr>=month(<wbr>date)]<wbr>
+
+base=merge(<wbr>dead,<wbr>pop)[,.(<wbr>age,<wbr>year,<wbr>month,<wbr>base=dead/<wbr>pop/<wbr>days_<wbr>in_<wbr>month(<wbr>date))]<wbr>
+
+me=a[,.(<wbr>dead=sum(<wbr>dead),<wbr>pop=sum(<wbr>pop)),.(<wbr>age=pmin(<wbr>age,<wbr>95)%/%<wbr>5*<wbr>5,<wbr>year,<wbr>month,<wbr>week,<wbr>type)]<wbr>
+me=merge(<wbr>me,<wbr>base)[,.(<wbr>dead=sum(<wbr>dead),<wbr>base=sum(<wbr>base*<wbr>pop)),.(<wbr>week,<wbr>type,<wbr>age)]<wbr>
+me[,<wbr>age:<wbr>=agecut(<wbr>age,<wbr>c(<wbr>0,<wbr>2:<wbr>4*<wbr>20))]<wbr>
+me=me[,.(<wbr>dead=sum(<wbr>dead),<wbr>base=sum(<wbr>base)),.(<wbr>age,<wbr>type,<wbr>week)]<wbr>
+p=me[,.(<wbr>y=c(<wbr>dead[<wbr>type==1],<wbr>base[<wbr>type==1],<wbr>base[<wbr>type==2]),<wbr>z=1:<wbr>3),.(<wbr>facet=age,<wbr>x=week)]<wbr>
+
+p[,<wbr>z:<wbr>=factor(<wbr>z,,<wbr>c(<wbr>&quot;<wbr>Deaths&quot;,<wbr>&quot;<wbr>Expected&quot;,<wbr>&quot;<wbr>Expected (starting from last listed dose of each person)<wbr>&quot;))]<wbr>
+
+xmin=as.<wbr>Date(<wbr>&quot;<wbr>2021-<wbr>1-<wbr>1&quot;);<wbr>xmax=as.<wbr>Date(<wbr>&quot;<wbr>2024-<wbr>1-<wbr>1&quot;);<wbr>xbreak=seq(<wbr>xmin+<wbr>182,<wbr>xmax,<wbr>365)<wbr>
+ybreak=pretty(<wbr>c(<wbr>p$<wbr>y),<wbr>7);<wbr>ymin=ybreak[<wbr>1];<wbr>ymax=max(<wbr>ybreak)<wbr>
+
+ylim=p[,.(<wbr>ymax=max(<wbr>y,<wbr>na.<wbr>rm=T)*<wbr>1.<wbr>02),<wbr>facet]<wbr>
+
+ggplot(<wbr>p)+<wbr>
+facet_<wbr>wrap(~<wbr>facet,<wbr>ncol=2,<wbr>dir=&quot;<wbr>v&quot;,<wbr>scales=&quot;<wbr>free_<wbr>y&quot;)+<wbr>
+geom_<wbr>vline(<wbr>xintercept=seq(<wbr>xmin,<wbr>xmax,<wbr>&quot;<wbr>year&quot;),<wbr>linewidth=.<wbr>4,<wbr>color=&quot;<wbr>gray75&quot;)+<wbr>
+geom_<wbr>rect(<wbr>data=ylim,<wbr>aes(<wbr>ymax=ymax),<wbr>ymin=0,<wbr>xmin=xmin,<wbr>xmax=xmax,<wbr>lineend=&quot;<wbr>square&quot;,<wbr>linejoin=&quot;<wbr>mitre&quot;,<wbr>fill=NA,<wbr>color=&quot;<wbr>gray75&quot;,<wbr>linewidth=.<wbr>4)+<wbr>
+geom_<wbr>line(<wbr>aes(<wbr>x,<wbr>y,<wbr>color=z),<wbr>linewidth=.<wbr>6)+<wbr>
+geom_<wbr>label(<wbr>data=ylim,<wbr>aes(<wbr>xmin,<wbr>ymax,<wbr>label=facet),<wbr>hjust=0,<wbr>vjust=1,<wbr>fill=&quot;<wbr>white&quot;,<wbr>label.<wbr>padding=unit(<wbr>4,<wbr>&quot;<wbr>pt&quot;),<wbr>label.<wbr>r=unit(<wbr>0,<wbr>&quot;<wbr>pt&quot;),<wbr>label.<wbr>size=.<wbr>4,<wbr>color=&quot;<wbr>gray75&quot;,<wbr>size=3.<wbr>87)+<wbr>
+geom_<wbr>label(<wbr>data=ylim,<wbr>aes(<wbr>xmin,<wbr>ymax,<wbr>label=facet),<wbr>hjust=0,<wbr>vjust=1,<wbr>fill=NA,<wbr>label.<wbr>padding=unit(<wbr>4,<wbr>&quot;<wbr>pt&quot;),<wbr>label.<wbr>r=unit(<wbr>0,<wbr>&quot;<wbr>pt&quot;),<wbr>label.<wbr>size=0,<wbr>size=3.<wbr>87)+<wbr>
+labs(<wbr>x=NULL,<wbr>y=NULL,<wbr>title=&quot;<wbr>Weekly deaths in Barry Young&#39;<wbr>s New Zealand dataset&quot;)+<wbr>
+scale_<wbr>x_<wbr>date(<wbr>limits=c(<wbr>xmin,<wbr>xmax),<wbr>breaks=xbreak,<wbr>labels=year(<wbr>xbreak))+<wbr>
+scale_<wbr>y_<wbr>continuous(<wbr>breaks=\(<wbr>x)<wbr>pretty(<wbr>x,<wbr>4))+<wbr>
+scale_<wbr>color_<wbr>manual(<wbr>values=c(<wbr>&quot;<wbr>red&quot;,<wbr>&quot;<wbr>gray60&quot;,<wbr>&quot;<wbr>gray35&quot;))+<wbr>
+coord_<wbr>cartesian(<wbr>clip=&quot;<wbr>off&quot;,<wbr>expand=F)+<wbr>
+theme(<wbr>axis.<wbr>text=element_<wbr>text(<wbr>size=11,<wbr>color=&quot;<wbr>gray45&quot;),<wbr>
+  axis.<wbr>text.<wbr>x=element_<wbr>text(<wbr>margin=margin(<wbr>2.<wbr>5)),<wbr>
+  axis.<wbr>text.<wbr>y=element_<wbr>text(<wbr>margin=margin(,<wbr>1.<wbr>5)),<wbr>
+  axis.<wbr>ticks=element_<wbr>line(<wbr>linewidth=.<wbr>4,<wbr>color=&quot;<wbr>gray75&quot;),<wbr>
+  axis.<wbr>ticks.<wbr>length.<wbr>x=unit(<wbr>0,<wbr>&quot;<wbr>pt&quot;),<wbr>
+  axis.<wbr>ticks.<wbr>length.<wbr>y=unit(<wbr>4,<wbr>&quot;<wbr>pt&quot;),<wbr>
+  legend.<wbr>background=element_<wbr>blank(),<wbr>
+  legend.<wbr>box.<wbr>spacing=unit(<wbr>0,<wbr>&quot;<wbr>pt&quot;),<wbr>
+  legend.<wbr>direction=&quot;<wbr>vertical&quot;,<wbr>
+  legend.<wbr>key=element_<wbr>blank(),<wbr>
+  legend.<wbr>key.<wbr>height=unit(<wbr>12,<wbr>&quot;<wbr>pt&quot;),<wbr>
+  legend.<wbr>key.<wbr>spacing.<wbr>x=unit(<wbr>2,<wbr>&quot;<wbr>pt&quot;),<wbr>
+  legend.<wbr>key.<wbr>width=unit(<wbr>24,<wbr>&quot;<wbr>pt&quot;),<wbr>
+  legend.<wbr>margin=margin(,,<wbr>5),<wbr>
+  legend.<wbr>position=&quot;<wbr>top&quot;,<wbr>
+  legend.<wbr>spacing.<wbr>y=unit(<wbr>0,<wbr>&quot;<wbr>pt&quot;),<wbr>
+  legend.<wbr>text=element_<wbr>text(<wbr>size=11,<wbr>margin=margin(,,,<wbr>2)),<wbr>
+  legend.<wbr>title=element_<wbr>blank(),<wbr>
+  panel.<wbr>background=element_<wbr>blank(),<wbr>
+  panel.<wbr>grid.<wbr>major=element_<wbr>blank(),<wbr>
+  plot.<wbr>title=element_<wbr>text(<wbr>size=11,<wbr>hjust=.<wbr>5,<wbr>face=2,<wbr>margin=margin(,,<wbr>3)),<wbr>
+  strip.<wbr>background=element_<wbr>blank(),<wbr>
+  strip.<wbr>text=element_<wbr>blank())<wbr>
+ggsave(<wbr>&quot;<wbr>1.<wbr>png&quot;,<wbr>width=4.<wbr>9,<wbr>height=3.<wbr>4,<wbr>dpi=300*<wbr>4)<wbr>
+sub=&quot;<wbr>Source:<wbr> github.<wbr>com/<wbr>skirsch/<wbr>NewZealand,<wbr> stats.<wbr>govt.<wbr>nz/<wbr>information-<wbr> releases/<wbr>births-<wbr>and-<wbr>deaths-<wbr>year-<wbr>ended-<wbr>september-<wbr>2023 (monthly baseline deaths),<wbr> and infoshare.<wbr>stats.<wbr>govt.<wbr>nz (quarterly population estimates interpolated to monthly).<wbr> The expected deaths were calculated by multiplying the person-<wbr>days for each combination of month and 5-<wbr>year age group with the mortality rate among the general population of New Zealand for the same combination of month and age group.<wbr>&quot;<wbr>
+system(<wbr>paste0(<wbr>&quot;<wbr>mar=$[<wbr>24*<wbr>4];<wbr>w=`<wbr>identify -format %w 1.<wbr>png`;<wbr>magick \\(<wbr> 1.<wbr>png -gravity southwest -chop 0x70 \\)<wbr> \\(<wbr> -size $[<wbr>w-<wbr>mar*<wbr>2]<wbr>x -font Arial -interline-<wbr>spacing -4 -pointsize $[<wbr>44*<wbr>4]<wbr> caption:<wbr>&#39;<wbr>&quot;,<wbr>gsub(<wbr>&quot;<wbr>&#39;<wbr>&quot;,<wbr>&quot;<wbr>&#39;\\\\<wbr>&#39;<wbr>&quot;,<wbr>sub),<wbr>&quot;<wbr>&#39;<wbr> -gravity southwest -splice $[<wbr>mar]<wbr>x$[<wbr>20*<wbr>4]<wbr> \\)<wbr> -append -resize 25%<wbr> -colors 256 1.<wbr>png&quot;))<wbr>
+qp2()<wbr>
+</pre>
 </div>
 <h3>
 <a href="#Why_were_about_89_of_COVID_deaths_in_fully_vaccinated_people" id="Why_were_about_89_of_COVID_deaths_in_fully_vaccinated_people">Why
