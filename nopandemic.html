@@ -11807,15 +11807,15 @@ ul,ol{width:min(100%,var(--pagewidth));margin:1em auto;box-sizing:border-box}
   padding:10px;
   background:rgba(40,40,40,.95);
   color:#fff;
-  height:calc(100vh - 122px);
+  max-height:calc(100vh - 122px);
   display:none;
   z-index:10001;
-  line-height:1.6;
+  line-height:1.8;
 }
 
-#reader-controls button,.stepper button{touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+#reader-panel,#reader-panel button,#reader-controls,#reader-controls button{touch-action:manipulation;user-select:none;-webkit-touch-callout:none}
 
-@media(min-width:1024px){#scroll-up,#scroll-down{display:none}}
+@media (hover:hover) and (pointer:fine){#scroll-up,#scroll-down{display:none}}
 
 #scroll-to-top{display:none}
 .current-section{color:white !important;font-weight:bold}
@@ -11832,25 +11832,19 @@ const panel=document.getElementById("reader-panel")
 
 const contentsPanel=document.getElementById("contents-panel")
 const toc=document.querySelector("body>ul.toc")
-if(toc){
-  contentsPanel.appendChild(toc.cloneNode(true))
-  let ul=contentsPanel.querySelector("ul")
-  let li=document.createElement("li")
-  li.innerHTML='<a href="#Contents">Contents</a>'
-  ul.prepend(li)
-}
+if(toc)contentsPanel.appendChild(toc.cloneNode(true))
 
-document.querySelectorAll("#reader-buttons button,#reader-panel button").forEach(b=>{
-  b.onmousedown=(e)=>e.stopPropagation()
+document.querySelectorAll("#reader-controls button").forEach(b=>{
+  b.addEventListener("pointerdown",e=>{e.stopPropagation()})
 })
 
-document.getElementById("style-toggle").onmousedown=(e)=>{
+document.getElementById("style-toggle").onpointerdown=(e)=>{
   e.stopPropagation()
   contentsPanel.classList.remove("open")
   panel.classList.toggle("open")
 }
 
-document.getElementById("contents-toggle").onmousedown=(e)=>{
+document.getElementById("contents-toggle").onpointerdown=(e)=>{
   e.stopPropagation()
   panel.classList.remove("open")
 
@@ -11860,8 +11854,8 @@ document.getElementById("contents-toggle").onmousedown=(e)=>{
   if(open)updateContentsPosition()
 }
 
-document.getElementById("scroll-up").onmousedown=()=>{scrollBy(0,-window.innerHeight+40)}
-document.getElementById("scroll-down").onmousedown=()=>{scrollBy(0,window.innerHeight-40)}
+document.getElementById("scroll-up").onpointerdown=()=>{scrollBy(0,-window.innerHeight+40);hidepanels()}
+document.getElementById("scroll-down").onpointerdown=()=>{scrollBy(0,window.innerHeight-40);hidepanels()}
 
 function updateContentsPosition(){
   let headings=[...document.querySelectorAll("h2 a,h3 a")]
@@ -11901,18 +11895,25 @@ function update(){
   pagenum()
 }
 
-document.getElementById("width-inc").onmousedown=()=>{readerWidth=Math.min(Math.floor(window.innerWidth/fontSize/2)*2,readerWidth+2);update()}
-document.getElementById("width-dec").onmousedown=()=>{readerWidth=Math.max(20,readerWidth-2);update()}
+document.getElementById("width-inc").onpointerdown=()=>{readerWidth=Math.min(Math.floor(window.innerWidth/fontSize/2)*2,readerWidth+2);update()}
+document.getElementById("width-dec").onpointerdown=()=>{readerWidth=Math.max(20,readerWidth-2);update()}
 
-document.getElementById("font-inc").onmousedown=()=>{fontSize=Math.min(30,fontSize+(fontSize>=20?2:1));update()}
-document.getElementById("font-dec").onmousedown=()=>{fontSize=Math.max(10,fontSize-(fontSize>=22?2:1));update()}
+document.getElementById("font-inc").onpointerdown=()=>{fontSize=Math.min(30,fontSize+(fontSize>=20?2:1));update()}
+document.getElementById("font-dec").onpointerdown=()=>{fontSize=Math.max(10,fontSize-(fontSize>=22?2:1));update()}
 
-document.getElementById("line-inc").onmousedown=()=>{lineHeight=Math.min(3,lineHeight+(lineHeight>=1.99?.2:.1));update()}
-document.getElementById("line-dec").onmousedown=()=>{lineHeight=Math.max(1.2,lineHeight-(lineHeight>=2.19?.2:.1));update()}
+document.getElementById("line-inc").onpointerdown=()=>{lineHeight=Math.min(3,lineHeight+(lineHeight>=1.99?.2:.1));update()}
+document.getElementById("line-dec").onpointerdown=()=>{lineHeight=Math.max(1.2,lineHeight-(lineHeight>=2.19?.2:.1));update()}
 
-document.getElementById("scroll-to-top").onmousedown=(e)=>{
-  e.stopPropagation()
+document.querySelectorAll("#reader-panel button,#reader-controls button").forEach(b=>{
+  b.addEventListener("pointerdown",e=>{
+    e.preventDefault()
+    e.stopPropagation()
+  })
+})
+
+document.getElementById("scroll-to-top").onpointerdown=(e)=>{
   scrollTo(0,0)
+  history.replaceState(null,"",location.pathname+location.search)
   hidepanels()
 }
 
@@ -11922,9 +11923,12 @@ function hidepanels(){
   document.getElementById("scroll-to-top").style.display="none"
 }
 
-document.getElementById("reader-controls").addEventListener("click",(e)=>{e.stopPropagation()})
-
 document.addEventListener("click",(e)=>{if(!e.target.closest("#reader-controls"))hidepanels()})
+
+document.querySelectorAll('#reader-controls button, .stepper button').forEach(e=>{
+  e.addEventListener('touchstart',e=>e.preventDefault(),{passive:false})
+  e.addEventListener('pointerdown',e=>e.preventDefault(),{passive:false})
+})
 
 update()
 </script>

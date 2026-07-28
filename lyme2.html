@@ -5325,13 +5325,13 @@ ul,ol{width:min(100%,var(--pagewidth));margin:1em auto;box-sizing:border-box}
   padding:10px;
   background:rgba(40,40,40,.95);
   color:#fff;
-  height:calc(100vh - 122px);
+  max-height:calc(100vh - 122px);
   display:none;
   z-index:10001;
-  line-height:1.6;
+  line-height:1.8;
 }
 
-#reader-controls button,.stepper button{touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+#reader-panel,#reader-panel button,#reader-controls,#reader-controls button{touch-action:manipulation;user-select:none;-webkit-touch-callout:none}
 
 @media (hover:hover) and (pointer:fine){#scroll-up,#scroll-down{display:none}}
 
@@ -5350,13 +5350,7 @@ const panel=document.getElementById("reader-panel")
 
 const contentsPanel=document.getElementById("contents-panel")
 const toc=document.querySelector("body>ul.toc")
-if(toc){
-  contentsPanel.appendChild(toc.cloneNode(true))
-  let ul=contentsPanel.querySelector("ul")
-  let li=document.createElement("li")
-  li.innerHTML='<a href="#Contents">Contents</a>'
-  ul.prepend(li)
-}
+if(toc)contentsPanel.appendChild(toc.cloneNode(true))
 
 document.querySelectorAll("#reader-controls button").forEach(b=>{
   b.addEventListener("pointerdown",e=>{e.stopPropagation()})
@@ -5378,8 +5372,8 @@ document.getElementById("contents-toggle").onpointerdown=(e)=>{
   if(open)updateContentsPosition()
 }
 
-document.getElementById("scroll-up").onpointerdown=()=>{scrollBy(0,-window.innerHeight+40)}
-document.getElementById("scroll-down").onpointerdown=()=>{scrollBy(0,window.innerHeight-40)}
+document.getElementById("scroll-up").onpointerdown=()=>{scrollBy(0,-window.innerHeight+40);hidepanels()}
+document.getElementById("scroll-down").onpointerdown=()=>{scrollBy(0,window.innerHeight-40);hidepanels()}
 
 function updateContentsPosition(){
   let headings=[...document.querySelectorAll("h2 a,h3 a")]
@@ -5428,9 +5422,16 @@ document.getElementById("font-dec").onpointerdown=()=>{fontSize=Math.max(10,font
 document.getElementById("line-inc").onpointerdown=()=>{lineHeight=Math.min(3,lineHeight+(lineHeight>=1.99?.2:.1));update()}
 document.getElementById("line-dec").onpointerdown=()=>{lineHeight=Math.max(1.2,lineHeight-(lineHeight>=2.19?.2:.1));update()}
 
+document.querySelectorAll("#reader-panel button,#reader-controls button").forEach(b=>{
+  b.addEventListener("pointerdown",e=>{
+    e.preventDefault()
+    e.stopPropagation()
+  })
+})
+
 document.getElementById("scroll-to-top").onpointerdown=(e)=>{
-  e.stopPropagation()
   scrollTo(0,0)
+  history.replaceState(null,"",location.pathname+location.search)
   hidepanels()
 }
 
@@ -5440,9 +5441,12 @@ function hidepanels(){
   document.getElementById("scroll-to-top").style.display="none"
 }
 
-document.getElementById("reader-controls").addEventListener("click",(e)=>{e.stopPropagation()})
-
 document.addEventListener("click",(e)=>{if(!e.target.closest("#reader-controls"))hidepanels()})
+
+document.querySelectorAll('#reader-controls button, .stepper button').forEach(e=>{
+  e.addEventListener('touchstart',e=>e.preventDefault(),{passive:false})
+  e.addEventListener('pointerdown',e=>e.preventDefault(),{passive:false})
+})
 
 update()
 </script>
