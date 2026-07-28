@@ -2254,23 +2254,18 @@ ul,ol{width:min(100%,var(--pagewidth));margin:1em auto;box-sizing:border-box}
 
 #reader-controls button,.stepper button{touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 
-@media(min-width:1024px){#scroll-up,#scroll-down{display: none}}
+@media(min-width:1024px){#scroll-up,#scroll-down{display:none}}
 
 #scroll-to-top{display:none}
-
 .current-section{color:white !important;font-weight:bold}
+
+h2 a:focus,h3 a:focus{outline:none}
 </style>
 
 <script>
-const target=document.body
-
-let readerWidth=parseFloat(localStorage.getItem("readerWidth"))
-let fontSize=parseFloat(localStorage.getItem("fontSize"))
-let lineHeight=parseFloat(localStorage.getItem("lineHeight"))
-
-if(isNaN(readerWidth))readerWidth=32
-if(isNaN(fontSize))fontSize=15
-if(isNaN(lineHeight))lineHeight=1.6
+let readerWidth=parseFloat(localStorage.getItem("readerWidth"))||32
+let fontSize=parseFloat(localStorage.getItem("fontSize"))||15
+let lineHeight=parseFloat(localStorage.getItem("lineHeight"))||1.6
 
 const panel=document.getElementById("reader-panel")
 
@@ -2299,11 +2294,9 @@ document.getElementById("contents-toggle").onmousedown=(e)=>{
   panel.classList.remove("open")
 
   let open=contentsPanel.classList.toggle("open")
-  document.getElementById("scroll-to-top").style.display=open?"block":"none"
-  if(open)updateContentsPosition()
-
   if(window.scrollY>0)
     document.getElementById("scroll-to-top").style.display=open?"block":"none"
+  if(open)updateContentsPosition()
 }
 
 document.getElementById("scroll-up").onmousedown=()=>{scrollBy(0,-window.innerHeight+40)}
@@ -2331,8 +2324,8 @@ function update(){
   let scrollRatio=scrollY/(document.documentElement.scrollHeight-window.innerHeight)
 
   document.documentElement.style.setProperty("--pagewidth",readerWidth+"em")
-  target.style.fontSize=fontSize+"px"
-  target.style.lineHeight=(lineHeight*fontSize)+"px"
+  document.body.style.fontSize=fontSize+"px"
+  document.body.style.lineHeight=(lineHeight*fontSize)+"px"
 
   localStorage.setItem("readerWidth",readerWidth)
   localStorage.setItem("fontSize",fontSize)
@@ -2347,7 +2340,7 @@ function update(){
   pagenum()
 }
 
-document.getElementById("width-inc").onmousedown=()=>{readerWidth=Math.min(Math.floor(window.innerWidth/fontSize),readerWidth+2);update()}
+document.getElementById("width-inc").onmousedown=()=>{readerWidth=Math.min(Math.floor(window.innerWidth/fontSize/2)*2,readerWidth+2);update()}
 document.getElementById("width-dec").onmousedown=()=>{readerWidth=Math.max(20,readerWidth-2);update()}
 
 document.getElementById("font-inc").onmousedown=()=>{fontSize=Math.min(30,fontSize+(fontSize>=20?2:1));update()}
@@ -2356,13 +2349,19 @@ document.getElementById("font-dec").onmousedown=()=>{fontSize=Math.max(10,fontSi
 document.getElementById("line-inc").onmousedown=()=>{lineHeight=Math.min(3,lineHeight+(lineHeight>=1.99?.2:.1));update()}
 document.getElementById("line-dec").onmousedown=()=>{lineHeight=Math.max(1.2,lineHeight-(lineHeight>=2.19?.2:.1));update()}
 
-document.getElementById("scroll-to-top").onmousedown=()=>{scrollTo(0,0);hidepanels()}
+document.getElementById("scroll-to-top").onmousedown=(e)=>{
+  e.stopPropagation()
+  scrollTo(0,0)
+  hidepanels()
+}
 
 function hidepanels(){
   panel.classList.remove("open")
   contentsPanel.classList.remove("open")
   document.getElementById("scroll-to-top").style.display="none"
 }
+
+document.getElementById("reader-controls").addEventListener("click",(e)=>{e.stopPropagation()})
 
 document.addEventListener("click",(e)=>{if(!e.target.closest("#reader-controls"))hidepanels()})
 
