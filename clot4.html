@@ -1,0 +1,863 @@
+<!doctype html>
+<meta charset=utf-8>
+<meta name=viewport content=width=device-width,initial-scale=1.0>
+
+<style>
+:root{--pagewidth:30em}
+
+body{background:#333;color:#fff;text-align:center}
+body,td,th{font-size:15px;line-height:2;
+  font-family:Arial,Helvetica,'Liberation Sans','Nimbus Sans',sans-serif}
+
+p,pre,ul,li,blockquote,table,dl{text-align:left}
+p{max-width:var(--pagewidth);margin:1em auto}
+pre,dl{margin:1em auto;width:fit-content;max-width:min(100%, 1000px);
+  box-sizing:border-box}
+hr{border:none;border-top: 2px solid #bbb;margin:1em auto;
+  max-width:var(--pagewidth)}
+
+a,a .quote{text-decoration:none;color:hsl(220,94%,75%)}
+a:visited,a .quote{color:hsl(270,94%,75%)}
+
+pre,code{white-space:pre-wrap;word-wrap:break-word;
+  font:.93em Menlo,'DejaVu Sans Mono','Liberation Mono',Consolas,monospace;
+  background:#555;color:white}
+pre{padding:4px;line-height:1.4}
+code{padding:1px}
+
+h1,h2,h3,h4,h2 a,h3 a,h4 a,h2 a:visited,h3 a:visited,h4 a:visited{color:white;
+  font-weight:normal;line-height:1.3}
+h2 a,h3 a{text-decoration:underline}
+h2 a:focus,h3 a:focus{outline:none}
+h1{font-size:2.1em;margin:.7em 0 .5em 0}
+h2{font-size:1.75em}
+h3{font-size:1.35em}
+h4{font-size:1.17em}
+
+ul,ol{width:min(100%, var(--pagewidth));margin:1em auto;
+  box-sizing:border-box}
+ul ul,ul ol,ol ol,ol ul{margin-top:0;margin-bottom:0}
+
+table{border-collapse:collapse;margin:0 auto;max-width:100%}
+td,th{border:1px solid #606060;padding:1px 3px}
+th{background:#494949;font-weight:bold}
+
+img{max-width:100%;margin:2px;vertical-align:middle}
+body>div{width:fit-content;margin:0 auto}
+
+dt{font-size:1.3em;margin:.4em 0}
+
+sup{vertical-align:0;position:relative;bottom:1.1ex}
+sub{vertical-align:0;position:relative;top:0.8ex}
+
+body>blockquote{margin:1em auto;padding-left:40px;
+  max-width:calc(var(--pagewidth) - 40px)}
+blockquote blockquote{width:calc(100% - 40px);margin-left:40px;
+  box-sizing:border-box}
+blockquote>:first-child{margin-top:0}
+blockquote>:last-child{margin-bottom:0}
+blockquote h2,blockquote h3,blockquote h4{margin:.5em 0}
+blockquote ul,blockquote ol{margin:.4em 0}
+blockquote h3,blockquote h4{color:inherit}
+
+.quote{color:hsl(0,0%,81%)}
+.quote .quote{color:hsl(0,0%,65%)}
+.quote .quote .quote{color:hsl(0,0%,53%)}
+.quote .quote .quote .quote{color:hsl(0,0%,41%)}
+.quote .quote .quote .quote .quote{color:hsl(0,0%,33%)}
+.quote .quote .quote .quote .quote .quote{color:hsl(0,0%,28%)}
+
+.spoiler{max-width:1060px;margin:0 auto}
+.spoiler button{width:90px;border:0;font-family:inherit;font-size:inherit;
+  color:inherit;background:#555;padding:4px 0px;outline:none;cursor:pointer;
+  margin:0 0 -.3em 0}
+.spoiler pre{display:none;margin-top:0;text-align:left}
+
+body>.toc{box-sizing:border-box;
+  width:calc(100% - 8px - max(0px,50vw - var(--pagewidth)/2 - 20px));
+  margin-left:max(0px,50vw - 8px - var(--pagewidth)/2 - 20px)}
+body>.toc ul{width:100%;box-sizing:border-box}
+
+.red,.red .quote{color:hsl(0,100%,77%)!important}
+.comment{color:hsl(0,100%,80%)!important}
+.dates{color:#ccc}
+.wide{width:min(100%, 1000px)}
+.fullwidth{max-width:100%}
+
+#pagenumber{position:fixed;right:12px;bottom:12px;
+  user-select:none;cursor:default}
+
+@media print{
+  body{background:white;color:black;margin:0px;zoom:.85;
+    print-color-adjust:exact;-webkit-print-color-adjust:exact}
+  a,a:visited{color:#0000EE}
+  h1,h2,h2 a,h3 a,h2 a:visited,h3 a:visited{color:black}
+  pre,code{background:#d6d6d6;color:black}
+  th{background:#ddd}
+  td,th{border:1px solid #ccc}
+  .quote{color:hsl(0,0%,42%)}
+  .quote .quote{color:hsl(0,0%,60%)}
+  .quote .quote .quote{color:hsl(0,0%,78%)}
+  .quote .quote .quote .quote{color:hsl(0,0%,88%)}
+  .spoiler{display:none}
+  .red,.red .quote{color:hsl(0,70%,70%)!important}
+  .comment{color:hsl(0,40%,60%)!important}
+  .dates{color:#777}
+  #pagenumber,#readercontrols{display:none}
+}
+
+#readercontrols{position:fixed;right:12px;top:50%;transform:translateY(-50%);
+  z-index:2;line-height:1.6;font-size:15px}
+#readerbuttons{display:flex;flex-direction:column;gap:4px}
+#readerbuttons button{border:none;width:48px;height:48px;color:white;
+  background:rgba(40,40,40,.6);cursor:pointer;font-size:16px}
+@media(hover:hover) and (pointer:fine){#upbutton,#downbutton{display:none}}
+
+#contentspanel{box-sizing:border-box;position:fixed;right:64px;top:50%;
+  transform:translateY(-50%);z-index:2;
+  overflow:auto;overscroll-behavior:contain;
+  padding:10px;max-width:calc(100% - 76px);max-height:calc(100% - 10px);
+  color:#fff;line-height:1.6}
+#contentspanel .toc{white-space:nowrap;max-width:calc(100vw - 92px)}
+#contentspanel ul{margin:0;list-style:none}
+#contentspanel>ul{padding:0}
+.currentsection{color:white !important}
+
+#stylepanel{position:absolute;right:52px;top:50%;transform:translateY(-50%);
+  width:max-content;padding:6px;color:#fff}
+.control{display:grid;grid-template-columns:auto auto;justify-content:end;
+  align-items:center;column-gap:10px;margin:8px}
+.stepper{display:flex;align-items:center;gap:6px}
+.stepper button{width:36px;height:36px;appearance:none;border:none;
+  color:black;font-weight:bold;cursor:pointer}
+.stepper span{width:54px;text-align:center}
+
+#contentspanel,#stylepanel{background:rgba(40,40,40,.95)}
+#contentspanel,#stylepanel,#stylebutton,#topbutton{display:none}
+#contentspanel.open,#stylepanel.open{display:block}
+#readercontrols *{touch-action:manipulation;user-select:none;-webkit-touch-callout:none}
+</style>
+<title>Are the white clots found by embalmers a hoax? (part 4)</title>
+<h1 id=top>Are the white clots found by embalmers a hoax? (part 4) - <a href=index.html>sars2.net</a></h1><div class=dates>First published 2026-08-21 UTC, last modified 2026-08-21 UTC</div><p>Other parts: <a href=clot.html>clot.<wbr>html</a>, <a href=clot2.html>clot2.<wbr>html</a>, <a href=clot3.html>clot3.<wbr>html</a> <span class="quote">(Kevin McCairn)</span>.</p>
+<h2><a href=#Contents id=Contents>Contents</a></h2>
+<ul class=toc>
+<li><a href="#Clot_symposium_hosted_by_SGT_Report_and_Todd_Callender_in_September_2025">Clot symposium hosted by SGT Report and Todd Callender in September 2025</a></li>
+<li><a href="#An_unholy_trilogy_of_preprints_by_Bruce_Rapley_and_Matt_Shelton">An unholy trilogy of preprints by Bruce Rapley and Matt Shelton</a></li>
+<li><a href="#Jikkys_tweets_about_the_trilogy_of_preprints_by_Rapley_and_Shelton">Jikky&#39;s tweets about the trilogy of preprints by Rapley and Shelton</a></li>
+<li><a href="#Types_of_professionals_who_would_be_expected_to_see_a_novel_type_of_clots">Types of professionals who would be expected to see a novel type of clots</a></li>
+<li><a href="#Question_about_clots_in_a_Facebook_mortician_group">Question about clots in a Facebook mortician group</a></li>
+<li><a href="#Waubra_Foundation">Waubra Foundation</a></li>
+<li><a href="#Paper_about_Congo_red_staining_and_AmyloGram_by_Kell_and_Pretorius">Paper about Congo red staining and AmyloGram by Kell and Pretorius</a></li>
+<li><a href="#Are_calamari_clots_level_5_nanotechnology">Are calamari clots level 5 nanotechnology?</a></li>
+<li><a href="#Daniel_Santiagos_papers_about_magnetism_and_clots_in_an_Indian_predatory_journal">Daniel Santiago&#39;s papers about magnetism and clots in an Indian predatory journal</a></li>
+<li><a href="#Comments_by_Mike_Adams_about_Died_Suddenly_and_Jane_Rubys_role_in_covering_the_clots">Comments by Mike Adams about Died Suddenly and Jane Ruby&#39;s role in covering the clots</a></li>
+<li><a href="#Michael_Merricks_clots_created_through_centrifugation">Michael Merrick&#39;s clots created through centrifugation</a></li>
+<li><a href="#Greg_Harrison_interviewed_on_Cafe_Locked_Out">Greg Harrison interviewed on Cafe Locked Out</a></li>
+<li><a href="#Australian_National_Review_is_a_Russian_disinformation_outlet">Australian National Review is a Russian disinformation outlet</a></li>
+</ul>
+
+
+<h2>
+<a href="#Clot_symposium_hosted_by_SGT_Report_and_Todd_Callender_in_September_2025" id="Clot_symposium_hosted_by_SGT_Report_and_Todd_Callender_in_September_2025">Clot symposium hosted by SGT Report and Todd Callender in September 2025</a>
+</h2>
+<p>In September 2025, SGT Report and Todd Callender hosted a video symposium about the clots, which featured presentations by Wayne Crouch, Lisa Johnston, Richard Hirschman, Tom Haviland, and Greg Harrison. Afterwards the presentations were discussed by Sherri Tenpenny, Rima Laibow, Bill Lionberger, and Jamie Scher. <span class="quote">[<a href=https://rumble.com/v6z3xuw-documenting-genocide-the-vax-amyloid-clots-symposium.html>https://<wbr>rumble.<wbr>com/<wbr>v6z3xuw-<wbr>documenting-<wbr>genocide-<wbr>the-<wbr>vax-<wbr>amyloid-<wbr>clots-<wbr>symposium.<wbr>html</a>]</span></p>
+<p>Todd Callender introduced Wayne and Lisa by saying: <span class="quote">"This particular vector of attack goes back to the 1990s - the early 1990s, the end of the Soviet Union - where you have Soviet bioweapon scientists collaborating with American scientists, collaborating with Chinese scientists, to design the dead man switch, the means by which all of humanity is eventually eradicated. With that said, welcome to Truth be Told, both Lisa and Wayne!"</span> The title of Wayne's video series <span class="quote">"An Unholy Triad"</span> refers to the triad of Soviet Union, China, and United States, which supposedly created SARS-CoV-2.</p>
+<p>Then Wayne Crouch and Lisa Johnston showed the image below and said: <span class="quote">"Well, one night, while Greg - who's going to be the main speaker tonight - was bearing himself into the research he was doing, he came across a genetic map of the COVID-19 virus. Some of this map was labeled in English, but some was written in an incomprehensible language. But at the time we all assumed was likely gibberish, or what is called an AI hallucination. Then Greg being Greg, he can never let anything go, so he barely slept until he worked out that the map was written in three very specific phonetically scrambled languages, languages used by researchers to mask their work from people like us. So what Greg identified is what we now know to be bioweaponweapon nomenclature. Three different yet distinct types of known encoded languages were identified and then broken: Soviet, Chinese, and American. With this new knowledge, we went into investigation mode, and we now believe that we can tell you the story of how SARS-CoV-2 came to be. It all begins with a Soviet scientist defecting to America, carrying a suitcase full of secrets."</span></p>
+<div>
+<img src=i/clot-sgt-orf.webp width=340>
+</div>
+<p>At time 11:30, Lisa Johnston said: <span class="quote">"It turns out SARS-CoV-2 has ORF1a, ORF1b, ORF2, ORF3a, ORF6 and more. And if we are right, it also has ORF19, warping fibrinogen into fibrous amyloid prionic death traps, ORF29, cementing their permanence, and ORF8, causing clotting and immune evasion, effectively blinding T-cells and causing systemic damage, while cloaking the chaos from immune detection."</span> So apparently she's now saying that ORF19 and ORF29 are ORFs of the virus and not a vaccine, even though elsewhere Greg has claimed they are ORFs of a vaccine.</p>
+<p>At time 55:56, Greg said: <span class="quote">"But in this clot the most dominant fibrinogen monomer that we found was in fact the fibrinogen beta chain. And the point is these are not fully formed fibrils. The fact that we found the fibrin monomers tells us that the polymerization pathway has not been completed."</span> So has he still not figured out that fibrin is not supposed to show up in the HPLC results? HPLC detects fragments of proteins, so it can't tell a fibrin polymer apart from the fibrinogen monomers <span class="quote">(unless for example you look for crosslinked peptides like γ-γ or α-α chain dimers, or you look for the absence of the fibrinopeptides A and B that are cleaved off from fibrinogen by thrombin)</span>.</p>
+<p>At time 1:10:59, Greg again had a convenient excuse for why he cannot share his HPLC-MS data: <span class="quote">"One of my colleagues is actually studying protein chemistry in one of these universities. And we were told by the university that we must not identify them, nor can we show the raw data. Which unfortunately means that a lot of our work has been dismissed by more sophisticated scientists because they want to see the real data, and I understand that. But we had to give the universities an undertaking that we would not, under any circumstance, divulge the actual data findings. We can show the summaries of what we found. But to provide the hard data, the readout, the counts, et cetera, that were provided to us - it still had to be manipulated into spreadsheets, for example, so we could understand it - that's the data we are forbidden to share. It's that simple."</span></p>
+<p>At time 1:44:27, Greg showed the image below and said: <span class="quote">"Part of the video that Kevin was filming back in July 2025 was this. This is actually a still taken from his video. But what he's captured here is the entire mechanism we're describing. You've got a cloud - you can see here quite clearly - of the amyloidic microclots, forming a macroclot fibril. And more importantly, if you look here, there's signs that these clots - the microclots are starting to align by starting to form linear structures, which would indicate the fibrinogen beta chain bonding that we were describing. This is a fascinating image, this one."</span> However McCairn told me that what the image actually showed was the dried out boundary of a droplet, where particulate matter had accumulated because of surface tension. <span class="quote">[<a href=https://x.com/KevinMcCairnPhD/status/1974118396221673693>https://<wbr>x.<wbr>com/<wbr>KevinMcCairnPhD/<wbr>status/<wbr>1974118396221673693</a>]</span></p>
+<div>
+<img src=i/clot-sgt-orf-2.webp width=470>
+</div>
+<p>At time 1:58:53, Rima Laibow said: <span class="quote">"And we are living in the most successful genocide that humanity has ever perpetrated, with the numbers that go from 17 million of Dennis Rancourt's minimum estimates, to 500 million of James Thorp's estimates, of the people that we've lost so far through reproductive disaster and physical harm."</span> However in the years 2021-2024, there were only about 260 million total deaths worldwide according to the UN's estimates. <span class="quote">[<a href=https://population.un.org/wpp/Download/Standard/>https://<wbr>population.<wbr>un.<wbr>org/<wbr>wpp/<wbr>Download/<wbr>Standard/<wbr></a>]</span> In 2024 Thorp claimed that there were 714 million Americans killed by COVID vaccines. <span class="quote">[<a href=https://x.com/jathorpmfm/status/1775697278130401406>https://<wbr>x.<wbr>com/<wbr>jathorpmfm/<wbr>status/<wbr>1775697278130401406</a>]</span></p>
+<p>Greg said there was an abnormally high level of phosphorus in the clots, so at time 2:07:36, Rima Laibow speculated that the phosphorus may have made it possible to kill people via 5G: <span class="quote">"And I'm hearing phosphorus, another metal in the body - which happens to be radio-sensitive - EMF frequencies interact with phosphorus. Could it not be possible - hypothesis, I'm speculating - could it not be possible that the disease is triggered by the G5 - by the 5G, 6G, 7G, God knows what G nonsense to which we are all being exposed as part of the kill mechanism? Is that not possible that the entire biochemistry of phosphorylation, which is critical to life - I mean, anybody who studied biochemistry knows that in many ways it's the study of phosphorylation, and its companion activities - could it not be that, that is a central kill mechanism?"</span> Her theory is reminiscent of how Mike Adams said that the clots had a high level of tin and other electrically conductive metals, so he said the metals formed electric circuits that may have enabled killing people via 5G.</p>
+<p>Rima Laibow is included in the Hall of Fame of the Scientologist organization Citizen's Commission for Human Rights. <a href=https://newagefraud.org/smf/index.php?topic=4406.0>https://<wbr>newagefraud.<wbr>org/<wbr>smf/<wbr>index.<wbr>php?<wbr>topic=4406.<wbr>0</a>] Mike Adams received the CCHR Human Rights Award. <span class="quote">[<a href=https://www.cchrint.org/2011/09/07/naturalnews-names-award-winner-for-2011-jim-marrs/>https://<wbr>www.<wbr>cchrint.<wbr>org/<wbr>2011/<wbr>09/<wbr>07/<wbr>naturalnews-<wbr>names-<wbr>award-<wbr>winner-<wbr>for-<wbr>2011-<wbr>jim-<wbr>marrs/<wbr></a>]</span> Rima Laibow, Mike Adams, and Sherri Tenpennny were all featured in a film by CCHR titled <span class="quote">"Making a Killing: The Untold Story of Psychotropic Drugging"</span>. <span class="quote">[<a href=https://www.youtube.com/watch?v=lglCDwifzio>https://<wbr>www.<wbr>youtube.<wbr>com/<wbr>watch?<wbr>v=lglCDwifzio</a>, <a href=https://www.imdb.com/title/tt1354556/fullcredits/>https://<wbr>www.<wbr>imdb.<wbr>com/<wbr>title/<wbr>tt1354556/<wbr>fullcredits/<wbr></a>]</span> The featured video on CCHR's YouTube channel used to be a film by Mike Adams called <span class="quote">"Psychiatry in the Military"</span>. <span class="quote">[<a href=https://www.youtube.com/watch?v=sHC2wH_iGYM>https://<wbr>www.<wbr>youtube.<wbr>com/<wbr>watch?<wbr>v=sHC2wH_<wbr>iGYM</a>]</span> Laibow's husband General Albert Stubblebine was the Commanding General of the US Army Intelligence and Security Command, and he was the head of the US Army's remote viewing program, but the SRI's remote viewing program was founded by the Scientologist Hal Puthoff, and the remote viewers Ingo Swann, Russel Targ, Pat Price, and Edwin May were all Scientologists. <span class="quote">[<a href=https://books.google.com/books?id=8lgHtauc5R4C&pg=PA113>https://<wbr>books.<wbr>google.<wbr>com/<wbr>books?<wbr>id=8lgHtauc5R4C&amp;<wbr>pg=PA113</a>]</span></p>
+<h2>
+<a href="#An_unholy_trilogy_of_preprints_by_Bruce_Rapley_and_Matt_Shelton" id="An_unholy_trilogy_of_preprints_by_Bruce_Rapley_and_Matt_Shelton">An unholy trilogy of preprints by Bruce Rapley and Matt Shelton</a>
+</h2>
+<p>A series of three preprints about the clots by Bruce Rapley and Matt Shelton was published in January 2026, titled <span class="quote">"Morphological and Histological Characterisation of Anomalous Intravascular Casts <span class="quote">(AICs)</span>"</span>, <span class="quote">"Elemental Characterisation of Anomalous Intravascular Casts Reveals an Abnormal Biochemical Matrix"</span>, and <span class="quote">"Proteomic Characterisation of Anomalous Intravascular Casts Reveals Non-Canonical Fibrin Architecture and Impaired Fibrinolysis"</span>. <span class="quote">[<a href=https://www.preprints.org/manuscript/202601.1846>https://<wbr>www.<wbr>preprints.<wbr>org/<wbr>manuscript/<wbr>202601.<wbr>1846</a>, <a href=https://www.preprints.org/manuscript/202601.2149>https://<wbr>www.<wbr>preprints.<wbr>org/<wbr>manuscript/<wbr>202601.<wbr>2149</a>, <a href=https://www.preprints.org/manuscript/202601.2319>https://<wbr>www.<wbr>preprints.<wbr>org/<wbr>manuscript/<wbr>202601.<wbr>2319</a>]</span></p>
+<p>I'm aware of only one earlier scientific paper about the calamari clots, which was coauthored by Daniel Santiago and John Oller and published in Oller's journal IJVTPR <span class="quote">(if I employ a very liberal definition of a scientific paper that includes pseudo-scientific papers masquerading as scientific papers)</span>. <span class="quote">[<a href=https://ijvtpr.com/index.php/IJVTPR/article/view/73>https://<wbr>ijvtpr.<wbr>com/<wbr>index.<wbr>php/<wbr>IJVTPR/<wbr>article/<wbr>view/<wbr>73</a>]</span></p>
+<p>Bruce Rapley, Matt Shelton, and Daniel Santiago were all credited as members of the <span class="quote">"scientific research and advisory team"</span> of An Unholy Triad, and Matt Shelton was also credited as one of the executive producers: <span class="quote">[<a href=https://rumble.com/v6paaoo-an-unholy-triad-the-birth-of-a-plague-episode-01.html>https://<wbr>rumble.<wbr>com/<wbr>v6paaoo-<wbr>an-<wbr>unholy-<wbr>triad-<wbr>the-<wbr>birth-<wbr>of-<wbr>a-<wbr>plague-<wbr>episode-<wbr>01.<wbr>html</a>]</span></p>
+<div>
+<img src=i/clot-unholy.webp width=300>
+</div>
+<p>The three new preprints covered the same material as the <span class="quote">"top secret press release"</span> by Solution of Scientists from September 2024, which didn't look anything like a press release. <span class="quote">[<a href=https://laurakasner.substack.com/p/how-the-white-clots-are-formed>https://<wbr>laurakasner.<wbr>substack.<wbr>com/<wbr>p/<wbr>how-<wbr>the-<wbr>white-<wbr>clots-<wbr>are-<wbr>formed</a>]</span> The authors of the so-called press release were anonymous, but Laura Kasner said that Greg Harrison was one of the authors, so I don't know if Rapley or Shelton were also involved in writing the press release. In November 2023 Greg tweeted: <span class="quote">"You could also ask Bruce Rapley &amp; John O'Looney as we all formed a team now to prove Mike Adams' ICP-MS findings."</span> <span class="quote">[<a href=https://x.com/Greg21143362/status/1726166138860773809>https://<wbr>x.<wbr>com/<wbr>Greg21143362/<wbr>status/<wbr>1726166138860773809</a>]</span> The new preprints didn't include any reference to the earlier press release or to Greg Harrison.</p>
+<p>The authors had now fixed three anomalies I pointed out in the press release by SOS. The morphology paper no longer included the photo of a clot from a pleural catherer from 2019, which was earlier presented as a <span class="quote">"worm-like fibrous clot from a patient who died from COVID disease"</span>. The elementary analysis paper no longer included the plots that showed zinc had 100% variance <span class="quote">(which I guess was just fake AI-generated data, because I never got Greg to explain how the variance percentages were calculated)</span>. And the proteomics paper no longer said that the lack of fibrin was somehow anomalous, so now Greg's crew seem to have finally realized that fibrin is not supposed to show up in the HPLC results.</p>
+<p>The methods section of the proteomics paper said: <span class="quote">"Raw LC-MS/MS data were processed using standard proteomic analysis pipelines to identify peptides and assign them to corresponding human proteins under established false discovery rate thresholds."</span> It's unusual how the authors said they used standard pipelines but didn't describe what specific utilities they used, which might serve as further evidence that Greg's crew just generated fake data with AI.</p>
+<p>The proteomics paper said: <span class="quote">"A complete list of all 541 identified human proteins, together with their relative abundances, is provided in Supplementary Table S1."</span> But the supplementary information was not posted at Preprints.org.</p>
+<p>Bruce Rapley's affiliation was listed as <span class="quote">"Consulting Scientist - Human Health and Environment, Uranus Consulting, New Zealand"</span>, and his correspondence email was <code>analyst@<wbr>uranusconsulting.<wbr>org</code>. When I googled for a combination of the terms Uranus Consulting and Rapley in double quotes, the only hits were about the new preprints. Uranus Consulting has a website with no content. <span class="quote">[<a href=https://uranusconsulting.org>https://<wbr>uranusconsulting.<wbr>org</a>]</span> Uranus Consulting sounds like something to do with proctology, or maybe it refers to the source the authors consulted to derive their wisdom from.</p>
+<p>All three papers had the same funding statement, which said: <span class="quote">"This work received significant funding from the NZDSOS, and a number of private donors who wished to remain anonymous, to facilitate the cost of laboratory analysis."</span> I don't remember Greg having said earlier that his mass spectrometry analysis was funded by NZDSOS.</p>
+<p>The acknowledgements said: <span class="quote">"The authors thank Professor Robyn Cossford, Dr. Gerry Brady, Dr. Rob Maunsell and Mr. Nic Broomfield for constructive discussions, critical feedback, and methodological insights that informed the development of this work."</span> Gerry Brady and Robyn Cosford were 2 of the 7 people who were interviewed by Daniel Broudy on IIRT's Brighteon channel, along with Matt Shelton, David Hughes, Ana Mihalcea, David Nixon, and Shimon Yanowitz. <span class="quote">[<a href=https://www.brighteon.com/channels/iirteam/videos/all>https://<wbr>www.<wbr>brighteon.<wbr>com/<wbr>channels/<wbr>iirteam/<wbr>videos/<wbr>all</a>]</span> David Nixon is also a member of NZDSOS. <span class="quote">[<a href=https://nzdsos.com/2024/02/20/rubbery-clots-campbell/>https://<wbr>nzdsos.<wbr>com/<wbr>2024/<wbr>02/<wbr>20/<wbr>rubbery-<wbr>clots-<wbr>campbell/<wbr></a>]</span></p>
+<p>Rob Maunsell works at an anthroposophical medical clinic called Sophia Healing Centre. <span class="quote">[<a href=https://www.weleda.co.nz/health/sophia-healing-centre>https://<wbr>www.<wbr>weleda.<wbr>co.<wbr>nz/<wbr>health/<wbr>sophia-<wbr>healing-<wbr>centre</a>]</span> Rudolf Steiner equated Sophia with Isis, or the female aspect of Satan. <span class="quote">[<a href=https://rsarchive.org/Lectures/19201224p02.html>https://<wbr>rsarchive.<wbr>org/<wbr>Lectures/<wbr>19201224p02.<wbr>html</a>]</span> Tom Cowan is also a practicioner of anthroposophical medicine, and Douglas Gabriel and John Barnwell from American Intelligence Media are leading anthroposophists, who have developed a cult of worshipping Sophia. <span class="quote">[<a href=https://gospelofsophia.com/2016/12/31/the-holy-sophia-of-the-divine-feminine-trinity/>https://<wbr>gospelofsophia.<wbr>com/<wbr>2016/<wbr>12/<wbr>31/<wbr>the-<wbr>holy-<wbr>sophia-<wbr>of-<wbr>the-<wbr>divine-<wbr>feminine-<wbr>trinity/<wbr></a>]</span> In March 2020 AIM came up with a theory that COVID was caused by 5G-activated nanotechnology, which was frequently promoted by Robert David Steele. <span class="quote">[<a href=https://aim4truth.org/2020/03/22/cat-report-340/>https://<wbr>aim4truth.<wbr>org/<wbr>2020/<wbr>03/<wbr>22/<wbr>cat-<wbr>report-<wbr>340/<wbr></a>; <a href=https://www.bitchute.com/video/giiDPiEioe0/>https://<wbr>www.<wbr>bitchute.<wbr>com/<wbr>video/<wbr>giiDPiEioe0/<wbr></a>, 6:32]</span></p>
+<p>A blog post by NZDSOS said that the research in the preprints was <span class="quote">"significantly funded by"</span> NZDSOS and <span class="quote">"conducted by New Zealand-based researchers Drs Bruce Rapley and Matt Shelton"</span>, but there was no reference to Greg Harrison or to the press release by SOS. <span class="quote">[<a href=https://nzdsos.com/2026/02/04/breaking-research-decodes-the-mystery-of-the-rubbery-white-clots/>https://<wbr>nzdsos.<wbr>com/<wbr>2026/<wbr>02/<wbr>04/<wbr>breaking-<wbr>research-<wbr>decodes-<wbr>the-<wbr>mystery-<wbr>of-<wbr>the-<wbr>rubbery-<wbr>white-<wbr>clots/<wbr></a>]</span></p>
+<p>When John O'Looney promoted the new papers, Greg replied: <span class="quote">"Thx John, we did the analyses...as you know..😇"</span>. <span class="quote">[<a href=https://x.com/GregGr67545/status/2026912400495329583>https://<wbr>x.<wbr>com/<wbr>GregGr67545/<wbr>status/<wbr>2026912400495329583</a>]</span> So Greg still seems to be taking credit for the analysis.</p>
+<p>Wayne Crouch linked to a website that listed Bruce Rapley's papers, and he wrote: <span class="quote">"People like you need to share Greg Harrison and Bruce Rapley's work that is qhat it takes <a href=https://sciprofiles.com/user/publications/5056497>https://<wbr>sciprofiles.<wbr>com/<wbr>user/<wbr>publications/<wbr>5056497</a>"</span>. <span class="quote">[<a href=https://x.com/WayneC50256258/status/2027612716618375577>https://<wbr>x.<wbr>com/<wbr>WayneC50256258/<wbr>status/<wbr>2027612716618375577</a>]</span> He listed Greg first, so he gave the impression Greg might have been the primary author of the work.</p>
+<hr />
+<p>Nurse Campbell did two videos about the new trilogy of papers, which had over 500,000 views combined when I wrote this. <span class="quote">[<a href=https://www.youtube.com/watch?v=d2YiNVgot-A>https://<wbr>www.<wbr>youtube.<wbr>com/<wbr>watch?<wbr>v=d2YiNVgot-<wbr>A</a>, <a href=https://www.youtube.com/watch?v=GEmJGuIsDkw>https://<wbr>www.<wbr>youtube.<wbr>com/<wbr>watch?<wbr>v=GEmJGuIsDkw</a>]</span> His videos were promoted on Twitter by the usual junk amplifier accounts, like Humanspective, SenseReceptor, Andrew Bridgen, SaiKate108, and David Cartland: <span class="quote">[<a href=https://x.com/Humanspective/status/2026377881132409336>https://<wbr>x.<wbr>com/<wbr>Humanspective/<wbr>status/<wbr>2026377881132409336</a>, <a href=https://x.com/ABridgen/status/2026768941696299018>https://<wbr>x.<wbr>com/<wbr>ABridgen/<wbr>status/<wbr>2026768941696299018</a>, <a href=https://x.com/SaiKate108/status/2026322078459170970>https://<wbr>x.<wbr>com/<wbr>SaiKate108/<wbr>status/<wbr>2026322078459170970</a>, <a href=https://x.com/CartlandDavid/status/2028730200154861779>https://<wbr>x.<wbr>com/<wbr>CartlandDavid/<wbr>status/<wbr>2028730200154861779</a>]</span></p>
+<div>
+<img src=i/clot-rapley-amplifier-4.webp width=530><img src=i/clot-rapley-amplifier-2.webp width=530><img src=i/clot-rapley-amplifier-1.webp width=530><img src=i/clot-rapley-amplifier-3.webp width=530><img src=i/clot-rapley-amplifier-5.webp width=530>
+</div>
+<p>Andrew Bridgen and David Cartland are frequently reposted by bots that also repost accounts like SenseReceptor and the IlluminatiCoin bots. <span class="quote">[<a href=bot2.html>bot2.<wbr>html</a>]</span> David Cartland's bio used to say <span class="quote">"Managed account by PR team"</span>. <span class="quote">[<a href=https://xbase.so/CartlandDavid>https://<wbr>xbase.<wbr>so/<wbr>CartlandDavid</a>]</span></p>
+<hr />
+<p>I didn't find any videos by Bruce Rapley in alt media, but in February 2026 Wayne Crouch tweeted that he was going to do an interview with Rapley: <span class="quote">[<a href=https://x.com/WayneC50256258/status/2022130000603079081>https://<wbr>x.<wbr>com/<wbr>WayneC50256258/<wbr>status/<wbr>2022130000603079081</a>]</span></p>
+<div>
+<img src=i/clot-wayne-rapley-tweet.webp width=597>
+</div>
+<p>Wayne's tweet looked like it was generated by AI, and the tweet was not written in his usual poor grammar full of run-in sentences. His tweet had similar Markdown bold formatting as McCairn's Substack post and one of Greg's AI-generated responses to me. One time Greg wrote: <span class="quote">"our 3 AI engines in concert with each other...don't ask me which engines, these are the paid-for academic and proper research engines we using...not the useless free ones..."</span> <span class="quote">[<a href=https://x.com/Greg21143362/status/1904322522608447848>https://<wbr>x.<wbr>com/<wbr>Greg21143362/<wbr>status/<wbr>1904322522608447848</a>]</span> He wrote in the first person plural, so I don't know if Wayne or McCairn are using one of the same AI engines as Greg. McCairn admitted to me that his post was generated by AI, even though it's also possible that McCairn didn't generate the post himself, but he got the post from someone in Greg's crew. <span class="quote">[<a href=https://x.com/KevinMcCairnPhD/status/1930603571487424779>https://<wbr>x.<wbr>com/<wbr>KevinMcCairnPhD/<wbr>status/<wbr>1930603571487424779</a>]</span></p>
+<hr />
+<p>In April 2026 Greg said this about the elementary analysis paper: <span class="quote">"The paper is flawed due to reliance on a less sensitive ICP-MS analysis technique claiming no Sulphur detected...should have used ICP-OES which specifically finds Sulphur...amateurs...😇"</span> <span class="quote">[<a href=https://x.com/GregGr67545/status/2039623862238011715>https://<wbr>x.<wbr>com/<wbr>GregGr67545/<wbr>status/<wbr>2039623862238011715</a>]</span> So is he no longer taking credit for the ICP analysis in the paper, or is he calling himself an amateur?</p>
+<p>Both the old press release and new paper said the authors used ICP-MS and not ICP-OES, and both reported the same level of sulfur in the samples.</p>
+<p>The new paper didn't say that no sulfur was detected, but it said: <span class="quote">"AICs exhibited reproducible, non-physiological elemental ratios characterized by marked sulfur depletion, relative phosphorus enrichment, and imbalance within bulk elemental relationships."</span> But the old press release by SOS said: <span class="quote">"The elemental analysis provides evidence of increased phosphorus, sulphur and tin, each of which contributes to the new clotting phenomenon."</span> Earlier Greg was saying that a high level of sulfur was one of the main ways in which the clots were somehow abnormal. In the new paper the authors didn't explain why they had earlier considered the exact same sulfur levels as abnormally high, but now they claimed the levels were low instead.</p>
+<p>Greg also criticized the papers for not mentioning the fluorescence microscopy images with Thioflavin staining <span class="quote">(which were not mentioned in the original press release either, because the images were published about 4 months after the press release)</span>: <span class="quote">[<a href=https://x.com/GregGr67545/status/2039616492749340776/photo/1>https://<wbr>x.<wbr>com/<wbr>GregGr67545/<wbr>status/<wbr>2039616492749340776/<wbr>photo/<wbr>1</a>]</span></p>
+<div>
+<img src=i/clot-greg-critique-2.webp width=594>
+</div>
+<p>One of the things Greg emphasized in his presentations was how the HPLC results showed a high level of proline, which he called a <span class="quote">"kinker"</span> molecule that initiated misfolding. However there was no mention of proline in either the old press release or the new proteomics paper:</p>
+<div>
+<img src=i/clot-greg-critique-3.webp width=592>
+</div>
+<hr />
+<p>In 2025 IJVTPR published a paper by Bruce Rapley, where in the acknowledgements he wrote: <span class="quote">"Special thanks are owed to Matt Shelton, Robyn Cosford, Heather Way, Gerry Brady, Andrew Zywiec, and the many members of the Independent International Research Team that have encouraged this work. The Editor-in-Chief of the IJVTPR has informed me that Stephanie Seneff, Christopher A. Shaw, and Daniel Santiago were among the reviewers who, along with himself, reviewed this work prior to its publication."</span> <span class="quote">[<a href=https://ijvtpr.com/index.php/IJVTPR/article/view/118>https://<wbr>ijvtpr.<wbr>com/<wbr>index.<wbr>php/<wbr>IJVTPR/<wbr>article/<wbr>view/<wbr>118</a>]</span> So Rapley is likely a member of IIRT. In 2025 IJVTPR published a paper by John Oller and Daniel Santiago, who wrote they sent their paper for review to several members of IJVTPR's editorial board and other peer-reviewers, who included Stephanie Seneff, Daniel Broudy, Sasha Latypova, Christopher Shaw, Bruce Rapley, Gerry Brady, Mary Holland, Klaus Steger, and Robyn Cosford. <span class="quote">[<a href=https://ijvtpr.com/index.php/IJVTPR/article/view/123>https://<wbr>ijvtpr.<wbr>com/<wbr>index.<wbr>php/<wbr>IJVTPR/<wbr>article/<wbr>view/<wbr>123</a>]</span></p>
+<hr />
+<p>In March 2026 Bruce Rapley and Matt Shelton were interviewed about their preprints by Philip McMillan. <span class="quote">[<a href=https://philipmcmillan.substack.com/p/white-clots-thbs1-monocytes-and-the>https://<wbr>philipmcmillan.<wbr>substack.<wbr>com/<wbr>p/<wbr>white-<wbr>clots-<wbr>thbs1-<wbr>monocytes-<wbr>and-<wbr>the</a>]</span> There was no reference to Greg Harrison during the interview, even though McMillan had earlier done videos where Greg presented the same results that were now presented by Rapley and Shelton.</p>
+<p>At time 3:20 Rapley said: <span class="quote">"I was involved in two international research groups, which met virtually weekly. And we all discussed these clots. They became a big topic for all of us."</span> One of the groups was probably IIRT.</p>
+<p>At time 3:56 Rapley said: <span class="quote">"But the problem was in New Zealand - and as I found out in other countries - you were not allowed to study COVID. <span class="quote">[...]</span> So I contacted a number of embalmers from three different countries, and I managed to get some samples. And then I set about analyzing these. And it took a very long time because very specialized equipment was needed to do this task. I reached out to a number of laboratories in New Zealand, and I found that they were not allowed to research this. I had to reach out to other countries and many laboratories were very, very guarded about doing any work on COVID. So in the end I managed to contact a number of laboratories internationally who agreed to work on a black box project where I would supply material and no other information, and that was the only way that I could get access to some of the highly specialized equipment that we need to do this. And the answer is the three papers that we've just put on preprint."</span> But the equipment needed to do mass spectrometry is hardly highly specialized. Rapley spoke of himself in the first person as having sent the samples to the laboratories, and he didn't mention Greg, even though earlier Greg gave the impression he coordinated the analysis of the clots at the two labs. And Rapley now spoke of <span class="quote">"a number of laboratories"</span> and not only two laboratories like Greg.</p>
+<p>Next Rapley said: <span class="quote">"The laboratories were told by government agencies they could not investigate anything related to COVID. They were forbidden. And when I tried to dig deeper into this and say, who has told you this, everything went quiet. And they said, <span class="quote">'Oh, our policy direction - we've been directed not to work on COVID.'</span> And this was so virtually across the world."</span> However what he said doesn't make sense, because there was a huge number of studies about COVID being published during the pandemic. I had never earlier heard of a lab that had a rule that they were not allowed to do studies on COVID.</p>
+<p>At time 32:30 Rapley said: <span class="quote">"what we find is it's a complete dog's breakfast. You've got broken fibrinogen broken fibrin, broken blood cells, broken platelets. And as we discovered, you've got 532 other proteins normally found in the blood which are getting stuck to these clots. And the reason they're getting stuck is because of the failure to create proper fibrin. So when you take away part of the alpha and gamma chains, essentially you've got chemical bonds which are unsatisfied. You've got parts of that molecule that want to hang on to something, and damn it, they're not hanging on to the normal pieces. They're not hanging on to other bits of fibrin."</span> So he now had a novel explanation for why the clots had an unusual composition, which was that extra proteins somehow got stuck to the clots because fibrinogen beta chain was overrepresented relative to the alpha and gamma chains.</p>
+<h2>
+<a href="#Jikkys_tweets_about_the_trilogy_of_preprints_by_Rapley_and_Shelton" id="Jikkys_tweets_about_the_trilogy_of_preprints_by_Rapley_and_Shelton">Jikky'<wbr>s tweets about the trilogy of preprints by Rapley and Shelton</a>
+</h2>
+<p>Jikkyleaks said that Rapley and Shelton's proteomics paper was probably a scam: <span class="quote">[<a href=https://x.com/Jikkyleaks/status/2026603360271450407>https://<wbr>x.<wbr>com/<wbr>Jikkyleaks/<wbr>status/<wbr>2026603360271450407</a>]</span></p>
+<div>
+<img src=i/clot-shelton-jikky-2.webp width=595>
+</div>
+<p>Jikkyleaks seems to think that Matt Shelton is a clueless victim who was tricked into getting involved with psyops about clots and nanobots <span class="quote">(even though Shelton was one of the early people who started saying that vaccinated people were magnetic, he said that vaccines contained progenitor donuts where machines popped up from, he is a member of IIRT, he said he knows Daniel Broudy well, he was credited in An Unholy Triad, and he defended O'Looney's tweet about how vaccines contained graphene razor blades that resonated with 5G)</span>: <span class="quote">[<a href=https://x.com/Jikkyleaks/status/2026931654321909895>https://<wbr>x.<wbr>com/<wbr>Jikkyleaks/<wbr>status/<wbr>2026931654321909895</a>]</span></p>
+<div>
+<img src=i/clot-shelton-jikky.webp width=595>
+</div>
+<p>Jikky was also rightfully suspicious of how several people connected to the clots have a military background: <span class="quote">[<a href=https://x.com/Jikkyleaks/status/2026738994168697175>https://<wbr>x.<wbr>com/<wbr>Jikkyleaks/<wbr>status/<wbr>2026738994168697175</a>]</span></p>
+<div>
+<img src=i/clot-shelton-jikky-8.webp width=593>
+</div>
+<p>Jikky also said he had warned McCairn about Hirschman <span class="quote">(just like I did before McCairn was even connected to Hirschman or Greg)</span>: <span class="quote">[<a href=https://x.com/Jikkyleaks/status/2026613507429642407>https://<wbr>x.<wbr>com/<wbr>Jikkyleaks/<wbr>status/<wbr>2026613507429642407</a>]</span></p>
+<div>
+<img src=i/clot-shelton-jikky-3.webp width=595>
+</div>
+<p>He also pointed out how the methods section of the proteomics paper was lacking in details: <span class="quote">[<a href=https://x.com/Jikkyleaks/status/2026597763639894174>https://<wbr>x.<wbr>com/<wbr>Jikkyleaks/<wbr>status/<wbr>2026597763639894174</a>]</span></p>
+<div>
+<img src=i/clot-shelton-jikky-10.webp width=595>
+</div>
+<p>He also posted these tweets: <span class="quote">[<a href=https://x.com/Jikkyleaks/status/2026616687261593603>https://<wbr>x.<wbr>com/<wbr>Jikkyleaks/<wbr>status/<wbr>2026616687261593603</a>, <a href=https://x.com/Jikkyleaks/status/2026793094776324557>https://<wbr>x.<wbr>com/<wbr>Jikkyleaks/<wbr>status/<wbr>2026793094776324557</a>]</span></p>
+<div>
+<img src=i/clot-shelton-jikky-11.webp width=596>
+</div>
+<div>
+<img src=i/clot-shelton-jikky-12.webp width=596>
+</div>
+<p>Jikky also pointed out how Greg Harrison had earlier pushed graphene oxide: <span class="quote">[<a href=https://x.com/Jikkyleaks/status/2026728691074740258>https://<wbr>x.<wbr>com/<wbr>Jikkyleaks/<wbr>status/<wbr>2026728691074740258</a>]</span></p>
+<div>
+<img src=i/clot-shelton-jikky-5.webp width=597>
+</div>
+<p>Greg Harrison seems to have deleted his Twitter account after Jikky's thread: <span class="quote">[<a href=https://x.com/Jikkyleaks/status/2026823955714289705>https://<wbr>x.<wbr>com/<wbr>Jikkyleaks/<wbr>status/<wbr>2026823955714289705</a>]</span></p>
+<div>
+<img src=i/clot-shelton-jikky-6.webp width=596>
+</div>
+<p>Greg's last tweets might have been replies to Jikky's thread, because when I searched the newest direct replies to Greg, they were posted to Jikky's thread: <span class="quote">[<a href=https://x.com/search?q=to%3AGreg21143362&f=live>https://<wbr>x.<wbr>com/<wbr>search?<wbr>q=to%<wbr>3AGreg21143362&amp;<wbr>f=live</a>]</span></p>
+<div>
+<img src=i/clot-shelton-jikky-9.webp width=598>
+</div>
+<p>Greg was doing such a sloppy job that maybe Rapley and Shelton wanted to distance themselves from him, and to not have their new papers connected to him. Or maybe Greg was asked to delete his account so evidence of his earlier involvement in the clot operation would be more difficult to document. Or another possible scenario might be that Greg ran his account as part of a job he had to produce disinformation, but he was fired or he retired or his contract ended, so then he no longer needed the account <span class="quote">(even though as evidence against the last scenario, Greg has kept posting on his alt account even after he deleted his main account)</span>. <span class="quote">[<a href=https://x.com/GregGr67545/with_replies>https://<wbr>x.<wbr>com/<wbr>GregGr67545/<wbr>with_<wbr>replies</a>]</span></p>
+<p>Matt Shelton stopped tweeting on his personal account in December 2025, even though I don't know if he's one of the people who runs the Twitter account of NZDSOS. <span class="quote">[<a href=https://x.com/sussdoc/with_replies>https://<wbr>x.<wbr>com/<wbr>sussdoc/<wbr>with_<wbr>replies</a>]</span> Richard Hirschman also stopped tweeting in December 2025. <span class="quote">[<a href=https://x.com/r_hirschman/with_replies>https://<wbr>x.<wbr>com/<wbr>r_<wbr>hirschman/<wbr>with_<wbr>replies</a>]</span> <span class="quote">(Added later: Hirschman started tweeting again in February 2025, when he wrote: <span class="quote">"I have almost totally abandoned social media. I rarely open my account because I feel it sometimes consumes me. Lots of the stuff that's out there is toxic to our well being."</span>)</span> <span class="quote">[<a href=https://x.com/r_hirschman/status/2027764179734528160>https://<wbr>x.<wbr>com/<wbr>r_<wbr>hirschman/<wbr>status/<wbr>2027764179734528160</a>]</span></p>
+<p>Even though Jikky is one of my worst enemies, it's nice to see that anti-vaxxers are finally catching up to how the clots look like a psyop.</p>
+<p>McCairn's response to Jikky wasn't overly critical of Rapley and Shelton, and McCairn didn't point out how I had earlier shown that both the ICP and HPLC data was likely generated with AI, or how the data had been previously presented by Greg whose ORF hoax I busted: <span class="quote">[<a href=https://x.com/KevinMcCairnPhD/status/2026637566469120406>https://<wbr>x.<wbr>com/<wbr>KevinMcCairnPhD/<wbr>status/<wbr>2026637566469120406</a>]</span></p>
+<div>
+<img src=i/clot-shelton-jikky-4.webp width=592>
+</div>
+<p>So McCairn might be trying to cover up for his buddies at the Aussie-Kiwi Quinta Columna, like a year earlier when I showed him that Greg's ORFs were fake, but he only threw Greg halfway under the bus, and he made it seem like Greg was a foolish boomer who got tricked into believing in his own AI hallucinations <span class="quote">(even though in reality Greg was clearly part of a coordinated disinformation operation that also included Wayne Crouch, and that also included other people who were credited in An Unholy Triad)</span>.</p>
+<p>McCairn now told Jikky that he thinks the clots are <span class="quote">"a generally rare phenomenon, otherwise CAT/MRI, ultrasound, and cathlab procedures should be finding them"</span>: <span class="quote">[<a href=https://x.com/KevinMcCairnPhD/status/2026767431423898069>https://<wbr>x.<wbr>com/<wbr>KevinMcCairnPhD/<wbr>status/<wbr>2026767431423898069</a>]</span></p>
+<div>
+<img src=i/clot-shelton-jikky-13.webp width=594>
+</div>
+<p>But then why do embalmers like Hirschman say they find the clots in a large percentage of dead bodies? And why did Haviland's and McMillan's cath lab whistleblowers say that they frequently saw the clots?</p>
+<p>McCairn also said: <span class="quote">"And as so far there is no evidence of vax spike, they could just as well be from viral exposure."</span> But then why do embalmers like Hirschman say they didn't see the clots in 2020? Do the clots consistently take a year or more to form, so if someone started to develop the clots because of a COVID infection in early 2020, then the clots didn't get big enough to be noticed by an embalmer until 2021?</p>
+<p>There's a parsimonious explanation for why the clots are not seen by people like KarmaDoc who do CT and MRI scans, or by people like the endovascular surgeon who sent a letter to McMillan, or by embalmers who are not linked to shady alt media outlets. And the explanation is that the clots are a hoax.</p>
+<hr />
+<p>Added in May 2026: Greg Harrison now said that he deleted his main account because he <span class="quote">"Got sick of being called an Ahole &amp; C by vermin like HeNjin et al...lowlifes not worth engaging with"</span>: <span class="quote">[<a href=https://x.com/GregGr67545/status/2057050094743257533>https://<wbr>x.<wbr>com/<wbr>GregGr67545/<wbr>status/<wbr>2057050094743257533</a>]</span></p>
+<div>
+<img src=i/clot-greg-delete-1.webp width=597>
+</div>
+<div>
+<img src=i/clot-greg-delete-2.webp width=596>
+</div>
+<h2>
+<a href="#Types_of_professionals_who_would_be_expected_to_see_a_novel_type_of_clots" id="Types_of_professionals_who_would_be_expected_to_see_a_novel_type_of_clots">Types of professionals who would be expected to see a novel type of clots</a>
+</h2>
+<p>I can't think of a single person who claims to have seen the calamari clots in the body of a dead or living person but who does not come from an English-speaking country. Embalming is not too common outside of English-speaking countries, but if the clots were real, there should be other types of professionals who would see the clots even outside of English-speaking countries.</p>
+<p>I asked ChatGPT: <span class="quote">"if the conspiracy about novel white fibrous clots was real, what professionals would be expected to notice the clots, apart from embalmers, endovascular surgeons, people who do CT and MRI scans, and people who do autopsies"</span>. I got this response:</p>
+<blockquote class=quote>
+<h3 id="physicians-dealing-directly-with-vascular-access">Physicians dealing directly with vascular access</h3>
+<ul>
+<li><strong class=quote>Interventional cardiologists</strong> - perform coronary angiography, thrombectomy, and catheter-based procedures in arteries and veins.</li>
+<li><strong class=quote>Interventional radiologists</strong> - routinely perform thrombectomies, catheter placements, and venous interventions.</li>
+<li><strong class=quote>Neurointerventionalists</strong> - remove clots during stroke thrombectomy procedures.</li>
+</ul>
+<p>These specialists physically <strong class=quote>extract clots through catheters</strong>, so unusual texture or structure would likely be noticed.</p>
+<h3 id="cardiovascular-surgery-teams">Cardiovascular surgery teams</h3>
+<ul>
+<li><strong class=quote>Cardiac surgeons</strong> - during open-heart surgery, bypass operations, and ventricular thrombectomy.</li>
+<li><strong class=quote>Perfusionists</strong> - manage heart-lung machines and filters that can trap clot material during surgery.</li>
+</ul>
+<h3 id="dialysis-and-vascular-access-specialists">Dialysis and vascular access specialists</h3>
+<ul>
+<li><strong class=quote>Nephrologists</strong> and <strong class=quote>dialysis nurses/technicians</strong> - manage hemodialysis circuits, which frequently clot and require inspection of the tubing and filters.</li>
+</ul>
+<h3 id="hematology-and-coagulation-specialists">Hematology and coagulation specialists</h3>
+<ul>
+<li><strong class=quote>Hematologists</strong> - evaluate abnormal clotting disorders and examine clot specimens sent for laboratory analysis.</li>
+<li><strong class=quote>Coagulation laboratory scientists</strong> - study fibrin structure, platelet function, and abnormal thrombi.</li>
+</ul>
+<h3 id="emergency-and-acute-care-clinicians">Emergency and acute-care clinicians</h3>
+<ul>
+<li><strong class=quote>Emergency physicians</strong> and <strong class=quote>intensivists</strong> - manage pulmonary embolism, stroke, and other thrombotic emergencies where clot material may be removed or analyzed.</li>
+</ul>
+<h3 id="blood-handling-laboratory-staff">Blood-handling laboratory staff</h3>
+<ul>
+<li><strong class=quote>Clinical laboratory technologists</strong> - examine blood samples for abnormal clotting behavior.</li>
+<li><strong class=quote>Transfusion medicine specialists</strong> - investigate unusual coagulation phenomena.</li>
+</ul>
+<h3 id="organ-procurement-and-transplant-teams">Organ procurement and transplant teams</h3>
+<ul>
+<li><strong class=quote>Transplant surgeons</strong> and <strong class=quote>organ procurement specialists</strong> - inspect major vessels during organ retrieval and preparation.</li>
+</ul>
+</blockquote>
+<p>ChatGPT concluded:</p>
+<blockquote class=quote>
+<p>The <span class="quote">"white fibrous clot"</span> claim circulated widely online after the COVID-19 pandemic. If such a <strong class=quote>new type of widespread intravascular structure</strong> truly existed, it would almost certainly appear in:</p>
+<ul>
+<li><strong class=quote>Thrombectomy specimens</strong></li>
+<li><strong class=quote>Pathology reports</strong></li>
+<li><strong class=quote>Peer-reviewed hematology research</strong></li>
+<li><strong class=quote>Stroke and pulmonary embolism registries</strong></li>
+</ul>
+<p>Those systems involve <strong class=quote>thousands of clinicians and researchers worldwide</strong>, so a genuinely new clot type would likely be documented quickly in the scientific literature.</p>
+</blockquote>
+<h2>
+<a href="#Question_about_clots_in_a_Facebook_mortician_group" id="Question_about_clots_in_a_Facebook_mortician_group">Question about clots in a Facebook mortician group</a>
+</h2>
+<p>About a week after the Died Suddenly movie came out, a user on Facebook posted 4 photos of clots to a group called <span class="quote">"National Funeral Director's, Mortician's, and Embalmer's Exchange"</span>, and the Facebook user wrote: <span class="quote">"Hello, I am not an embalmer but have a serious question. There have been a number of embalmers whom have recently come out saying they have been noticing unusual blood clots that they are calling white fibrous structures. They claim to have started seeing this over the last year and a half. Have any embalmers seen these white fibrous structures and is this normal or have ya'll just recently started seeing this in the last year and a half or so?"</span> <span class="quote">[<a href=https://www.facebook.com/groups/758311471240932/posts/1530488374023234/>https://<wbr>www.<wbr>facebook.<wbr>com/<wbr>groups/<wbr>758311471240932/<wbr>posts/<wbr>1530488374023234/<wbr></a>]</span></p>
+<p>There were replies from a total of 5 people whose posts were still visible in 2026:</p>
+<ul>
+<li><p><span class="quote">"I've seen them... my preceptor thinks it's because of the covid vaccine. But I don't really know..."</span></p></li>
+<li><p><span class="quote">"I truly believe this is COVID related - not vaccine - but virus related. I have seen it in most COVID deceased - both current and recovered COVID PATIENTS. It seems that the virus has long lasting effects on blood thickening and vascular issues. I am not a medical professional, but keen to the anatomy and how things work. I have spent much time as a COVID relief embalmer and remained active throughout the COVID crisis. My personal opinion is that current and recovered COVID patients should consider an aspirin a day - a plain regular strength aspirin."</span></p></li>
+<li><p><span class="quote">"Here we go! I have been asked this question a lot lately, my answer, I have been pulling these <span class="quote">'chicken fat'</span> clots out of the dead for years! Long before COVID!"</span></p></li>
+<li><p><span class="quote">"I haven't noticed any more clots than usual"</span></p></li>
+<li><p><span class="quote">"Yea they're becoming more and more prevalent"</span></p></li>
+</ul>
+<p>The users who posted the replies seemed like real people, and the bios of 3 out of 5 users indicated that they worked as morticians. A 4th user had posted an image related to funeral homes almost a year before they answered the Facebook group, so their account doesn't seem to have been set up for the purpose of answering the poll.</p>
+<p>But anyway, at least one of the 5 people seems to have thought that the photos showed regular chicken fat clots and not any novel type of clots. All 4 photos showed fairly small clots, or red clots that had lighter parts attached to them, and not massive fully white clots:</p>
+<div>
+<img src=i/clot-edward-nino-photos.webp width=370>
+</div>
+<p>In 2025 when Tom Haviland spoke at a conference of the Tennessee Funeral Directors Association, he asked people who were currently active embalmers to raise their hands. Then he presented the photo on the screen below to the audience and said: <span class="quote">"If you're seeing these white fibrous clots in the last two years, keep your hands up. If you're not seeing them, please put your hands down."</span> But only a few people put their hands down: <span class="quote">[<a href=https://laurakasner.substack.com/p/tennessee-funeral-directors-association>https://<wbr>laurakasner.<wbr>substack.<wbr>com/<wbr>p/<wbr>tennessee-<wbr>funeral-<wbr>directors-<wbr>association</a>, <a href=https://rumble.com/v6ukwjt-th-at-tnfd-06082025.html?start=220>https://<wbr>rumble.<wbr>com/<wbr>v6ukwjt-<wbr>th-<wbr>at-<wbr>tnfd-<wbr>06082025.<wbr>html?<wbr>start=220</a>]</span></p>
+<div>
+<img src=i/clot-conference-haviland.webp width=470>
+</div>
+<p>Tom Haviland pretended like his experiment was great evidence that the clots are real. But he didn't ask the people in the audience if they had never seen the same type of clots before 2021, and the clots he showed were relatively small, so the people in the audience might have thought he referred to regular chicken fat clots, in the same way that one of the users on Facebook said <span class="quote">"I have been pulling these <span class="quote">'chicken fat'</span> clots out of the dead for years! Long before COVID!"</span></p>
+<p>When I searched for the 4 photos in the Facebook post on reverse image search engines, I didn't find the photos posted anywhere else. So if the Facebook user was not a mortician themselves, then where did they get the photos?</p>
+<p>Actually the Facebook post might have been some kind of an op, because the user who posted the photos was someone called Edward Nino, whose profile is full of posts of him attending various <span class="quote">"freedom"</span> events: <span class="quote">[<a href=https://www.facebook.com/edward.nino.980/photos>https://<wbr>www.<wbr>facebook.<wbr>com/<wbr>edward.<wbr>nino.<wbr>980/<wbr>photos</a>]</span></p>
+<div>
+<img src=i/clot-edward-nino.webp width=780>
+</div>
+<p>Edward Nino seems like an astroturfed fake influencer. He is one of the leaders of an organization called <span class="quote">"Alamo City Trump Train"</span> which organized a freedom convey in support of Trump. He was also one of the people who organized an event called <span class="quote">"Alamo City Freedom Fest"</span>, where the performers included two rappers, a black comedian, someone called <span class="quote">"Red Pill Latina"</span>, and a former head of the FEMA's Office of Response and Recovery:</p>
+<div>
+<img src=i/clot-edward-nino-poster.webp width=350>
+</div>
+<h2>
+<a href="#Waubra_Foundation" id="Waubra_Foundation">Waubra Foundation</a>
+</h2>
+<p>In the trilogy of preprint about the clots, the corresponding author was Bruce Rapley, whose email address was listed as <code>analyst@<wbr>uranusconsulting.<wbr>org</code>. But apparently the email address gets redirected to the nonfunctional address <code>info@<wbr>waubrafoundation.<wbr>org.<wbr>au</code>: <span class="quote">[<a href=https://covidmythbuster.substack.com/p/the-bandaid-that-wouldnt-dissolve/comments>https://<wbr>covidmythbuster.<wbr>substack.<wbr>com/<wbr>p/<wbr>the-<wbr>bandaid-<wbr>that-<wbr>wouldnt-<wbr>dissolve/<wbr>comments</a>]</span></p>
+<div>
+<img src=i/clot-uranus.webp width=550>
+</div>
+<p>Before COVID Bruce Rapley was mainly known as an activist opposed to wind energy, and he wrote several papers about the supposedly harmful infrasound frequency emitted by wind turbines. <span class="quote">[<a href=https://www.researchgate.net/profile/Bruce-Rapley>https://<wbr>www.<wbr>researchgate.<wbr>net/<wbr>profile/<wbr>Bruce-<wbr>Rapley</a>]</span> He is affiliated with an Australian organization called Waubra Foundation. The SourceWatch wiki says: <span class="quote">[<a href=https://www.sourcewatch.org/index.php/Waubra_Foundation>https://<wbr>www.<wbr>sourcewatch.<wbr>org/<wbr>index.<wbr>php/<wbr>Waubra_<wbr>Foundation</a>]</span></p>
+<blockquote class=quote>
+<p>The Waubra Foundation is a front or astroturf group created by Peter Mitchell on March 1, 2010 to oppose wind farming in Australia. It was registered with Business Affairs as an incorporated body on that date but later deregistered on July 13, 2011.</p>
+<p>The Waubra Foundation claims to be an independent organisation but it has direct links to the Australian Landscape Guardians, the Liberal Party of Australia and mining interests who in turn have inks with the right wing thinktank, Institute of Public Affairs, <span class="quote">(IPA)</span>.</p>
+<p>The Waubra Foundation does not exist in any physical sense, there is no building, just a post office box. The address, Box No.1136, South Melbourne, Victoria 3205, is shared by Sarah Laurie, the Australian Landscape Guardians and Lowell Resources, a mining investment company owned by Peter Mitchell.</p>
+<p>Sarah Laurie, the Waubra Foundation's <span class="quote">"medical director"</span> and now CEO, promotes unfounded health concerns and an unrecognised condition called <span class="quote">"Wind Turbine Syndrome"</span>, allegedly caused by wind farms despite her lack of any recognised, peer-reviewed evidence that could possibly support such claims. She has a medical degree but is not a practising doctor, has no medical research qualifications, nor does she have any recognised qualifications relating to acoustics or physics. She claims wind turbines can cause ill-health up to 10 km away but relies only on untested anecdotes and a poor understanding of the physics of sound.<span class="quote">[1]</span> <span class="quote">[linked website offline and not archived]</span></p>
+<p>Sarah Laurie frequently references the work of Dr Nina Pierpoint who has published a book called <span class="quote">"Wind Turbine Syndrome"</span> even though she is unqualified in the field of acoustics and/or any health effects resulting from infra-sound. An accurate critique of Pierpoint's very unscientific claims can be found here.<span class="quote">[<a href=https://www.quora.com/Wind-Energy/Is-Dr-Nina-Pierponts-Wind-Turbine-Syndrome-a-real-medical-syndrome-caused-by-wind-turbines/answer/Michael-Barnard-14>2</a>]</span> Briefly, Pierpoint is relies on skewed data, an extremely small sample size, fails to use a control group for comparison, resorts to anecdotal evidence and has not had her work peer-reviewed.</p>
+</blockquote>
+<p>A book about wind turbine syndrome said that Waubra Foundation was founded by the mining guy: <span class="quote">"Peter Mitchell, now in his 80s, has a long history in mining investment. He has been involved in the Landscape Guardians and the Waubra Foundation, which he founded in March 2010. A submission sent in February 2011 to the Senate inquiry into windfarms, authored by Mitchell on behalf of the Australian Landscape Guardians, is addressed from PO Box 1136, South Melbourne, Victoria 3205, the same address as Mitchell's Lowell Resources Funds Management Limited, a mining investment company."</span> <span class="quote">[<a href=https://www.jstor.org/content/pdf/oa_book_monograph/j.ctt1zrvhrt>https://<wbr>www.<wbr>jstor.<wbr>org/<wbr>content/<wbr>pdf/<wbr>oa_<wbr>book_<wbr>monograph/<wbr>j.<wbr>ctt1zrvhrt</a>]</span></p>
+<p>In a submission to an Australian senate inquiry into windfarms, Mitchell wrote: <span class="quote">"I have never worked for big oil, big coal, big wind, or big anything industrial; and neither my mind nor my soul has ever been captured by any such industry. The only big organisations that I have been involved in were, and still are, major Australian institutions including the National Stroke Foundation, the Florey Neurosciences Institute, the Queen's Trust for Young Australians <span class="quote">(now the Foundation for Young Australians)</span> and the WWF in Australia."</span> <span class="quote">[<a href=https://www.aph.gov.au/DocumentStore.ashx?id=8bc7dfd2-a9f3-4572-a078-a705bcbd8fc5>https://<wbr>www.<wbr>aph.<wbr>gov.<wbr>au/<wbr>DocumentStore.<wbr>ashx?<wbr>id=8bc7dfd2-<wbr>a9f3-<wbr>4572-<wbr>a078-<wbr>a705bcbd8fc5</a>]</span></p>
+<p>However a response to his submission said: <span class="quote">[<a href=https://www.aph.gov.au/~/media/Committees/clac_ctte/estimates/bud_1314/DoHA/tabled_docs/18_060613_DiNatale.pdf>https://<wbr>www.<wbr>aph.<wbr>gov.<wbr>au/~/<wbr>media/<wbr>Committees/<wbr>clac_<wbr>ctte/<wbr>estimates/<wbr>bud_<wbr>1314/<wbr>DoHA/<wbr>tabled_<wbr>docs/<wbr>18_<wbr>060613_<wbr>DiNatale.<wbr>pdf</a>]</span></p>
+<blockquote class=quote>
+<p>It is clear that Mr Mitchell chose only to disclose a very small subset of his activities and interests that could be considered apparent, perceived or potential conflicts of interests in relation to the wind energy sector. Such omissions would appear to be at odds with the NHMRC's sophisticated conflicts of interest management protocol.</p>
+<p><span class="quote">[...]</span></p>
+<p>Mr Mitchell's directorships include Lowell Resources Fund Management Ltd <span class="quote">(2002 to 2009)</span>, Lowell Petroleum <span class="quote">(Australia)</span> P/L <span class="quote">(1994 to 2001)</span>, Molopo Energy Ltd <span class="quote">(1998 to 2000)</span> and Lowell Capital Ltd <span class="quote">(2005 to 2006)</span>. Mr Mitchell's son, Stephen Peter Mitchell, is also heavily involved in the energy sector including as chairman and major shareholder of ASX listed petroleum company Petrel Energy Ltd and former Managing Director <span class="quote">(until 2009)</span> of ASX listed oil and gas company Molopo Energy Ltd.</p>
+<p>Mr Mitchell was founding chairman of the Moonie Oil Company Ltd, and chairman or a director of related companies including Clyde Petroleum pic, Avalon Energy Inc, North Flinders Mines Ltd, Paringa Mining and Exploration plc. A website connected to Mr Mitchell boasts of 25 years involvement in companies that explored for, developed and financed oil and gas fields and pipeline systems in Australia and overseas.<span class="quote">[3]</span></p>
+<p>Mr Mitchell is also Chairman of Lowell Pty Ltd, the ultimate parent company of both Lowell Capital Limited and Lowell Resources Funds Management Pty Ltd. He is a major shareholder of Lowell <span class="quote">(via another company, Dominion Charter Pty Ltd)</span>. Lowell is the ultimate holding company of Lowell Resources Fund and Lowell Resources Pty Ltd, both companies heavily engaged in mining and energy investment, including oil, gas and uranium. Mr Mitchell is also a former Director of the Australian Institute of Petroleum Ltd.</p>
+</blockquote>
+<h2>
+<a href="#Paper_about_Congo_red_staining_and_AmyloGram_by_Kell_and_Pretorius" id="Paper_about_Congo_red_staining_and_AmyloGram_by_Kell_and_Pretorius">Paper about Congo red staining and AmyloGram by Kell and Pretorius</a>
+</h2>
+<p>In May 2026 Pretorius and Kell posted a preprint where they did Congo red staining on the microclots. <span class="quote">[<a href=https://www.preprints.org/manuscript/202605.0464>https://<wbr>www.<wbr>preprints.<wbr>org/<wbr>manuscript/<wbr>202605.<wbr>0464</a>]</span> The caption of figure 2 says: <span class="quote">"The classical <span class="quote">'apple-green'</span> birefringence is observed in particular around the periphery of the microclot."</span> But there are only small green areas around the periphery of the clot, and most of the area of the clot does not display the apple-green birefringence, so I don't know if it should even be counted as a true positive or not:</p>
+<div>
+<img src=i/clot-kell-congo.webp width=500>
+</div>
+<p>The authors didn't attempt to explain why large parts of the clot would be fluorescent with ThT, but with Congo Red only tiny areas around the edges of the clot display the green birefringence.</p>
+<p>The authors also wrote: <span class="quote">"Table 2 shows proteins enriched in the microclots, a dataset <span class="quote">[77]</span> to which we have added their Amylogram scores. Each of these exceeds 0.75, some by a considerable margin. It is likely that this is caused by cross-seeding of these amyloidogenic proteins catalysing the transition to the amyloid form, and that the macroclots in ischaemic stroke and other cardiovascular diseases can form via accretion of these microclots."</span></p>
+<p>The authors made the same mistake as Kevin McKernan, where they ran AmyloGram on whole proteins, even though the amyloid probability scores returned by AmyloGram are only designed to be meaningful for peptides but not whole proteins.</p>
+<p>AmyloGram was trained on peptide sequences with a length between 6 and 25 aa, and the sequences used in a benchmark of AmyloGram were all between 6 and 14 aa long. <span class="quote">[<a href=https://nature.com/articles/s41598-017-13210-9>https://<wbr>nature.<wbr>com/<wbr>articles/<wbr>s41598-<wbr>017-<wbr>13210-<wbr>9</a>]</span> The sequences given as sample input on AmyloGram's website are between 11 and 23 aa long. <span class="quote">[<a href=https://biongram.biotech.uni.wroc.pl/AmyloGram/>https://<wbr>biongram.<wbr>biotech.<wbr>uni.<wbr>wroc.<wbr>pl/<wbr>AmyloGram/<wbr></a>]</span> When I ran AmyloGram on 10 random 20 aa sequences, my average amyloid probability score was about 0.52, but the average score increased to about 0.89 when I ran AmyloGram for 10 random 1252 aa sequences. <span class="quote">[<a href=clot2.html#Are_calamari_clots_made_of_spider_silk_protein_coded_by_the_Pfizer_reverse_ORF>clot2.<wbr>html#<wbr>Are_<wbr>calamari_<wbr>clots_<wbr>made_<wbr>of_<wbr>spider_<wbr>silk_<wbr>protein_<wbr>coded_<wbr>by_<wbr>the_<wbr>Pfizer_<wbr>reverse_<wbr>ORF</a>]</span></p>
+<p>AmyloGram splits the input into 6 aa segments, calculates an amyloid probability score for each segment, and returns the maximum score of the segments as the overall score. <span class="quote">[<a href=https://github.com/michbur/AmyloGram/blob/master/R/predict.R>https://<wbr>github.<wbr>com/<wbr>michbur/<wbr>AmyloGram/<wbr>blob/<wbr>master/<wbr>R/<wbr>predict.<wbr>R</a>]</span> So the maximum score is likely higher for a 1,000 aa sequence with 995 6-grams than a 20 aa sequence with 15 6-grams.</p>
+<p>Here's a simplified version of the core code for AmyloGram:</p>
+<pre>library(<wbr>AmyloGram);<wbr>library(<wbr>biogram);<wbr>data(<wbr>AmyloGram_<wbr>model)<wbr>
+
+input=&quot;<wbr>AMILGRAMTEST&quot;<wbr>
+
+<span class=comment>#<wbr> matrix of all 6-<wbr>grams</span>
+sliding=embed(<wbr>strsplit(<wbr>tolower(<wbr>input),<wbr>&quot;<wbr>&quot;)[[<wbr>1]],<wbr>6)[,<wbr>6:<wbr>1]<wbr>
+
+nsize=c(<wbr>1,<wbr>2,<wbr>2,<wbr>2,<wbr>2,<wbr>3,<wbr>3,<wbr>3)<wbr> <span class=comment>#<wbr> n-<wbr>gram sizes the model looks for</span>
+gaps=list(<wbr>0,<wbr>0,<wbr>1,<wbr>2,<wbr>3,<wbr>c(<wbr>0,<wbr>0),<wbr>0:<wbr>1,<wbr>1:<wbr>0)<wbr> <span class=comment>#<wbr> gaps between residues in n-<wbr>gram</span>
+
+<span class=comment>#<wbr> reduce sequences to degenerate alphabet with 6 letters</span>
+degen=degenerate(<wbr>sliding,<wbr>AmyloGram_<wbr>model$<wbr>enc)<wbr>
+degenalphabet=as.<wbr>character(<wbr>1:<wbr>6)<wbr>
+
+<span class=comment>#<wbr> make feature matrix</span>
+features=as.<wbr>matrix(<wbr>count_<wbr>multigrams(<wbr>nsize,<wbr>gaps,<wbr>degen,<wbr>degenalphabet))<wbr>
+
+<span class=comment>#<wbr> apply binary transformation so values are either 0 or 1</span>
+features=pmin(<wbr>features,<wbr>1)<wbr>
+
+<span class=comment>#<wbr> keep subset of features used to train the model</span>
+features=data.<wbr>frame(<wbr>features[,<wbr>AmyloGram_<wbr>model$<wbr>imp_<wbr>features])<wbr>
+
+<span class=comment>#<wbr> amyloid probability score of each 6-<wbr>gram</span>
+scores=predict(<wbr>AmyloGram_<wbr>model$<wbr>rf,<wbr>features)$<wbr>predictions[,<wbr>2]<wbr>
+
+max(<wbr>scores)<wbr> <span class=comment>#<wbr> 0.<wbr>500304 (same as score returned by web GUI)<wbr></span>
+
+<span class=comment>#<wbr> score of each 6-<wbr>gram</span>
+o=data.<wbr>frame(<wbr>ngram=apply(<wbr>sliding,<wbr>1,<wbr>paste,<wbr>collapse=&quot;<wbr>&quot;))<wbr>
+o$<wbr>degen=apply(<wbr>degen,<wbr>1,<wbr>paste,<wbr>collapse=&quot;<wbr>&quot;)<wbr>
+cbind(<wbr>o,<wbr>score=round(<wbr>scores,<wbr>2))<wbr>
+<span class=comment>#<wbr>    ngram  degen score</span>
+<span class=comment>#<wbr> 1 amilgr 553312  0.<wbr>50 # this is returned as the overall score</span>
+<span class=comment>#<wbr> 2 milgra 533125  0.<wbr>37</span>
+<span class=comment>#<wbr> 3 ilgram 331255  0.<wbr>24</span>
+<span class=comment>#<wbr> 4 lgramt 312556  0.<wbr>03</span>
+<span class=comment>#<wbr> 5 gramte 125566  0.<wbr>01</span>
+<span class=comment>#<wbr> 6 ramtes 255666  0.<wbr>01</span>
+<span class=comment>#<wbr> 7 amtest 556666  0.<wbr>02</span></pre>
+<p>When I created random amino acid sequences for each length between 6 and 1,000 aa, all sequences longer than 500 aa got an amyloid likelihood score above 0.7:</p>
+<div>
+<img src=i/clot-amylogram-random.webp width=550>
+</div>
+<div class="spoiler">
+<button>
+Show code
+</button>
+<pre>library(<wbr>AmyloGram);<wbr>data(<wbr>AmyloGram_<wbr>model)<wbr>
+
+chars=strsplit(<wbr>&quot;<wbr>A<wbr>C<wbr>D<wbr>E<wbr>F<wbr>G<wbr>H<wbr>I<wbr>K<wbr>L<wbr>M<wbr>N<wbr>P<wbr>Q<wbr>R<wbr>S<wbr>T<wbr>V<wbr>W<wbr>Y<wbr>&quot;,<wbr>&quot;<wbr>&quot;)[[<wbr>1]]<wbr>
+lengths=6:<wbr>1000
+seqs=setNames(<wbr>lapply(<wbr>lengths,\(<wbr>i)<wbr>sample(<wbr>chars,<wbr>i,<wbr>T)),<wbr>paste0(<wbr>&quot;<wbr>X&quot;,<wbr>lengths))<wbr>
+pred=predict(<wbr>AmyloGram_<wbr>model,<wbr>seqs)<wbr>
+
+p=data.<wbr>frame(<wbr>x=lengths,<wbr>y=pred$<wbr>Probability)<wbr>
+
+xmin=0;<wbr>xmax=1000;<wbr>xbreak=0:<wbr>5*<wbr>200;<wbr>ybreak=0:<wbr>5/<wbr>5;<wbr>ymin=0;<wbr>ymax=1
+
+ggplot(<wbr>p)+<wbr>
+annotate(<wbr>&quot;<wbr>rect&quot;,<wbr>xmin=xmin,<wbr>xmax=xmax,<wbr>ymin=ymin,<wbr>ymax=ymax,<wbr>linewidth=.<wbr>4,<wbr>lineend=&quot;<wbr>square&quot;,<wbr>linejoin=&quot;<wbr>mitre&quot;,<wbr>fill=NA,<wbr>color=&quot;<wbr>gray70&quot;)+<wbr>
+geom_<wbr>point(<wbr>aes(<wbr>x,<wbr>y),<wbr>size=1.<wbr>4,<wbr>stroke=0)+<wbr>
+labs(<wbr>x=&quot;<wbr>Length (aa)<wbr>&quot;,<wbr>y=&quot;<wbr>Amyloid probability&quot;,<wbr>title=&quot;<wbr>Amyloid likelihood score returned by AmyloGram for random amino\<wbr>nacid sequences for each length between 6 and 1,<wbr>000 aa&quot;)+<wbr>
+scale_<wbr>x_<wbr>continuous(<wbr>limits=c(<wbr>xmin,<wbr>xmax),<wbr>breaks=xbreak)+<wbr>
+scale_<wbr>y_<wbr>continuous(<wbr>limits=c(<wbr>ymin,<wbr>ymax),<wbr>breaks=ybreak)+<wbr>
+coord_<wbr>cartesian(<wbr>clip=&quot;<wbr>off&quot;,<wbr>expand=F)+<wbr>
+theme(<wbr>axis.<wbr>text=element_<wbr>text(<wbr>size=11,<wbr>color=&quot;<wbr>gray45&quot;),<wbr>
+  axis.<wbr>ticks.<wbr>length=unit(<wbr>0,<wbr>&quot;<wbr>pt&quot;),<wbr>
+  axis.<wbr>title=element_<wbr>text(<wbr>size=11),<wbr>
+  plot.<wbr>margin=margin(<wbr>5.<wbr>5,<wbr>17,<wbr>5.<wbr>5,<wbr>5.<wbr>5),<wbr>
+  panel.<wbr>background=element_<wbr>blank(),<wbr>
+  panel.<wbr>grid.<wbr>major=element_<wbr>line(<wbr>linewidth=.<wbr>4,<wbr>color=&quot;<wbr>gray90&quot;),<wbr>
+  plot.<wbr>title=element_<wbr>text(<wbr>size=11,<wbr>hjust=.<wbr>5,<wbr>face=2,<wbr>margin=margin(,,<wbr>4)))<wbr>
+ggsave(<wbr>&quot;<wbr>1.<wbr>png&quot;,<wbr>width=5.<wbr>7,<wbr>height=3.<wbr>3,<wbr>dpi=300*<wbr>4)<wbr></pre>
+</div>
+<p>In 2025 Pretorius and Kell also published a paper titled <span class="quote">"AmyloGram reveals amyloidogenic potential in stroke thrombus proteomes"</span>, where they wrote: <span class="quote">"Among the UniProt-annotated <span class="quote">'amyloid'</span> set, nearly all proteins received AmyloGram scores above 0.7, including 23 of the 24 human proteins. Even the lowest-scoring human protein, lysozyme <span class="quote">(scoring 0.675)</span>, is known to form amyloid under certain conditions. In thrombi from both stroke subtypes in four different studies, all detected proteins <span class="quote">(with a single exception)</span> had AmyloGram scores above 0.7, suggesting a high likelihood of amyloid content. A majority of unannotated proteins also achieve AmyloGram scores exceeding 0.7."</span> <span class="quote">[<a href=https://www.sciencedirect.com/org/science/article/pii/S1470872825000967>https://<wbr>www.<wbr>sciencedirect.<wbr>com/<wbr>org/<wbr>science/<wbr>article/<wbr>pii/<wbr>S1470872825000967</a>]</span> But the reason why most proteins got a score above 0.7 is that the score is just the maximum score of 6-grams within the protein, which is not intended to be a meaningful measure of the overall amyloidogenicity of a whole protein.</p>
+<p>The paper about AmyloGram mentions that AmyloGram had trouble classifying long peptides of 16-25 aa, because a single amyloidogenic hexapeptide sequence within the peptide would cause the entire peptide to be classified as amyloidogenic: <span class="quote">"The most problematic result was the correct prediction of the amyloidogenicity in the longest peptides, ranging from 16 to 25 residues, when the algorithm was trained on longer peptides, i.e. the 6-10 and 6-15 data sets. Here the AUC value did not exceed 0.77. This weak performance results from more complex organization of longer amylogenic peptides. In such peptides, only a very specific region of residues might be responsible for the creation of harmful aggregates. In this case, when overlapping hexapeptides are extracted, only part of them may carry the true signal of amyloidogenicity but all of them are marked as amyloids."</span> <span class="quote">[<a href=https://www.nature.com/articles/s41598-017-13210-9>https://<wbr>www.<wbr>nature.<wbr>com/<wbr>articles/<wbr>s41598-<wbr>017-<wbr>13210-<wbr>9</a>]</span></p>
+<h2>
+<a href="#Are_calamari_clots_level_5_nanotechnology" id="Are_calamari_clots_level_5_nanotechnology">Are calamari clots level 5 nanotechnology?<wbr></a>
+</h2>
+<p>In June 2026, IJVTPR published a paper by Shimon Yanowitz and Daniel Broudy titled <span class="quote">"From Synthetic DNA and RNA-Based Self-Assembling Nanotechnology to Sequalae of COVID-19 Shots"</span>. <span class="quote">[<a href=https://ijvtpr.com/index.php/IJVTPR/article/view/129>https://<wbr>ijvtpr.<wbr>com/<wbr>index.<wbr>php/<wbr>IJVTPR/<wbr>article/<wbr>view/<wbr>129</a>]</span></p>
+<p>Yanowitz and Broudy now presented a new classification system where fibers in blood samples are <span class="quote">"level 4 nanotechnology"</span> and calamari clots are <span class="quote">"level 5 nanotechnology"</span>:</p>
+<div>
+<img src=i/clot-level5-1.webp width=678><img src=i/clot-level5-2.webp width=590><img src=i/clot-level5-3.webp width=271><img src=i/clot-level5-4.webp width=511>
+</div>
+<p>The scale bar in the last image above is actually about 20-30 µm wide and not 50 µm, because the scale bar is only about 3-4 red blood cells wide, and red blood cells have a diameter of about 6-8 µm. The fibers in the image have a diameter of about 2-3 red blood cells, which is similar to the diameter of the textile fibers that anti-vaxxers have claimed are amyloid fibrils, hydrogel filaments, graphene oxide, Morgellons filaments, and so on.</p>
+<p>For a long time Jikkyleaks has been arguing with people on Twitter who claim that vaccines contain self-assembling nanobots. In 2025 he came up with a new question to ask from the people, which is that if the nanobots assemble into something, then what have they assembled into? <span class="quote">[<a href=https://x.com/Jikkyleaks/status/1935077545076220022>https://<wbr>x.<wbr>com/<wbr>Jikkyleaks/<wbr>status/<wbr>1935077545076220022</a>, <a href=https://x.com/Jikkyleaks/status/2005409314195022230>https://<wbr>x.<wbr>com/<wbr>Jikkyleaks/<wbr>status/<wbr>2005409314195022230</a>, <a href=https://x.com/Jikkyleaks/status/2044960200306864372>https://<wbr>x.<wbr>com/<wbr>Jikkyleaks/<wbr>status/<wbr>2044960200306864372</a>, <a href=https://x.com/Jikkyleaks/status/2070035268590334104>https://<wbr>x.<wbr>com/<wbr>Jikkyleaks/<wbr>status/<wbr>2070035268590334104</a>]</span></p>
+<div>
+<img src=i/clot-level5-assembled-0.webp width=598><img src=i/clot-level5-assembled-1.webp width=599><img src=i/clot-level5-assembled-2.webp width=595><img src=i/clot-level5-assembled-3.webp width=594>
+</div>
+<p>However now Yanowitz and Broudy have provided the answer to Jikky's question, which is that the nanobots assemble into fibers that look like dust fibers <span class="quote">(which are level 4 nanotechnology)</span>, or into calamari clots <span class="quote">(which are level 5 nanotechnology)</span>.</p>
+<p>The five-level scheme is not too different from what Kevin McCairn is saying, because he also says that textile fibers in blood samples are mini versions of calamari clots. And Ana Mihalcea has been saying for a long time that textile fibers in blood samples are built by nanobots, and she already said in 2022 that a textile fiber in a blood sample was a calamari clot in the process of being formed. <span class="quote">[<a href=https://anamihalceamdphd.substack.com/p/thoughts-and-comments-about-death>https://<wbr>anamihalceamdphd.<wbr>substack.<wbr>com/<wbr>p/<wbr>thoughts-<wbr>and-<wbr>comments-<wbr>about-<wbr>death</a>]</span></p>
+<p>Now even some random Twitter user told Jikky that the nanobots assemble into calamari clots: <span class="quote">[<a href=https://x.com/Paul&#x5f;&#x5f;Rasmussen/status/2070237033793048972>https://<wbr>x.<wbr>com/<wbr>Paul__<wbr>Rasmussen/<wbr>status/<wbr>2070237033793048972</a>, <a href=https://x.com/Paul&#x5f;&#x5f;Rasmussen/status/2070126694405390439>https://<wbr>x.<wbr>com/<wbr>Paul__<wbr>Rasmussen/<wbr>status/<wbr>2070126694405390439</a>]</span></p>
+<div>
+<img src=i/clot-level5-assembled-5.webp width=594><img src=i/clot-level5-assembled-6.webp width=595>
+</div>
+<p>The paper by Yanowitz and Broudy was promoted by CHD's CEO Mary Holland, who is on the editorial board of IJVTPR: <span class="quote">[<a href=https://x.com/maryhollandnyc/status/2069792947629928553>https://<wbr>x.<wbr>com/<wbr>maryhollandnyc/<wbr>status/<wbr>2069792947629928553</a>]</span></p>
+<div>
+<img src=i/clot-level5-holland.webp width=597>
+</div>
+<p>An old bio of Shimon Yanowitz said: <span class="quote">"I am active on several international groups such as: Children's Health Defense, D4CE and Medical D4CE. I am one of the members of an international group called IIRT <span class="quote">(International Interdisciplinary Research Team)</span>."</span> <span class="quote">[<a href=https://rumble.com/v2xlblk-shimon-yanowitz-on-the-northern-light-convention.html>https://<wbr>rumble.<wbr>com/<wbr>v2xlblk-<wbr>shimon-<wbr>yanowitz-<wbr>on-<wbr>the-<wbr>northern-<wbr>light-<wbr>convention.<wbr>html</a>]</span> Ana Mihalcea said that Children's Health Defense had Shimon Yanowitz in their group for two years. <span class="quote">[<a href=https://rumble.com/v2ys1ge-ban-the-jab-discussion-with-dr.-ana-mihalcea-and-dr.-joseph-sansone.html?start=2478>https://<wbr>rumble.<wbr>com/<wbr>v2ys1ge-<wbr>ban-<wbr>the-<wbr>jab-<wbr>discussion-<wbr>with-<wbr>dr.-<wbr>ana-<wbr>mihalcea-<wbr>and-<wbr>dr.-<wbr>joseph-<wbr>sansone.<wbr>html?<wbr>start=2478</a>]</span> The editorial board of IJVTPR also includes Brian Hooker, who is the Chief Scientific Officer of CHD. <span class="quote">[<a href=https://ijvtpr.com/index.php/IJVTPR/about/editorialTeam>https://<wbr>ijvtpr.<wbr>com/<wbr>index.<wbr>php/<wbr>IJVTPR/<wbr>about/<wbr>editorialTeam</a>]</span></p>
+<hr />
+<p>Michael Palmer wrote a Substack post about the paper by Yanowitz and Broudy, where he showed the image below and wrote: <span class="quote">"Aside from the conspicuous large <span class="quote">'nanotechnology'</span> object, the picture also shows a large number of red blood cells, only the outlines of which are visible due to the illumination technique used. The size of red blood cells is such that they can pass through capillaries only in a single file. Accordingly, the much larger fiber could not possibly pass through intact capillaries. Thus, even if it had originally been contained in the the vaccine and somehow had entered into the bloodstream, it should have gotten stuck in the first capillary bed that it encountered - which is that of the lungs. It is not possible for objects of this size to stay in circulation and be recovered in blood samples. This points to sample contamination as the source of the fiber-like object."</span> <span class="quote">[<a href=https://michaelpalmer.substack.com/p/outbreak-ii-attack-of-the-nanobots>https://<wbr>michaelpalmer.<wbr>substack.<wbr>com/<wbr>p/<wbr>outbreak-<wbr>ii-<wbr>attack-<wbr>of-<wbr>the-<wbr>nanobots</a>]</span></p>
+<div>
+<img src=i/clot-level5-fiber.webp width=440>
+</div>
+<p>He's not necessarily right that the first capillary bed the fiber would've encountered would've been in the lungs, because if the vaccine was accidentally injected into an artery of the arm, then the fiber would've gotten stuck in the capillaries of the arm. But if the vaccine was accidentally injected into the vein of an arm, then the fiber would've ended up in the lungs. <span class="quote">(And of course if the vaccine was correctly injected into a muscle, then the fiber would've been too big to even enter circulation.)</span></p>
+<p>But anyway, next Palmer showed the images below and wrote: <span class="quote">"And indeed the aspect of this object, and of the others presented in the paper, resembles that of ordinary fibers found in dust samples. This is illustrated in Figure 2, which compares another of Yanowitz and Broudy's fiber-like objects with a sample of household dust <span class="quote">(source: E.R. Crutcher, Microlab Northwest)</span>. Of course, we can't be sure that any two of the fibers shown in either image are composed of the same material, since light microscopy simply cannot decide such questions. Nevertheless, the similarity in their appearance should make it clear that contamination with dust must be considered as a possible source of error. Yanowitz and Broudy don't seem to have considered and addressed this possibility."</span></p>
+<div>
+<img src=i/clot-level5-fiber-2.webp width=640>
+</div>
+<h2>
+<a href="#Daniel_Santiagos_papers_about_magnetism_and_clots_in_an_Indian_predatory_journal" id="Daniel_Santiagos_papers_about_magnetism_and_clots_in_an_Indian_predatory_journal">Daniel Santiago'<wbr>s papers about magnetism and clots in an Indian predatory journal</a>
+</h2>
+<p>In June 2025 the Indian predatory journal IJIRMS published a paper by Tamara Tuuminen, Pasi Suominen, and Mikko Ahonen, who claimed that a large percentage of the respondents of their survey had become magnetic after vaccination. <span class="quote">[<a href=https://ijirms.in/index.php/ijirms/article/view/2081>https://<wbr>ijirms.<wbr>in/<wbr>index.<wbr>php/<wbr>ijirms/<wbr>article/<wbr>view/<wbr>2081</a>]</span> The paper was promoted by Nic Hulscher, who has coauthored 4 papers published by IJIRMS. <span class="quote">[<a href=https://x.com/NicHulscher/status/1933233103092285819>https://<wbr>x.<wbr>com/<wbr>NicHulscher/<wbr>status/<wbr>1933233103092285819</a>]</span> A month later IJIRMS published a paper by John Oller, Daniel Santiago, and Daniel Broudy, who said that vaccines contained magnetic nanoparticles that migrated to the brain. <span class="quote">[<a href=https://ijirms.in/index.php/ijirms/article/view/2101>https://<wbr>ijirms.<wbr>in/<wbr>index.<wbr>php/<wbr>ijirms/<wbr>article/<wbr>view/<wbr>2101</a>]</span> John Oller was the original editor-in-chief of the fake journal IJVTPR, but in 2026 Christopher Shaw, Daniel Broudy, and Daniel Santiago were named as the new editors in chief of the journal. <span class="quote">[<a href=https://ijvtpr.com/index.php/IJVTPR/about/editorialTeam>https://<wbr>ijvtpr.<wbr>com/<wbr>index.<wbr>php/<wbr>IJVTPR/<wbr>about/<wbr>editorialTeam</a>]</span> Tamara Tuuminen is also on the editorial board IJVTPR.</p>
+<p>Oller, Santiago, and Broudy usually publish papers in their own journal IJVTPR, but I don't know if they thought they could give their paper more credibility by publishing it in an Indian predatory journal instead of their own journal.</p>
+<p>But anyway, in the paper they asked <span class="quote">"could militarized experimentation with magnetic nanoparticles be involved in causing the documented outcomes of proteinaceous clotting, cardio-vascular conditions, strokes, new autoimmune diseases, unprecedented rapidly developing <span class="quote">'prion diseases'</span>, <span class="quote">'turbo'</span> cancers, and sudden deaths - many of these occurring in otherwise young and healthy recipients of the experimental COVID-19 injectables?"</span> So the authors blamed <span class="quote">"magnetic nanoparticles"</span> for the formation of the calamari clots, which is a new explanation I haven't heard before.</p>
+<p>The paper synthesized data from the <span class="quote">"55 undeclared elements"</span> paper in IJVTPR, and from a paper by James Thorp who supposedly found that magnets and paperclips were more likely to stick to the body parts of vaccinated people than unvaccinated people. <span class="quote">[<a href=https://www.thegms.co/publichealth/pubheal-pos-21071202.pdf>https://<wbr>www.<wbr>thegms.<wbr>co/<wbr>publichealth/<wbr>pubheal-<wbr>pos-<wbr>21071202.<wbr>pdf</a>]</span> James Thorp has also written papers about topics like ether and morphogenic fields.</p>
+<p>Thorp was in contact with Hirschman soon after Hirschman did his alt media debut in January 2022, because Hirschman already said in February 2022 that he was in contact with Thorp. <span class="quote">[<a href=https://podcasts.apple.com/us/podcast/are-the-vaccines-causing-solid-frankenstein-blood/id1065050908?i=1000551322493>https://<wbr>podcasts.<wbr>apple.<wbr>com/<wbr>us/<wbr>podcast/<wbr>are-<wbr>the-<wbr>vaccines-<wbr>causing-<wbr>solid-<wbr>frankenstein-<wbr>blood/<wbr>id1065050908?<wbr>i=1000551322493</a>, 49:50]</span> In 2022 the Epoch Times published a long article about the calamari clots, which featured comments by James Thorp and Sherri Tenpenny, who were both prominent proponents of vaccine-induced magnetism. <span class="quote">[<a href=https://web.archive.org/web/20220907091600/https:/www.theepochtimes.com/embalmers-have-been-finding-numerous-long-fibrous-clots-that-lack-post-mortem-characteristics_4696015.html>https://<wbr>web.<wbr>archive.<wbr>org/<wbr>web/<wbr>20220907091600/<wbr>https:/<wbr>www.<wbr>theepochtimes.<wbr>com/<wbr>embalmers-<wbr>have-<wbr>been-<wbr>finding-<wbr>numerous-<wbr>long-<wbr>fibrous-<wbr>clots-<wbr>that-<wbr>lack-<wbr>post-<wbr>mortem-<wbr>characteristics_<wbr>4696015.<wbr>html</a>]</span></p>
+<p>In 2026 IJIRMS published a paper about the calamari clots by Daniel Santiago and Greg Harrison. <span class="quote">[<a href=https://ijirms.in/index.php/ijirms/article/view/2202>https://<wbr>ijirms.<wbr>in/<wbr>index.<wbr>php/<wbr>ijirms/<wbr>article/<wbr>view/<wbr>2202</a>]</span> So it's interesting how the same journal had earlier published a paper about vaccine-induced magnetism that Santiago coauthored with a former military intelligence agent. Many anti-vaxxers have realized that the story about vaccine-induced magnetism is a psyop, but few anti-vaxxers view the story about the calamari clots the same way, even though the same network of people seems to be behind both stories.</p>
+<h2>
+<a href="#Comments_by_Mike_Adams_about_Died_Suddenly_and_Jane_Rubys_role_in_covering_the_clots" id="Comments_by_Mike_Adams_about_Died_Suddenly_and_Jane_Rubys_role_in_covering_the_clots">Comments by Mike Adams about Died Suddenly and Jane Ruby'<wbr>s role in covering the clots</a>
+</h2>
+<p>The Died Suddenly film didn't feature Jane Ruby or Mike Adams, who both had a prominent role in covering the story about the clots earlier in 2022. When the film was released in November 2022, Mike Adams wrote: <span class="quote">[<a href=https://www.naturalnews.com/2022-11-26-died-suddenly-the-groundbreaking-investigations-that-made-the-film-possible.html>https://<wbr>www.<wbr>naturalnews.<wbr>com/<wbr>2022-<wbr>11-<wbr>26-<wbr>died-<wbr>suddenly-<wbr>the-<wbr>groundbreaking-<wbr>investigations-<wbr>that-<wbr>made-<wbr>the-<wbr>film-<wbr>possible.<wbr>html</a>]</span></p>
+<blockquote class=quote>
+<p>Before the film <em class=quote>Died Suddenly</em>, there were investigations that received far less attention but were pivotal in uncovering the truth about the <span class="quote">"fibrous clots"</span> that are causing people to die.</p>
+<p><strong class=quote>Dr. Jane Ruby broke the <span class="quote">"fibrous clots"</span> story in early 2022</strong>. She's the one who first <span class="quote">"discovered"</span> embalmer Richard Hirschman. She did the initial due diligence, conducted the phone calls, and reached out to people like myself to get lab tests done on the clots so that she could try to confirm what they were made of. <span class="quote">(For the record, we still don't know for sure what they're made of, but we are able to eliminate some guesses on what they're not, which is helpful.)</span></p>
+<p><span class="quote">[...]</span></p>
+<p>From that first breaking news exclusive, Dr. Jane Ruby went on to conduct <strong class=quote>dozens of interviews</strong> and investigation pieces into the fibrous clots story. You can see many of those videos <a href="https://rumble.com/user/DrJaneRubyShow">on her channel on Rumble</a>. Or just search Brighteon.com for <span class="quote">"Jane Ruby clots"</span> and you'll see plenty of videos.</p>
+<p>During the first half of 2022, Dr. Ruby was reaching out to me privately, asking if I could volunteer our laboratory expertise to examine these clots. I agreed, and she arranged for Richard Hirschman to send clot specimens to my lab. I currently have a fascinating collection of these fibrous clots in my laboratory, where we are still conducting microscopy work <span class="quote">(many new photos coming soon)</span> and ICP-MS mass spec analysis.</p>
+<p>On June 13th, I invited Dr. Jane Ruby and Richard Hirschman to the Alex Jones Show, where I had been invited to host the show. <strong class=quote>We made radio history that day</strong> by conducting the very first live, on-air microscopy examination of the fibrous clots that had been provided by Hirschman. I brought a $100,000 laboratory microscope to the InfoWars studios in Austin and we did the whole thing live, with Harrison Smith sitting next to me trying not to barf up his breakfast as we manipulated grotesque clot structures with tweezers under the microscope, amplified on the large monitors in the studio.</p>
+<p>You can watch that groundbreaking episode <a href="https://www.banned.video/watch?id=62a7c513d3003e1cb464c25c">on Banned.<wbr>video at this link</a>. The title of that episode is, <span class="quote">"Scientists Confirm COVID Vaccines Contain Nanostructures Colonizing In The Human Body."</span></p>
+<p>In fact, most of the fibrous clot microscopy photos circulating around the 'net today are photos that I personally took and published either on NaturalNews.com or aired on the Alex Jones Show as exclusive content.</p>
+<p>I published my breaking news photos on June 12, 2022, in an article titled, <span class="quote">"<a href="https://naturalnews.com/2022-06-12-blood-clots-microscopy-suddenly-died.html">EXCLUSIVE:<wbr> Shocking microscopy photos of blood clots extracted from those who 'suddenly died'<wbr> - crystalline structures,<wbr> nanowires,<wbr> chalky particles and fibrous structures</a>."</span></p>
+<p><span class="quote">[...]</span></p>
+<p>If anybody deserves credit on the fibrous clots story, it's Dr. Jane Ruby. I wrote <a href="https://www.naturalnews.com/2022-11-25-died-suddenly-film-is-a-powerful-showcase-of-vaccine-dangers-where-is-dr-jane-ruby.html">a story yesterday about all this</a>, but pulled it within a few hours because the story was being misappropriated by vax pushers to try to discredit the <em class=quote>Died Suddenly</em> film, which wasn't my intention.</p>
+<p>Today, I invite everyone becoming aware of all this to simply <strong class=quote>give Dr. Jane Ruby the credit she deserves</strong> for the work she did that brought this issue to light.</p>
+</blockquote>
+<p>Jane Ruby is such a ridiculous person that when she was left out of the Died Suddenly film, it probably helped make the film appear more credible. When Mike Adams claimed that the clots contained structures that resembled microchips and reptile-scaled nanowires, he also made the story about the clots seem less believable, but when his claims were not incorporated into what became the dominant narrative about the clots, it helped make the clots seem more mundane and therefore more believable.</p>
+<h2>
+<a href="#Michael_Merricks_clots_created_through_centrifugation" id="Michael_Merricks_clots_created_through_centrifugation">Michael Merrick'<wbr>s clots created through centrifugation</a>
+</h2>
+<p>Ana Mihalcea has been collaborating with Clifford Carnicom's Carnicom Institute since 2023. She and Carnicom were among the earliest people who presented a laboratory analysis of the calamari clots.</p>
+<p>There's another person affiliated with Carnicom Institute called Michael Merrick, who has coined the term <span class="quote">"abnormal polymer mass"</span> <span class="quote">(APM)</span> to refer to calamari clots. He published a blog post where he claimed he extracted this <span class="quote">"abnormal polymer mass"</span> from blood through centrifugation: <span class="quote">[<a href=https://lacmicroscopy.substack.com/p/apm>https://<wbr>lacmicroscopy.<wbr>substack.<wbr>com/<wbr>p/<wbr>apm</a>]</span></p>
+<div>
+<img src=i/clot-apm-1.webp width=500>
+</div>
+<p><span class="quote">"Cross-domain bacteria"</span> or CBD is a name that Clifford Carnicom coined for the supposed causative agent of Morgellons disease. Merrick claimed that when he looked at his lab-created calamari clot under a microscope, he saw a filament that had cross-domain bacteria attached along the filament:</p>
+<div>
+<img src=i/clot-apm-2.webp width=600>
+</div>
+<p>And he also posted other similar images of supposed Morgellons filaments and Morgellons bacteria, and at the end of his post he linked to various articles about Morgellons disease on the website of the Carnicom Institute.</p>
+<p>Ana Mihalcea wrote: <span class="quote">"I have been following the work of Michael Merrick on Telegram - he goes under the name of LAC microscopy. He has not only replicated many of the experiments of Clifford Carnicom and myself, but he has looked at drugs like Enbrel and found nanotechnology."</span> <span class="quote">[<a href=https://anamihalceamdphd.substack.com/p/whoever-is-in-charge-of-geoengineering>https://<wbr>anamihalceamdphd.<wbr>substack.<wbr>com/<wbr>p/<wbr>whoever-<wbr>is-<wbr>in-<wbr>charge-<wbr>of-<wbr>geoengineering</a>]</span></p>
+<p>She claimed that the filaments found by Merrick were <span class="quote">"self-assembling nanotechnology"</span> similar to the fibers she found in COVID vaccines. She also compared Merrick's image of fibers in rainwater against her image of a fiber in blood:</p>
+<div>
+<img src=i/clot-apm-3.webp width=600>
+</div>
+<h2>
+<a href="#Greg_Harrison_interviewed_on_Cafe_Locked_Out" id="Greg_Harrison_interviewed_on_Cafe_Locked_Out">Greg Harrison interviewed on Cafe Locked Out</a>
+</h2>
+<p>In August 2026, Greg Harrison was interviewed by Michael Gray Griffith and Paul Oosterhuis from Cafe Locked Out. <span class="quote">[<a href=https://x.com/dragonfishy/status/2088928702394675694>https://<wbr>x.<wbr>com/<wbr>dragonfishy/<wbr>status/<wbr>2088928702394675694</a>, <a href=https://cafelockeddown.substack.com/p/who-of-us-ordered-calamari-in-our>https://<wbr>cafelockeddown.<wbr>substack.<wbr>com/<wbr>p/<wbr>who-<wbr>of-<wbr>us-<wbr>ordered-<wbr>calamari-<wbr>in-<wbr>our</a>]</span></p>
+<p>At time 36:44, Griffith told Greg: <span class="quote">"One of the reasons to have you on is I interviewed Wendy Daniel the other night. She's a prominent anti-vaxxer, she's never taken a vaccine, or any vaccine as far as I know. And she has had one removed from her veins in New Zealand. And the guy in New Zealand who did that had an hour-long conversation with me on the phone. He just didn't want to go live yet. But, um, he was telling me how they did that. And he was saying it had actually formed once it got outside the body. They took blood and it went through a process. Have you heard of that?"</span></p>
+<p>Then Greg said: <span class="quote">"Now, we've got photographs from Dr. Matt Shelton out of New Zealand, that was performing an oncogenic procedure, and draining fluids from the lymph system. And one of his tubes filled up with a white clot."</span> But Greg didn't say anything about how it's normal for fibrin clots to form in surgery drain tubes, and those are not a novel type of clots that were not seen before 2021.</p>
+<p>Then Greg showed the clot below and said: <span class="quote">"But more importantly, the phenomenon that Wendy Daniel has reported is real. In fact I met with Wendy Daniel last week, and I obtained from her a sample of her white clot, she cut it up for me. And I actually have it here somewhere."</span></p>
+<div>
+<img src=i/clot-wendy-daniel.webp width=520>
+</div>
+<p>Next Greg said: <span class="quote">"Wendy gave me that sample. And that's going off to my lab in, um, my colleagues in Europe, to be analyzed by Raman. And we've gotta run two tiers. We'll run Thioflavin-T to check if there's some degree of fluorescence. We've got a totally open mind on this. Because Wendy's clot occurred in her plasma sample after centrifuging of her blood. It took 30 to 40 minutes to form. But I was present when Wendy pulled it out of the tube, and she cut it to provide me this sample. And it is rubbery. It is like calamari."</span></p>
+<p>So it seems like Wendy's clot didn't even form in a surgery drain tube, but the clot formed when her blood was centrifuged, so the clot may have formed via a similar procedure that was demonstrated by Michael Merrick from the Carnicom Institute.</p>
+<p>A few days earlier when Cafe Locked Out interviewed Wendy Daniel, she was promoting her book titled <span class="quote">"Rescuing Ourselves from Chemtrails, Clots and Cancers"</span>. <span class="quote">[<a href=https://cafelockedout.com/wendy-daniel-is-in-the-cafe-with-rescuing-ourselves-from-chemtrails-clots-and-cancers/>https://<wbr>cafelockedout.<wbr>com/<wbr>wendy-<wbr>daniel-<wbr>is-<wbr>in-<wbr>the-<wbr>cafe-<wbr>with-<wbr>rescuing-<wbr>ourselves-<wbr>from-<wbr>chemtrails-<wbr>clots-<wbr>and-<wbr>cancers/<wbr></a>]</span> Clifford Carnicom was also a chemtrail guru before he started posting about Morgellons. And his assistant Ana Mihalcea claims that chemtrails contain the same substances that are included in calamari clots, like polyamides and spider silk.</p>
+<p>At time 49:53 during the interview with Cafe Locked Out, Greg said: <span class="quote">"Before I even met Richard Hirschman and got involved and saw the Epoch Times video, I was actually contributing to DRASTIC - Charles Rixey, myself, The Seeker - a lot of others were communicating about the origin of the virus."</span> However DRASTIC's founder Billy Bostickson said that Greg was never a member of DRASTIC, and Billy said that he had told Greg to stop claiming he was a member of DRASTIC. <span class="quote">[<a href=https://x.com/BillyBostickson/status/1957089519104307622>https://<wbr>x.<wbr>com/<wbr>BillyBostickson/<wbr>status/<wbr>1957089519104307622</a>]</span></p>
+<p>At time 1:04:55, Greg said: <span class="quote">"We've got a pretty small team. I've got two colleagues who I can't name in Europe because they have access to universities. And this is a sad part. We can't name them because they don't want to be named for one. Secondly, it'll compromise - one of them doing a PhD in protein chemistry - and to lose the access to the labs."</span> But the two Hungarians were already listed as coauthors in Greg's recent paper. They were Miklós Veres, whose affiliation was listed as <span class="quote">"Senior Scientist, Hun-REN Wigner Research Centre for Physics, Hungary"</span>, and Márk File, who was described as <span class="quote">"Chemist, PhD Candidate, Hungary"</span>. <span class="quote">[<a href=https://ijirms.in/index.php/ijirms/article/view/2202>https://<wbr>ijirms.<wbr>in/<wbr>index.<wbr>php/<wbr>ijirms/<wbr>article/<wbr>view/<wbr>2202</a>]</span> So Greg can no longer rely on the excuse that he cannot release the HPLC data because he cannot reveal the identities of the people who did the analysis.</p>
+<p>Another coauthor of Greg's paper was Dennis Planner, who previously worked with Greg for an Australian chemical company called Chemson, but whose affiliation was now listed as <span class="quote">"Chemical Engineer, Hungary"</span>, and who seems to live in Hungary based on his LinkedIn profile. <span class="quote">[<a href=https://3dprint.com/176533/fabrisonic-dd-titan-chemson/>https://<wbr>3dprint.<wbr>com/<wbr>176533/<wbr>fabrisonic-<wbr>dd-<wbr>titan-<wbr>chemson/<wbr></a>, <a href=https://patents.google.com/patent/AU2018253459A1/en>https://<wbr>patents.<wbr>google.<wbr>com/<wbr>patent/<wbr>AU2018253459A1/<wbr>en</a>, <a href=https://www.linkedin.com/in/dennisplanner/>https://<wbr>www.<wbr>linkedin.<wbr>com/<wbr>in/<wbr>dennisplanner/<wbr></a>]</span> So the reason why the analysis was done in Hungary may have been because Greg's former co-worker had moved to Hungary.</p>
+<p>But regardless, next Greg said he couldn't release the raw HPLC data, because <span class="quote">"it was written in another language for starters, which is a dead giveaway"</span>. But we already know that the analysis is supposed to have been done in Hungary. And even if the HPLC data did contain some localized text in Hungarian, Greg could just export the data in a CSV format where he would omit the fields with the Hungarian text, or he would translate the text to English. But that would still be pointless, because he has already revealed the identities of the two Hungarian guys.</p>
+<p>At time 1:04:03, Griffith said that the greatest research right now was being done by amateur scientists like Greg, but as another example of a great amateur scientist, Griffith named David Nixon out of all people.</p>
+<p>In 2025 when Michael Gray Griffith did a video about nanobots with David Nixon and Mateo Taylor, Griffith presented a video of Alex Jones being scanned with a nanobot scanner as evidence that people are now filled with nanobots. Griffith said: <span class="quote">"But before this whole thing starts, we had a gift today. And the gift is this. Watch. This is Alex Jones being scanned for nanobots."</span> Then he played the video and said: <span class="quote">"But now we've got Alex Jones being scanned. So they've got a nanobot scanner. And to me, well, they're not going away. The stuff is still in people's systems. You know, I just - and what is it doing there? What's it doing now? Is it developing? Is it growing? Last time it seemed to be assembling itself. Has it constructed the local cities within us? I mean, what the hell is - what the hell is going on?"</span> <span class="quote">[<a href=https://cafelockeddown.substack.com/p/dr-david-nixon-a-2025-nano-bot-update>https://<wbr>cafelockeddown.<wbr>substack.<wbr>com/<wbr>p/<wbr>dr-<wbr>david-<wbr>nixon-<wbr>a-<wbr>2025-<wbr>nano-<wbr>bot-<wbr>update</a>, 4:10]</span> The video was so ridiculous that even Mateo Taylor had a hard time holding back laughter.</p>
+<div>
+<img src=i/griffith-nanobot.webp width=500>
+</div>
+<p>Michael Gray Griffith recently did an interview with an Arcturian guy called IRa, who is an emissary of The Galactic High Council of Planets, and whose mission is to assist humanity to ascend from the 3rd dimension to the 5th dimension: <span class="quote">[<a href=https://cafelockedout.com/meet-ira-an-emissary-of-the-galactic-high-council-of-planets/>https://<wbr>cafelockedout.<wbr>com/<wbr>meet-<wbr>ira-<wbr>an-<wbr>emissary-<wbr>of-<wbr>the-<wbr>galactic-<wbr>high-<wbr>council-<wbr>of-<wbr>planets/<wbr></a>]</span></p>
+<div>
+<img src=i/griffith-ira.webp width=450>
+</div>
+<p>IRa the Arcturian also says that vaccines contain graphene and nanobots: <span class="quote">[<a href=https://x.com/IRa_of_Arcturus/status/2044607047443112405>https://<wbr>x.<wbr>com/<wbr>IRa_<wbr>of_<wbr>Arcturus/<wbr>status/<wbr>2044607047443112405</a>, <a href=https://x.com/IRa_of_Arcturus/status/1918177155860840512>https://<wbr>x.<wbr>com/<wbr>IRa_<wbr>of_<wbr>Arcturus/<wbr>status/<wbr>1918177155860840512</a>]</span></p>
+<div>
+<img src=i/griffith-ira-2.webp width=596>
+</div>
+<div>
+<img src=i/griffith-ira-3.webp width=596>
+</div>
+<h2>
+<a href="#Australian_National_Review_is_a_Russian_disinformation_outlet" id="Australian_National_Review_is_a_Russian_disinformation_outlet">Australian National Review is a Russian disinformation outlet</a>
+</h2>
+<p>Greg Harrison said that he set out to do an ICP analysis of the clots after he saw an Epoch Times video about the earlier analysis by Mike Adams. Greg's co-conspirator Wayne Crouch is the <span class="quote">"head reporter"</span> at Australian National Review <span class="quote">(ANR)</span>.</p>
+<p>The majority of recent articles at ANR appear to be copied from the Epoch Times, but ANR has also published many articles copied from Natural News. James Fulk identified ANR as part of a network of pro-Russia websites that republish content from Natural News. <span class="quote">[<a href=https://web.archive.org/web/20240711213045/https://eyesoftherepublic.com/2024/07/09/russian-disinformation-ecosystem-chart-featuring-global-research-natural-news-and-others/>https://<wbr>web.<wbr>archive.<wbr>org/<wbr>web/<wbr>20240711213045/<wbr>https://<wbr>eyesoftherepublic.<wbr>com/<wbr>2024/<wbr>07/<wbr>09/<wbr>russian-<wbr>disinformation-<wbr>ecosystem-<wbr>chart-<wbr>featuring-<wbr>global-<wbr>research-<wbr>natural-<wbr>news-<wbr>and-<wbr>others/<wbr></a>]</span></p>
+<p>Content by ANR is mirrored by a large network of fake news sites, which is reminiscent of how Mike Adams operates a network of fake news sites that mirror content from Natural News. ANR even launched their own social media called TruthBook, which is reminiscent of how Mike Adams has launched his own video site called Brighteon, his own search engine called Good Gopher, and his own AI utility called Enoch. Australian National Review is run by a serial conman called Jamie McIntyre, who is something like an Australian equivalent of Mike Adams, or perhaps an Australian equivalent of Stew Peters.</p>
+<p>A report about Russian influence operations said: <span class="quote">[<a href=https://assets.recordedfuture.com/insikt-report-pdfs/2025/ta-ru-2025-0903.pdf>https://<wbr>assets.<wbr>recordedfuture.<wbr>com/<wbr>insikt-<wbr>report-<wbr>pdfs/<wbr>2025/<wbr>ta-<wbr>ru-<wbr>2025-<wbr>0903.<wbr>pdf</a>]</span></p>
+<blockquote class=quote>
+<p>R-FBI is an ongoing Russia-based IO ostensibly dedicated to exposing alleged human rights violations and injustices committed primarily by Western governments. R-FBI poses as an <span class="quote">"independent non-profit organization"</span> in support of addressing <span class="quote">"human rights violations"</span>; the organization, however, leverages non-credible, long-form investigative reporting to accuse prominent international opposition leaders, particularly during major election cycles, of serious criminal activities, including terrorism, electoral fraud, human trafficking, and sexual abuse of minors. These reports are then laundered through a network of pro-Russian influencers and websites previously identified as promoting Kremlin propaganda, such as Jamie McIntyre's Australian National Review <span class="quote">(ANR, <em class=quote>australiannationalreview<span class="quote">[.]</span>com</em>)</span>, the London Times <span class="quote">(<em class=quote>londontimes<span class="quote">[.]</span>live</em>)</span>, and Veterans Today <span class="quote">(VT, <em class=quote>vtforeignpolicy<span class="quote">[.]</span>com</em>)</span>.</p>
+<p>R-FBI was founded and initially financed in 2021 by deceased Russian oligarch Yevgeny Prigozhin, although management of the organization has since been transferred to Oksana Vovk, known now as Mira Terada. Based on Insikt Group investigations, in addition to public reporting from researchers at Clemson University and VIGINUM, R-FBI is also closely involved with a separately tracked Russian IO we refer to as CopyCop <span class="quote">(Storm-1516)</span>.</p>
+</blockquote>
+<p>Mira Terada served 30 months in prison for money laundering her ex-husband's cocaine trafficking profits. <span class="quote">[<a href=https://fi.wikipedia.org/wiki/Mira_Terada>https://<wbr>fi.<wbr>wikipedia.<wbr>org/<wbr>wiki/<wbr>Mira_<wbr>Terada</a>]</span></p>
+<p>In 2025 Australian National Review republished an article by R-FBI, which claimed that US-backed biolabs were supposedly performing experiments targeting civilians in Armenia. According to a report by the Digital Forensic Research Lab of the Atlantic Council, the same article was also republished by websites called londontimes.live, cnbsnews.live, newzealandtimes.live, canadiantimes.live, and goldcoastreview.com. <span class="quote">[<a href=https://dfrlab.org/2025/07/07/pro-kremlin-actors-push-multilingual-biolab-hoax-targeting-armenia/>https://<wbr>dfrlab.<wbr>org/<wbr>2025/<wbr>07/<wbr>07/<wbr>pro-<wbr>kremlin-<wbr>actors-<wbr>push-<wbr>multilingual-<wbr>biolab-<wbr>hoax-<wbr>targeting-<wbr>armenia/<wbr></a>]</span> Then the report said: <span class="quote">"A <a href="https://ghorganisation.com/wp-content/uploads/2021/07/GHO-updated-pdf.pdf">document</a> published by the anti-vaccine group <a href="https://ghorganisation.com/">Global Health Organization</a> listed all six websites among a group of <span class="quote">'independent media partners.'</span> The document includes falsified narratives about the COVID-19 pandemic, claiming that <span class="quote">'the WHO has falsely declared a pandemic in relation to COVID-19'</span> and that <span class="quote">'COVID-19 tests are unreliable to test any specific disease.'</span> The citation of the six websites by a single publication additionally suggests coordination among them."</span> The report also pointed out that ANR, CNBS News, and the other sites had image and JavaScript files served from a domain called b37mrlt.ru, which operates as a media asset server for RT, and which was registered by RT's parent company TV-Novosti. ANR's website no longer has images hosted under the Russian domain name, but you can see still the domain name in the source code of archived snapshots of the website. <span class="quote">[<a href=https://web.archive.org/web/20250813003831/https://anr.news/>https://<wbr>web.<wbr>archive.<wbr>org/<wbr>web/<wbr>20250813003831/<wbr>https://<wbr>anr.<wbr>news/<wbr></a>]</span></p>
+<p>The cover page of the document by the Global Health Organization shows the logo of ANR above the other logos and at a bigger size than the other logos: <span class="quote">[<a href=https://ghorganisation.com/wp-content/uploads/2021/07/GHO-updated-pdf>https://<wbr>ghorganisation.<wbr>com/<wbr>wp-<wbr>content/<wbr>uploads/<wbr>2021/<wbr>07/<wbr>GHO-<wbr>updated-<wbr>pdf</a>]</span></p>
+<div>
+<img src=i/clot-global-health-organization.webp width=650>
+</div>
+<p>The website of Global Health Organization prominently promotes ANR's social media truthbook.social. <span class="quote">[<a href=https://ghorganisation.com>https://<wbr>ghorganisation.<wbr>com</a>]</span> The website also has a page that says in poor grammar: <span class="quote">"We need help in many roles across many not for profit organisations that are being established and we require help on a part time or full basis. These roles are mostly volunteer roles however some may become paid roles. All volunteers would receive Bitcoin 2.0 regardless of some payment."</span> Then the page says: <span class="quote">"Jobs and Volunteer Roles at the Australian National Review and other not for profit organisations we help fund or support such as Global Health Organisation, Global Economic Forum, Take Back Australia, Take Back our World, Global Independent Media, Australian Patriots Alliance"</span>: <span class="quote">[<a href=https://ghorganisation.com/volunteer/>https://<wbr>ghorganisation.<wbr>com/<wbr>volunteer/<wbr></a>]</span></p>
+<div>
+<img src=i/clot-global-health-organization-volunteers.webp width=700>
+</div>
+<p>It's funny how the set of organizations affiliated with ANR not only includes the Global Health Organization, but also the Global Economic Forum. I guess the GHO is the based alternative to the WHO, and the GEF is the based alternative to the WEF.</p>
+<p>Bitcoin 2.0 was launched by Jamie McIntyre from Australian National Review. The ostensible purpose of Bitcoin 2.0 was for followers of ANR to <span class="quote">"support independent media"</span>. If you donated 1,000 AUD to ANR, you would receive 3,000 AUD worth of Bitcoin 2.0, and if you donated 25,000 AUD to ANR, you would receive 250,000 AUD worth of Bitcoin 2.0. <span class="quote">[<a href=https://anr.news/bitcoin-2-0-sponsorship-offer/>https://<wbr>anr.<wbr>news/<wbr>bitcoin-<wbr>2-<wbr>0-<wbr>sponsorship-<wbr>offer/<wbr></a>]</span> But the catch was that you were not allowed to sell the Bitcoin 2.0 for 60 days, and afterwards you were only allowed to sell up to 8.33% of your holdings per month <span class="quote">(which should've been a red flag that you had joined a ponzi scheme)</span>. Bitcoin 2.0 seems to have soon become worthless.</p>
+<p>In 2015 Jamie McIntyre was banned from managing a corporation or providing financial services for the next 10 years, because he operated real estate scam where his investors ended up losing about 7 million AUD. <span class="quote">[<a href=https://www.asic.gov.au/about-asic/news-centre/find-a-media-release/2015-releases/15-214mr-asic-acts-against-21st-century-group-and-jamie-mcintyre-land-banking-schemes>https://<wbr>www.<wbr>asic.<wbr>gov.<wbr>au/<wbr>about-<wbr>asic/<wbr>news-<wbr>centre/<wbr>find-<wbr>a-<wbr>media-<wbr>release/<wbr>2015-<wbr>releases/<wbr>15-<wbr>214mr-<wbr>asic-<wbr>acts-<wbr>against-<wbr>21st-<wbr>century-<wbr>group-<wbr>and-<wbr>jamie-<wbr>mcintyre-<wbr>land-<wbr>banking-<wbr>schemes</a>]</span> He operated a land banking scheme, where he bought a nearly worthless area of land, divided it into lots, and sold the lots to his investors while offering the false promise that the land was set to soon be redeveloped and skyrocket in value. So basically he followed the classic <span class="quote">"prime real estate in the Everglades"</span> scheme. Later McIntyre ran another similar land banking scam in Bali, where he again ripped off about 7 million AUD from his investors. <span class="quote">[<a href=https://www.nine.com.au/australia-news/a-current-affair/new-troubles-for-brothers-jamie-and-dennis-mcintyre-20260113-p5rm11.html>https://<wbr>www.<wbr>nine.<wbr>com.<wbr>au/<wbr>australia-<wbr>news/<wbr>a-<wbr>current-<wbr>affair/<wbr>new-<wbr>troubles-<wbr>for-<wbr>brothers-<wbr>jamie-<wbr>and-<wbr>dennis-<wbr>mcintyre-<wbr>20260113-<wbr>p5rm11.<wbr>html</a>, <a href=https://www.theaustralian.com.au/nation/aussie-investors-lose-7m-in-alleged-lombok-villa-scam-linked-to-banned-businessman/news-story/a2d04b1bf525b9d0ff325775427b0bb3>https://<wbr>www.<wbr>theaustralian.<wbr>com.<wbr>au/<wbr>nation/<wbr>aussie-<wbr>investors-<wbr>lose-<wbr>7m-<wbr>in-<wbr>alleged-<wbr>lombok-<wbr>villa-<wbr>scam-<wbr>linked-<wbr>to-<wbr>banned-<wbr>businessman/<wbr>news-<wbr>story/<wbr>a<wbr>2<wbr>d<wbr>0<wbr>4<wbr>b<wbr>1<wbr>b<wbr>f<wbr>5<wbr>2<wbr>5<wbr>b<wbr>9<wbr>d<wbr>0<wbr>f<wbr>f<wbr>3<wbr>2<wbr>5<wbr>7<wbr>7<wbr>5<wbr>4<wbr>2<wbr>7<wbr>b<wbr>0<wbr>b<wbr>b<wbr>3<wbr></a>]</span></p>
+<p>But anyway, the report by the Digital Forensics Lab also said: <span class="quote">[<a href=https://dfrlab.org/2025/07/07/pro-kremlin-actors-push-multilingual-biolab-hoax-targeting-armenia/>https://<wbr>dfrlab.<wbr>org/<wbr>2025/<wbr>07/<wbr>07/<wbr>pro-<wbr>kremlin-<wbr>actors-<wbr>push-<wbr>multilingual-<wbr>biolab-<wbr>hoax-<wbr>targeting-<wbr>armenia/<wbr></a>]</span></p>
+<blockquote class=quote>
+<p>An analysis conducted using the social media listening tool Meltwater Explore found that the domain <span class="quote">(anr.news)</span> for the Australian National Review <span class="quote">(ANR)</span> website appeared in identical articles published across more than 160 websites on May 19 and 20, 2025. These articles promoted the <a href="https://www.eventbrite.com.au/e/free-speech-summit-independent-media-awards-2025-tickets-1301676542579">Free Speech Summit and Independent Media Awards 2025</a>, set to take place July 19-20 in Broadbeach, Gold Coast, Queensland. The event is positioned as a platform to support free speech and strengthen independent journalism in the digital age. According to information published on multiple websites, the event will feature keynote speakers, panels, strategy sessions, and networking opportunities, with listed speakers including Julian Assange, Tucker Carlson, the Aussie Cossack, and Joe Rogan.</p>
+<p>All the websites direct readers to buy tickets via the ANR website, and the event details are also posted in the <a href="https://x.com/ANRHeadlines">bio</a> of ANR's X account. An analysis of publishing timestamps for articles about the Free Speech Summit and Independent Media Awards 2025 showed a suspicious pattern - the majority of the texts were published within intervals of seconds or minutes. This suggests the websites may be coordinating to amplify content about the event.</p>
+</blockquote>
+<p>Assange, Tucker, and Rogan didn't actually attend the event, but they just received awards from ANR. People who attended the event in person included Steve Kirsch, Max Igan, Maryanne Demasi, Ben Tapper, and Michael Gray Griffith. <span class="quote">[<a href=https://anr.news/event-page/>https://<wbr>anr.<wbr>news/<wbr>event-<wbr>page/<wbr></a>, <a href=https://www.youtube.com/watch?v=vV9q4pda3H0>https://<wbr>www.<wbr>youtube.<wbr>com/<wbr>watch?<wbr>v=vV9q4pda3H0</a>]</span> Stew Peters, Maria Zeee, and Aussie Cossack gave video presentations at the event.</p>
+<p>Global Health Organization was also linked to an organization called COVID Fraud Bureau of Investigations <span class="quote">(CFBI)</span>. Both organizations had text with extremely poor grammar on their website, so I don't know if the text on the websites was written by Wayne Crouch, whose grammar is atrocious: <span class="quote">[<a href=http://web.archive.org/web/20210907020356/https://www.covidfraudbureauinvestigation.com/>http://<wbr>web.<wbr>archive.<wbr>org/<wbr>web/<wbr>20210907020356/<wbr>https://<wbr>www.<wbr>c<wbr>o<wbr>v<wbr>i<wbr>d<wbr>f<wbr>r<wbr>a<wbr>u<wbr>d<wbr>b<wbr>u<wbr>r<wbr>e<wbr>a<wbr>u<wbr>i<wbr>n<wbr>v<wbr>e<wbr>s<wbr>t<wbr>i<wbr>g<wbr>a<wbr>t<wbr>i<wbr>o<wbr>n<wbr>.<wbr>com/<wbr></a>]</span></p>
+<div>
+<img src=i/clot-cfbi.webp width=600>
+</div>
+<p>The website of COVID Fraud Bureau of Investigations had a link to a <span class="quote">"cease and desist order on COVID-19 measures"</span> that an Australian citizen could print and send to their local doctor. The letter claimed that treatment for COVID constitutes biowarfare, PCR testing constitutes psychological warfare, lockdowns constitute false imprisonment, and so on: <span class="quote">[<a href=http://web.archive.org/web/20210907020514/https://www.covidfraudbureauinvestigation.com/wp-content/uploads/2021/08/Doctors-to-cease-and-disist-COVID-vaccines.pdf>http://<wbr>web.<wbr>archive.<wbr>org/<wbr>web/<wbr>20210907020514/<wbr>https://<wbr>www.<wbr>c<wbr>o<wbr>v<wbr>i<wbr>d<wbr>f<wbr>r<wbr>a<wbr>u<wbr>d<wbr>b<wbr>u<wbr>r<wbr>e<wbr>a<wbr>u<wbr>i<wbr>n<wbr>v<wbr>e<wbr>s<wbr>t<wbr>i<wbr>g<wbr>a<wbr>t<wbr>i<wbr>o<wbr>n<wbr>.<wbr>com/<wbr>wp-<wbr>content/<wbr>uploads/<wbr>2021/<wbr>08/<wbr>Doctors-<wbr>to-<wbr>cease-<wbr>and-<wbr>disist-<wbr>COVID-<wbr>vaccines.<wbr>pdf</a>]</span></p>
+<div>
+<img src=i/clot-cfbi-2.webp width=550>
+</div>
+<p>The letter was dated August 1st 2021, and it's reminiscent of a similar form that Todd Callender published on his website around the same time, where a private citizen could print out the form in order to file a criminal complaint against a long list of defendants, who included Fauci, Gates, Baric, Tedros, Soros, all directors of Pfizer and the WHO, and so on. The defendants were to be charged with crimes against humanity, war crimes, violation of biological weapons treaties, murder, and genocide. <span class="quote">[<a href=https://vaxxchoice.com/wp-content/uploads/2021/06/Combined-Criminal-Complaint-w-Instructions-for-Filing-1.pdf>https://<wbr>vaxxchoice.<wbr>com/<wbr>wp-<wbr>content/<wbr>uploads/<wbr>2021/<wbr>06/<wbr>Combined-<wbr>Criminal-<wbr>Complaint-<wbr>w-<wbr>Instructions-<wbr>for-<wbr>Filing-<wbr>1.<wbr>pdf</a>]</span> So it's interesting how in 2025 Wayne Crouch took part in Todd Callender's clot symposium.</p>
+<p>One site in the ANR network is London Times. The oldest snapshot of their website had a banner promoting Bitcoin 2.0, and it had articles with titles like <span class="quote">"Adrenochrome: The Leaked Documents"</span> and <span class="quote">"Dr. Sherri Tenpenny Explains How the Depopulation COVID Vaccines Will Start Working in 3-6 Months"</span>. <span class="quote">[<a href=https://web.archive.org/web/20210503122123/https://www.londontimes.live/>https://<wbr>web.<wbr>archive.<wbr>org/<wbr>web/<wbr>20210503122123/<wbr>https://<wbr>www.<wbr>londontimes.<wbr>live/<wbr></a>]</span> The website also showed that <span class="quote">"independent media content share partners"</span> of London Times were Australian National Review, Trump News, COVID Global News, USA Tomorrow, National Times Australia, European Times, New Zealand Times, CNBS News, and Bill Gates News.</p>
+<p>The editorial team of European News supposedly consists of nine people, but at least four of the people seem to have a portrait picture generated by a GAN algorithm: <span class="quote">[<a href=https://europeantimes.news/about-us/>https://<wbr>europeantimes.<wbr>news/<wbr>about-<wbr>us/<wbr></a>]</span></p>
+<div>
+<img src=i/clot-european-times.webp width=900>
+</div>
+<p>The portrait pictures of 4 of the editors have eyes located at exactly the same spot, which is a hallmark of GAN-generated images:</p>
+<div>
+<img src=i/clot-european-times-2.webp width=400>
+</div>
+<p>The Chief Editor of the European Times is Petar Gramatikov, who seems to be a real person who has been ordained by the Bulgarian Orthodox Church. He is a defender of Scientology and a critic of the anti-cult movement. An article by the Church of Scientology quoted Gramatikov as saying: <span class="quote">"If you want to know who is the voice of interfaith progress, it's you - the Church of Scientology! You have demonstrated an unconditional commitment to interreligious unity"</span>. <span class="quote">[<a href=https://www.scientology.org/scientology-today/events/paris-grand-opening.html>https://<wbr>www.<wbr>scientology.<wbr>org/<wbr>scientology-<wbr>today/<wbr>events/<wbr>paris-<wbr>grand-<wbr>opening.<wbr>html</a>]</span> Gramatikov is the vice president of an organization called European Interreligious Forum for Religious Freedom, which in 2014 held an academic conference about Scientology. <span class="quote">[<a href=https://www.eifrf-articles.org/An-academic-conference-at-the-turn-of-a-new-step-of-research-on-Scientology_a87.html>https://<wbr>www.<wbr>eifrf-<wbr>articles.<wbr>org/<wbr>An-<wbr>academic-<wbr>conference-<wbr>at-<wbr>the-<wbr>turn-<wbr>of-<wbr>a-<wbr>new-<wbr>step-<wbr>of-<wbr>research-<wbr>on-<wbr>Scientology_<wbr>a87.<wbr>html</a>]</span> In 2007 Gramatikov presented a paper at a workshop held by the <span class="quote">"Church of Scientology International European Public Affairs and Human Rights Office"</span>. <span class="quote">[<a href=https://www.scientologyreligion.org/articles/pg074.html>https://<wbr>www.<wbr>scientologyreligion.<wbr>org/<wbr>articles/<wbr>pg074.<wbr>html</a>]</span> European Times has published about 700 articles that match the keyword <span class="quote">"Scientology"</span>, which appear to consistently be favorable to Scientology. <span class="quote">[<a href=https://europeantimes.news/?s=scientology>https://<wbr>europeantimes.<wbr>news/?<wbr>s=scientology</a>]</span></p>
+<p>Out of the nine editorial board members of European Times, another real person is Willy Fautre, who runs an organization called Human Rights Without Frontiers has frequently defended Scientology. <span class="quote">[<a href=https://www.google.com/search?q=site%3Ahttps%3A%2F%2Fhrwf.eu+scientology>https://<wbr>www.<wbr>google.<wbr>com/<wbr>search?<wbr>q=site%<wbr>3Ahttps%<wbr>3A%<wbr>2F%<wbr>2Fhrwf.<wbr>eu+<wbr>scientology</a>]</span> A website of the Church of Scientology published an article where Fautre criticized Russia for outlawing Scientology and Jehova's Witnesses. <span class="quote">[<a href=https://www.scientologyreligion.org.tw/blog/human-rights-without-frontiers-censures-russian-ban-of-jehovahs-witnesses.html>https://<wbr>www.<wbr>scientologyreligion.<wbr>org.<wbr>tw/<wbr>blog/<wbr>human-<wbr>rights-<wbr>without-<wbr>frontiers-<wbr>censures-<wbr>russian-<wbr>ban-<wbr>of-<wbr>jehovahs-<wbr>witnesses.<wbr>html</a>]</span></p>
+<p>A report by the Australian National University from 2015 said: <span class="quote">"The chair noted that the Ron Paul Institute for Peace and Prosperity and Russia finance the Australian National Review, a right-wing publication that has claimed that the UK and US were funding ISIL."</span> <span class="quote">[<a href=https://ces.cass.anu.edu.au/files/docs/2025/6/ANUCES_Briefing_Paper_6_1_2015_pdf.pdf>https://<wbr>ces.<wbr>cass.<wbr>anu.<wbr>edu.<wbr>au/<wbr>files/<wbr>docs/<wbr>2025/<wbr>6/<wbr>ANUCES_<wbr>Briefing_<wbr>Paper_<wbr>6_<wbr>1_<wbr>2015_<wbr>pdf.<wbr>pdf</a>]</span> The executive director of the Ron Paul Institute is Daniel McAdams, who used to have a pro-Russian news site called The Daily Putin. <span class="quote">[<a href=https://web.archive.org/web/20110201113832/http://dailyputin.com/>https://<wbr>web.<wbr>archive.<wbr>org/<wbr>web/<wbr>20110201113832/<wbr>http://<wbr>dailyputin.<wbr>com/<wbr></a>]</span> McAdams was also listed as a fellow at Ed Lozansky's American University in Moscow. <span class="quote">[<a href=https://web.archive.org/web/20130621122248/http://us-russia.org/think-tank.html>https://<wbr>web.<wbr>archive.<wbr>org/<wbr>web/<wbr>20130621122248/<wbr>http://<wbr>us-<wbr>russia.<wbr>org/<wbr>think-<wbr>tank.<wbr>html</a>]</span> Daniel McAdams and Ed Lozansky were listed as contact points by the PR firm Mark Saylor Company, which was lobbying for the Russia-backed breakaway republics of Abkhazia and South Ossetia. <span class="quote">[<a href=https://keywiki.org/Ron_Paul_Institute>https://<wbr>keywiki.<wbr>org/<wbr>Ron_<wbr>Paul_<wbr>Institute</a>]</span> Several authors whose articles have been published by the Ron Paul Institute have also been published by both the Strategic Culture Foundation, which is controlled by the active measures directorate of the Russian foreign intelligence service SVR. <span class="quote">[<a href=https://home.treasury.gov/news/press-releases/jy0126>https://<wbr>home.<wbr>treasury.<wbr>gov/<wbr>news/<wbr>press-<wbr>releases/<wbr>jy0126</a>]</span> The authors include Ed Lozansky, Matthew Ehret, Martin Sieff, Patrick Armstrong, Dmitry Babich, Robert Bridge, and Jim Jatras. <span class="quote">[<a href=https://thefulkintelligencereport.substack.com/p/notes-daniel-mcadams-and-the-ron>https://<wbr>t<wbr>h<wbr>e<wbr>f<wbr>u<wbr>l<wbr>k<wbr>i<wbr>n<wbr>t<wbr>e<wbr>l<wbr>l<wbr>i<wbr>g<wbr>e<wbr>n<wbr>c<wbr>e<wbr>r<wbr>e<wbr>p<wbr>o<wbr>r<wbr>t<wbr>.<wbr>substack.<wbr>com/<wbr>p/<wbr>notes-<wbr>daniel-<wbr>mcadams-<wbr>and-<wbr>the-<wbr>ron</a>]</span></p>
+<p>Wayne Crouch was one of the earliest people in alt media who interviewed Elon Musk's father Erroll Musk. In 2025 Erroll Musk, Alex Jones, Max Blumenthal, Jackson Hinkle, Larry Johnson, and Jeffrey Sachs attended a conference of Alexandr Dugin's Tsargrad Institute in Moscow. The institute published report called <span class="quote">"Russia 2050"</span>, which said that said <span class="quote">"The symbol of the anti-liberal turn in the West is the Trump revolution and Trumpism"</span>, and that <span class="quote">"The final victory of the Trumpists will lead to the strengthening of presidential power and the transformation of the political regime of the USA into an autocracy."</span> <span class="quote">[<a href=https://thehill.com/opinion/international/5433736-why-did-these-prominent-americans-attend-a-festival-of-russian-supremacy/>https://<wbr>thehill.<wbr>com/<wbr>opinion/<wbr>international/<wbr>5433736-<wbr>why-<wbr>did-<wbr>these-<wbr>prominent-<wbr>americans-<wbr>attend-<wbr>a-<wbr>festival-<wbr>of-<wbr>russian-<wbr>supremacy/<wbr></a>]</span> Jackson Hinkle is the Führer of the American Communist Party, who now lives in Russia. In 2026 he and Max Blumenthal were among the handful of Americans who attended Ayatollah Khamenei's funeral in Iran, along with another leader of the American Communist Party who now lives in Russia, and a communist youth leader called Calla Walsh. <span class="quote">[<a href=https://www.memri.org/reports/american-islamist-left-and-communist-extremists-islamists-and-pro-iranian-activists-many>https://<wbr>www.<wbr>memri.<wbr>org/<wbr>reports/<wbr>american-<wbr>islamist-<wbr>left-<wbr>and-<wbr>communist-<wbr>extremists-<wbr>islamists-<wbr>and-<wbr>pro-<wbr>iranian-<wbr>activists-<wbr>many</a>]</span></p>
+<p>In early 2020, Michel Chossudovsky published an article at Global Research where he claimed that the COVID pandemic was fake, but a report about Russian disinformation noted that Australian National Review was one of the websites which republished the article, along with sites like the FSB-directed SouthFront. <span class="quote">[<a href=https://www.globalresearch.ca/covid-19-coronavirus-a-fake-pandemic-whos-behind-it-global-economic-and-geopolitical-destabilization/5705063>https://<wbr>www.<wbr>globalresearch.<wbr>ca/<wbr>covid-<wbr>19-<wbr>coronavirus-<wbr>a-<wbr>fake-<wbr>pandemic-<wbr>whos-<wbr>behind-<wbr>it-<wbr>global-<wbr>economic-<wbr>and-<wbr>geopolitical-<wbr>destabilization/<wbr>5705063</a>, <a href=https://content.govdelivery.com/attachments/USSTATEBPA/2020/08/04/file_attachments/1511364/Pillars%20of%20Russias%20Disinformation%20and%20Propaganda%20Ecosystem_08-04-20%20%281%29.pdf>https://<wbr>content.<wbr>govdelivery.<wbr>com/<wbr>attachments/<wbr>USSTATEBPA/<wbr>2020/<wbr>08/<wbr>04/<wbr>file_<wbr>attachments/<wbr>1511364/<wbr>Pillars%<wbr>20of%<wbr>20Russias%<wbr>20Disinformation%<wbr>20and%<wbr>20Propaganda%<wbr>20Ecosystem_<wbr>08-<wbr>04-<wbr>20%<wbr>20%<wbr>281%<wbr>29.<wbr>pdf</a>]</span> Chossudovsky's article was published on March 1st 2020 UTC, which was almost two weeks before the WHO had even declared a pandemic. It's interesting that Chossudovsky was an early proponent of the theory that the pandemic was fake, because Robert David Steele was possibly the very earliest big name in alt media who started to say that the pandemic was fake, but he was a member of a group of pro-Russian ex-spooks called VIPS, and an early article where he said the pandemic was fake was published by an Iranian news site. <span class="quote">[<a href=novirus.html#Robert_David_Steele>novirus.<wbr>html#<wbr>Robert_<wbr>David_<wbr>Steele</a>]</span> Jamie McIntyre also says that the pandemic was fake, and in 2021 he offered a 5 million AUD reward to anyone who could prove that COVID exists. <span class="quote">[<a href=https://singlespeedgoldcoast.com/2021/10/09/how-to-make-money-through-a-covid-scam/>https://<wbr>s<wbr>i<wbr>n<wbr>g<wbr>l<wbr>e<wbr>s<wbr>p<wbr>e<wbr>e<wbr>d<wbr>g<wbr>o<wbr>l<wbr>d<wbr>c<wbr>o<wbr>a<wbr>s<wbr>t<wbr>.<wbr>com/<wbr>2021/<wbr>10/<wbr>09/<wbr>how-<wbr>to-<wbr>make-<wbr>money-<wbr>through-<wbr>a-<wbr>covid-<wbr>scam/<wbr></a>, <a href=https://anr.news/global-issues/the-aj-roberts-show-leading-the-fight-against-trouble-down-under-with-jamie-mcintyre/>https://<wbr>anr.<wbr>news/<wbr>global-<wbr>issues/<wbr>the-<wbr>aj-<wbr>roberts-<wbr>show-<wbr>leading-<wbr>the-<wbr>fight-<wbr>against-<wbr>trouble-<wbr>down-<wbr>under-<wbr>with-<wbr>jamie-<wbr>mcintyre/<wbr></a>]</span></p>
+<p>But anyway, it's interesting that even though ANR seems to be controlled by Kremlin, ANR still reposts articles by Falun Gong's newspaper Epoch Times, even though Falun Gong is overtly opposed to China and Russia. I have been thinking that Falun Gong might serve as controlled opposition to communism, similar to how Miles Guo has been suspected of covertly working for the CCP. Both Falun Gong and Miles Guo have certainly helped to make the opposition to communism look ridiculous.</p>
+<p>I have considered the possibility that these various neo-Theosophical UFO cults might be controlled by Russia, because even Helena Blavatsky was suspected of being a Russian spy <span class="quote">(and Theosophy had a key role in the development of Indian nationalism, which served the geostrategic interests of Russia)</span>. The leader of the Raelian UFO cult calls himself Maitreya Rael, but he has a Twitter account where most of his tweets are links to Russia Today. <span class="quote">[<a href=https://x.com/maitreyarael>https://<wbr>x.<wbr>com/<wbr>maitreyarael</a>]</span> There's also a Theosophical UFO cult called ALLATRA, which transplanted itself first from Russia to Ukraine and then from Ukraine to the United States. One of ALLATRA's most prominent American representatives is the perennial presidential candidate Robby Wells, who has worked as an international correspondant for Russia Today, and who has appeared as a regular commentator on the Russian TV channels NTV and REN TV. <span class="quote">[<a href=https://imi.org.ua/en/news/investigation-us-presidential-candidate-with-ties-to-allatra-works-for-russan-propaganda-i57710>https://<wbr>imi.<wbr>org.<wbr>ua/<wbr>en/<wbr>news/<wbr>investigation-<wbr>us-<wbr>presidential-<wbr>candidate-<wbr>with-<wbr>ties-<wbr>to-<wbr>allatra-<wbr>works-<wbr>for-<wbr>russan-<wbr>propaganda-<wbr>i57710</a>]</span></p>
+<div id=pagenumber></div>
+<script>
+document.querySelectorAll('.spoiler button').forEach(x=>{
+  x.addEventListener('click',()=>{
+    const block=x.nextElementSibling
+    const isHidden=block.style.display=='none'||!block.style.display
+    block.style.display=isHidden?'block':'none'
+    x.textContent=isHidden?'Hide code':'Show code'
+  })
+})
+</script>
+<div id=contentspanel></div>
+<div id=readercontrols>
+  <div id=readerbuttons>
+    <button id=topbutton>Top</button>
+    <button id=stylebutton>Style</button>
+    <button id=contentsbutton>≡</button>
+    <button id=upbutton>▲</button>
+    <button id=downbutton>▼</button>
+  </div>
+  <div id=stylepanel>
+    <div class=control>
+      <span>Width</span>
+      <div class=stepper>
+        <button id=pagewidthminus>−</button>
+        <span id=pagewidthvalue></span>
+        <button id=pagewidthplus>+</button>
+      </div>
+    </div>
+    <div class=control>
+      <span>Font size</span>
+      <div class=stepper>
+        <button id=fontsizeminus>−</button>
+        <span id=fontsizevalue></span>
+        <button id=fontsizeplus>+</button>
+      </div>
+    </div>
+    <div class=control>
+      <span>Line height</span>
+      <div class=stepper>
+        <button id=lineheightminus>−</button>
+        <span id=lineheightvalue></span>
+        <button id=lineheightplus>+</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function pagenum(){
+  let h=innerHeight-40
+  let cur=Math.round((scrollY-h/2)/h)+1
+  let tot=Math.max(1,Math.round((document.body.scrollHeight-h/2)/h))
+  document.getElementById("pagenumber").textContent=cur+" / "+tot
+}
+
+addEventListener("load",pagenum)
+addEventListener("scroll",pagenum,{passive:true})
+addEventListener("resize",pagenum,{passive:true})
+
+let fontsize=parseFloat(localStorage.getItem("fontsize"))||15
+let lineheight=parseFloat(localStorage.getItem("lineheight"))||1.8
+lineheight=Math.round(lineheight*10)/10
+let pagewidth=parseFloat(localStorage.getItem("pagewidth"))||30
+
+document.documentElement.style.setProperty("--pagewidth",pagewidth+"em")
+document.body.style.fontSize=fontsize+"px"
+document.body.style.lineHeight=(lineheight*fontsize)+"px"
+
+let contentspanel=document.getElementById("contentspanel")
+let stylepanel=document.getElementById("stylepanel")
+let topbutton=document.getElementById("topbutton")
+let stylebutton=document.getElementById("stylebutton")
+let contentsbutton=document.getElementById("contentsbutton")
+let upbutton=document.getElementById("upbutton")
+let downbutton=document.getElementById("downbutton")
+
+let toc=document.querySelector("body>ul.toc")
+if(toc)contentspanel.appendChild(toc.cloneNode(true))
+
+topbutton.onpointerdown=e=>{
+  scrollTo(0,0)
+  history.replaceState(null,"",location.pathname+location.search)
+  hidepanels()
+}
+
+stylebutton.onpointerdown=e=>{
+  e.stopPropagation()
+  contentspanel.classList.remove("open")
+  stylepanel.classList.toggle("open")
+}
+
+contentsbutton.onpointerdown=e=>{
+  e.stopPropagation()
+  stylepanel.classList.remove("open")
+
+  let open=contentspanel.classList.toggle("open")
+  stylebutton.style.display=open?"block":"none"
+  if(scrollY>0)topbutton.style.display=open?"block":"none"
+  if(open)scrollcontents()
+}
+
+upbutton.onpointerdown=()=>{scrollBy(0,40-innerHeight);hidepanels()}
+downbutton.onpointerdown=()=>{scrollBy(0,innerHeight-40);hidepanels()}
+
+let headings=[...document.querySelectorAll("h2 a,h3 a")]
+let contentlinks=contentspanel.querySelectorAll("a")
+let anchorids=new Map([...contentlinks].map(x=>[x.hash.slice(1),x]))
+
+function scrollcontents(){
+  contentlinks.forEach(x=>x.classList.remove("currentsection"))
+
+  let newscroll=0
+  for(let i=headings.length-1;i>=0;i--){
+    if(headings[i].getBoundingClientRect().top<=innerHeight/2){
+      let a=anchorids.get(headings[i].id)
+      if(headings[i].id!="Contents"){
+        a.classList.add("currentsection")
+        newscroll=a.offsetTop-contentspanel.clientHeight/2+a.offsetHeight/2
+      }
+      break
+    }
+  }
+
+  contentspanel.scrollTop=newscroll
+}
+
+addEventListener("scroll",()=>{
+  if(contentspanel.classList.contains("open"))scrollcontents()
+},{passive:true})
+
+function updatestyle(){
+  let scrollratio=(scrollY+innerHeight/2)/document.body.scrollHeight
+
+  document.documentElement.style.setProperty("--pagewidth",pagewidth+"em")
+  document.body.style.fontSize=fontsize+"px"
+  document.body.style.lineHeight=(lineheight*fontsize)+"px"
+
+  localStorage.setItem("pagewidth",pagewidth)
+  localStorage.setItem("fontsize",fontsize)
+  localStorage.setItem("lineheight",lineheight)
+
+  document.getElementById("pagewidthvalue").textContent=pagewidth.toFixed(0)+" em"
+  document.getElementById("fontsizevalue").textContent=fontsize.toFixed(0)+" px"
+  document.getElementById("lineheightvalue").textContent=lineheight.toFixed(1)
+
+  scrollTo(0,scrollratio*document.body.scrollHeight-innerHeight/2)
+
+  pagenum()
+}
+
+document.getElementById("pagewidthplus").onpointerdown=()=>{
+  let incr=pagewidth>=40?4:2
+  pagewidth=Math.min(Math.floor(innerWidth/fontsize/2)*2,pagewidth+incr)
+  updatestyle()
+}
+
+document.getElementById("pagewidthminus").onpointerdown=()=>{
+  pagewidth=Math.max(20,pagewidth-(pagewidth>40?4:2))
+  updatestyle()
+}
+
+document.getElementById("fontsizeplus").onpointerdown=()=>{
+  fontsize=Math.min(30,fontsize+(fontsize>=20?2:1))
+  updatestyle()
+}
+
+document.getElementById("fontsizeminus").onpointerdown=()=>{
+  fontsize=Math.max(10,fontsize-(fontsize>=22?2:1))
+  updatestyle()
+}
+
+document.getElementById("lineheightplus").onpointerdown=()=>{
+  lineheight=Math.min(3,lineheight+(lineheight>=2?.2:.1))
+  updatestyle()
+}
+
+document.getElementById("lineheightminus").onpointerdown=()=>{
+  lineheight=Math.max(1.2,lineheight-(lineheight>=2.2?.2:.1))
+  updatestyle()
+}
+
+document.querySelectorAll("#readercontrols button,#stylepanel button").forEach(x=>{
+  x.addEventListener("touchstart",e=>e.preventDefault(),{passive:false})
+  x.addEventListener("pointerdown",e=>e.preventDefault(),{passive:false})
+})
+
+function hidepanels(){
+  stylepanel.classList.remove("open")
+  contentspanel.classList.remove("open")
+  topbutton.style.display="none"
+  stylebutton.style.display="none"
+}
+
+document.addEventListener("click",e=>{
+  if(!e.target.closest("#readercontrols"))hidepanels()}
+)
+
+document.addEventListener("keydown",e=>{if(e.key=="Escape")hidepanels()})
+
+updatestyle()
+</script>
